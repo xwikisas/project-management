@@ -31,6 +31,9 @@
   <artifactId>project-management</artifactId>
   <version>1.0-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
+  <modules>
+    <module>project-management-api</module>
+  </modules>
   <packaging>pom</packaging>
   <issueManagement>
     <system>GitHub</system>
