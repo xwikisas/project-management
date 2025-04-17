@@ -24,56 +24,82 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Describes an issue, a ticket, work package or some item coming from a project management tool.
  *
  * @version $Id$
  * @since 1.0
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class WorkItem
 {
+    @JsonProperty
     private String type;
 
+    @JsonProperty
     private Linkable<String> identifier;
 
+    @JsonProperty
     private Linkable<String> summary;
 
+    @JsonProperty
     private String description;
 
+    @JsonProperty
     private Date startDate;
 
+    @JsonProperty
     private Date dueDate;
 
+    @JsonProperty
     private int progress;
 
+    @JsonProperty
     private Date creationDate;
 
+    @JsonProperty
     private Date updateDate;
 
+    @JsonProperty
     private Linkable<String> creator;
 
+    @JsonProperty
     private List<Linkable<String>> assignees;
 
+    @JsonProperty
     private String priority;
 
+    @JsonProperty
     private Linkable<String> project;
 
+    @JsonProperty
     private String status;
 
+    @JsonProperty
     private Linkable<String> reporter;
 
+    @JsonProperty
     private String resolution;
 
+    @JsonProperty
     private boolean resolved;
 
+    @JsonProperty
     private List<String> labels;
 
+    @JsonProperty
     private Date closeDate;
 
+    @JsonProperty
     private Linkable<String> milestones;
 
+    @JsonProperty
     private Linkable<String> closedBy;
 
+    @JsonProperty
     private Map<String, Object> meta;
 
     /**

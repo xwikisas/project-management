@@ -20,19 +20,39 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 /**
  * Describes a property that be accessed through a URL.
  *
  * @param <T> the type of the value - typically a string.
- *
  * @version $Id$
  * @since 1.0
  */
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class Linkable<T>
 {
     private T value;
 
     private String location;
+
+    /**
+     * Default constructor.
+     */
+    public Linkable()
+    {
+
+    }
+
+    /**
+     * @param value the value this object wraps.
+     * @param location the location where the resource represented by this object can be accessed.
+     */
+    public Linkable(T value, String location)
+    {
+        this.value = value;
+        this.location = location;
+    }
 
     /**
      * @return the location where this object can be accessed. i.e. the url to a user profile.
