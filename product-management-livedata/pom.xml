@@ -28,32 +28,19 @@
     <version>1.0.9-SNAPSHOT</version>
   </parent>
 
-  <artifactId>project-management-api</artifactId>
+  <artifactId>product-management-livedata</artifactId>
 
   <dependencies>
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.xml.bind</groupId>
-      <artifactId>jakarta.xml.bind-api</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-livedata-api</artifactId>
       <version>${platform.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-rest-server</artifactId>
-      <version>${platform.version}</version>
-    </dependency>
-    <!--  To be removed.  -->
-    <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
-      <artifactId>product-management-livedata</artifactId>
+      <artifactId>project-management-api</artifactId>
       <version>${project.version}</version>
     </dependency>
   </dependencies>
+
 </project>
