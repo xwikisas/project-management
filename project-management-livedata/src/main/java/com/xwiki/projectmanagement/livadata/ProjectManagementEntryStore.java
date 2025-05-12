@@ -20,26 +20,17 @@ package com.xwiki.projectmanagement.livadata;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.lang.reflect.Type;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.component.descriptor.ComponentDescriptor;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveData;
@@ -47,12 +38,10 @@ import org.xwiki.livedata.LiveDataEntryStore;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementManager;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
-import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementPropertyDisplayer;
+import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
+import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -66,10 +55,18 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class ProjectManagementEntryStore implements LiveDataEntryStore
 {
+    private static final List<String> LINK_PROPERTIES = List.of(WorkItem.KEY_IDENTIFIER,
+        WorkItem.KEY_SUMMARY, WorkItem.KEY_CREATOR, WorkItem.KEY_PROJECT, WorkItem.KEY_REPORTER);
+
+    private static final String FLATTEN_FORMAT = "%s.%s";
+
     private Map<String, Map<String, Object>> db = new HashMap<>();
 
     @Inject
     private ProjectManagementManager projectManagementManager;
+
+    @Inject
+    private ProjectManagementLiveDataDisplayer defaultDisplayer;
 
     @Inject
     private ComponentManager componentManager;
@@ -102,63 +99,62 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         if (clientId.isEmpty()) {
             throw new LiveDataException("The client property was not specified in the source parameters.");
         }
-        // GET ENTRIES FROM TEST FILE
-        Map<String, Map<String, Object>> newDb = maybeGetTestEntries();
-        if (newDb != null) {
-            ld.setCount(newDb.size());
-            ld.getEntries().addAll(new ArrayList<>(newDb.values()));
-            return ld;
-        }
-        Set<Map.Entry<String, Map<String, Object>>> entrySet = db.entrySet();
 
+        // GET ENTRIES FROM ACTUAL SOURCE ---------------
         PaginatedResult<WorkItem> workItems = null;
         try {
-            workItems = projectManagementManager.getWorkItems(clientId, Math.toIntExact(query.getOffset()), query.getLimit(),
-                query.getFilters());
-        } catch (WorkItemRetrievalException e) {
+            workItems =
+                projectManagementManager.getWorkItems(clientId, Math.toIntExact(query.getOffset()), query.getLimit(),
+                    query.getFilters());
+        } catch (WorkItemException e) {
             throw new LiveDataException("Failed to retrieve the work items.", e);
         }
         ld.getEntries().addAll(workItems.getItems());
-        // TODO: Add a method that modifies how the returned objects/properties are displayed. Maybe a
-        //  ProjectManagementLivedataDisplayer with the hint = property that generates some html. For example, for
-        //  the status property we might want a custom displayer in the case of JIRA that displays a nice icon. Hint
-        //  might be jira.status.
-        List<ComponentDescriptor<ProjectManagementPropertyDisplayer>> displayerDescriptors =
-            componentManager.getComponentDescriptorList((Type) ProjectManagementPropertyDisplayer.class);
-        for (ComponentDescriptor<ProjectManagementPropertyDisplayer> displayerDescriptor : displayerDescriptors) {
-            if (displayerDescriptor.getRoleHint().startsWith(clientId)) {
-                try {
-                    componentManager.getInstance(ProjectManagementPropertyDisplayer.class,
-                        displayerDescriptor.getRoleHint());
-                } catch (ComponentLookupException e) {
-                    logger.warn("Failed to find the project management livedata displayer with hint [{}].",
-                        displayerDescriptor.getRoleHint());
-                }
-            }
-        }
+        ld.setCount(workItems.getTotalItems());
+        // PREPARE THE RESULTS FOR THE LIVEDATA - TURN THE LINKABLES TO PROPERTIES OF THE WORK ITEM -----------
+        applyDisplayers(workItems.getItems(), clientId);
+        flatten(ld);
 
         return ld;
     }
 
-    private static Map<String, Map<String, Object>> maybeGetTestEntries()
+    private void applyDisplayers(List<WorkItem> workItems, String clientId)
     {
-        String testPath = "/home/teo/Desktop/customLiveDataStore.json";
-        File testFile = new File(testPath);
-        String foundEntriesJSON = "";
-        Map<String, Map<String, Object>> newDb = null;
-        if (testFile.exists()) {
-            try (InputStream testFileInputStream = new FileInputStream(testFile)) {
-                foundEntriesJSON = IOUtils.toString(testFileInputStream, Charset.defaultCharset());
+        defaultDisplayer.display(workItems);
 
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode root = objectMapper.readTree(foundEntriesJSON);
-                newDb = objectMapper.readerFor(new TypeReference<Map<String, Map<String, Object>>>()
-                {
-                }).readValue(root);
-            } catch (Exception e) {
+        if (!componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)) {
+            return;
+        }
+        try {
+            ProjectManagementLiveDataDisplayer displayer =
+                componentManager.getInstance(ProjectManagementLiveDataDisplayer.class, clientId);
+            displayer.display(workItems);
+        } catch (ComponentLookupException e) {
+            logger.warn("Failed to find the project management livedata displayer with hint [{}].",
+                clientId);
+        }
+    }
+
+    // TODO: Have a more generic method of flattening a work item.
+    private static void flatten(LiveData ld)
+    {
+        for (Map<String, Object> entry : ld.getEntries()) {
+            for (String linkWorkItemProperty : LINK_PROPERTIES) {
+                Object property = entry.get(linkWorkItemProperty);
+                if (property == null) {
+                    continue;
+                }
+                if (!(property instanceof Map)) {
+                    continue;
+                }
+                Map<String, Object> linkableProperty = (Map<String, Object>) property;
+                entry.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
+                    linkableProperty.get(Linkable.KEY_LOCATION));
+                entry.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_VALUE),
+                    linkableProperty.get(Linkable.KEY_VALUE));
+                entry.remove(linkWorkItemProperty);
             }
         }
-        return newDb;
     }
 
     @Override

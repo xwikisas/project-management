@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -46,6 +47,14 @@ public class PaginatedResult<T>
 
     @JsonProperty
     private int totalItems;
+
+    /**
+     * Default constructor that initializes the items with an empty list.
+     */
+    public PaginatedResult()
+    {
+        items = new ArrayList<>();
+    }
 
     /**
      * @param items the items contained by this paginated result. The size of the items should be smaller than the

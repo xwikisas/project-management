@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.rest;
+package com.xwiki.projectmanagement.internal;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -34,6 +34,7 @@ import org.xwiki.rest.XWikiResource;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.rest.WorkItemsResource;
 
 /**
  * Default implementation of {@link WorkItemsResource}.
@@ -42,7 +43,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * @since 1.0
  */
 @Component
-@Named("com.xwiki.projectmanagement.rest.DefaultWorkItemsResource")
+@Named("com.xwiki.projectmanagement.internal.DefaultWorkItemsResource")
 @Singleton
 public class DefaultWorkItemsResource extends XWikiResource implements WorkItemsResource
 {
@@ -58,7 +59,8 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
         tmp.setProgress(100);
         tmp.setResolved(true);
         WorkItem workItem =
-            workItems.stream().filter(item -> item.getIdentifier().getValue().equals(workItemId)).findFirst()
+            workItems.stream().filter(item -> item.getLinkableValue(WorkItem.KEY_IDENTIFIER).equals(workItemId))
+                .findFirst()
                 .orElse(tmp);
         return Response.ok().entity(workItem).build();
     }
@@ -72,11 +74,12 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     @Override
     public Response createWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
     {
-        if (workItem == null || workItem.getIdentifier() == null) {
+        if (workItem == null || workItem.get(WorkItem.KEY_IDENTIFIER) == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-        if (workItems.stream()
-            .anyMatch(wi -> wi.getIdentifier().getValue().equals(workItem.getIdentifier().getValue())))
+        if (workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER) != null && workItems.stream().anyMatch(
+            wi -> workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER)
+                .equals(wi.getLinkableValue(WorkItem.KEY_IDENTIFIER))))
         {
             return Response.status(Response.Status.CONFLICT).build();
         }
@@ -87,9 +90,13 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     @Override
     public Response updateWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
     {
-        WorkItem dbWorkItem =
-            workItems.stream().filter(i -> i.getIdentifier().getValue().equals(workItem.getIdentifier().getValue()))
-                .findFirst().orElse(null);
+        if (workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER) == null) {
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        WorkItem dbWorkItem = workItems.stream().filter(
+                i -> workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER)
+                    .equals(i.getLinkableValue(WorkItem.KEY_IDENTIFIER)))
+            .findFirst().orElse(null);
         if (dbWorkItem == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
@@ -103,7 +110,7 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     public Response deleteWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
         WorkItem dbWorkItem =
-            workItems.stream().filter(i -> i.getIdentifier().getValue().equals(workItemId))
+            workItems.stream().filter(i -> i.getLinkableValue(WorkItem.KEY_IDENTIFIER).equals(workItemId))
                 .findFirst().orElse(null);
         if (dbWorkItem == null) {
             return Response.status(Response.Status.NOT_FOUND).build();

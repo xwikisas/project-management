@@ -26,10 +26,7 @@ import org.xwiki.component.annotation.Role;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
-import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
-import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
-import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
+import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -48,9 +45,9 @@ public interface ProjectManagementManager
      * @param client the hint of the client implementation
      * @param workItemId the identifier of the work item that needs retrieval.
      * @return the work item if it was found or null if nothing was found
-     * @throws WorkItemNotFoundException if the work item was not found.
+     * @throws WorkItemException if the work item was not found.
      */
-    WorkItem getWorkItem(String client, String workItemId) throws WorkItemNotFoundException;
+    WorkItem getWorkItem(String client, String workItemId) throws WorkItemException;
 
     /**
      * Retrieve a list of work items based on a filter.
@@ -60,10 +57,10 @@ public interface ProjectManagementManager
      * @param pageSize the maximum number of items the result can have.
      * @param filters a list of filters that the returned items must satisfy.
      * @return a paginated result containing the list of items that satisfy the filters.
-     * @throws WorkItemRetrievalException if there was an exception during the retrieval of the tasks.
+     * @throws WorkItemException if there was an exception during the retrieval of the tasks.
      */
     PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize, List<LiveDataQuery.Filter> filters)
-        throws WorkItemRetrievalException;
+        throws WorkItemException;
 
     /**
      * Create a work item.
@@ -73,7 +70,7 @@ public interface ProjectManagementManager
      * @return the work item that was created.
      * @throws WorkItemCreationException if there was an exception during the creation of the work item.
      */
-    WorkItem createWorkItem(String client, WorkItem workItem) throws WorkItemCreationException;
+    WorkItem createWorkItem(String client, WorkItem workItem) throws WorkItemException;
 
     /**
      * Update a work item.
@@ -81,9 +78,9 @@ public interface ProjectManagementManager
      * @param client the hint of the client implementation.
      * @param workItem the work item that will be updated.
      * @return the work item that was updated.
-     * @throws WorkItemUpdatingException if there was an exception during the updating of the work item.
+     * @throws WorkItemException if there was an exception during the updating of the work item.
      */
-    WorkItem updateWorkItem(String client, WorkItem workItem) throws WorkItemUpdatingException;
+    WorkItem updateWorkItem(String client, WorkItem workItem) throws WorkItemException;
 
     /**
      * The work item that will be deleted.
@@ -91,7 +88,7 @@ public interface ProjectManagementManager
      * @param client the hint of the client implementation.
      * @param workItemId the id of the work item that needs to be deleted.
      * @return true if the work item was deleted; false otherwise.
-     * @throws WorkItemDeletionException if there was any exception during the deletion of the work item.
+     * @throws WorkItemException if there was any exception during the deletion of the work item.
      */
-    boolean deleteWorkItem(String client, String workItemId) throws WorkItemDeletionException;
+    boolean deleteWorkItem(String client, String workItemId) throws WorkItemException;
 }

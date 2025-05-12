@@ -20,6 +20,8 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.HashMap;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
@@ -30,11 +32,17 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @since 1.0
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Linkable<T>
+public class Linkable<T> extends HashMap<String, Object>
 {
-    private T value;
+    /**
+     * The key identifying the value property of the linkable item.
+     */
+    public static final String KEY_VALUE = "value";
 
-    private String location;
+    /**
+     * The key identifying the value property of the linkable item.
+     */
+    public static final String KEY_LOCATION = "location";
 
     /**
      * Default constructor.
@@ -50,8 +58,8 @@ public class Linkable<T>
      */
     public Linkable(T value, String location)
     {
-        this.value = value;
-        this.location = location;
+        put(KEY_VALUE, value);
+        put(KEY_LOCATION, location);
     }
 
     /**
@@ -59,7 +67,7 @@ public class Linkable<T>
      */
     public String getLocation()
     {
-        return location;
+        return (String) get(KEY_LOCATION);
     }
 
     /**
@@ -67,7 +75,7 @@ public class Linkable<T>
      */
     public void setLocation(String location)
     {
-        this.location = location;
+        put(KEY_LOCATION, location);
     }
 
     /**
@@ -75,7 +83,7 @@ public class Linkable<T>
      */
     public T getValue()
     {
-        return value;
+        return (T) get(KEY_VALUE);
     }
 
     /**
@@ -83,6 +91,6 @@ public class Linkable<T>
      */
     public void setValue(T value)
     {
-        this.value = value;
+        put(KEY_VALUE, value);
     }
 }

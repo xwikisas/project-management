@@ -20,10 +20,14 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -36,46 +40,109 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class WorkItem extends HashMap<String, Object>
 {
+    /**
+     * The key identifying the type property of the work item.
+     */
     public static final String KEY_TYPE = "type";
 
+    /**
+     * The key identifying the identifier property of the work item.
+     */
     public static final String KEY_IDENTIFIER = "identifier";
 
+    /**
+     * The key identifying the summary property of the work item.
+     */
     public static final String KEY_SUMMARY = "summary";
 
+    /**
+     * The key identifying the description property of the work item.
+     */
     public static final String KEY_DESCRIPTION = "description";
 
+    /**
+     * The key identifying the startDate property of the work item.
+     */
     public static final String KEY_START_DATE = "startDate";
 
+    /**
+     * The key identifying the dueDate property of the work item.
+     */
     public static final String KEY_DUE_DATE = "dueDate";
 
+    /**
+     * The key identifying the progress property of the work item.
+     */
     public static final String KEY_PROGRESS = "progress";
 
+    /**
+     * The key identifying the creationDate property of the work item.
+     */
     public static final String KEY_CREATION_DATE = "creationDate";
 
+    /**
+     * The key identifying the updateDate property of the work item.
+     */
     public static final String KEY_UPDATE_DATE = "updateDate";
 
+    /**
+     * The key identifying the creator property of the work item.
+     */
     public static final String KEY_CREATOR = "creator";
 
+    /**
+     * The key identifying the assignees property of the work item.
+     */
     public static final String KEY_ASSIGNEES = "assignees";
 
+    /**
+     * The key identifying the priority property of the work item.
+     */
     public static final String KEY_PRIORITY = "priority";
 
+    /**
+     * The key identifying the project property of the work item.
+     */
     public static final String KEY_PROJECT = "project";
 
+    /**
+     * The key identifying the status property of the work item.
+     */
     public static final String KEY_STATUS = "status";
 
+    /**
+     * The key identifying the reporter property of the work item.
+     */
     public static final String KEY_REPORTER = "reporter";
 
+    /**
+     * The key identifying the resolution property of the work item.
+     */
     public static final String KEY_RESOLUTION = "resolution";
 
+    /**
+     * The key identifying the resolved property of the work item.
+     */
     public static final String KEY_RESOLVED = "resolved";
 
+    /**
+     * The key identifying the labels property of the work item.
+     */
     public static final String KEY_LABELS = "labels";
 
+    /**
+     * The key identifying the closeDate property of the work item.
+     */
     public static final String KEY_CLOSE_DATE = "closeDate";
 
+    /**
+     * The key identifying the milestones property of the work item.
+     */
     public static final String KEY_MILESTONES = "milestones";
 
+    /**
+     * The key identifying the closedBy property of the work item.
+     */
     public static final String KEY_CLOSED_BY = "closedBy";
 
     /**
@@ -463,5 +530,63 @@ public class WorkItem extends HashMap<String, Object>
     public void setClosedBy(Linkable<String> closedBy)
     {
         put(KEY_CLOSED_BY, closedBy);
+    }
+
+    /**
+     * @return the map.
+     */
+    @JsonAnyGetter
+    public Map<String, Object> getMapEntries()
+    {
+        return this;
+    }
+
+    /**
+     * @param key the key.
+     * @param value the value.
+     */
+    @JsonAnySetter
+    public void putEntry(String key, Object value)
+    {
+        this.put(key, value);
+    }
+
+    /**
+     * Utility method that retrieves a linkable property.
+     *
+     * @param key the key of the linkable property. i.e. identifier, summary.
+     * @return the linkable property as a map or an empty map if nothing was found.
+     */
+    public Map<String, Object> getLinkable(String key)
+    {
+        Object property = get(key);
+        if (!(property instanceof Map<?, ?>)) {
+            return Collections.emptyMap();
+        }
+        return (Map<String, Object>) property;
+    }
+
+    /**
+     * Utility method that retrieves the value of a linkable property.
+     *
+     * @param key the key of the linkable property. i.e. identifier, summary.
+     * @return the value of the linkable property or null if the linkable property does not exist.
+     */
+    public Object getLinkableValue(String key)
+    {
+
+        return getLinkable(key).get(Linkable.KEY_VALUE);
+    }
+
+    /**
+     * Utility method that retrieves the location of a linkable property.
+     *
+     * @param key the key of the linkable property. i.e. identifier, summary.
+     * @return the location of the linkable property or null if the linkable property does not exist.
+     */
+    public Object getLinkableLocation(String key)
+    {
+
+        return getLinkable(key).get(Linkable.KEY_VALUE);
     }
 }
