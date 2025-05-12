@@ -1,1 +1,3 @@
-com.xwiki.projectmanagement.rest.DefaultWorkItemsResource
+com.xwiki.projectmanagement.internal.DefaultWorkItemsResource
+com.xwiki.projectmanagement.internal.DefaultProjectManagementManager
+com.xwiki.projectmanagement.internal.TestClient

@@ -1,0 +1,6 @@
+com.xwiki.projectmanagement.livadata.ProjectManagementEntryStore
+com.xwiki.projectmanagement.livadata.ProjectManagementPropertyDescriptorStore
+com.xwiki.projectmanagement.livadata.ProjectManagementSource
+com.xwiki.projectmanagement.livadata.ProjectManagementConfigurationResolver
+com.xwiki.projectmanagement.livadata.ProjectManagementConfigurationProvider
+com.xwiki.projectmanagement.livadata.internal.displayer.DefaultProjectManagementLiveDataDisplayer
