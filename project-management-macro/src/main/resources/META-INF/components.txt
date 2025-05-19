@@ -1,0 +1,2 @@
+org.xwiki.projectmanagement.internal.DefaultProjectManagementMacroContext
+org.xwiki.projectmanagement.internal.macro.TestMacro
