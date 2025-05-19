@@ -31,10 +31,10 @@
   <artifactId>project-management</artifactId>
   <version>1.0-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
-  <modules>
-    <module>project-management-api</module>
-    <module>project-management-livedata</module>
-  </modules>
+  <properties>
+    <xwikipro.commons.version>1.0.4</xwikipro.commons.version>
+    <licensing.version>1.28</licensing.version>
+  </properties>
   <packaging>pom</packaging>
   <issueManagement>
     <system>GitHub</system>
@@ -46,9 +46,12 @@
     <url>https://github.com/xwikisas/project-management/tree/master</url>
     <tag>HEAD</tag>
   </scm>
-  <properties>
-    <licensing.version>1.28</licensing.version>
-  </properties>
+  <modules>
+    <module>project-management-api</module>
+    <module>project-management-livedata</module>
+    <module>project-management-macro</module>
+    <module>project-management-openproject</module>
+  </modules>
   <profiles>
     <profile>
       <id>integration-tests</id>

@@ -20,16 +20,26 @@ package com.xwiki.projectmanagement.livadata;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.io.IOUtils;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.internal.JSONMerge;
+import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.rendering.macro.Macro;
 
 /**
  * Some Name.
@@ -42,8 +52,17 @@ import org.xwiki.livedata.internal.JSONMerge;
 public class ProjectManagementConfigurationResolver implements LiveDataConfigurationResolver<LiveDataConfiguration>
 {
     @Inject
+    private ContextualLocalizationManager l10n;
+
+    @Inject
     @Named("projectmanagement")
     private Provider<LiveDataConfiguration> configurationProvider;
+
+    @Inject
+    private ComponentManager componentManager;
+
+    @Inject
+    private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
     private JSONMerge jsonMerge = new JSONMerge();
 
@@ -52,10 +71,67 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
     {
         LiveDataConfiguration defaultConfig = configurationProvider.get();
 
+        defaultConfig = translate(defaultConfig);
+
         defaultConfig.setId(input.getId());
 
-        LiveDataConfiguration mergedConfig = this.jsonMerge.merge(defaultConfig, input);
+        LiveDataConfiguration clientConfig = maybeGetClientConfiguration(input);
 
+        LiveDataConfiguration mergedConfig = null;
+        if (clientConfig != null) {
+            mergedConfig = this.jsonMerge.merge(defaultConfig, clientConfig);
+        }
+        if (mergedConfig != null) {
+            mergedConfig = this.jsonMerge.merge(mergedConfig, input);
+        } else {
+            mergedConfig = this.jsonMerge.merge(defaultConfig, input);
+        }
+        return translate(mergedConfig);
+    }
+
+    private LiveDataConfiguration maybeGetClientConfiguration(LiveDataConfiguration inputConfig)
+    {
+        String clientId = (String) inputConfig.getQuery().getSource().getParameters().get("client");
+        if (clientId == null || clientId.isEmpty()) {
+            return null;
+        }
+        try {
+            Macro macro = componentManager.getInstance(Macro.class, clientId);
+            InputStream inputStream = macro.getClass()
+                .getResourceAsStream(String.format("/%sProjectManagementLiveDataConfiguration.json", clientId));
+            if (inputStream == null) {
+                return null;
+            }
+            return this.stringLiveDataConfigResolver.resolve(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+        } catch (ComponentLookupException | IOException | LiveDataException e) {
+            return null;
+        }
+    }
+
+    private LiveDataConfiguration translate(LiveDataConfiguration mergedConfig)
+    {
+        String translationPrefix =
+            (String) mergedConfig.getQuery().getSource().getParameters().get("translationPrefix");
+        if (translationPrefix == null || translationPrefix.isEmpty()) {
+            return mergedConfig;
+        }
+        for (LiveDataPropertyDescriptor property : mergedConfig.getMeta().getPropertyDescriptors()) {
+            translateProperty(translationPrefix, property);
+        }
         return mergedConfig;
+    }
+
+    private void translateProperty(String translationPrefix, LiveDataPropertyDescriptor property)
+    {
+        String translationPlain = this.l10n.getTranslationPlain(translationPrefix + property.getId());
+        if (translationPlain != null) {
+            property.setName(translationPlain);
+        }
+        if (property.getName() == null) {
+            property.setName(property.getId());
+        }
+        if (property.getDescription() == null) {
+            property.setDescription(this.l10n.getTranslationPlain(translationPrefix + property.getId() + ".hint"));
+        }
     }
 }

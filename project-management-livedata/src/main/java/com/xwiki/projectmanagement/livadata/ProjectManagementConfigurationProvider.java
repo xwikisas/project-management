@@ -72,8 +72,12 @@ public class ProjectManagementConfigurationProvider implements Provider<LiveData
                 }
             } else {
                 InputStream defaultConfigInputStream =
-                    getClass().getResourceAsStream("/customLiveDataConfiguration.json");
-                this.defaultConfigJSON = IOUtils.toString(defaultConfigInputStream, "UTF-8");
+                    getClass().getResourceAsStream("/projectManagementLiveDataConfiguration.json");
+                if (defaultConfigInputStream == null) {
+                    this.defaultConfigJSON = "";
+                } else {
+                    this.defaultConfigJSON = IOUtils.toString(defaultConfigInputStream, "UTF-8");
+                }
             }
             return this.stringLiveDataConfigResolver.resolve(this.defaultConfigJSON);
         } catch (IOException | LiveDataException e) {

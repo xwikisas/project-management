@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
@@ -38,6 +39,7 @@ import org.xwiki.livedata.LiveDataEntryStore;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
@@ -73,6 +75,9 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
 
     @Inject
     private Logger logger;
+
+    @Inject
+    private Provider<XWikiContext> contextProvider;
 
     /**
      * @param entryId identifies the entry to return

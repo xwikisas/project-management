@@ -4,3 +4,4 @@ com.xwiki.projectmanagement.livadata.ProjectManagementSource
 com.xwiki.projectmanagement.livadata.ProjectManagementConfigurationResolver
 com.xwiki.projectmanagement.livadata.ProjectManagementConfigurationProvider
 com.xwiki.projectmanagement.livadata.internal.displayer.DefaultProjectManagementLiveDataDisplayer
+com.xwiki.projectmanagement.livadata.script.ProjectManagementLivedataScriptService

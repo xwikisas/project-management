@@ -1,0 +1,239 @@
+{
+  "query": {
+    "source": {
+      "id": "projectmanagement",
+      "translationPrefix": "projectmanagement.livedata.property."
+    }
+  },
+  "meta": {
+    "entryDescriptor": {
+      "idProperty": "identifier.value"
+    },
+    "propertyDescriptors": [
+      {
+        "id": "identifier.value",
+        "type": "String",
+        "name": "Identifier",
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "identifier.location"
+        }
+      },
+      {
+        "id": "type",
+        "type": "String",
+        "name": "Type",
+        "editable": false,
+        "displayer": "html"
+      },
+      {
+        "id": "summary.value",
+        "type": "String",
+        "name": "Summary",
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "summary.location"
+        }
+      },
+      {
+        "id": "description",
+        "type": "String",
+        "name": "description",
+        "editable": false,
+        "displayer": "text"
+      },
+      {
+        "id": "startDate",
+        "type": "Date",
+        "name": "Start Date",
+        "editable": false
+      },
+      {
+        "id": "dueDate",
+        "type": "Date",
+        "name": "Due Date",
+        "editable": false
+      },
+      {
+        "id": "progress",
+        "type": "String",
+        "name": "Progress",
+        "sortable": true,
+        "filterable": true,
+        "editable": true,
+        "displayer": "number"
+      },
+      {
+        "id": "creationDate",
+        "type": "Date",
+        "name": "Creation Date",
+        "sortable": true,
+        "filterable": true,
+        "editable": false
+      },
+      {
+        "id": "updateDate",
+        "type": "Date",
+        "name": "Update Date",
+        "sortable": true,
+        "filterable": true,
+        "editable": false
+      },
+      {
+        "id": "creator.value",
+        "type": "String",
+        "name": "Creator",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "creator.location"
+        }
+      },
+      {
+        "id": "assignees",
+        "type": "String",
+        "name": "Assignee(s)",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": "html"
+      },
+      {
+        "id": "priority",
+        "type": "String",
+        "name": "Priority",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": "text"
+      },
+      {
+        "id": "project.value",
+        "type": "String",
+        "name": "Project",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "project.location"
+        }
+      },
+      {
+        "id": "status",
+        "type": "String",
+        "name": "Status",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": "text"
+      },
+      {
+        "id": "reporter.value",
+        "type": "String",
+        "name": "Reporter",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "reporter.location"
+        }
+      },
+      {
+        "id": "resolution",
+        "type": "String",
+        "name": "Resolution",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": "text"
+      },
+      {
+        "id": "resolved",
+        "type": "Boolean",
+        "name": "Resolved"
+      },
+      {
+        "id": "labels",
+        "type": "String",
+        "name": "Labels",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": "text"
+      },
+      {
+        "id": "closeDate",
+        "type": "Date",
+        "name": "Close Date",
+        "editable": false
+      },
+      {
+        "id": "milestones.value",
+        "type": "String",
+        "name": "Milestones",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "milestones.location"
+        }
+      },
+      {
+        "id": "closedBy.value",
+        "type": "String",
+        "name": "Closed By",
+        "sortable": true,
+        "filterable": true,
+        "editable": false,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "closedBy.location"
+        }
+      }
+    ],
+    "propertyTypes": [
+      {
+        "id": "Boolean",
+        "sortable": true,
+        "filterable": true,
+        "editable": true,
+        "displayer": "boolean",
+        "filter": {
+          "id": "boolean",
+          "trueValue": 1,
+          "falseValue": 0
+        }
+      },
+      {
+        "id": "Date",
+        "sortable": true,
+        "filterable": true,
+        "editable": true,
+        "displayer": "date",
+        "filter": "date"
+      },
+      {
+        "id": "Number",
+        "sortable": true,
+        "filterable": true,
+        "editable": true,
+        "displayer": "number",
+        "filter": "number"
+      },
+      {
+        "id": "String",
+        "sortable": true,
+        "filterable": true,
+        "editable": true,
+        "filter": "text"
+      }
+    ]
+  }
+}
