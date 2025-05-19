@@ -27,11 +27,11 @@
     <artifactId>project-management</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-  <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <artifactId>project-management-openproject</artifactId>
 
   <modules>
+    <module>project-management-openproject-macro</module>
   </modules>
 
 </project>
