@@ -36,6 +36,10 @@
     <module>project-management-livedata</module>
     <module>project-management-ui</module>
   </modules>
+  <properties>
+    <xwikipro.commons.version>1.0.4</xwikipro.commons.version>
+    <licensing.version>1.28</licensing.version>
+  </properties>
   <packaging>pom</packaging>
   <issueManagement>
     <system>GitHub</system>
@@ -51,6 +55,12 @@
     <licensing.version>1.28</licensing.version>
     <oidc.version>2.17.3</oidc.version>
   </properties>
+  <modules>
+    <module>project-management-api</module>
+    <module>project-management-livedata</module>
+    <module>project-management-macro</module>
+    <module>project-management-openproject</module>
+  </modules>
   <profiles>
     <profile>
       <id>integration-tests</id>

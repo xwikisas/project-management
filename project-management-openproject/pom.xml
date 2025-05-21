@@ -27,31 +27,11 @@
     <artifactId>project-management</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
+  <packaging>pom</packaging>
+  <artifactId>project-management-openproject</artifactId>
 
-  <artifactId>project-management-api</artifactId>
-  <dependencies>
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.xml.bind</groupId>
-      <artifactId>jakarta.xml.bind-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-livedata-api</artifactId>
-      <version>${platform.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-livedata-rest</artifactId>
-      <version>${platform.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-rest-server</artifactId>
-      <version>${platform.version}</version>
-    </dependency>
-  </dependencies>
+  <modules>
+    <module>project-management-openproject-macro</module>
+  </modules>
+
 </project>
