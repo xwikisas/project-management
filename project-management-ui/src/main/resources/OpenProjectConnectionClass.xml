@@ -1,0 +1,156 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="ProjectManagement.OpenProjectConnectionClass" locale="">
+  <web>ProjectManagement</web>
+  <name>OpenProjectConnectionClass</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>XWiki.XWikiClasses</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>OpenProjectConnection Class</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>{{velocity}}
+## Replace the default space with the space where you want your documents to be created.
+## Replace the default parent with the one of your choice and save the document.
+##
+#set ($defaultSpace = 'ProjectManagement')
+#set ($defaultParent = 'ProjectManagement.WebHome')
+{{/velocity}}</content>
+  <class>
+    <name>ProjectManagement.OpenProjectConnectionClass</name>
+    <customClass/>
+    <customMapping/>
+    <defaultViewSheet/>
+    <defaultEditSheet/>
+    <defaultWeb/>
+    <nameField/>
+    <validationScript/>
+    <clientId>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>clientId</name>
+      <number>3</number>
+      <picker>1</picker>
+      <prettyName>Client Id</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </clientId>
+    <clientSecret>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>clientSecret</name>
+      <number>4</number>
+      <picker>1</picker>
+      <prettyName>Client Secret</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </clientSecret>
+    <connectionName>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>connectionName</name>
+      <number>1</number>
+      <picker>1</picker>
+      <prettyName>Connection Name</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </connectionName>
+    <serverURL>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>serverURL</name>
+      <number>2</number>
+      <picker>1</picker>
+      <prettyName>Server URL</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </serverURL>
+  </class>
+  <object>
+    <name>ProjectManagement.OpenProjectConnectionClass</name>
+    <number>0</number>
+    <className>XWiki.DocumentSheetBinding</className>
+    <guid>ebe3fa45-302a-4fab-929e-56e6cbbca779</guid>
+    <class>
+      <name>XWiki.DocumentSheetBinding</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <sheet>
+        <cache>0</cache>
+        <classname/>
+        <customDisplay/>
+        <disabled>0</disabled>
+        <displayType>input</displayType>
+        <hint/>
+        <idField/>
+        <multiSelect>0</multiSelect>
+        <name>sheet</name>
+        <number>1</number>
+        <picker>1</picker>
+        <prettyName>Sheet</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators/>
+        <size>30</size>
+        <sort>none</sort>
+        <sql/>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <valueField/>
+        <classType>com.xpn.xwiki.objects.classes.PageClass</classType>
+      </sheet>
+    </class>
+    <property>
+      <sheet>XWiki.ClassSheet</sheet>
+    </property>
+  </object>
+</xwikidoc>
