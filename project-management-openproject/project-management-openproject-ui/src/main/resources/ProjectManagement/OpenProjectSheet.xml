@@ -45,11 +45,10 @@
   #set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
   ##handle the create connection request
   #set ($formToken = $request.form_token)
-  #set ($connectionName = $escapetool.xml($request.connectionName))
-  #set ($serverURL = $escapetool.xml($request.serverURL))
-  #set ($clientId = $escapetool.xml($request.clientId))
-  #set ($clientSecret = $escapetool.xml($request.clientSecret))
-  #set ($linkedId = $escapetool.xml($request.linkedId))
+  #set ($connectionName = $request.connectionName)
+  #set ($serverURL = $request.serverURL)
+  #set ($clientId = $request.clientId)
+  #set ($clientSecret = $request.clientSecret)
   #if($stringtool.isNotBlank($connectionName)&amp;&amp; $stringtool.isNotBlank($serverURL)&amp;&amp; $stringtool.isNotBlank($clientId) &amp;&amp; $stringtool.isNotBlank($clientSecret) &amp;&amp; $services.csrf.isTokenValid($formToken))
     #set ($documentName = "${connectionName}InstanceConfiguration")
     #set ($documentRef = $services.model.createDocumentReference($xcontext.getDatabase(), $configDocSpace, $documentName))
@@ -104,7 +103,7 @@
         #set($currentIndex = $foreach.index + 1)
         $currentIndex
       &lt;/div&gt;
-      &lt;form id="${connectionName}" method="post" action="$document.getURL("save", "xredirect=$escapetool.url(${redirect})")" class="withLock xform"&gt;
+      &lt;form id="$escapetool.xml(${connectionName})" method="post" action="$document.getURL("save", "xredirect=$escapetool.url($redirect)")" class="withLock xform"&gt;
         &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
         &lt;div&gt;
           &lt;input
@@ -119,7 +118,7 @@
             &gt;
           &lt;input
             id="${escapetool.xml("${configClassName}_${connectionName}_title")}"
-            value="${document.getTitle()}"
+            value="${escapetool.xml(${document.getTitle()})}"
             name="title"
             type="hidden"
             &gt;
@@ -205,7 +204,7 @@
     <name>ProjectManagement.OpenProjectSheet</name>
     <number>0</number>
     <className>XWiki.JavaScriptExtension</className>
-    <guid>051e2165-98bc-4e37-9cd7-a6514a06d118</guid>
+    <guid>e7168df2-04d4-422c-96c7-5341c12085ce</guid>
     <class>
       <name>XWiki.JavaScriptExtension</name>
       <customClass/>
