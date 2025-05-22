@@ -104,7 +104,7 @@
         #set($currentIndex = $foreach.index + 1)
         $currentIndex
       &lt;/div&gt;
-      &lt;form id="${connectionName}" method="post" action="$document.getURL("save", "xredirect=$escapetool.xml(${redirect})")" class="withLock xform"&gt;
+      &lt;form id="${connectionName}" method="post" action="$document.getURL("save", "xredirect=$escapetool.url(${redirect})")" class="withLock xform"&gt;
         &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
         &lt;div&gt;
           &lt;input
@@ -188,7 +188,7 @@
           &gt;
         &lt;/div&gt;
         &lt;div&gt;
-          &lt;a href="$document.getURL('delete', "&amp;amp;form_token=$!{services.csrf.getToken()}&amp;amp;confirm=1&amp;amp;xredirect=$escapetool.xml(${redirect})")"")"&gt;$escapetool.xml($services.localization.render('openproject.config.delete'))&lt;/a&gt;
+          &lt;a href="$document.getURL('delete', "&amp;amp;form_token=$!{services.csrf.getToken()}&amp;amp;confirm=1&amp;amp;xredirect=$escapetool.url($redirect)")&gt;$escapetool.xml($services.localization.render('openproject.config.delete'))&lt;/a&gt;
           &lt;button type="submit" for="$escapetool.xml(connectionName)"&gt;$escapetool.xml($services.localization.render('openproject.config.update'))&lt;/button&gt;
         &lt;/div&gt;
       &lt;/form&gt;
@@ -205,7 +205,7 @@
     <name>ProjectManagement.OpenProjectSheet</name>
     <number>0</number>
     <className>XWiki.JavaScriptExtension</className>
-    <guid>e7168df2-04d4-422c-96c7-5341c12085ce</guid>
+    <guid>051e2165-98bc-4e37-9cd7-a6514a06d118</guid>
     <class>
       <name>XWiki.JavaScriptExtension</name>
       <customClass/>
