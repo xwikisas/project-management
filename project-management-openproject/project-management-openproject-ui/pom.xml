@@ -24,16 +24,18 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
+    <artifactId>project-management-openproject</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>project-management-ui</artifactId>
+  <artifactId>project-management-openproject-ui</artifactId>
 
   <packaging>xar</packaging>
 
-  <name>Project Management UI</name>
-
+  <name>Project Management Open Project UI</name>
+  <properties>
+    <oidc.version>2.17.3</oidc.version>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>
