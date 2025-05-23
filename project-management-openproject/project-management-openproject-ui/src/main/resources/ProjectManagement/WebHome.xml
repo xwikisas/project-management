@@ -20,32 +20,21 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.ProjectManagementAdministration" locale="">
+<xwikidoc version="1.5" reference="ProjectManagement.WebHome" locale="">
   <web>ProjectManagement</web>
-  <name>ProjectManagementAdministration</name>
+  <name>WebHome</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
+  <parent>Main.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>ProjectManagementAdministration</title>
+  <title>ProjectManagement</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>{{velocity}}
-#set ($title = $services.localization.render('openproject.config.connectionsTitle'))
-#set ($description = $services.localization.render('openproject.config.connectionsDescription'))
-==$escapetool.xml($services.rendering.escape($title, 'xwiki/2.1'))==
-$escapetool.xml($services.rendering.escape($description, 'xwiki/2.1'))
-
-{{html wiki="false"}}
-$xwiki.includeTopic("ProjectManagement.OpenProjectSheet")
-{{/html}}
-
-{{/velocity}}
-</content>
+  <content/>
 </xwikidoc>

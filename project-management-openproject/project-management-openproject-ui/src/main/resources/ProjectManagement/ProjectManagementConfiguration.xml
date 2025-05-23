@@ -27,7 +27,7 @@
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>WebHome</parent>
+  <parent>ProjectManagement.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -41,7 +41,7 @@
     <name>ProjectManagement.ProjectManagementConfiguration</name>
     <number>0</number>
     <className>XWiki.ConfigurableClass</className>
-    <guid>d65576fd-2536-4d54-870e-a4201c469d3e</guid>
+    <guid>d94a8b83-c7be-4b15-9dc9-61d6f51935de</guid>
     <class>
       <name>XWiki.ConfigurableClass</name>
       <customClass/>

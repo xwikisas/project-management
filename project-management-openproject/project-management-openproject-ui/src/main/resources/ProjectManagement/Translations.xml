@@ -27,7 +27,7 @@
   <defaultLanguage>en</defaultLanguage>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>Dashboard.WebHome</parent>
+  <parent>ProjectManagement.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -50,7 +50,7 @@ openproject.config.update=Update</content>
     <name>ProjectManagement.Translations</name>
     <number>0</number>
     <className>XWiki.TranslationDocumentClass</className>
-    <guid>8ebdffe0-112f-486c-b84a-ce6d184b892b</guid>
+    <guid>60d031df-e1d4-40f5-95a6-80941fb52261</guid>
     <class>
       <name>XWiki.TranslationDocumentClass</name>
       <customClass/>
