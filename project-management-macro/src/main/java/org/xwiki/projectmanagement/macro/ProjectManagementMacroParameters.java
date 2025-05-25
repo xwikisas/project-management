@@ -21,8 +21,11 @@ package org.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
+import org.xwiki.projectmanagement.ProjectManagementFilter;
 import org.xwiki.projectmanagement.ProjectManagementProperties;
+import org.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.stability.Unstable;
 
 /**
@@ -32,6 +35,18 @@ import org.xwiki.stability.Unstable;
 @Unstable
 public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 {
+    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.LIVEDATA;
+
+    /**
+     * Default constructor.
+     */
+    public ProjectManagementMacroParameters()
+    {
+        // Set default values.
+        setProperties("identifier.value,type,summary.value,description,startDate,resolved,assignees");
+        setLimit(5);
+    }
+
     @Override
     public String getProperties()
     {
@@ -43,5 +58,73 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     public void setProperties(String properties)
     {
         super.setProperties(properties);
+    }
+
+    @PropertyDisplayType(ProjectManagementFilter.class)
+    @Override
+    public void setFilters(String filters)
+    {
+        super.setFilters(filters);
+    }
+
+    /**
+     * @return the displayer id that determines how the work items should be displayed.
+     */
+    public WorkItemsDisplayer getWorkItemsDisplayer()
+    {
+        return workItemsDisplayer;
+    }
+
+    /**
+     * @param workItemsDisplayer see {@link #getWorkItemsDisplayer()}.
+     */
+    @PropertyDisplayType(WorkItemsDisplayer.class)
+    public void setWorkItemsDisplayer(WorkItemsDisplayer workItemsDisplayer)
+    {
+        this.workItemsDisplayer = workItemsDisplayer;
+    }
+
+    // We hide some parameters in order to make the macro simpler to use.
+
+    @PropertyHidden
+    @Override
+    public void setPageSizes(String pageSizes)
+    {
+        super.setPageSizes(pageSizes);
+    }
+
+    @PropertyHidden
+    @Override
+    public Boolean getShowPageSizeDropdown()
+    {
+        return super.getShowPageSizeDropdown();
+    }
+
+    @PropertyHidden
+    @Override
+    public void setLayouts(String layouts)
+    {
+        super.setLayouts(layouts);
+    }
+
+    @PropertyHidden
+    @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
+    }
+
+    @PropertyHidden
+    @Override
+    public void setSourceParameters(String sourceParameters)
+    {
+        super.setSourceParameters(sourceParameters);
+    }
+
+    @PropertyHidden
+    @Override
+    public void setId(String id)
+    {
+        super.setId(id);
     }
 }

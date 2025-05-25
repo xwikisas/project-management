@@ -2,8 +2,7 @@
   "query": {
     "source": {
       "id": "projectmanagement",
-      "translationPrefix": "openproject.livedata.property.",
-      "client": "openproject"
+      "translationPrefix": "openproject.livedata.property."
     }
   }
 }

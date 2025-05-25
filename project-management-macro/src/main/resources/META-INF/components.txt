@@ -1,2 +1,4 @@
 org.xwiki.projectmanagement.internal.DefaultProjectManagementMacroContext
 org.xwiki.projectmanagement.internal.macro.TestMacro
+org.xwiki.projectmanagement.internal.displayers.WorkItemsCardsDisplayer
+org.xwiki.projectmanagement.internal.displayers.WorkItemsListDisplayer

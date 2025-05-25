@@ -25,7 +25,6 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
-import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
@@ -44,22 +43,28 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
      */
     public OpenProjectMacro()
     {
-        super("Open Project", "Retrieve work items from open project.",
-            new DefaultContentDescriptor("Some description", false), OpenProjectMacroParameters.class);
+        super("Open Project", "Retrieve work items from open project.", null, OpenProjectMacroParameters.class);
     }
 
     @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
+        addToSourceParams(parameters, "client", "test");
+
         String instance = parameters.getInstance();
         if (instance == null || instance.isEmpty()) {
             return;
         }
+        addToSourceParams(parameters, "instance", instance);
+    }
+
+    private void addToSourceParams(OpenProjectMacroParameters parameters, String key, String value)
+    {
         String sourceParameters = parameters.getSourceParameters();
         if (sourceParameters == null || sourceParameters.isEmpty()) {
-            parameters.setSourceParameters(String.format("instance=%s", instance));
+            parameters.setSourceParameters(String.format("%s=%s", key, value));
         } else {
-            parameters.setSourceParameters(String.format("%s&instance=%s", sourceParameters, instance));
+            parameters.setSourceParameters(String.format("%s&%s=%s", sourceParameters, key, value));
         }
     }
 }
