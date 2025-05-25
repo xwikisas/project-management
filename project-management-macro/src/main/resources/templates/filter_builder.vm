@@ -1,0 +1,61 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#macro (livedataProperties_displayOptions $selectedValues)
+  #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
+  #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
+    #set ($discard = $options.add({
+      'name': $propertyDescriptor.id,
+      'value': $propertyDescriptor.name
+    }))
+    <option value="$!escapetool.xml($propertyDescriptor.id)"#if ($selectedValues.contains($propertyDescriptor.id)) selected="selected"#end
+      >$!escapetool.xml($propertyDescriptor.name)</option>
+  #end
+#end
+#macro (filterBuilder $parameters)
+#picker_import
+#set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
+#set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
+##set ($discard = $xwiki.jsrx.use('js/projectmanagement/filterBuilder.js'))
+<div class="projManagementConstraintBuilder">
+  <div>
+    <button id="addConstraint" class="btn btn-default">
+      $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))
+    </button>
+  </div>
+  <div class="projManagConstraints">
+  </div>
+  <div id="projManagConstraintTemplate" class="hidden projManagConstraint">
+    <div>
+      <select class="projManagConstraintName">
+        #livedataProperties_displayOptions([])
+      </select>
+    </div>
+    <div>
+      <span>
+        $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.constraint.equals'))
+      </span>
+    </div>
+    <div>
+      <input class="projManagConstraintValue" type="text"
+        placeholder="$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.placeholder'))" />
+    </div>
+  </div>
+</div>
+#end

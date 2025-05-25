@@ -85,7 +85,7 @@ public class DefaultProjectManagementManager implements ProjectManagementManager
         try {
             return componentManager.getInstance(ProjectManagementClient.class, hint);
         } catch (ComponentLookupException e) {
-            throw new WorkItemException(String.format("Failed to retrieve the client with hint [{}].", hint));
+            throw new WorkItemException(String.format("Failed to retrieve the client with hint [%s].", hint));
         }
     }
 }

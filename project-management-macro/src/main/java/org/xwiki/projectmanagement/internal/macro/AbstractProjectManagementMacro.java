@@ -27,9 +27,13 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.http.client.utils.URLEncodedUtils;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
 import org.xwiki.projectmanagement.ProjectManagementMacroContext;
 import org.xwiki.projectmanagement.internal.DefaultProjectManagementMacroContext;
+import org.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
@@ -43,14 +47,18 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
  * @param <T> something.
  * @version $Id$
  */
-public abstract class AbstractProjectManagementMacro<T extends LiveDataMacroParameters> extends AbstractMacro<T>
+public abstract class AbstractProjectManagementMacro<T extends ProjectManagementMacroParameters>
+    extends AbstractMacro<T>
 {
+    @Inject
+    protected ProjectManagementMacroContext projectManagementMacroContext;
+
     @Inject
     @Named("liveData")
     private Macro<LiveDataMacroParameters> liveDataMacro;
 
     @Inject
-    private ProjectManagementMacroContext projectManagementMacroContext;
+    private ComponentManager componentManager;
 
     /**
      * @param name smth
@@ -84,13 +92,20 @@ public abstract class AbstractProjectManagementMacro<T extends LiveDataMacroPara
     public List<Block> execute(T parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
         if (projectManagementMacroContext instanceof DefaultProjectManagementMacroContext) {
             ((DefaultProjectManagementMacroContext) projectManagementMacroContext).setSourceParams(
                 URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8));
         }
-        return liveDataMacro.execute(parameters, content, context);
+        try {
+            Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.toString());
+
+            return displayerMacro.execute(parameters, content, context);
+        } catch (ComponentLookupException e) {
+            throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
+        }
     }
 
     /**
