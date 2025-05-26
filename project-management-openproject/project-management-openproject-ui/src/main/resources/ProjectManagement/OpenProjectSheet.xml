@@ -1,0 +1,365 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="ProjectManagement.OpenProjectSheet" locale="">
+  <web>ProjectManagement</web>
+  <name>OpenProjectSheet</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>ProjectManagement.WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>OpenProjectSheet</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>{{velocity}}
+#if($hasAdmin)
+  #set ($redirect = $xwiki.relativeRequestURL)
+  #set ($configClassName = 'ProjectManagement.OpenProjectConnectionClass')
+  #set ($configDocSpace = ['ProjectManagement', 'OpenProjectConfigurations'])
+  #set ($oidcClassName = 'XWiki.OIDC.ClientConfigurationClass')
+  #set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
+  ##handle the create connection request
+  #set ($formToken = $request.form_token)
+  #set ($connectionName = $request.connectionName)
+  #set ($serverURL = $request.serverURL)
+  #set ($clientId = $request.clientId)
+  #set ($clientSecret = $request.clientSecret)
+  #if($stringtool.isNotBlank($connectionName)&amp;&amp; $stringtool.isNotBlank($serverURL)&amp;&amp; $stringtool.isNotBlank($clientId) &amp;&amp; $stringtool.isNotBlank($clientSecret) &amp;&amp; $services.csrf.isTokenValid($formToken))
+    #set ($documentName = "${connectionName}InstanceConfiguration")
+    #set ($documentRef = $services.model.createDocumentReference($xcontext.getDatabase(), $configDocSpace, $documentName))
+    #set ($document = $xwiki.getDocument($documentRef))
+    #set ($discard = $document.setTitle($documentName))
+    #set ($discard = $document.setHidden(true))
+    #set ($configObject = $document.getObject($configClassName, true))
+    #set ($discard = $configObject.set('connectionName', $connectionName))
+    #set ($discard = $configObject.set('serverURL', $serverURL))
+    #set ($discard = $configObject.set('clientId', $clientId))
+    #set ($discard = $configObject.set('clientSecret', $clientSecret))
+    ##create the oidc configuration
+    #set ($oidcObject = $document.getObject($oidcClassName, true))
+    #set ($discard = $oidcObject.set('configurationName', $connectionName))
+    #set ($discard = $oidcObject.set('authorizationEndpoint', $serverURL.concat('/oauth/authorize')))
+    #set ($discard = $oidcObject.set('tokenEndpoint', $serverURL.concat('/oauth/token')))
+    #set ($discard = $oidcObject.set('clientId', $clientId))
+    #set ($discard = $oidcObject.set('clientSecret', $clientSecret))
+    #set ($discard = $oidcObject.set('tokenEndpointMethod', 'client_secret_basic'))
+    #set ($discard = $oidcObject.set('skipped', 0))
+    #set ($discard = $oidcObject.set('scope', 'api_v3'))
+    #set ($discard = $oidcObject.set('responseType', 'code'))
+    #set ($discard = $oidcObject.set('enableUser', 1))
+    #set ($discard = $oidcObject.set('tokenStorageScope', 'USER'))
+    #set ($discard = $document.save())
+    #set ($discard = $response.sendRedirect($redirect))
+  #end
+  {{html clean="false"}}
+  &lt;form method="post"&gt;
+    &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
+    &lt;label for="connectionName"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionName'))&lt;/label&gt;
+    &lt;input id="connectionName" name="connectionName" type="text" required&gt;
+    &lt;label for="serverURL"&gt;$escapetool.xml($services.localization.render('openproject.config.serverUrl'))&lt;/label&gt;
+    &lt;input id="serverURL" name="serverURL" type="text" required&gt;
+    &lt;label for="clientId"&gt;$escapetool.xml($services.localization.render('openproject.config.clientId'))&lt;/label&gt;
+    &lt;input id="clientId" name="clientId" type="text" required&gt;
+    &lt;label for="clientSecret"&gt;$escapetool.xml($services.localization.render('openproject.config.clientSecret'))&lt;/label&gt;
+    &lt;input id="clientSecret" name="clientSecret" type="text" required&gt;
+    &lt;button class="button" type="submit"&gt;$escapetool.xml($services.localization.render('openproject.config.addNewConnection'))&lt;/button&gt;
+  &lt;/form&gt;
+  #set ($query = "from doc.object($configClassName) as connection")
+  #set ($connectionsDocs = $services.query.xwql($query).execute())
+  #foreach($connectionDoc in $connectionsDocs)
+    #set ($document = $xwiki.getDocument($connectionDoc))
+    #set ($connection = $document.getObject($configClassName))
+    #set ($connectionName = $connection.get('connectionName'))
+    #set ($oauthConnection = $document.getObject($oidcClassName))
+    #set ($documentRef = $services.model.createDocumentReference($xcontext.getDatabase(), $configDocSpace, $connectionName))
+    #set ($oauthConnection = $document.getObject($oidcClassName))
+    &lt;div&gt;
+      &lt;div&gt;
+        #set($currentIndex = $foreach.index + 1)
+        $currentIndex
+      &lt;/div&gt;
+      &lt;form id="$escapetool.xml(${connectionName})" method="post" action="$document.getURL("save", "xredirect=$escapetool.url($redirect)")" class="withLock xform"&gt;
+        &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
+        &lt;div&gt;
+          &lt;input
+            id="${escapetool.xml("${configClassName}_0_${connectionName}_connectionName")}"
+            class="connection-name-input"
+            name="${escapetool.xml($configClassName)}_0_connectionName"
+            value="$escapetool.xml($connection.getValue('connectionName'))"
+            data-config-connection-name="${escapetool.xml($connectionName)}"
+            data-config-connection-class-name="${escapetool.xml($configClassName)}"
+            data-config-class-name="${escapetool.xml($oidcClassName)}"
+            type="text"
+            &gt;
+          &lt;input
+            id="${escapetool.xml("${configClassName}_${connectionName}_title")}"
+            value="${escapetool.xml(${document.getTitle()})}"
+            name="title"
+            type="hidden"
+            &gt;
+          &lt;input
+            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_configurationName")}"
+            name="${escapetool.xml($oidcClassName)}_0_configurationName"
+            value="$escapetool.xml($oauthConnection.getValue('configurationName'))"
+            type="hidden"
+          &gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+          &lt;input
+            id="${escapetool.xml("${configClassName}_0_${connectionName}_serverURL")}"
+            class="server-url-input"
+            name="${escapetool.xml($configClassName)}_0_serverURL"
+            value="$escapetool.xml($connection.getValue('serverURL'))"
+            data-config-class-name="${escapetool.xml($oidcClassName)}"
+            data-config-connection-name="${escapetool.xml($connectionName)}"
+            type="text"
+          &gt;
+          &lt;input
+            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_tokenEndpoint")}"
+            name="${escapetool.xml($oidcClassName)}_0_tokenEndpoint"
+            value="$escapetool.xml($oauthConnection.getValue('tokenEndpoint'))"
+            type="hidden"
+            &gt;
+          &lt;input
+            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_authorizationEndpoint")}"
+            name="${escapetool.xml($oidcClassName)}_0_authorizationEndpoint"
+            value="$escapetool.xml($oauthConnection.getValue('authorizationEndpoint'))"
+            type="hidden"
+          &gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+          &lt;input
+            id="${escapetool.xml("${configClassName}_${connectionName}_clientId")}"
+            class="client-id-input"
+            name="${escapetool.xml($configClassName)}_0_clientId"
+            value="$escapetool.xml($connection.getValue('clientId'))"
+            data-config-class-name="${escapetool.xml($oidcClassName)}"
+            data-config-connection-name="${escapetool.xml($connectionName)}"
+            type="text"
+          &gt;
+          &lt;input
+            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_clientId")}"
+            name="${escapetool.xml($oidcClassName)}_0_clientId"
+            value="$escapetool.xml($oauthConnection.getValue('clientId'))"
+            type="hidden"
+          &gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+          &lt;input
+            id="${escapetool.xml("${configClassName}_${connectionName}_clientSecret")}"
+            class="client-secret-input"
+            name="${escapetool.xml($configClassName)}_0_clientSecret"
+            value="$escapetool.xml($connection.getValue('clientSecret'))"
+            data-config-class-name="${escapetool.xml($oidcClassName)}"
+            data-config-connection-name="${escapetool.xml($connectionName)}"
+            type="text"
+          &gt;
+          &lt;input
+            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_clientSecret")}"
+            name="${escapetool.xml($oidcClassName)}_0_clientSecret"
+            value="$escapetool.xml($oauthConnection.getValue('clientSecret'))"
+            type="hidden"
+          &gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+          &lt;a href="$document.getURL('delete', "&amp;amp;form_token=$!{services.csrf.getToken()}&amp;amp;confirm=1&amp;amp;xredirect=$escapetool.url($redirect)")"&gt;$escapetool.xml($services.localization.render('openproject.config.delete'))&lt;/a&gt;
+          &lt;button type="submit" for="$escapetool.xml(connectionName)"&gt;$escapetool.xml($services.localization.render('openproject.config.update'))&lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  #end
+  {{/html}}
+#else
+  {{info}}
+    $escapetool.xml($services.localization.render('openproject.config.noRights'))
+  {{/info}}
+#end
+{{/velocity}}</content>
+  <object>
+    <name>ProjectManagement.OpenProjectSheet</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>e7168df2-04d4-422c-96c7-5341c12085ce</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>default</cache>
+    </property>
+    <property>
+      <code>require(["jquery"], function ($) {
+  $(document).ready(function () {
+    $(".connection-name-input").on("input", function () {
+      const configClassName = $(this).data("config-class-name");
+      const configConnectionClassName = $(this).data(
+        "config-connection-class-name"
+      );
+      const connectionName = $(this).data("config-connection-name");
+      const hiddenConfigurationNameInput =
+        `${configClassName}_0_${connectionName}_configurationName`.replace(
+          /\./g,
+          "\\."
+        );
+      const hiddenTitleInput =
+        `${configConnectionClassName}_${connectionName}_title`.replace(
+          /\./g,
+          "\\."
+        );
+      $(`#${hiddenConfigurationNameInput}`).val($(this).val());
+      $(`#${hiddenTitleInput}`).val(`${$(this).val()}InstanceConfiguration`);
+    });
+
+    $(".server-url-input").on("input", function () {
+      const configClassName = $(this).data("config-class-name");
+      const connectionName = $(this).data("config-connection-name");
+      const currentInputValue = $(this).val();
+      const hiddenTokenEndpointInput =
+        `${configClassName}_0_${connectionName}_tokenEndpoint`.replace(
+          /\./g,
+          "\\."
+        );
+      const hiddenAuthorizationEndpointInput =
+        `${configClassName}_0_${connectionName}_authorizationEndpoint`.replace(
+          /\./g,
+          "\\."
+        );
+      $(`#${hiddenTokenEndpointInput}`).val(`${currentInputValue}/oauth/token`);
+      $(`#${hiddenAuthorizationEndpointInput}`).val(
+        `${currentInputValue}/oauth/authorize`
+      );
+    });
+
+    $(".client-id-input").on("input", function () {
+      const configClassName = $(this).data("config-class-name");
+      const connectionName = $(this).data("config-connection-name");
+      const hiddenClientIdInput =
+        `${configClassName}_0_${connectionName}_clientId`.replace(/\./g, "\\.");
+      $(`#${hiddenClientIdInput}`).val($(this).val());
+    });
+
+    $(".client-secret-input").on("input", function () {
+      const configClassName = $(this).data("config-class-name");
+      const connectionName = $(this).data("config-connection-name");
+      const hiddenClientSecretInput =
+        `${configClassName}_0_${connectionName}_clientSecret`.replace(
+          /\./g,
+          "\\."
+        );
+      $(`#${hiddenClientSecretInput}`).val($(this).val());
+    });
+  });
+});
+</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+</xwikidoc>
