@@ -39,8 +39,8 @@
   <content>{{velocity}}
 #set ($title = $services.localization.render('openproject.config.connectionsTitle'))
 #set ($description = $services.localization.render('openproject.config.connectionsDescription'))
-==$escapetool.xml($services.rendering.escape($title, 'xwiki/2.1'))==
-$escapetool.xml($services.rendering.escape($description, 'xwiki/2.1'))
+==$services.rendering.escape($title, 'xwiki/2.1')==
+$services.rendering.escape($description, 'xwiki/2.1')
 
 {{html wiki="false"}}
 $xwiki.includeTopic("ProjectManagement.OpenProjectSheet")
