@@ -30,7 +30,8 @@
   #end
   #set ($parameters = {
     'multiple': 'multiple',
-    'options': $options
+    'options': $options,
+    'prefix': ' '
   })
   #set ($discard = $parameters.putAll($params))
   #staticSelectPicker($parameters)

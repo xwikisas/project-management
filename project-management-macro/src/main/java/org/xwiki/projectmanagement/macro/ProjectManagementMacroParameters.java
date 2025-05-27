@@ -35,6 +35,10 @@ import org.xwiki.stability.Unstable;
 @Unstable
 public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 {
+    private String identifier;
+
+    private String url;
+
     private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.LIVEDATA;
 
     /**
@@ -45,6 +49,23 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         // Set default values.
         setProperties("identifier.value,type,summary.value,description,startDate,resolved,assignees");
         setLimit(5);
+    }
+
+    /**
+     * @return the identifier for a work item (i.e. ISSUE-100 in case of jira) or an url containing either the
+     *     identifier for a work item or a filter retrieving a list of work items.
+     */
+    public String getIdentifier()
+    {
+        return identifier;
+    }
+
+    /**
+     * @param identifier see {@link #getIdentifier()}.
+     */
+    public void setIdentifier(String identifier)
+    {
+        this.identifier = identifier;
     }
 
     @Override
