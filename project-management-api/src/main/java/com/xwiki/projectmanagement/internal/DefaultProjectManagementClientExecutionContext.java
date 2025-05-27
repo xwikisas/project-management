@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.internal;
+package com.xwiki.projectmanagement.internal;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,36 +20,49 @@ package org.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.List;
+import java.util.Collections;
+import java.util.Map;
 
 import javax.inject.Singleton;
 
-import org.apache.http.NameValuePair;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.projectmanagement.ProjectManagementMacroContext;
+
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 
 /**
- * SOme description.
+ * Default implementation for the {@link ProjectManagementClientExecutionContext}. Uses thread local map that should be
+ * set before the client should be executed.
  *
  * @version $Id$
  */
 @Component
 @Singleton
-public class DefaultProjectManagementMacroContext implements ProjectManagementMacroContext
+public class DefaultProjectManagementClientExecutionContext implements ProjectManagementClientExecutionContext
 {
-    private final ThreadLocal<List<NameValuePair>> sourceParams = new ThreadLocal<>();
+    private final ThreadLocal<Map<String, Object>> context = new ThreadLocal<>();
 
     @Override
-    public List<NameValuePair> getSourceParams()
+    public Map<String, Object> getContext()
     {
-        return sourceParams.get();
+        Map<String, Object> setContext = context.get();
+        if (setContext == null) {
+            return Collections.emptyMap();
+        }
+        return setContext;
+    }
+
+    @Override
+    public Object get(String key)
+    {
+        return getContext().get(key);
     }
 
     /**
-     * @param sourceParams set the source params.
+     * @param context a map of entries that serve the client implementation.
      */
-    public void setSourceParams(List<NameValuePair> sourceParams)
+    public void setContext(Map<String, Object> context)
     {
-        this.sourceParams.set(sourceParams);
+        this.context.set(context);
     }
 }
+

@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement;
+package com.xwiki.projectmanagement;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,22 +20,29 @@ package org.xwiki.projectmanagement;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.List;
+import java.util.Map;
 
-import org.apache.http.NameValuePair;
 import org.xwiki.component.annotation.Role;
 
 /**
- * Provides various information in the context of a project management macro execution, such as the source parameters.
+ * The execution context of the project management client. Can be used to pass additional information to the client
+ * implementation.
  *
  * @version $Id$
  * @since 1.0
  */
 @Role
-public interface ProjectManagementMacroContext
+public interface ProjectManagementClientExecutionContext
 {
     /**
-     * @return a map representing the source parameters passed to the project management macro.
+     * @return a map containing various information that can be used by the client. Returns an empty map if the context
+     *     was not set.
      */
-    List<NameValuePair> getSourceParams();
+    Map<String, Object> getContext();
+
+    /**
+     * @param key identifies tha value that might or might not be set in the context.
+     * @return a value from the current execution context or null if the key was not found.
+     */
+    Object get(String key);
 }

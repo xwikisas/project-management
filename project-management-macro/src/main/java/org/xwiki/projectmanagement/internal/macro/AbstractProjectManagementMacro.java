@@ -22,16 +22,17 @@ package org.xwiki.projectmanagement.internal.macro;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
-import org.xwiki.projectmanagement.ProjectManagementMacroContext;
-import org.xwiki.projectmanagement.internal.DefaultProjectManagementMacroContext;
 import org.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
@@ -40,6 +41,9 @@ import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 
 /**
  * Something.
@@ -51,7 +55,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     extends AbstractMacro<T>
 {
     @Inject
-    protected ProjectManagementMacroContext projectManagementMacroContext;
+    protected ProjectManagementClientExecutionContext projectManagementMacroContext;
 
     @Inject
     @Named("liveData")
@@ -95,9 +99,12 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
-        if (projectManagementMacroContext instanceof DefaultProjectManagementMacroContext) {
-            ((DefaultProjectManagementMacroContext) projectManagementMacroContext).setSourceParams(
-                URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8));
+        if (projectManagementMacroContext instanceof DefaultProjectManagementClientExecutionContext) {
+            Map<String, Object> clientContext =
+                URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8)
+                    .stream()
+                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
+            ((DefaultProjectManagementClientExecutionContext) projectManagementMacroContext).setContext(clientContext);
         }
         try {
             Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.toString());

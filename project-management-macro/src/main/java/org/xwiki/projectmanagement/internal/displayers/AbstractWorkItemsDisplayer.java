@@ -28,22 +28,20 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.NameValuePair;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.projectmanagement.ProjectManagementMacroContext;
 import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -62,7 +60,7 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
     protected ProjectManagementManager projectManagementManager;
 
     @Inject
-    protected ProjectManagementMacroContext macroContext;
+    protected ProjectManagementClientExecutionContext macroContext;
 
     /**
      * @param name the name of the work item.
@@ -76,10 +74,9 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
     public List<Block> execute(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
-        Optional<NameValuePair> clientPair =
-            macroContext.getSourceParams().stream().filter(param -> param.getName().equals("client")).findFirst();
+        String clientId = (String) macroContext.get("client");
 
-        if (clientPair.isEmpty()) {
+        if (clientId == null || clientId.isEmpty()) {
             throw new MacroExecutionException("Failed to retrieve the client id from the source params.");
         }
 
@@ -93,12 +90,11 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
         PaginatedResult<WorkItem> workItemList = null;
         try {
             // TODO: Maybe separate this logic in a separate method and allow the implementations to override it?
-            workItemList = projectManagementManager.getWorkItems(clientPair.get().getValue(),
+            workItemList = projectManagementManager.getWorkItems(clientId,
                 Math.toIntExact(parameters.getOffset()), parameters.getLimit(), filters);
         } catch (WorkItemException e) {
             throw new MacroExecutionException(
-                String.format("Failed to retrieve the work items from the client [%s].", clientPair.get().getValue()),
-                e);
+                String.format("Failed to retrieve the work items from the client [%s].", clientId), e);
         }
 
         return internalExecute(workItemList, parameters, context);
