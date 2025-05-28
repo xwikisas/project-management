@@ -27,7 +27,6 @@ import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
@@ -39,9 +38,10 @@ import org.xwiki.livedata.LiveDataEntryStore;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 
-import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -77,7 +77,7 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
     private Logger logger;
 
     @Inject
-    private Provider<XWikiContext> contextProvider;
+    private ProjectManagementClientExecutionContext clientContext;
 
     /**
      * @param entryId identifies the entry to return
@@ -103,6 +103,11 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         String clientId = (String) query.getSource().getParameters().getOrDefault("client", "");
         if (clientId.isEmpty()) {
             throw new LiveDataException("The client property was not specified in the source parameters.");
+        }
+
+        if (clientContext instanceof DefaultProjectManagementClientExecutionContext) {
+            ((DefaultProjectManagementClientExecutionContext) clientContext).setContext(
+                query.getSource().getParameters());
         }
 
         // GET ENTRIES FROM ACTUAL SOURCE ---------------
