@@ -24,16 +24,26 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
+    <artifactId>project-management-openproject</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-  <packaging>pom</packaging>
-  <artifactId>project-management-openproject</artifactId>
 
-  <modules>
-    <module>project-management-openproject-macro</module>
-    <module>project-management-openproject-ui</module>
-    <module>project-management-openproject-api</module>
-  </modules>
-
+  <artifactId>project-management-openproject-api</artifactId>
+  <dependencies>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.contrib.oidc</groupId>
+      <artifactId>oauth2-client</artifactId>
+      <version>2.17.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.nimbusds</groupId>
+      <artifactId>nimbus-jose-jwt</artifactId>
+      <version>10.3</version>
+    </dependency>
+  </dependencies>
 </project>

@@ -1,0 +1,4 @@
+com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
+com.xwiki.projectmanagement.openproject.config.internal.DefaultOpenProjectConfiguration
+com.xwiki.projectmanagement.openproject.config.internal.OpenProjectDocumentConfigurationSource
+com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
