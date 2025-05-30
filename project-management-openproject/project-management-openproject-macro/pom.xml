@@ -42,6 +42,11 @@
       <version>${xwikipro.commons.version}</version>
       <scope>runtime</scope>
     </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-openproject-api</artifactId>
+      <version>1.14.11-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 
 </project>

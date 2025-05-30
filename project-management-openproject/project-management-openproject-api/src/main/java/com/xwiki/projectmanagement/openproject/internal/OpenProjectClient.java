@@ -19,38 +19,24 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.joda.time.LocalDate;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
-import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
-import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.apiclient.OpenProjectApiClient;
 
 /**
  * Open project client.
@@ -63,16 +49,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 public class OpenProjectClient implements ProjectManagementClient
 {
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
-
-    @Inject
-    private ProjectManagementClientExecutionContext executionContext;
-
-    private final HttpClient client = HttpClient.newHttpClient();
-
-    private String connectionUrl;
-
-    private String token;
+    private OpenProjectApiClient openProjectApiClient;
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
@@ -85,23 +62,10 @@ public class OpenProjectClient implements ProjectManagementClient
         throws WorkItemRetrievalException
     {
         try {
-            String filtersString = URLEncoder.encode(
-                "[{\"status\":{\"operator\":\"*\",\"values\":[]}}]", StandardCharsets.UTF_8);
-            String connectionName = (String) executionContext.get("instance");
-            this.connectionUrl = openProjectConfiguration.getConnectionUrl(connectionName);
-            this.token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
-            PaginatedResult<WorkItem> paginatedResult = new PaginatedResult<>();
-            HttpRequest request =
-                createGetHttpRequest(token,
-                    connectionUrl + "/api/v3/work_packages?filters=" + filtersString);
-
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            String body = response.body();
-
-            List<WorkItem> workItems = getWorkItemsFromResponse(body);
-
-            paginatedResult.setItems(workItems);
-            return paginatedResult;
+            int offset = (page / pageSize) + 1;
+            String filtersString =
+                "[{\"status\":{\"operator\":\"*\",\"values\":[]}}]";
+            return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
         } catch (Exception e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items");
         }
@@ -123,79 +87,5 @@ public class OpenProjectClient implements ProjectManagementClient
     public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
     {
         return false;
-    }
-
-    private void setDates(WorkItem workItem, JsonNode startDate, JsonNode dueDate)
-    {
-        if (startDate != null && !startDate.isNull()) {
-            workItem.setStartDate(LocalDate.parse(startDate.asText()).toDate());
-        }
-        if (dueDate != null && !dueDate.isNull()) {
-            workItem.setDueDate(LocalDate.parse(dueDate.asText()).toDate());
-        }
-    }
-
-    private HttpRequest createGetHttpRequest(String token, String url) throws URISyntaxException
-    {
-        return HttpRequest
-            .newBuilder()
-            .header("Accept", "application/json")
-            .header("Authorization", "Bearer " + token)
-            .uri(new URI(url))
-            .GET()
-            .build();
-    }
-
-    private WorkItem createWorkItemFromJson(JsonNode element)
-        throws URISyntaxException, InterruptedException, IOException
-    {
-        String title = "title";
-        String href = "href";
-        WorkItem workItem = new WorkItem();
-        int id = element.path("id").asInt();
-        ObjectMapper objectMapper = new ObjectMapper();
-        workItem.setDescription(element.path("description").path("raw").asText());
-
-        JsonNode startDate = element.get("startDate");
-        JsonNode dueDate = element.get("dueDate");
-        setDates(workItem, startDate, dueDate);
-
-        JsonNode linksNode = element.path("_links");
-        workItem.setType(linksNode.path("type").path(title).asText());
-        JsonNode selfNode = linksNode.path("self");
-        String issueName = selfNode.get(title).asText();
-        String issueUrl = connectionUrl + "/work_packages/" + id + "/activity";
-        workItem.setIdentifier(new Linkable<>(issueName, issueUrl));
-        workItem.setSummary(new Linkable<>(element.path("subject").asText(), issueUrl));
-
-        String statusUrl = connectionUrl + linksNode.path("status").get(href).asText();
-
-        HttpRequest request = createGetHttpRequest(token, statusUrl);
-
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        String statusBody = response.body();
-
-        JsonNode statusJson = objectMapper.readTree(statusBody);
-        boolean isResolved = statusJson.get("isClosed").asBoolean();
-        workItem.setResolved(isResolved);
-
-        JsonNode assigneeNode = linksNode.path("assignee");
-
-        workItem.setAssignees(List.of(new Linkable<>(assigneeNode.path(title).asText(),
-            connectionUrl + assigneeNode.path(href).asText().replaceFirst("/api/v3", ""))));
-        return workItem;
-    }
-
-    private List<WorkItem> getWorkItemsFromResponse(String body)
-        throws IOException, URISyntaxException, InterruptedException
-    {
-        List<WorkItem> workItems = new ArrayList<>();
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode elementsNode = objectMapper.readTree(body).path("_embedded").path("elements");
-        for (JsonNode element : elementsNode) {
-            workItems.add(createWorkItemFromJson(element));
-        }
-        return workItems;
     }
 }
