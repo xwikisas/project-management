@@ -49,7 +49,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
-        addToSourceParams(parameters, "client", "test");
+        addToSourceParams(parameters, "client", "openproject");
 
         String instance = parameters.getInstance();
         if (instance == null || instance.isEmpty()) {

@@ -21,13 +21,20 @@
   display: flex;
   justify-content: space-between;
   gap: 1em;
-  align-items: center;
 }
 
 .projManagConstraint > div {
   flex-grow: 1;
 }
 
-.projManagConstraint .projManagConstraintValue {
+.projManagConstraintName, .projManagConstraintValueContainer > input,.projManagConstraintOperator {
+  width: 100%;
+}
+
+.projManagContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1em;
   width: 100%;
 }

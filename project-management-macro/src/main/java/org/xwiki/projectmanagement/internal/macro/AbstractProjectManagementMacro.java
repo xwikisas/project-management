@@ -106,10 +106,15 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                     .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
             ((DefaultProjectManagementClientExecutionContext) projectManagementMacroContext).setContext(clientContext);
         }
+        String newContent = content;
+        if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
+            newContent = parameters.getFilters();
+            parameters.setFilters("");
+        }
         try {
             Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.toString());
 
-            return displayerMacro.execute(parameters, content, context);
+            return displayerMacro.execute(parameters, newContent, context);
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
         }

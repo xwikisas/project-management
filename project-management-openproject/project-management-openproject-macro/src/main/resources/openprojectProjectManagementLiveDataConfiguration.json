@@ -4,5 +4,495 @@
       "id": "projectmanagement",
       "translationPrefix": "openproject.livedata.property."
     }
+  },
+  "meta": {
+    "propertyDescriptors": [
+      {
+        "id": "identifier.value",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "type",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "summary.value",
+        "filterable": true,
+        "filter": {
+          "id": "text",
+          "operators": [
+            {
+              "id": "~",
+              "name": "Contains"
+            },
+            {
+              "id": "!~",
+              "name": "Does not contain"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "description",
+        "filterable": true,
+        "filter": {
+          "id": "text",
+          "operators": [
+            {
+              "id": "~",
+              "name": "Contains"
+            },
+            {
+              "id": "!~",
+              "name": "Does not contain"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "startDate",
+        "filterable": true,
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "<t+",
+              "name": "in less than"
+            },
+            {
+              "id": ">t+",
+              "name": "in more than"
+            },
+            {
+              "id": "<t->",
+              "name": "less than days ago"
+            },
+            {
+              "id": ">t-",
+              "name": "more than days ago"
+            },
+            {
+              "id": "t-",
+              "name": "Days ago"
+            },
+            {
+              "id": "t+",
+              "name": "Days later"
+            },
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "<>d",
+              "name": "Between"
+            },
+            {
+              "id": "!*",
+              "name": "Empty"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "dueDate",
+        "filterable": true,
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "<t+",
+              "name": "in less than"
+            },
+            {
+              "id": ">t+",
+              "name": "in more than"
+            },
+            {
+              "id": "<t-",
+              "name": "less than days ago"
+            },
+            {
+              "id": ">t-",
+              "name": "more than days ago"
+            },
+            {
+              "id": "t-",
+              "name": "Days ago"
+            },
+            {
+              "id": "t+",
+              "name": "Days later"
+            },
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "<>d",
+              "name": "Between"
+            },
+            {
+              "id": "!*",
+              "name": "Empty"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "progress",
+        "filterable": true,
+        "filter": {
+          "id": "number",
+          "operators": [
+            {
+              "id": "=",
+              "name": "is"
+            },
+            {
+              "id": "!",
+              "name": "is not"
+            },
+            {
+              "id": ">=",
+              "name": ">="
+            },
+            {
+              "id": "<=",
+              "name": "<="
+            },
+            {
+              "id": "*",
+              "name": "not empty"
+            },
+            {
+              "id": "!*",
+              "name": "empty"
+            }
+          ]
+        }
+      },
+      {
+        "id": "creationDate",
+        "filterable": true,
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "<t-",
+              "name": "less than days ago"
+            },
+            {
+              "id": ">t-",
+              "name": "more than days ago"
+            },
+            {
+              "id": "t-",
+              "name": "Days ago"
+            },
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "<>d",
+              "name": "Between"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "updateDate",
+        "filterable": true,
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "<t-",
+              "name": "less than days ago"
+            },
+            {
+              "id": ">t-",
+              "name": "more than days ago"
+            },
+            {
+              "id": "t-",
+              "name": "Days ago"
+            },
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "<>d",
+              "name": "Between"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "creator.value",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "assignees",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            },
+            {
+              "id": "*",
+              "name": "Not empty"
+            },
+            {
+              "id": "!*",
+              "name": "Empty"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "priority",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "project.value",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "status",
+        "filterable": true,
+        "filter": {
+          "id": "list",
+          "operators": [
+            {
+              "id": "=",
+              "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
+            },
+            {
+              "id": "o",
+              "name": "open"
+            },
+            {
+              "id": "c",
+              "name": "closed"
+            },
+            {
+              "id": "*",
+              "name": "not empty"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      }
+    ],
+    "filters": [
+      {
+        "id": "text",
+        "operators": [
+          {
+            "id": "~",
+            "name": "Contains words"
+          },
+          {
+            "id": "!~",
+            "name": "Does not contain words"
+          },
+          {
+            "id": "**",
+            "name": "Search string"
+          },
+          {
+            "id": "*",
+            "name": "Not empty"
+          },
+          {
+            "id": "!*",
+            "name": "Is empty"
+          }
+        ],
+        "defaultOperator": "~"
+      },
+      {
+        "id": "number",
+        "operators": [
+          {
+            "id": ">=",
+            "name": "Greater of equal"
+          },
+          {
+            "id": "<=",
+            "name": "Lower or equal"
+          },
+          {
+            "id": "=",
+            "name": "Equals"
+          },
+          {
+            "id": "!",
+            "name": "Not equal"
+          }
+        ],
+        "defaultOperator": "="
+      },
+      {
+        "id": "boolean",
+        "operators": [
+          {
+            "id": "=",
+            "name": "Equals"
+          },
+          {
+            "id": "!",
+            "name": "Not equal"
+          }
+        ],
+        "trueValue": "true",
+        "falseValue": "false",
+        "defaultOperator": "="
+      },
+      {
+        "id": "date",
+        "operators": [
+          {
+            "id": "=",
+            "name": "Equals"
+          },
+          {
+            "id": "!",
+            "name": "Not equal"
+          }
+        ],
+        "dateFormat": "yyyy/MM/dd HH:mm",
+        "defaultOperator": "between"
+      },
+      {
+        "id": "list",
+        "operators": [
+          "equals",
+          "startsWith",
+          "contains",
+          "empty"
+        ],
+        "defaultOperator": "contains"
+      }
+    ]
   }
 }
