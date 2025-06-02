@@ -24,13 +24,20 @@ require.config({
 });
 require(['filterBuilder'], function () {
   require(['jquery', 'project-management-filter-builder'], function($, builder) {
+    console.log('smth');
     builder.element.on('constraintsUpdated', function(e, constraints) {
-      $('#projManagFilter').val($.param(constraints).replaceAll('%5B%5D=', '='));
+      console.log("constraints: " + constraints);
+      let livedataCfg = { query: { filters: [] } };
+      for (key in constraints) {
+        livedataCfg.query.filters.push(constraints[key]);
+      }
+      $('#projManagFilter').val(JSON.stringify(livedataCfg));
     });
     let initBuilder = function (filterString) {
-      const filters = new URLSearchParams(filterString);
-      filters.forEach((value, key) => {
-        builder.addFilter(key, value);
+      const filterCfg = JSON.parse(filterString);
+      let filters = (filterCfg.query && filterCfg.query.filters) || [];
+      filters.forEach((filter) => {
+        builder.addFilter(filter);
       });
     };
     let initialFilter = $('#projManagFilter').val();

@@ -17,45 +17,55 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#macro (livedataProperties_displayOptions $selectedValues)
-  #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
-  #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
-    #set ($discard = $options.add({
-      'name': $propertyDescriptor.id,
-      'value': $propertyDescriptor.name
-    }))
-    <option value="$!escapetool.xml($propertyDescriptor.id)"#if ($selectedValues.contains($propertyDescriptor.id)) selected="selected"#end
-      >$!escapetool.xml($propertyDescriptor.name)</option>
-  #end
-#end
 #macro (filterBuilder $parameters)
 #picker_import
 #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
 ##set ($discard = $xwiki.jsrx.use('js/projectmanagement/filterBuilder.js'))
-<div class="projManagementConstraintBuilder">
-  <div>
-    <button id="addConstraint" class="btn btn-default">
-      $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))
-    </button>
-  </div>
-  <div class="projManagConstraints">
-  </div>
-  <div id="projManagConstraintTemplate" class="hidden projManagConstraint">
-    <div>
-      <select class="projManagConstraintName">
-        #livedataProperties_displayOptions([])
-      </select>
+#set ($clientId = "$!parameters.client")
+#if ($clientId == '')
+  #set ($clientId = $macroId)
+#end
+#set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($macroId))
+#if ("$!clientCfg" != '')
+  #set ($propertiesJson = $clientCfg.meta.propertyDescriptors)
+  #set ($filterableProperties = [])
+  #foreach ($prop in $propertiesJson)
+    #if ($prop.filter && $prop.filter.id)
+      #set ($discard = $filterableProperties.add($prop))
+    #end
+  #end
+  #if ($$filterableProperties.isEmpty())
+    <p>The entries of this macro are not filterable at the moment.</p>
+  #else
+    <div class="projManagementConstraintBuilder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+      <div>
+        <button id="addConstraint" class="btn btn-default">
+          $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))
+        </button>
+      </div>
+      <div class="projManagConstraints">
+      </div>
+      <div id="projManagConstraintTemplate" class="projManagConstraint">
+        <div class="projManagContainer projManagConstraintNameContainer">
+          <select class="projManagConstraintName">
+            #foreach ($prop in $filterableProperties)
+              <option value="$prop.id">$prop.id</option>
+            #end
+          </select>
+        </div>
+        <div class="projManagContainer projManagConstraintOperatorContainer">
+          <select class="projManagConstraintOperator">
+          </select>
+        </div>
+        <div class="projManagContainer projManagConstraintValueContainer">
+          <input class="projManagConstraintValue" type="text"
+            placeholder="$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.placeholder'))" />
+        </div>
+      </div>
     </div>
-    <div>
-      <span>
-        $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.constraint.equals'))
-      </span>
-    </div>
-    <div>
-      <input class="projManagConstraintValue" type="text"
-        placeholder="$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.placeholder'))" />
-    </div>
-  </div>
-</div>
+  #end
+#else
+  <p>The entries of this macro are not filterable at the moment.</p>
+#end
 #end
