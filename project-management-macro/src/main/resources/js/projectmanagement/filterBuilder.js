@@ -17,7 +17,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-define('project-management-filter-builder', ['jquery', 'xwiki-selectize'], function ($) {
+// TODO: All the dependencies are defined by the livedata so we can just require them. However, we might want to define
+// their urls to not depend on livedata.
+define('project-management-filter-builder', ['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'daterangepicker'], function ($, moment) {
   let constraintBuilder = $('.projManagementConstraintBuilder');
   let addButton = $('.projManagementConstraintBuilder #addConstraint');
   let template = $('#projManagConstraintTemplate');
@@ -33,7 +35,50 @@ define('project-management-filter-builder', ['jquery', 'xwiki-selectize'], funct
         inputElem.attr('type', 'number');
         break;
       case "date":
-        inputElem.attr('type', 'date');
+        let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
+        let dateInput = $('<input />').attr('type', 'text').on('change', function() {
+          let valToSet = '';
+          const daterangepicker = $(this).data("daterangepicker");
+          if (!daterangepicker) {
+            return;
+          }
+          if (this.operator === "between") {
+            // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
+            // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
+            valToSet = `${daterangepicker.startDate.format()}/${daterangepicker.endDate.add(59, "seconds").format()}`;
+          } else if (this.operator === "before" || this.operator === "after") {
+            // Use the ISO 8601 representation, without fractional seconds.
+            valToSet = daterangepicker.startDate.format();
+          } else {
+            // Use the formatted date.
+            valToSet = daterangepicker.startDate.format(this.format);
+          }
+          inputElem.val(valToSet);
+          inputElem.trigger('change');
+        }).appendTo(parent).daterangepicker({
+          drops: "down",
+          opens: "right",
+          timePicker: /[Hhkms]/.test(dateFormat),
+          singleDatePicker: 'between' != operator,
+          timePicker24Hour: true,
+          locale: {
+            format: dateFormat,
+            cancelLabel: "Clear",
+          },
+        }).on("hide.daterangepicker", function (e) {
+          // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
+          // This removes the 'hide' function only for the event target.
+          e.target.hide = undefined;
+          // Restore the 'hide' function after the event is handled (i.e. after all the listeners have been called).
+          setTimeout(function() {
+            // This deletes the local 'hide' key from the instance, making the 'hide' inherited from the prototype
+            // visible again (the next calls to 'hide' won't find the key on the instance and thus it will go up
+            // the prototype chain).
+            delete e.target["hide"];
+          }, 0);
+        });
+        dateInput.data("daterangepicker").container.addClass('projManagDatePicker');
+        inputElem.attr('type', 'text').addClass('hidden');
         break;
       case "list":
         inputElem.addClass('hidden');
@@ -83,8 +128,13 @@ define('project-management-filter-builder', ['jquery', 'xwiki-selectize'], funct
       if (!val.val()) {
         return;
       }
+      let property = cfg.find(i => i.id == key.val());
       let filter = resultJson[key.val()] || { property: key.val(), constraints: []};
-      filter.constraints.push({operator: operator.val(), value: val.val()});
+      if (property.filter.id == 'list') {
+        val.val().split('|').each(e => filter.constraints.push({operator: operator.val(), value: e}));
+      } else {
+        filter.constraints.push({operator: operator.val(), value: val.val()});
+      }
       resultJson[key.val()] = filter;
     });
     return resultJson;

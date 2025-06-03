@@ -38,3 +38,7 @@
   gap: 1em;
   width: 100%;
 }
+
+.projManagDatePicker {
+  z-index: 99999
+}
