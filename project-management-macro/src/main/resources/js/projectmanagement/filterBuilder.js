@@ -27,8 +27,12 @@ define('project-management-filter-builder', ['jquery', 'moment', 'moment-jdatefo
   let cfg = constraintBuilder.data('cfg');
   let defaultDisplayer = function (type, inputElem, operator, params) {
     let parent = inputElem.parent();
-    parent.children().remove();
-    parent.append(inputElem);
+    if (inputElem[0] && inputElem[0].selectize) {
+      inputElem[0].selectize.destroy();
+    } else {
+      parent.children().remove();
+      parent.append(inputElem);
+    }
     inputElem.removeClass('hidden');
     switch (type) {
       case "number":
@@ -111,10 +115,23 @@ define('project-management-filter-builder', ['jquery', 'moment', 'moment-jdatefo
       case "boolean":
         //inputElem.xwikiSelectize();
         inputElem.attr('type', 'text');
+        inputElem.xwikiSelectize({
+          create: false,
+          options: [
+            {
+              value: params.trueValue || 'true',
+              label: params.trueValue || 'true'
+            },
+            {
+              value: params.falseValue || 'false',
+              label: params.falseValue || 'false'
+            }
+          ],
+          maxItems: 1
+        });
         break;
       default: // text
         inputElem.attr('type', 'text');
-
         break;
     }
   };
