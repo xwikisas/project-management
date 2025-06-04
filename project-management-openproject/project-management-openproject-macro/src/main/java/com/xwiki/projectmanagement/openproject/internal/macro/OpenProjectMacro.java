@@ -20,11 +20,16 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.List;
+
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
@@ -49,7 +54,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
-        addToSourceParams(parameters, "client", "open-project-client");
+        addToSourceParams(parameters, "client", "openproject");
 
         String instance = parameters.getInstance();
         if (instance == null || instance.isEmpty()) {
@@ -66,5 +71,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         } else {
             parameters.setSourceParameters(String.format("%s&%s=%s", sourceParameters, key, value));
         }
+    }
+
+    @Override
+    public List<Block> execute(OpenProjectMacroParameters parameters, String content,
+        MacroTransformationContext context) throws MacroExecutionException
+    {
+        return super.execute(parameters, content, context);
     }
 }

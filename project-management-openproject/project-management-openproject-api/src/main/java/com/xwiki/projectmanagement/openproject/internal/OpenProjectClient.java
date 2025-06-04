@@ -37,6 +37,7 @@ import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.apiclient.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.filterconverter.FilterHandler;
 
 /**
  * Open project client.
@@ -44,12 +45,15 @@ import com.xwiki.projectmanagement.openproject.apiclient.OpenProjectApiClient;
  * @version $Id$
  */
 @Component
-@Named("open-project-client")
+@Named("openproject")
 @Singleton
 public class OpenProjectClient implements ProjectManagementClient
 {
     @Inject
     private OpenProjectApiClient openProjectApiClient;
+
+    @Inject
+    private FilterHandler filterHandler;
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
@@ -61,10 +65,8 @@ public class OpenProjectClient implements ProjectManagementClient
     public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters)
         throws WorkItemRetrievalException
     {
-        try {
-            int offset = (page / pageSize) + 1;
-            String filtersString =
-                "[{\"status\":{\"operator\":\"*\",\"values\":[]}}]";
+        try {int offset = (page / pageSize) + 1;
+            String filtersString = filterHandler.convertFilters(filters);
             return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
         } catch (Exception e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items");

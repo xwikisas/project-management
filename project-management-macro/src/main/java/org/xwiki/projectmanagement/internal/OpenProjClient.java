@@ -58,7 +58,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * @version $Id$
  */
 @Component
-@Named("openproject")
+@Named("openproject-1")
 @Singleton
 public class OpenProjClient implements ProjectManagementClient
 {
