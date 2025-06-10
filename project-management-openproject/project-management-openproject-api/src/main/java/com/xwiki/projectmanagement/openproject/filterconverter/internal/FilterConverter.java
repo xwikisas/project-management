@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.filterconverter;
+package com.xwiki.projectmanagement.openproject.filterconverter.internal;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,6 +38,14 @@ public final class FilterConverter
      * The mapping between original and converted operators.
      */
     public static final Map<String, String> OPERATOR_MAPPING = new HashMap<>();
+
+    static {
+        KEY_MAPPING.put("date", "start_date");
+        KEY_MAPPING.put("identifier.value", "id");
+        KEY_MAPPING.put("summary.value", "subject");
+        KEY_MAPPING.put("assignees", "assignee_to");
+    }
+
 
     private FilterConverter()
     {

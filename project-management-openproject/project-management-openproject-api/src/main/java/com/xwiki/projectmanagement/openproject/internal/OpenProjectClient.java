@@ -65,7 +65,8 @@ public class OpenProjectClient implements ProjectManagementClient
     public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters)
         throws WorkItemRetrievalException
     {
-        try {int offset = (page / pageSize) + 1;
+        try {
+            int offset = (page / pageSize) + 1;
             String filtersString = filterHandler.convertFilters(filters);
             return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
         } catch (Exception e) {

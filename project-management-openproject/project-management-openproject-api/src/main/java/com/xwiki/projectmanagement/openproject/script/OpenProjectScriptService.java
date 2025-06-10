@@ -31,6 +31,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.script.service.ScriptService;
 
+import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 
@@ -48,9 +49,10 @@ public class OpenProjectScriptService implements ScriptService
 
     /**
      * Retrieves a list of available OpenProject connections.
+     *
      * @return a list of {@code OpenProjectConnection} instances;
      */
-    public List<Map<String, String>> getConnectionOptions()
+    public List<Map<String, String>> getConnectionOptions() throws AuthenticationException
     {
         List<OpenProjectConnection> openProjectConnections = openProjectConfiguration.getOpenProjectConnections();
 

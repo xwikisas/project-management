@@ -22,15 +22,21 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.List;
 
+import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.exception.AuthenticationException;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -43,6 +49,15 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Named("openproject")
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private DocumentAccessBridge documentAccessBridge;
+
+    @Inject
+    private Provider<XWikiContext> xContextProvider;
+
     /**
      * Default constructor.
      */
@@ -77,6 +92,20 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        XWikiContext xContext = this.xContextProvider.get();
+        if (xContext.getAction().equals("view")) {
+            String connectionName = parameters.getInstance();
+            try {
+                String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
+                if (token == null || token.isEmpty()) {
+                    String redirectUrl = xContext.getWiki().getURL(documentAccessBridge.getCurrentDocumentReference(),
+                        xContext);
+                    openProjectConfiguration.createNewToken(connectionName, redirectUrl);
+                }
+            } catch (AuthenticationException e) {
+                throw new MacroExecutionException(e.getMessage());
+            }
+        }
         return super.execute(parameters, content, context);
     }
 }

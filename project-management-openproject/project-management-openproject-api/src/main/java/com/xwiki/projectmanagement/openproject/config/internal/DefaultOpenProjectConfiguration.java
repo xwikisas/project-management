@@ -31,6 +31,7 @@ import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.script.service.ScriptService;
 
+import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
@@ -44,6 +45,8 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 @Singleton
 public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
 {
+    private static final String OAUTH_COMPONENT_NAME = "oauth2client";
+
     @Inject
     @Named("openproject")
     private ConfigurationSource openProjectConfiguration;
@@ -52,13 +55,13 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     private ComponentManager componentManager;
 
     @Override
-    public List<OpenProjectConnection> getOpenProjectConnections()
+    public List<OpenProjectConnection> getOpenProjectConnections() throws AuthenticationException
     {
         return openProjectConfiguration.getProperty("openprojectConnections");
     }
 
     @Override
-    public String getConnectionUrl(String connectionName)
+    public String getConnectionUrl(String connectionName) throws AuthenticationException
     {
         List<OpenProjectConnection> connections = getOpenProjectConnections();
         OpenProjectConnection searchedConnection = connections
@@ -67,23 +70,32 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
                 .equals(connectionName))
             .findFirst()
             .orElseThrow();
-
         return searchedConnection.getServerURL();
     }
 
     @Override
-    public String getTokenForCurrentConfig(String connectionName)
+    public String getTokenForCurrentConfig(String connectionName) throws AuthenticationException
+    {
+        String accessToken;
+        try {
+            OAuth2ClientScriptService oauth2Client = componentManager.getInstance(ScriptService.class,
+                OAUTH_COMPONENT_NAME);
+            accessToken = oauth2Client.getAccessToken(connectionName);
+        } catch (Exception e) {
+            throw new AuthenticationException("The selected connection" + connectionName + "is not available", e);
+        }
+        return accessToken;
+    }
+
+    @Override
+    public void createNewToken(String connectionName, String redirectUrl) throws AuthenticationException
     {
         try {
             OAuth2ClientScriptService oauth2Client = componentManager.getInstance(ScriptService.class,
-                "oauth2client");
-            String accessToken = oauth2Client.getAccessToken(connectionName);
-            if (accessToken != null) {
-                return accessToken;
-            }
+                OAUTH_COMPONENT_NAME);
+            oauth2Client.authorize(connectionName, redirectUrl);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new AuthenticationException("Cannot connect to the open project instance", e);
         }
-        return null;
     }
 }

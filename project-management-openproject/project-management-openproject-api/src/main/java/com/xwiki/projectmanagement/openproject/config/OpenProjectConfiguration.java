@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.xwiki.component.annotation.Role;
 
+import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 
 /**
@@ -34,26 +35,38 @@ import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 @Role
 public interface OpenProjectConfiguration
 {
-
     /**
      * Retrieves a list of available OpenProject connections.
+     *
      * @return a list of {@code OpenProjectConnection} instances;
+     * @throws AuthenticationException when the connection list cannot be retrieved
      */
-    List<OpenProjectConnection> getOpenProjectConnections();
+    List<OpenProjectConnection> getOpenProjectConnections() throws AuthenticationException;
 
     /**
      * Retrieves the server URL associated with a given connection name.
      *
      * @param connectionName the name of the OpenProject connection configuration
      * @return the server URL associated with the given connection
+     * @throws  AuthenticationException when the connection URL cannot be retrieved
      */
-    String getConnectionUrl(String connectionName);
+    String getConnectionUrl(String connectionName) throws AuthenticationException;
 
     /**
      * Retrieves the server URL associated with a given connection name.
      *
      * @param connectionName the name of the OpenProject connection configuration
      * @return the server URL associated with the given connection
+     * @throws AuthenticationException when the connection does not exist.
      */
-    String getTokenForCurrentConfig(String connectionName);
+    String getTokenForCurrentConfig(String connectionName) throws AuthenticationException;
+
+    /**
+     * Creates a new OAuth token using the specified connection name and redirect URL.
+     *
+     * @param connectionName the name of the connection to use for creating the OAuth token
+     * @param redirectUrl the URL to which the OAuth provider will redirect after authorization
+     * @throws AuthenticationException when a new token cannot be created.
+     */
+    void createNewToken(String connectionName, String redirectUrl) throws AuthenticationException;
 }

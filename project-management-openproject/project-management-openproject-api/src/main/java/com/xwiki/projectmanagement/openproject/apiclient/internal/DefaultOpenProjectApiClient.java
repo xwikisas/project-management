@@ -67,10 +67,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String filters)
     {
-        String connectionName = (String) executionContext.get("instance");
-        String connectionUrl = openProjectConfiguration.getConnectionUrl(connectionName);
-        String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
         try {
+            String connectionName = (String) executionContext.get("instance");
+            String connectionUrl = openProjectConfiguration.getConnectionUrl(connectionName);
+            String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + "/api/v3/work_packages");
             uriBuilder.addParameter("offset", String.valueOf(offset));
             uriBuilder.addParameter("pageSize", String.valueOf(pageSize));

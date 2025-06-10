@@ -119,12 +119,8 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 objects.add(new OpenProjectConnection(connectionName, serverURL, clientId, clientSecret));
             }
             return objects;
-        } catch (Exception e) {
-            try {
-                throw e;
-            } catch (QueryException ex) {
-                throw new RuntimeException(ex);
-            }
+        } catch (QueryException e) {
+            throw new XWikiException("Query creation error", e);
         }
     }
 }

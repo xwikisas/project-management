@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Singleton;
 
@@ -51,21 +52,30 @@ public class DefaultFilterHandler implements FilterHandler
         List<Map<String, Object>> convertedFilters = new ArrayList<>();
 
         for (LiveDataQuery.Filter filter : filters) {
+
+            List<LiveDataQuery.Constraint> validConstraints = filter
+                .getConstraints()
+                .stream()
+                .filter(constraint -> {
+                    String constraintValue = (String) constraint.getValue();
+                    return constraintValue != null && !constraintValue.isEmpty();
+                }).collect(Collectors.toList());
+
+            if (validConstraints.isEmpty()) {
+                continue;
+            }
+
             Map<String, Object> filterProperties = new HashMap<>();
 
-            for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
-                if (filterProperties.get(OPERATOR) != null) {
-                    List<String> values = (ArrayList<String>) filterProperties.get(VALUES);
-                    values.add((String) constraint.getValue());
-                } else {
-                    filterProperties.put(OPERATOR, constraint.getOperator());
-                    List<String> newList = new ArrayList<>();
-                    newList.add((String) constraint.getValue());
-                    filterProperties.put(VALUES, newList);
-                }
-            }
+            filterProperties.put(OPERATOR, validConstraints.get(0).getOperator());
+
+            List<String> values = validConstraints.stream().map(constraint -> (String) constraint.getValue())
+                .collect(Collectors.toList());
+
+            filterProperties.put(VALUES, values);
+
             Map<String, Object> convertedFilter = new HashMap<>();
-            convertedFilter.put(filter.getProperty(), filterProperties);
+            convertedFilter.put(FilterConverter.convertKey(filter.getProperty()), filterProperties);
             convertedFilters.add(convertedFilter);
         }
         try {
