@@ -24,8 +24,8 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 
+import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**

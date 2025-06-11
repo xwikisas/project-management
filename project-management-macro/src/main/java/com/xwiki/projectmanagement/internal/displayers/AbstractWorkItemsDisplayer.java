@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.internal.displayers;
+package com.xwiki.projectmanagement.internal.displayers;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -35,7 +35,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;

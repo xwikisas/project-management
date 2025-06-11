@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.macro;
+package com.xwiki.projectmanagement.macro;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -21,9 +21,9 @@ package org.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
-import org.xwiki.projectmanagement.ProjectManagementFilter;
-import org.xwiki.projectmanagement.ProjectManagementProperties;
-import org.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.ProjectManagementFilter;
+import com.xwiki.projectmanagement.ProjectManagementProperties;
+import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.stability.Unstable;

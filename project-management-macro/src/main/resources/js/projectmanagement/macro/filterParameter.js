@@ -33,16 +33,31 @@ require(['filterBuilder'], function () {
       }
       $('#projManagFilter').val(JSON.stringify(livedataCfg));
     });
-    let initBuilder = function (filterString) {
-      const filterCfg = JSON.parse(filterString);
+    let initBuilder = function () {
+      console.log('builder initiated.');
+      let initialFilter = $('#projManagFilter').val();
+      if (!initialFilter) {
+        console.log('no initial filter.');
+        return;
+      }
+      const filterCfg = JSON.parse(initialFilter);
       let filters = (filterCfg.query && filterCfg.query.filters) || [];
       filters.forEach((filter) => {
-        builder.addFilter(filter);
+        filter.constraints.forEach((constraint) => {
+          let filterCopy = { ...filter };
+          filterCopy.constraints = [constraint];
+          builder.addFilter(filterCopy);
+        });
       });
     };
-    let initialFilter = $('#projManagFilter').val();
-    if (initialFilter != '') {
-      initBuilder(initialFilter);
-    }
+    initBuilder();
+    $(document).on('hide.bs.modal', '.modal', function () {
+      builder.clean();
+    });
+    $(document).on('shown.bs.modal', '.modal', function () {
+      builder.clean();
+      builder.init();
+      initBuilder();
+    });
   });
 });

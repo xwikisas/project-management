@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.internal.macro;
+package com.xwiki.projectmanagement.internal.macro;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -33,8 +33,8 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
-import org.xwiki.projectmanagement.internal.WorkItemsDisplayer;
-import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
