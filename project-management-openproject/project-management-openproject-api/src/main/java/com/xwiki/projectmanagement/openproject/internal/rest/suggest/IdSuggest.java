@@ -54,7 +54,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Component
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.suggest.IdSuggest")
 @Singleton
-@Path("/wikis/{wikiName}/openproject/instance/{instance}/properties/{propety}")
+@Path("/wikis/{wikiName}/openproject/instance/{instance}/id")
 public class IdSuggest extends XWikiResource implements Initializable
 {
     private static final String XWIKI_URL = "http://xwiki.org/";
