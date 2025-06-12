@@ -37,9 +37,12 @@ public interface OpenProjectApiClient
      *
      * @param offset the page number to retrieve (1-based indexing)
      * @param pageSize the number of work items per page
+     * @param connectionUrl the base URL of the OpenProject instance to connect to
+     * @param token the API access token used for authenticating with the OpenProject instance
      * @param filters the list of filters to apply when retrieving work items
      * @return a {@link PaginatedResult} containing the list of retrieved {@link WorkItem} objects along with pagination
      *     metadata
      */
-    PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String filters);
+    PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String connectionUrl, String token,
+        String filters);
 }

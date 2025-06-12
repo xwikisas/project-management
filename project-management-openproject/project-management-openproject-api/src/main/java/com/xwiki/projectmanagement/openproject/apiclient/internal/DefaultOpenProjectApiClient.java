@@ -28,7 +28,6 @@ import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.apache.http.client.utils.URIBuilder;
@@ -38,12 +37,10 @@ import org.xwiki.component.annotation.Component;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.apiclient.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
 /**
  * Default Open project get items client helper.
@@ -54,23 +51,18 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 @Singleton
 public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 {
-    @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
 
-    @Inject
-    private ProjectManagementClientExecutionContext executionContext;
+    // nu mai este componenta, constructor cu  token, connectionUrl
 
     private final HttpClient client = HttpClient.newHttpClient();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String filters)
+    public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String connectionUrl,
+        String token, String filters)
     {
         try {
-            String connectionName = (String) executionContext.get("instance");
-            String connectionUrl = openProjectConfiguration.getConnectionUrl(connectionName);
-            String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + "/api/v3/work_packages");
             uriBuilder.addParameter("offset", String.valueOf(offset));
             uriBuilder.addParameter("pageSize", String.valueOf(pageSize));

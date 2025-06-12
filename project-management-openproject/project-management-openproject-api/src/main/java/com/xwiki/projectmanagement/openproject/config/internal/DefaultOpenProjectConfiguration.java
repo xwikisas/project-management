@@ -80,7 +80,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         try {
             OAuth2ClientScriptService oauth2Client = componentManager.getInstance(ScriptService.class,
                 OAUTH_COMPONENT_NAME);
-            accessToken = oauth2Client.getAccessToken(connectionName);
+            accessToken = oauth2Client.getAccessToken(connectionName, true);
         } catch (Exception e) {
             throw new AuthenticationException("The selected connection" + connectionName + "is not available", e);
         }

@@ -72,8 +72,13 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         addToSourceParams(parameters, "client", "openproject");
 
         String instance = parameters.getInstance();
+        String identifier = parameters.getIdentifier();
+
         if (instance == null || instance.isEmpty()) {
             return;
+        }
+        if (identifier != null) {
+            addToSourceParams(parameters, "identifier", identifier);
         }
         addToSourceParams(parameters, "instance", instance);
     }

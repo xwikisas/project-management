@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.filterconverter;
 
 import java.util.List;
+import java.util.Map;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.livedata.LiveDataQuery;
@@ -39,4 +40,11 @@ public interface FilterHandler
      * @return a string representation of the filters
      */
     String convertFilters(List<LiveDataQuery.Filter> filters);
+
+    /**
+     * Converts a JSON string representation of filters into a processed filter string.
+     * @param filtersList the list of filters, where each filter is a map containing keys and values
+     * @return a processed string representation of the filters
+     */
+    String convertFiltersFromQuery(List<Map<String, Object>> filtersList);
 }

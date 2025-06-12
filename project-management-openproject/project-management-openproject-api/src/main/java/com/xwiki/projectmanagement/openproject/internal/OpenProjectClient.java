@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -28,7 +29,11 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
@@ -37,7 +42,8 @@ import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.apiclient.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.filterconverter.FilterHandler;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.filterconverter.internal.OpenProjectFilterHandler;
 
 /**
  * Open project client.
@@ -53,7 +59,10 @@ public class OpenProjectClient implements ProjectManagementClient
     private OpenProjectApiClient openProjectApiClient;
 
     @Inject
-    private FilterHandler filterHandler;
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
@@ -67,8 +76,29 @@ public class OpenProjectClient implements ProjectManagementClient
     {
         try {
             int offset = (page / pageSize) + 1;
-            String filtersString = filterHandler.convertFilters(filters);
-            return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
+            String connectionName = (String) executionContext.get("instance");
+            String connectionUrl = openProjectConfiguration.getConnectionUrl(connectionName);
+            String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
+
+            String identifier = (String) executionContext.get("identifier");
+
+            String filtersString;
+            if (identifier != null) {
+                String parameterName = "query_props=";
+                String queryParam =
+                    identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode queriesNode = mapper.readTree(queryParam);
+                JsonNode filtersNode = queriesNode.path("f");
+                List<Map<String, Object>> filtersList =
+                    mapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
+                    {
+                    });
+                filtersString = OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+            } else {
+                filtersString = OpenProjectFilterHandler.convertFilters(filters);
+            }
+            return openProjectApiClient.getWorkItems(offset, pageSize, connectionUrl, token, filtersString);
         } catch (Exception e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items");
         }

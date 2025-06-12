@@ -25,29 +25,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import javax.inject.Singleton;
-
-import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xwiki.projectmanagement.openproject.filterconverter.FilterHandler;
 
 /**
- * Open Project Filter Handler.
+ * Filter converter handler.
  *
  * @version $Id$
  */
-@Component
-@Singleton
-public class DefaultFilterHandler implements FilterHandler
+public final class OpenProjectFilterHandler
 {
     private static final String OPERATOR = "operator";
 
     private static final String VALUES = "values";
 
-    @Override
-    public String convertFilters(List<LiveDataQuery.Filter> filters)
+    private OpenProjectFilterHandler()
+    {
+    }
+
+    /**
+     * Converts a list of {@link LiveDataQuery.Filter} objects into a JSON string representation compatible with
+     * OpenProject's query filter format.
+     *
+     * @param filters the list of LiveData filters to be converted
+     * @return a JSON string representing the filters in the format expected by the OpenProject API
+     */
+    public static String convertFilters(List<LiveDataQuery.Filter> filters)
     {
         List<Map<String, Object>> convertedFilters = new ArrayList<>();
 
@@ -79,6 +83,34 @@ public class DefaultFilterHandler implements FilterHandler
             convertedFilters.add(convertedFilter);
         }
         try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.writeValueAsString(convertedFilters);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * @param filterList the list of filters from the OpenProject instance
+     * @return a JSON string representing the filters in the format expected by the OpenProject API
+     */
+    public static String convertFiltersFromQuery(List<Map<String, Object>> filterList)
+    {
+        List<Map<String, Object>> convertedFilters = new ArrayList<>();
+        try {
+            for (Map<String, Object> filter : filterList) {
+                String name = (String) filter.get("n");
+                String operator = (String) filter.get("o");
+                List<String> values = (List<String>) filter.get("v");
+                Map<String, Object> filterProperties = new HashMap<>();
+                filterProperties.put(OPERATOR, operator);
+                filterProperties.put(VALUES, values);
+
+                Map<String, Object> convertedFilter = new HashMap<>();
+                convertedFilter.put(name, filterProperties);
+
+                convertedFilters.add(convertedFilter);
+            }
             ObjectMapper mapper = new ObjectMapper();
             return mapper.writeValueAsString(convertedFilters);
         } catch (Exception e) {
