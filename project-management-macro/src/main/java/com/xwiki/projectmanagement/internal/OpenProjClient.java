@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.internal;
+package com.xwiki.projectmanagement.internal;
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -48,7 +48,6 @@ import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
-import com.xwiki.projectmanagement.internal.DefaultWorkItemsResource;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 

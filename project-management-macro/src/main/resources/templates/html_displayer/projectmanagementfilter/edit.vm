@@ -20,7 +20,7 @@
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', { 'minify': 'false'}))
 #template("filter_builder.vm")
 #filterBuilder({})
-<textarea id="projManagFilter" value="$!escapetool.xml($!displayer.value)"
+<textarea id="projManagFilter" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end

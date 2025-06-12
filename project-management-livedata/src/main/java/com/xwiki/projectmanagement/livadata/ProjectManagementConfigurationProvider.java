@@ -81,8 +81,8 @@ public class ProjectManagementConfigurationProvider implements Provider<LiveData
             }
             return this.stringLiveDataConfigResolver.resolve(this.defaultConfigJSON);
         } catch (IOException | LiveDataException e) {
-            throw new RuntimeException(
-                "Failed to read the default live data configuration for the live table source.", e);
+            logger.error("Failed to read the default live data configuration for the live table source.", e);
+            return null;
         }
     }
 }

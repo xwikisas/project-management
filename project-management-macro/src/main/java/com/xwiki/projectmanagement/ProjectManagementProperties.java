@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement;
+package com.xwiki.projectmanagement;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -21,10 +21,11 @@ package org.xwiki.projectmanagement;
  */
 
 /**
- * Interface representing the project management macro filter.
+ * Interface representing a property to be used inside the livedata macro.
  *
  * @version $Id$
+ * @since 1.0
  */
-public interface ProjectManagementFilter
+public interface ProjectManagementProperties
 {
 }

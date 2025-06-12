@@ -22,7 +22,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/id?search={encodedQuery}"
         }
       },
       {
