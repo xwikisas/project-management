@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.livadata;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 
 import javax.inject.Inject;
@@ -33,13 +34,13 @@ import org.apache.commons.io.IOUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.component.util.DefaultParameterizedType;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.internal.JSONMerge;
 import org.xwiki.localization.ContextualLocalizationManager;
-import org.xwiki.rendering.macro.Macro;
 
 /**
  * Some Name.
@@ -96,14 +97,23 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             return null;
         }
         try {
-            Macro macro = componentManager.getInstance(Macro.class, clientId);
-            InputStream inputStream = macro.getClass()
-                .getResourceAsStream(String.format("/%sProjectManagementLiveDataConfiguration.json", clientId));
-            if (inputStream == null) {
-                return null;
+            Type clientCfgProviderType = new DefaultParameterizedType(null, LiveDataConfigurationResolver.class,
+                LiveDataConfiguration.class);
+            if (componentManager.hasComponent(clientCfgProviderType, clientId)) {
+                // Either look for a provider implemented by the client.
+                LiveDataConfigurationResolver<LiveDataConfiguration> clientCfgProvider =
+                    componentManager.getInstance(clientCfgProviderType, clientId);
+                return clientCfgProvider.resolve(inputConfig);
+            } else {
+                // Or try to see if some configuration matching the pattern exists.
+                InputStream inputStream = getClass().getResourceAsStream(
+                    String.format("/%sProjectManagementLiveDataConfiguration.json", clientId));
+                if (inputStream == null) {
+                    return null;
+                }
+                return this.stringLiveDataConfigResolver.resolve(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
             }
-            return this.stringLiveDataConfigResolver.resolve(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
-        } catch (ComponentLookupException | IOException | LiveDataException e) {
+        } catch (IOException | LiveDataException | ComponentLookupException e) {
             return null;
         }
     }

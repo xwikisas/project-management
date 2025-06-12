@@ -1,0 +1,2 @@
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.IdSuggest
+com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
