@@ -35,7 +35,7 @@
       #set ($discard = $filterableProperties.add($prop))
     #end
   #end
-  #if ($$filterableProperties.isEmpty())
+  #if ($filterableProperties.isEmpty())
     <p>The entries of this macro are not filterable at the moment.</p>
   #else
     <div class="projManagementConstraintBuilder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
@@ -46,7 +46,7 @@
       </div>
       <div class="projManagConstraints">
       </div>
-      <div id="projManagConstraintTemplate" class="projManagConstraint">
+      <div id="projManagConstraintTemplate" class="projManagConstraint hidden">
         <div class="projManagContainer projManagConstraintNameContainer">
           <select class="projManagConstraintName">
             #foreach ($prop in $filterableProperties)
@@ -59,8 +59,7 @@
           </select>
         </div>
         <div class="projManagContainer projManagConstraintValueContainer">
-          <input class="projManagConstraintValue" type="text"
-            placeholder="$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.placeholder'))" />
+          <input class="projManagConstraintValue" type="text"/>
         </div>
       </div>
     </div>

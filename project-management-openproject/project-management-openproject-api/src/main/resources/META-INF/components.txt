@@ -3,3 +3,5 @@ com.xwiki.projectmanagement.openproject.apiclient.internal.DefaultOpenProjectApi
 com.xwiki.projectmanagement.openproject.config.internal.DefaultOpenProjectConfiguration
 com.xwiki.projectmanagement.openproject.config.internal.OpenProjectDocumentConfigurationSource
 com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.IdSuggest
+com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver

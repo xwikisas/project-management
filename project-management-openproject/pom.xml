@@ -31,6 +31,7 @@
   <artifactId>project-management-openproject</artifactId>
 
   <modules>
+    <module>project-management-openproject-api</module>
     <module>project-management-openproject-macro</module>
     <module>project-management-openproject-ui</module>
     <module>project-management-openproject-api</module>

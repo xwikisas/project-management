@@ -42,3 +42,7 @@
 .projManagDatePicker {
   z-index: 99999
 }
+
+.projManagContainer.projManagConstraintValueContainer > * {
+  width: 100%;
+}

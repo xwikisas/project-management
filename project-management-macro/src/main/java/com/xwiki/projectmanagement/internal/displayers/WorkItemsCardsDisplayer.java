@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement.internal.displayers;
+package com.xwiki.projectmanagement.internal.displayers;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -26,7 +26,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;

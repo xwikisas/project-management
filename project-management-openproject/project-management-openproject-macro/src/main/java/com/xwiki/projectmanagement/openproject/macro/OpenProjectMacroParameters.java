@@ -20,7 +20,7 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import org.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;

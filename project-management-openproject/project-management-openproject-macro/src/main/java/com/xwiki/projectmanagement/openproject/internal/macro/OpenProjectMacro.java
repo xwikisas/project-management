@@ -45,6 +45,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**

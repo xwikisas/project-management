@@ -37,6 +37,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-openproject-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.xwiki.commons</groupId>
       <artifactId>xwiki-pro-commons-pickers-api</artifactId>
       <version>${xwikipro.commons.version}</version>

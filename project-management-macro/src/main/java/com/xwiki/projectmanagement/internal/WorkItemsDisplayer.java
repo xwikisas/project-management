@@ -1,4 +1,4 @@
-package org.xwiki.projectmanagement;
+package com.xwiki.projectmanagement.internal;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -21,11 +21,32 @@ package org.xwiki.projectmanagement;
  */
 
 /**
- * Interface representing a property to be used inside the livedata macro.
+ * An enum listing the different ways a list of work items can be displayed.
  *
  * @version $Id$
- * @since 1.0
  */
-public interface ProjectManagementProperties
+public enum WorkItemsDisplayer
 {
+    /**
+     * Display the work items using a livedata.
+     */
+    LIVEDATA,
+    /**
+     * Display the items using a card style.
+     */
+    CARD,
+    /**
+     * Display the work items in a list.
+     */
+    LIST;
+
+    @Override
+    public String toString()
+    {
+        switch (this) {
+            case CARD: return "workItemsCards";
+            case LIST: return "workItemsList";
+            default: return "liveData";
+        }
+    }
 }

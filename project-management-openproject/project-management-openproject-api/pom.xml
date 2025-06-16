@@ -29,21 +29,32 @@
   </parent>
 
   <artifactId>project-management-openproject-api</artifactId>
+
   <dependencies>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-api</artifactId>
       <version>${project.version}</version>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-component-api</artifactId>
+      <version>${commons.version}</version>
     </dependency>
     <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>
       <artifactId>oauth2-client</artifactId>
       <version>2.17.3</version>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-rest-api</artifactId>
+      <version>${platform.version}</version>
     </dependency>
     <dependency>
       <groupId>com.nimbusds</groupId>
       <artifactId>nimbus-jose-jwt</artifactId>
       <version>10.3</version>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-api</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
+
 </project>
