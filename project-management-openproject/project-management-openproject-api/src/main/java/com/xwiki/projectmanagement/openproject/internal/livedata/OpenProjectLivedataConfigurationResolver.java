@@ -109,7 +109,8 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             if (searchURL == null || searchURL.isEmpty()) {
                 continue;
             }
-            searchURL = searchURL.replace("{wikiName}", wiki).replace("{instance}", instance);
+            searchURL = searchURL.replace("{wikiName}", wiki)
+                .replace("{instance}", instance);
             propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);
         }
     }
