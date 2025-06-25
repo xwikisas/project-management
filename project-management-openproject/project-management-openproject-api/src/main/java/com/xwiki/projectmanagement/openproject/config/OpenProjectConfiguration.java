@@ -25,6 +25,7 @@ import java.util.List;
 import org.xwiki.component.annotation.Role;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
+import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 
 /**
@@ -69,4 +70,13 @@ public interface OpenProjectConfiguration
      * @throws AuthenticationException when a new token cannot be created.
      */
     void createNewToken(String connectionName, String redirectUrl) throws AuthenticationException;
+
+    /**
+     * Provides an instance of {@link OpenProjectApiClient} for interacting with the OpenProject API.
+     *
+     * @return a configured {@code OpenProjectApiClient} ready for use
+     * @param connectionName the name of the connection from which to obtain data
+     * @throws AuthenticationException if the client cannot be initialized due to missing configuration
+     */
+    OpenProjectApiClient getOpenProjectApiClient(String connectionName) throws AuthenticationException;
 }

@@ -20,7 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.ArrayList;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +33,6 @@ import javax.inject.Singleton;
 import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.LocalDocumentReference;
-import org.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.WordBlock;
@@ -44,8 +43,8 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -82,12 +81,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
         String instance = parameters.getInstance();
         String identifier = parameters.getIdentifier();
-
         if (instance == null || instance.isEmpty()) {
             return;
         }
         if (identifier != null) {
-            addToSourceParams(parameters, "identifier", identifier);
+            String encodedIdentifier = URLEncoder.encode(identifier);
+            addToSourceParams(parameters, "identifier", encodedIdentifier);
         }
         addToSourceParams(parameters, "instance", instance);
     }
@@ -106,8 +105,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
-        if (xContext.getAction().equals("view")) {
+        if (xContext.getAction().equals(viewAction)) {
             String connectionName = parameters.getInstance();
             try {
                 String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
@@ -117,7 +117,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                             xContext);
                     LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
                         "ProjectManagement", "RenewOAuthConnection");
-                    String redirectUrl = xContext.getWiki().getURL(connectionDocumentReference, "view", xContext);
+                    String redirectUrl = xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext);
                     redirectUrl = redirectUrl + "?connectionName=" + connectionName;
                     redirectUrl = redirectUrl + "&redirectUrl=" + currentDocumentUrl;
                     return Collections.singletonList(new LinkBlock(

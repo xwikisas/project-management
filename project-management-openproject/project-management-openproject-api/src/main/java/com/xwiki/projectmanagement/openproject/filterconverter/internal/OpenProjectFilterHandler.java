@@ -68,19 +68,33 @@ public final class OpenProjectFilterHandler
             if (validConstraints.isEmpty()) {
                 continue;
             }
+            List<Map<String, Object>> filterConstraints = new ArrayList<>();
+            for (LiveDataQuery.Constraint constraint : validConstraints) {
+                String operatorValue = FilterConverter.convertOperator(constraint.getOperator());
+                Map<String, Object> existingOperator =
+                    filterConstraints.stream()
+                        .filter(fc -> fc.get(OPERATOR).equals(operatorValue))
+                        .findFirst().orElse(null);
 
-            Map<String, Object> filterProperties = new HashMap<>();
+                if (existingOperator == null) {
+                    Map<String, Object> newOperator = new HashMap<>();
+                    newOperator.put(OPERATOR, operatorValue);
+                    List<String> initialValues = new ArrayList<>();
+                    initialValues.add((String) constraint.getValue());
+                    newOperator.put(VALUES, initialValues);
+                    filterConstraints.add(newOperator);
+                } else {
+                    List<String> currentValues = (List<String>) existingOperator.get(VALUES);
+                    currentValues.add((String) constraint.getValue());
+                    existingOperator.put(VALUES, currentValues);
+                }
+            }
 
-            filterProperties.put(OPERATOR, validConstraints.get(0).getOperator());
-
-            List<String> values = validConstraints.stream().map(constraint -> (String) constraint.getValue())
-                .collect(Collectors.toList());
-
-            filterProperties.put(VALUES, values);
-
-            Map<String, Object> convertedFilter = new HashMap<>();
-            convertedFilter.put(FilterConverter.convertKey(filter.getProperty()), filterProperties);
-            convertedFilters.add(convertedFilter);
+            for (Map<String, Object> filterConstraint : filterConstraints) {
+                Map<String, Object> convertedFilter = new HashMap<>();
+                convertedFilter.put(FilterConverter.convertKey(filter.getProperty()), filterConstraint);
+                convertedFilters.add(convertedFilter);
+            }
         }
         try {
             ObjectMapper mapper = new ObjectMapper();
@@ -117,4 +131,9 @@ public final class OpenProjectFilterHandler
             throw new RuntimeException(e);
         }
     }
+
+//    public static String intersectFilterStrings(String firstFilterString, String secondFilterString) throws
+//        JsonProcessingException
+//    {
+//    }
 }

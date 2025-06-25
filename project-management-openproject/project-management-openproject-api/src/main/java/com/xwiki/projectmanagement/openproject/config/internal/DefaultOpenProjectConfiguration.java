@@ -32,6 +32,7 @@ import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.script.service.ScriptService;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
+import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
@@ -80,7 +81,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         try {
             OAuth2ClientScriptService oauth2Client = componentManager.getInstance(ScriptService.class,
                 OAUTH_COMPONENT_NAME);
-            accessToken = oauth2Client.getAccessToken(connectionName, true);
+            accessToken = oauth2Client.getAccessToken(connectionName);
         } catch (Exception e) {
             throw new AuthenticationException("The selected connection" + connectionName + "is not available", e);
         }
@@ -97,5 +98,13 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         } catch (Exception e) {
             throw new AuthenticationException("Cannot connect to the open project instance", e);
         }
+    }
+
+    @Override
+    public OpenProjectApiClient getOpenProjectApiClient(String connectionName) throws AuthenticationException
+    {
+
+        return new OpenProjectApiClient(getConnectionUrl(connectionName),
+            getTokenForCurrentConfig(connectionName));
     }
 }

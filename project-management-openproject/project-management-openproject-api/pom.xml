@@ -35,6 +35,8 @@
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-api</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.commons</groupId>
       <artifactId>xwiki-commons-component-api</artifactId>
       <version>${commons.version}</version>
@@ -43,6 +45,8 @@
       <groupId>org.xwiki.contrib.oidc</groupId>
       <artifactId>oauth2-client</artifactId>
       <version>2.17.3</version>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-rest-api</artifactId>
       <version>${platform.version}</version>
@@ -51,9 +55,6 @@
       <groupId>com.nimbusds</groupId>
       <artifactId>nimbus-jose-jwt</artifactId>
       <version>10.3</version>
-      <groupId>com.xwiki.projectmanagement</groupId>
-      <artifactId>project-management-api</artifactId>
-      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

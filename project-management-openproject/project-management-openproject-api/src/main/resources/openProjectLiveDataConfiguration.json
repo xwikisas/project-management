@@ -40,7 +40,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/type"
         }
       },
       {
@@ -297,6 +297,44 @@
         }
       },
       {
+        "id": "updateDate",
+        "filterable": true,
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "<t-",
+              "name": "less than days ago"
+            },
+            {
+              "id": ">t-",
+              "name": "more than days ago"
+            },
+            {
+              "id": "t-",
+              "name": "Days ago"
+            },
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "<>d",
+              "name": "Between"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
         "id": "creator.value",
         "filterable": true,
         "filter": {
@@ -311,7 +349,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/users"
         }
       },
       {
@@ -337,7 +375,7 @@
               "name": "Empty"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/users"
         }
       },
       {
@@ -355,7 +393,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/priorities"
         }
       },
       {
@@ -369,7 +407,7 @@
               "name": "Equals"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/projects"
         }
       },
       {
@@ -399,7 +437,7 @@
               "name": "not empty"
             }
           ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/statuses"
         }
       }
     ],

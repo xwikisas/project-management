@@ -43,9 +43,11 @@ public final class FilterConverter
         KEY_MAPPING.put("date", "start_date");
         KEY_MAPPING.put("identifier.value", "id");
         KEY_MAPPING.put("summary.value", "subject");
-        KEY_MAPPING.put("assignees", "assignee_to");
+        KEY_MAPPING.put("assignees", "assigned_to");
+        KEY_MAPPING.put("creator.value", "author");
+        KEY_MAPPING.put("project.value", "project");
+        OPERATOR_MAPPING.put("contains", "=");
     }
-
 
     private FilterConverter()
     {
