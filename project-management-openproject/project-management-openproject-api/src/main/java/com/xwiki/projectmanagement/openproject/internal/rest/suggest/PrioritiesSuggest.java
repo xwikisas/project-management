@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Priority;
 
 /**
  * Rest endpoint that suggests priorities of projects from current OpenProject instance.
@@ -66,12 +69,29 @@ public class PrioritiesSuggest extends XWikiResource
     )
     {
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
-        List<Map<String, String>> response = openProjectApiClient.getPriorities();
-        return Response.ok(response).build();
+        List<Map<String, String>> prioritiesSuggestions = getPrioritiesSuggestions(openProjectApiClient, connectionUrl);
+        return Response.ok(prioritiesSuggestions).build();
+    }
+
+    private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient,
+        String connectionUrl)
+    {
+        List<Priority> prioritiesSuggestions = openProjectApiClient.getPriorities();
+        List<Map<String, String>> prioritiesSuggestionsList = new ArrayList<>();
+        for (Priority priority : prioritiesSuggestions) {
+            Map<String, String> prioritiesSuggestion = new HashMap<>();
+            prioritiesSuggestion.put("label", priority.getName());
+            prioritiesSuggestion.put("value", priority.getId().toString());
+            prioritiesSuggestion.put("url",  String.format("%s/priorities/%s/edit", connectionUrl, priority.getId()));
+            prioritiesSuggestionsList.add(prioritiesSuggestion);
+        }
+        return prioritiesSuggestionsList;
     }
 }

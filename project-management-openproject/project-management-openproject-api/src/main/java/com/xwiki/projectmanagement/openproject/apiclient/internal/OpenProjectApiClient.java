@@ -26,9 +26,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
@@ -39,6 +37,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.model.Identifier;
+import com.xwiki.projectmanagement.openproject.model.Priority;
+import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.Type;
+import com.xwiki.projectmanagement.openproject.model.User;
 
 /**
  * Default Open project get items client helper.
@@ -70,12 +74,6 @@ public class OpenProjectApiClient
     private static final String PAGE_SIZE = "pageSize";
 
     private static final String PROJECT = "project";
-
-    private static final String VALUE = "value";
-
-    private static final String LABEL = "label";
-
-    private static final String URL = "url";
 
     private static final String NAME = "name";
 
@@ -173,19 +171,18 @@ public class OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of maps
      */
-    public List<Map<String, String>> getIdentifiers(int pageSize, String filters)
+    public List<Identifier> getIdentifiers(int pageSize, String filters)
     {
         JsonNode elements = getSuggestionsMainNode(WORK_PACKAGES_API_URL, String.valueOf(pageSize),
             filters, "elements/id,elements/subject");
-        List<Map<String, String>> identifiers = new ArrayList<>();
+        List<Identifier> identifiers = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> identifier = new HashMap<>();
-            String id = element.path(ID).asText();
-            String label = element.path(SUBJECT).asText();
+            Identifier identifier = new Identifier();
+            int id = element.path(ID).asInt();
+            String name = element.path(SUBJECT).asText();
             String url = String.format("%s/%s/%s/%s", connectionUrl, WORK_PACKAGES, id, ACTIVITY);
-            identifier.put(VALUE, id);
-            identifier.put(LABEL, label);
-            identifier.put(URL, url);
+            identifier.setName(name);
+            identifier.setId(id);
             identifiers.add(identifier);
         }
         return identifiers;
@@ -198,7 +195,7 @@ public class OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of maps
      */
-    public List<Map<String, String>> getUsers(int pageSize, String filters)
+    public List<User> getUsers(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -207,15 +204,14 @@ public class OpenProjectApiClient
                 filters,
                 SELECT_ELEMENTS_FROM_API_URL_PARAM
             );
-        List<Map<String, String>> users = new ArrayList<>();
+        List<User> users = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> user = new HashMap<>();
-            String id = element.path(ID).asText();
-            String label = element.path(NAME).asText();
-            String url = String.format("%s/users/%s", connectionUrl, id);
-            user.put(VALUE, id);
-            user.put(LABEL, label);
-            user.put(URL, url);
+            User user = new User();
+            int id = element.path(ID).asInt();
+
+            String name = element.path(NAME).asText();
+            user.setId(id);
+            user.setName(name);
             users.add(user);
         }
         return users;
@@ -228,7 +224,7 @@ public class OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of maps
      */
-    public List<Map<String, String>> getProjects(int pageSize, String filters)
+    public List<Project> getProjects(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -237,15 +233,14 @@ public class OpenProjectApiClient
                 filters,
                 SELECT_ELEMENTS_FROM_API_URL_PARAM
             );
-        List<Map<String, String>> projects = new ArrayList<>();
+        List<Project> projects = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> project = new HashMap<>();
-            String id = element.path(ID).asText();
-            String label = element.path(NAME).asText();
+            Project project = new Project();
+            int id = element.path(ID).asInt();
+            String name = element.path(NAME).asText();
             String url = String.format("%s/projects/%s", connectionUrl, id);
-            project.put(VALUE, id);
-            project.put(LABEL, label);
-            project.put(URL, url);
+            project.setId(id);
+            project.setName(name);
             projects.add(project);
         }
         return projects;
@@ -256,18 +251,16 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Map<String, String>> getTypes()
+    public List<Type> getTypes()
     {
         JsonNode elements = getSuggestionsMainNode(TYPES_API_URL, "", "", "");
-        List<Map<String, String>> types = new ArrayList<>();
+        List<Type> types = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> type = new HashMap<>();
-            String id = element.path(ID).asText();
+            Type type = new Type();
+            int id = element.path(ID).asInt();
             String name = element.path(NAME).asText();
-            String url = String.format("%s/types/%s/edit/settings", connectionUrl, id);
-            type.put(VALUE, id);
-            type.put(LABEL, name);
-            type.put(URL, url);
+            type.setName(name);
+            type.setId(id);
             types.add(type);
         }
         return types;
@@ -278,18 +271,16 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Map<String, String>> getStatuses()
+    public List<Status> getStatuses()
     {
         JsonNode elements = getSuggestionsMainNode(STATUSES_API_URL, "", "", "");
-        List<Map<String, String>> statuses = new ArrayList<>();
+        List<Status> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> status = new HashMap<>();
-            String id = element.path(ID).asText();
+            Status status = new Status();
+            int id = element.path(ID).asInt();
             String labelName = element.path(NAME).asText();
-            String url = String.format("%s/statuses/%s/edit", connectionUrl, id);
-            status.put(VALUE, id);
-            status.put(LABEL, labelName);
-            status.put(URL, url);
+            status.setId(id);
+            status.setName(labelName);
             statuses.add(status);
         }
         return statuses;
@@ -300,18 +291,16 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Map<String, String>> getPriorities()
+    public List<Priority> getPriorities()
     {
         JsonNode elements = getSuggestionsMainNode(PRIORITIES_API_URL, "", "", "");
-        List<Map<String, String>> priorities = new ArrayList<>();
+        List<Priority> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
-            Map<String, String> priority = new HashMap<>();
-            String id = element.path(ID).asText();
-            String labelName = element.path(NAME).asText();
-            String url = String.format("%s/priorities/%s/edit", connectionUrl, id);
-            priority.put(VALUE, id);
-            priority.put(LABEL, labelName);
-            priority.put(URL, url);
+            Priority priority = new Priority();
+            int id = element.path(ID).asInt();
+            String name = element.path(NAME).asText();
+            priority.setId(id);
+            priority.setName(name);
             priorities.add(priority);
         }
         return priorities;

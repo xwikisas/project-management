@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Type;
 
 /**
  * Rest endpoint that suggests types.
@@ -66,12 +69,29 @@ public class TypeSuggest extends XWikiResource
     )
     {
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
-        List<Map<String, String>> response = openProjectApiClient.getTypes();
-        return Response.ok(response).build();
+        List<Map<String, String>> typeSuggestions = getTypesSuggestions(openProjectApiClient, connectionUrl);
+        return Response.ok(typeSuggestions).build();
+    }
+
+    private List<Map<String, String>> getTypesSuggestions(OpenProjectApiClient openProjectApiClient,
+        String connectionUrl)
+    {
+        List<Type> typeSuggestionsResponse = openProjectApiClient.getTypes();
+        List<Map<String, String>> typeSuggestions = new ArrayList<>();
+        for (Type type : typeSuggestionsResponse) {
+            Map<String, String> typeSuggestion = new HashMap<>();
+            typeSuggestion.put("value", type.getId().toString());
+            typeSuggestion.put("label", type.getName());
+            typeSuggestion.put("url", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId()));
+            typeSuggestions.add(typeSuggestion);
+        }
+        return typeSuggestions;
     }
 }

@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +41,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.User;
 
 /**
  * Rest endpoint that suggests users based on some query string.
@@ -73,15 +76,25 @@ public class UsersSuggest extends XWikiResource
         String lowerSearch = search.toLowerCase();
 
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
         String filter = lowerSearch.isEmpty() ? "[]" : String.format("[{\"name\":{\"operator\":\"~\","
                 + "\"values\":[\"%s\"]}}]",
             lowerSearch);
-        List<Map<String, String>> response = openProjectApiClient.getUsers(pageSize, filter);
-        return Response.ok(response).build();
+        List<User> usersResponse = openProjectApiClient.getUsers(pageSize, filter);
+        List<Map<String, String>> usersSuggestions = new ArrayList<>();
+        for (User user : usersResponse) {
+            Map<String, String> suggestion = new HashMap<>();
+            suggestion.put("value", user.getId().toString());
+            suggestion.put("label", user.getName());
+            suggestion.put("url", String.format("%s/users/%s", connectionUrl, user.getId()));
+            usersSuggestions.add(suggestion);
+        }
+        return Response.ok(usersSuggestions).build();
     }
 }

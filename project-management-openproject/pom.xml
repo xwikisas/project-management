@@ -36,4 +36,8 @@
     <module>project-management-openproject-api</module>
   </modules>
 
+  <properties>
+    <contrib.oauth2.version>2.18.2</contrib.oauth2.version>
+  </properties>
+
 </project>

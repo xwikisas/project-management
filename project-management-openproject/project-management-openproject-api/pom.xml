@@ -44,7 +44,7 @@
     <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>
       <artifactId>oauth2-client</artifactId>
-      <version>2.17.3</version>
+      <version>${contrib.oauth2.version}</version>
     </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>

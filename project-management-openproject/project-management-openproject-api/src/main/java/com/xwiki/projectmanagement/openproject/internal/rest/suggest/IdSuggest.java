@@ -20,6 +20,8 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +42,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Identifier;
 
 /**
  * Rest endpoint that suggests ids based on some query string.
@@ -55,7 +58,6 @@ public class IdSuggest extends XWikiResource
 {
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
-
 
     /**
      * @param wiki the wiki that contains the configured client.
@@ -75,15 +77,27 @@ public class IdSuggest extends XWikiResource
         String lowerSearch = search.toLowerCase();
 
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
         String filter = lowerSearch.isEmpty() ? "[]" : String.format("[{\"subject\":{\"operator\":\"~\","
                 + "\"values\":[\"%s\"]}}]",
             lowerSearch);
-        List<Map<String, String>> response = openProjectApiClient.getIdentifiers(pageSize, filter);
-        return Response.ok(response).build();
+
+        List<Identifier> identifiersResponse = openProjectApiClient.getIdentifiers(pageSize, filter);
+        List<Map<String, String>> identifiersSuggestions = new ArrayList<>();
+        for (Identifier identifier : identifiersResponse) {
+            Map<String, String> identifierSuggestion = new HashMap<>();
+            identifierSuggestion.put("value", identifier.getId().toString());
+            identifierSuggestion.put("label", identifier.getName());
+            identifierSuggestion.put("url", String.format("%s/work_packages/%s/activity", connectionUrl,
+                identifier.getId()));
+            identifiersSuggestions.add(identifierSuggestion);
+        }
+        return Response.ok(identifiersSuggestions).build();
     }
 }

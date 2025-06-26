@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +39,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Status;
 
 /**
  * Rest endpoint that suggests the work package available statuses.
@@ -66,12 +69,29 @@ public class StatusesSuggest extends XWikiResource
     )
     {
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
-        List<Map<String, String>> response = openProjectApiClient.getStatuses();
-        return Response.ok(response).build();
+        List<Map<String, String>> statusesSuggestions = getStatusesSuggestions(openProjectApiClient, connectionUrl);
+        return Response.ok(statusesSuggestions).build();
+    }
+
+    private List<Map<String, String>> getStatusesSuggestions(OpenProjectApiClient openProjectApiClient,
+        String connectionUrl)
+    {
+        List<Status> statusSuggestionsResponse = openProjectApiClient.getStatuses();
+        List<Map<String, String>> statusesSuggestions = new ArrayList<>();
+        for (Status status : statusSuggestionsResponse) {
+            Map<String, String> statusesSuggestion = new HashMap<>();
+            statusesSuggestion.put("value", status.getId().toString());
+            statusesSuggestion.put("label", status.getName());
+            statusesSuggestion.put("url", String.format("%s/statuses/%s/edit", connectionUrl, status.getId()));
+            statusesSuggestions.add(statusesSuggestion);
+        }
+        return statusesSuggestions;
     }
 }

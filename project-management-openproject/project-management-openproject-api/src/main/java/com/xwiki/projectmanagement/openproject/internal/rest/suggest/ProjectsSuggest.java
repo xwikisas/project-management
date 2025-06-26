@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +41,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 /**
  * Rest endpoint that suggests projects based on some query string.
@@ -73,15 +76,25 @@ public class ProjectsSuggest extends XWikiResource
         String lowerSearch = search.toLowerCase();
 
         OpenProjectApiClient openProjectApiClient;
+        String connectionUrl;
         try {
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+            connectionUrl = openProjectConfiguration.getConnectionUrl(instance);
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
         String filter = lowerSearch.isEmpty() ? "[]" : String.format("[{\"name\":{\"operator\":\"~\","
                 + "\"values\":[\"%s\"]}}]",
             lowerSearch);
-        List<Map<String, String>> response = openProjectApiClient.getProjects(pageSize, filter);
-        return Response.ok(response).build();
+        List<Project> projectApiResponse = openProjectApiClient.getProjects(pageSize, filter);
+        List<Map<String, String>> projectsSuggestions = new ArrayList<>();
+        for (Project project : projectApiResponse) {
+            Map<String, String> projectSuggestion = new HashMap<>();
+            projectSuggestion.put("value", project.getId().toString());
+            projectSuggestion.put("label", project.getName());
+            projectSuggestion.put("url", String.format("%s/projects/%s", connectionUrl, project.getId()));
+            projectsSuggestions.add(projectSuggestion);
+        }
+        return Response.ok(projectsSuggestions).build();
     }
 }
