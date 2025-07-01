@@ -58,10 +58,13 @@ public interface ProjectManagementClient
      * @param page the number identifying the page that needs to be retrieved.
      * @param pageSize the maximum number of items that can be present in the returned result.
      * @param filters a list of filters that the returned items need to match.
+     * @param sortEntries a list of {@link org.xwiki.livedata.LiveDataQuery.SortEntry} objects that denote how the
+     *     results should be sorted.
      * @return a paginated result containing the items matching the list of filters.
      * @throws WorkItemRetrievalException if there was any exception during the retrieval of the work item.
      */
-    PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters) throws
+    PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries) throws
         WorkItemRetrievalException;
 
     /**

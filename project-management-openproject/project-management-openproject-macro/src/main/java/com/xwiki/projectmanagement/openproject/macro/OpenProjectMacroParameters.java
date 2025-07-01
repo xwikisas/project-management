@@ -20,11 +20,10 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
-import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
 
 /**
  * Open project macro params.
@@ -50,12 +49,5 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     public void setInstance(String instance)
     {
         this.instance = instance;
-    }
-
-    @PropertyDisplayType(OpenProjectProperties.class)
-    @Override
-    public void setProperties(String properties)
-    {
-        super.setProperties(properties);
     }
 }

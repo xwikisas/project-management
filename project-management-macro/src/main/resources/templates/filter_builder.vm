@@ -26,7 +26,7 @@
 #if ($clientId == '')
   #set ($clientId = $macroId)
 #end
-#set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($macroId))
+#set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($clientId))
 #if ("$!clientCfg" != '')
   #set ($propertiesJson = $clientCfg.meta.propertyDescriptors)
   #set ($filterableProperties = [])
@@ -38,29 +38,32 @@
   #if ($filterableProperties.isEmpty())
     <p>The entries of this macro are not filterable at the moment.</p>
   #else
-    <div class="projManagementConstraintBuilder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+    <div class="proj-manag-constraint-builder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
       <div>
-        <button id="addConstraint" class="btn btn-default">
-          $!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))
-        </button>
+        <select id="proj-manag-add-constraint" class="btn btn-default">
+          <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
+          #foreach ($prop in $filterableProperties)
+            <option value="$prop.id">$prop.id</option>
+          #end
+        </select>
       </div>
-      <div class="projManagConstraints">
+      <div class="proj-manag-constraints">
       </div>
-      <div id="projManagConstraintTemplate" class="projManagConstraint hidden">
-        <div class="projManagContainer projManagConstraintNameContainer">
-          <select class="projManagConstraintName">
-            #foreach ($prop in $filterableProperties)
-              <option value="$prop.id">$prop.id</option>
-            #end
-          </select>
+      <div id="proj-manag-constraint-template" class="hidden">
+        <div class="proj-manag-container projManagConstraintNameContainer">
+          <span class="proj-manag-constraint-title">Some title</span>
+          <input type="text" class="projManagConstraintName hidden"/>
         </div>
-        <div class="projManagContainer projManagConstraintOperatorContainer">
-          <select class="projManagConstraintOperator">
-          </select>
+        <div class="proj-manag-filter-container">
+          <div class="proj-manag-constraint-operator-container">
+            <select class="proj-manag-constraint-operator">
+            </select>
+          </div>
+          <div class="proj-manag-container proj-manag-constraint-value-container">
+            <input class="proj-manag-constraint-value" type="text"/>
+          </div>
         </div>
-        <div class="projManagContainer projManagConstraintValueContainer">
-          <input class="projManagConstraintValue" type="text"/>
-        </div>
+        <a class="proj-manag-add-constraint" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
       </div>
     </div>
   #end
