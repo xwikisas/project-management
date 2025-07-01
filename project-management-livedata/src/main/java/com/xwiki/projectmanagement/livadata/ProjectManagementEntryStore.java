@@ -115,7 +115,7 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         try {
             workItems =
                 projectManagementManager.getWorkItems(clientId, Math.toIntExact(query.getOffset()), query.getLimit(),
-                    query.getFilters());
+                    query.getFilters(), query.getSort());
         } catch (WorkItemException e) {
             throw new LiveDataException("Failed to retrieve the work items.", e);
         }

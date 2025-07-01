@@ -72,7 +72,8 @@ public class TestClient implements ProjectManagementClient
     }
 
     @Override
-    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters)
+    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();

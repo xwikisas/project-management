@@ -57,9 +57,9 @@ public class DefaultProjectManagementManager implements ProjectManagementManager
 
     @Override
     public PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize,
-        List<LiveDataQuery.Filter> filters) throws WorkItemException
+        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
     {
-        return getClient(client).getWorkItems(page, pageSize, filters);
+        return getClient(client).getWorkItems(page, pageSize, filters, sortEntries);
     }
 
     @Override

@@ -18,14 +18,20 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
-#macro (propertyPicker $params $clientHint)
+#macro (sortPicker $params $clientHint)
   #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
+  #set ($ascTranslation = $services.localization.render("projectmanagement.macro.sort.asc"))
+  #set ($descTranslation = $services.localization.render("projectmanagement.macro.sort.desc"))
   #set ($options = [])
   #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
     #set ($discard = $options.add({
-      'name': $propertyDescriptor.name,
-      'value': $propertyDescriptor.id
+      'name': "${ascTranslation} - ${propertyDescriptor.name}",
+      'value': "${propertyDescriptor.id}:asc"
+    }))
+    #set ($discard = $options.add({
+      'name': "${descTranslation} - ${propertyDescriptor.name}",
+      'value': "${propertyDescriptor.id}:desc"
     }))
   #end
   #set ($parameters = {

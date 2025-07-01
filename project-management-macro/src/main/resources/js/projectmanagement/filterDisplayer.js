@@ -85,7 +85,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
             delete e.target["hide"];
           }, 0);
         });
-        dateInput.data("daterangepicker").container.addClass('projManagDatePicker');
+        dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
         inputElem.attr('type', 'text').addClass('hidden');
         break;
       case "list":

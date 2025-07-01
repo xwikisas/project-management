@@ -17,32 +17,35 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-.projManagConstraint {
+.proj-manag-constraint-title {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 5px;
+  font-weight: bold;
+}
+.proj-manag-filter-container {
   display: flex;
-  justify-content: space-between;
-  gap: 1em;
-}
-
-.projManagConstraint > div {
-  flex-grow: 1;
-}
-
-.projManagConstraintName, .projManagConstraintValueContainer > input,.projManagConstraintOperator {
-  width: 100%;
-}
-
-.projManagContainer {
-  display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: flex-start;
   align-items: center;
-  gap: 1em;
   width: 100%;
+  margin-bottom: .5em;
 }
 
-.projManagDatePicker {
-  z-index: 99999
+.proj-manag-container,.proj-manag-container>.proj-manag-constraint-value {
+  display: inline-block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 1em;
 }
 
-.projManagContainer.projManagConstraintValueContainer > * {
-  width: 100%;
+.proj-manag-add-constraint {
+  /*margin-left: 3rem;*/
+  display: inline-block;
+  margin-top: 3px;
+  font-style: italic;
+}
+
+.proj-manag-date-picker {
+  z-index: 99999;
 }

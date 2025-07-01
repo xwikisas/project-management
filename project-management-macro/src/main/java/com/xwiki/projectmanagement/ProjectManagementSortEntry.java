@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject;
+package com.xwiki.projectmanagement;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -21,10 +21,10 @@ package com.xwiki.projectmanagement.openproject;
  */
 
 /**
- * Class representing the properties of the open project macro.
+ * Interface representing the project management macro sort parameter.
  *
  * @version $Id$
  */
-public interface OpenProjectProperties
+public interface ProjectManagementSortEntry
 {
 }
