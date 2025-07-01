@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
  *
@@ -18,26 +16,36 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
+ */
+package com.xwiki.projectmanagement.exception;
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
-    <version>1.0-SNAPSHOT</version>
-  </parent>
-  <packaging>pom</packaging>
-  <artifactId>project-management-openproject</artifactId>
+/**
+ * Exception thrown when the authentication fails.
+ *
+ * @version $Id$
+ * @since 1.0
+ */
+public class AuthenticationException extends Exception
+{
+    /**
+     * Class ID for serialization.
+     */
+    private static final long serialVersionUID = 1L;
 
-  <modules>
-    <module>project-management-openproject-macro</module>
-    <module>project-management-openproject-ui</module>
-    <module>project-management-openproject-api</module>
-  </modules>
+    /**
+     * @param message the detail message for this exception.
+     */
+    public AuthenticationException(String message)
+    {
+        super(message);
+    }
 
-  <properties>
-    <contrib.oauth2.version>2.18.2</contrib.oauth2.version>
-  </properties>
-
-</project>
+    /**
+     * @param message the detail message for this exception.
+     * @param cause the cause for this exception or null if none exists.
+     */
+    public AuthenticationException(String message, Throwable cause)
+    {
+        super(message, cause);
+    }
+}

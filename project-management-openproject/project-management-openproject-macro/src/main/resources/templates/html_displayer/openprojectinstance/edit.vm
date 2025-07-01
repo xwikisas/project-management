@@ -18,10 +18,9 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
-## TODO: Get data from configuration.
-#set ($options = [])
+
 #set ($parameters = {
-  'options': $options
+  'options': $services.openprojectservice.getConnectionOptions()
 })
 #set ($discard = $parameters.putAll($displayer.parameters))
 #staticSelectPicker($parameters)
