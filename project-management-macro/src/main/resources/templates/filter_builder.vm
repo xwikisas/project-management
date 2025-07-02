@@ -17,11 +17,16 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+#**
+ * Generate the html structure for a filter builder.
+ *
+ * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
+ *   retrieve the filterable livedata properties.
+ *#
 #macro (filterBuilder $parameters)
 #picker_import
 #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
-##set ($discard = $xwiki.jsrx.use('js/projectmanagement/filterBuilder.js'))
 #set ($clientId = "$!parameters.client")
 #if ($clientId == '')
   #set ($clientId = $macroId)
@@ -36,7 +41,7 @@
     #end
   #end
   #if ($filterableProperties.isEmpty())
-    <p>The entries of this macro are not filterable at the moment.</p>
+    <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
   #else
     <div class="proj-manag-constraint-builder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
       <div>
@@ -50,9 +55,9 @@
       <div class="proj-manag-constraints">
       </div>
       <div id="proj-manag-constraint-template" class="hidden">
-        <div class="proj-manag-container projManagConstraintNameContainer">
+        <div class="proj-manag-container">
           <span class="proj-manag-constraint-title">Some title</span>
-          <input type="text" class="projManagConstraintName hidden"/>
+          <input type="text" class="proj-manag-constraint-name hidden"/>
         </div>
         <div class="proj-manag-filter-container">
           <div class="proj-manag-constraint-operator-container">
@@ -68,6 +73,6 @@
     </div>
   #end
 #else
-  <p>The entries of this macro are not filterable at the moment.</p>
+  <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
 #end
 #end

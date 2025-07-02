@@ -34,9 +34,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     cfg: ''
   };
   let clean = function () {
-    builder.constraintBuilder.find('.projManagConstraint').each(function (index, constraint) {
+    builder.constraintBuilder.find('.proj-manag-constraint').each(function (index, constraint) {
       let root = $(constraint);
-      let key = $(root.find('.projManagConstraintName'));
+      let key = $(root.find('.proj-manag-constraint-name'));
       let operators = $(root.find('select.proj-manag-constraint-operator'))
       let vals = $(root.find('input.proj-manag-constraint-value'));
       let property = builder.cfg.find(i => i.id == key.val());
@@ -52,9 +52,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
   };
   let getJson = function () {
     let resultJson = {};
-    builder.constraintBuilder.find('.projManagConstraint').each(function (index, constraint) {
+    builder.constraintBuilder.find('.proj-manag-constraint').each(function (index, constraint) {
       let root = $(constraint);
-      let key = $(root.find('.projManagConstraintName'));
+      let key = $(root.find('.proj-manag-constraint-name'));
       let operators = $(root.find('.proj-manag-constraint-operator'));
       let vals = $(root.find('input.proj-manag-constraint-value'));
       if (vals.length <= 0) {
@@ -90,19 +90,19 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     // Clone template and add it to dom or find the already existing one.
     let constraint = builder.constraintBuilder
       .find('.proj-manag-constraints')
-      .find('.projManagConstraintName')
+      .find('.proj-manag-constraint-name')
       .filter((i, j) => $(j).val() == filter.property)
-      .closest('.projManagConstraint');
+      .closest('.proj-manag-constraint');
     let operatorValueContainer = null;
     if (constraint.length <= 0) {
       constraint = builder.template.clone();
       builder.addPoint.append(constraint);
       constraint.removeAttr('id');
       constraint.removeClass('hidden');
-      constraint.addClass('projManagConstraint');
+      constraint.addClass('proj-manag-constraint');
       constraint.find('.proj-manag-constraint-title').text(filter.property);
       operatorValueContainer = constraint.find('.proj-manag-filter-container');
-      constraint.find('.projManagConstraintName').val(filter.property);
+      constraint.find('.proj-manag-constraint-name').val(filter.property);
     } else {
       operatorValueContainer = builder.template.find('.proj-manag-filter-container').clone();
       constraint.find('.proj-manag-add-constraint').before(operatorValueContainer);

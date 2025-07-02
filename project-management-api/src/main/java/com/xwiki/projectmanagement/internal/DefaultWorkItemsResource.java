@@ -36,6 +36,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.rest.WorkItemsResource;
 
+// Todo: to be removed or modified to use a ProjectManagementManager and actually function.
 /**
  * Default implementation of {@link WorkItemsResource}.
  *

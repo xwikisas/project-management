@@ -42,9 +42,9 @@ public interface ProjectManagementManager
     /**
      * Retrieve a work item from a specific project management client.
      *
-     * @param client the hint of the client implementation
+     * @param client the hint of the client implementation.
      * @param workItemId the identifier of the work item that needs retrieval.
-     * @return the work item if it was found or null if nothing was found
+     * @return the work item matching the id.
      * @throws WorkItemException if the work item was not found.
      */
     WorkItem getWorkItem(String client, String workItemId) throws WorkItemException;

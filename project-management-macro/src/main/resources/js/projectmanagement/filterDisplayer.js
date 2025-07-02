@@ -28,7 +28,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         }
         break;
       case "date":
-        parent.find('.projManagDateVal').data("daterangepicker")?.remove();
+        parent.find('.proj-manag-date-val').data("daterangepicker")?.remove();
       default:
         parent.children().remove();
         parent.append(inputElem);
@@ -44,7 +44,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         break;
       case "date":
         let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
-        let dateInput = $('<input />').attr('type', 'text').addClass('projManagDateVal').on('change', function() {
+        let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val').on('change', function() {
           let valToSet = '';
           const daterangepicker = $(this).data("daterangepicker");
           if (!daterangepicker) {
@@ -89,7 +89,6 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         inputElem.attr('type', 'text').addClass('hidden');
         break;
       case "list":
-        //inputElem.addClass('hidden');
         let options = params.options || [];
         let selectizeCfg = {
           create: true,
@@ -116,7 +115,6 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         inputElem.xwikiSelectize(selectizeCfg);
         break;
       case "boolean":
-        //inputElem.xwikiSelectize();
         inputElem.attr('type', 'text');
         inputElem.xwikiSelectize({
           create: false,

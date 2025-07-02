@@ -31,11 +31,11 @@ require(['filterBuilder'], function () {
       for (key in constraints) {
         livedataCfg.query.filters.push(constraints[key]);
       }
-      $('#projManagFilter').val(JSON.stringify(livedataCfg));
+      $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
     });
     let initBuilder = function () {
       console.log('builder initiated.');
-      let initialFilter = $('#projManagFilter').val();
+      let initialFilter = $('#proj-manag-filter').val();
       if (!initialFilter) {
         console.log('no initial filter.');
         return;

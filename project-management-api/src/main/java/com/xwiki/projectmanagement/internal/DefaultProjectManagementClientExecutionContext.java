@@ -31,7 +31,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 
 /**
  * Default implementation for the {@link ProjectManagementClientExecutionContext}. Uses thread local map that should be
- * set before the client should be executed.
+ * set before the client gets executed.
  *
  * @version $Id$
  */

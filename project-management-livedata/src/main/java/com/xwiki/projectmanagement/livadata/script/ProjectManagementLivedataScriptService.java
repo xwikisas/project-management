@@ -32,7 +32,8 @@ import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.script.service.ScriptService;
 
 /**
- * Some description.
+ * Project management livedata script service. Offers useful methods with regards to the project management livedata
+ * configuration and implementation.
  *
  * @version $Id$
  */

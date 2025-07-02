@@ -35,7 +35,8 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Default displayer implementation.
+ * Default displayer implementation that handles the more complex work item properties (i.e. list of assignees) in a
+ * generic way (i.e. transforms a list of linkables into a coherent html structure).
  *
  * @version $Id$
  * @since 1.0

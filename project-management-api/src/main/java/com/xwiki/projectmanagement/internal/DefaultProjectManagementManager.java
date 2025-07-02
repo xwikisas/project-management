@@ -37,7 +37,8 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Default implementation.
+ * Default implementation of the {@link ProjectManagementManager}. It searches the component manager for the client
+ * implementation matching the hint and passes the parameters further.
  *
  * @version $Id$
  * @since 1.0

@@ -50,6 +50,7 @@ import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
+// TODO: To be removed before release.
 /**
  * Test client retrieving entries from local files and other sources.
  *
