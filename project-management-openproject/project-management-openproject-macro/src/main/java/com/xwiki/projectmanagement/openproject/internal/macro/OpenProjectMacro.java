@@ -20,9 +20,6 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -57,25 +54,5 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         addToSourceParams(parameters, "instance", parameters.getInstance());
 
         addToSourceParams(parameters, "identifier", parameters.getIdentifier());
-    }
-
-    private void addToSourceParams(OpenProjectMacroParameters parameters, String key, String value)
-    {
-        if (value == null || value.isEmpty()) {
-            return;
-        }
-        String sourceParameters = parameters.getSourceParameters();
-        if (sourceParameters == null || sourceParameters.isEmpty()) {
-            parameters.setSourceParameters(String.format("%s=%s", key, value));
-        } else {
-            parameters.setSourceParameters(
-                String.format(
-                    "%s&%s=%s",
-                    sourceParameters,
-                    URLEncoder.encode(key, StandardCharsets.UTF_8),
-                    URLEncoder.encode(value, StandardCharsets.UTF_8)
-                )
-            );
-        }
     }
 }

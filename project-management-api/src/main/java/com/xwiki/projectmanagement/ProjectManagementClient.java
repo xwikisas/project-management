@@ -44,7 +44,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public interface ProjectManagementClient
 {
     /**
-     * Retrieve a work item.
+     * Retrieve a work item identified by an id specific to the implemented project management platform.
      *
      * @param workItemId the id of the work item that needs retrieval.
      * @return the work item that matches the passed id.

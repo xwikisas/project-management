@@ -24,10 +24,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.IOUtils;
@@ -43,7 +44,8 @@ import org.xwiki.livedata.internal.JSONMerge;
 import org.xwiki.localization.ContextualLocalizationManager;
 
 /**
- * Some Name.
+ * Merges an input livedata configuration with the generic project management configuration and with the configuration
+ * coming from the {@link com.xwiki.projectmanagement.ProjectManagementClient} implementation.
  *
  * @version $Id$
  */
@@ -56,21 +58,21 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
     private ContextualLocalizationManager l10n;
 
     @Inject
-    @Named("projectmanagement")
-    private Provider<LiveDataConfiguration> configurationProvider;
-
-    @Inject
     private ComponentManager componentManager;
 
     @Inject
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
-    private JSONMerge jsonMerge = new JSONMerge();
+    private String defaultSerializedConfig;
+
+    private final Map<String, String> clientSerializedConfigs = new HashMap<>();
+
+    private final JSONMerge jsonMerge = new JSONMerge();
 
     @Override
     public LiveDataConfiguration resolve(LiveDataConfiguration input) throws LiveDataException
     {
-        LiveDataConfiguration defaultConfig = configurationProvider.get();
+        LiveDataConfiguration defaultConfig = getDefaultConfiguration();
 
         defaultConfig = translate(defaultConfig);
 
@@ -79,6 +81,9 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         LiveDataConfiguration clientConfig = maybeGetClientConfiguration(input);
 
         LiveDataConfiguration mergedConfig = null;
+        // We want the returned configuration to have the properties coming from the input configuration (if any is
+        // specified). Otherwise, the properties should have the values defined in the client configuration.
+        // Otherwise, the values coming from the default configuration.
         if (clientConfig != null) {
             mergedConfig = this.jsonMerge.merge(defaultConfig, clientConfig);
         }
@@ -88,6 +93,25 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             mergedConfig = this.jsonMerge.merge(defaultConfig, input);
         }
         return translate(mergedConfig);
+    }
+
+    private LiveDataConfiguration getDefaultConfiguration()
+    {
+        try {
+            if (defaultSerializedConfig != null && !defaultSerializedConfig.isEmpty()) {
+                return stringLiveDataConfigResolver.resolve(defaultSerializedConfig);
+            }
+            InputStream defaultConfigInputStream =
+                getClass().getResourceAsStream("/projectManagementLiveDataConfiguration.json");
+            if (defaultConfigInputStream == null) {
+                this.defaultSerializedConfig = "";
+            } else {
+                this.defaultSerializedConfig = IOUtils.toString(defaultConfigInputStream, "UTF-8");
+            }
+            return stringLiveDataConfigResolver.resolve(defaultSerializedConfig);
+        } catch (LiveDataException | IOException e) {
+            return null;
+        }
     }
 
     private LiveDataConfiguration maybeGetClientConfiguration(LiveDataConfiguration inputConfig)
@@ -105,13 +129,19 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
                     componentManager.getInstance(clientCfgProviderType, clientId);
                 return clientCfgProvider.resolve(inputConfig);
             } else {
+                String serializedCfg = clientSerializedConfigs.get(clientId);
                 // Or try to see if some configuration matching the pattern exists.
-                InputStream inputStream = getClass().getResourceAsStream(
-                    String.format("/%sProjectManagementLiveDataConfiguration.json", clientId));
-                if (inputStream == null) {
-                    return null;
+                if (serializedCfg == null) {
+                    InputStream inputStream = getClass().getResourceAsStream(
+                        String.format("/%sProjectManagementLiveDataConfiguration.json", clientId));
+                    if (inputStream == null) {
+                        return null;
+                    }
+                    serializedCfg = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
                 }
-                return this.stringLiveDataConfigResolver.resolve(IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+                // Store the serialized configurations in memory so we don't read from the file system everytime.
+                clientSerializedConfigs.put(clientId, serializedCfg);
+                return this.stringLiveDataConfigResolver.resolve(serializedCfg);
             }
         } catch (IOException | LiveDataException | ComponentLookupException e) {
             return null;

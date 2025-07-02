@@ -18,6 +18,13 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
+#**
+ * Generate a property sort picker for the client identified by its hint.
+ *
+ * @param $params a map of parameters that will be passed to the static picker.
+ * @param $clientHint the hint of the project management client implementation. It will be used to retrieve the livedata
+ *   configuration defined by that client.
+ *#
 #macro (sortPicker $params $clientHint)
   #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")

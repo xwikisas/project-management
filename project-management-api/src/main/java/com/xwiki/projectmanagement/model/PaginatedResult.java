@@ -27,7 +27,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
- * The representation of a paginated result that contains useful information for following requests.
+ * The representation of a paginated result that contains useful information for following requests, such as the
+ * total number of requested items present in the database.
  *
  * @param <T> the type of the data held by this class.
  * @version $Id$

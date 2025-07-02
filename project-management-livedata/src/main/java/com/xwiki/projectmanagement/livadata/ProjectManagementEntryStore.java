@@ -48,7 +48,9 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Something.
+ * Provides the storing and retrieval operations for the entries coming from an
+ * {@link com.xwiki.projectmanagement.ProjectManagementClient} identified by a hint present in the livedata
+ * configuration.
  *
  * @version $Id$
  */
@@ -79,11 +81,6 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
     @Inject
     private ProjectManagementClientExecutionContext clientContext;
 
-    /**
-     * @param entryId identifies the entry to return
-     * @return sadas
-     * @throws LiveDataException sadasd
-     */
     @Override
     public Optional<Map<String, Object>> get(Object entryId) throws LiveDataException
     {
@@ -105,6 +102,7 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
             throw new LiveDataException("The client property was not specified in the source parameters.");
         }
 
+        // Set the context for the client implementation.
         if (clientContext instanceof DefaultProjectManagementClientExecutionContext) {
             ((DefaultProjectManagementClientExecutionContext) clientContext).setContext(
                 query.getSource().getParameters());
@@ -130,9 +128,8 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
 
     private void applyDisplayers(List<WorkItem> workItems, String clientId)
     {
-        defaultDisplayer.display(workItems);
-
         if (!componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)) {
+            defaultDisplayer.display(workItems);
             return;
         }
         try {
@@ -143,6 +140,7 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
             logger.warn("Failed to find the project management livedata displayer with hint [{}].",
                 clientId);
         }
+        defaultDisplayer.display(workItems);
     }
 
     // TODO: Have a more generic method of flattening a work item.
