@@ -9,3 +9,5 @@ com.xwiki.projectmanagement.openproject.internal.rest.suggest.UsersSuggest
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.ProjectsSuggest
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.PrioritiesSuggest
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
+com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection
+com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService

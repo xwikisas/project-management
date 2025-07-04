@@ -27,173 +27,245 @@
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>OpenProjectSheet</title>
+  <title/>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#if($hasAdmin)
-  #set ($redirect = $xwiki.relativeRequestURL)
-  #set ($configClassName = 'ProjectManagement.OpenProjectConnectionClass')
-  #set ($configDocSpace = ['ProjectManagement', 'OpenProjectConfigurations'])
-  #set ($oidcClassName = 'XWiki.OIDC.ClientConfigurationClass')
-  #set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
-  ##handle the create connection request
-  #set ($formToken = $request.form_token)
-  #set ($connectionName = $request.connectionName)
-  #set ($serverURL = $request.serverURL)
-  #set ($clientId = $request.clientId)
-  #set ($clientSecret = $request.clientSecret)
-  #if($stringtool.isNotBlank($connectionName)&amp;&amp; $stringtool.isNotBlank($serverURL)&amp;&amp; $stringtool.isNotBlank($clientId) &amp;&amp; $stringtool.isNotBlank($clientSecret) &amp;&amp; $services.csrf.isTokenValid($formToken))
-    #set ($documentName = "${connectionName}InstanceConfiguration")
-    #set ($documentRef = $services.model.createDocumentReference($xcontext.getDatabase(), $configDocSpace, $documentName))
-    #set ($document = $xwiki.getDocument($documentRef))
-    #set ($discard = $document.setTitle($documentName))
-    #set ($discard = $document.setHidden(true))
-    #set ($configObject = $document.getObject($configClassName, true))
-    #set ($discard = $configObject.set('connectionName', $connectionName))
-    #set ($discard = $configObject.set('serverURL', $serverURL))
-    #set ($discard = $configObject.set('clientId', $clientId))
-    #set ($discard = $configObject.set('clientSecret', $clientSecret))
-    ##create the oidc configuration
-    #set ($oidcObject = $document.getObject($oidcClassName, true))
-    #set ($discard = $oidcObject.set('configurationName', $connectionName))
-    #set ($discard = $oidcObject.set('authorizationEndpoint', $serverURL.concat('/oauth/authorize')))
-    #set ($discard = $oidcObject.set('tokenEndpoint', $serverURL.concat('/oauth/token')))
-    #set ($discard = $oidcObject.set('clientId', $clientId))
-    #set ($discard = $oidcObject.set('clientSecret', $clientSecret))
-    #set ($discard = $oidcObject.set('tokenEndpointMethod', 'client_secret_basic'))
-    #set ($discard = $oidcObject.set('skipped', 0))
-    #set ($discard = $oidcObject.set('scope', 'api_v3'))
-    #set ($discard = $oidcObject.set('responseType', 'code'))
-    #set ($discard = $oidcObject.set('enableUser', 1))
-    #set ($discard = $oidcObject.set('tokenStorageScope', 'USER'))
-    #set ($discard = $document.save())
-    #set ($discard = $response.sendRedirect($redirect))
-  #end
-  {{html clean="false"}}
-  &lt;form method="post"&gt;
-    &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
-    &lt;label for="connectionName"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionName'))&lt;/label&gt;
-    &lt;input id="connectionName" name="connectionName" type="text" required&gt;
-    &lt;label for="serverURL"&gt;$escapetool.xml($services.localization.render('openproject.config.serverUrl'))&lt;/label&gt;
-    &lt;input id="serverURL" name="serverURL" type="text" required&gt;
-    &lt;label for="clientId"&gt;$escapetool.xml($services.localization.render('openproject.config.clientId'))&lt;/label&gt;
-    &lt;input id="clientId" name="clientId" type="text" required&gt;
-    &lt;label for="clientSecret"&gt;$escapetool.xml($services.localization.render('openproject.config.clientSecret'))&lt;/label&gt;
-    &lt;input id="clientSecret" name="clientSecret" type="text" required&gt;
-    &lt;button class="button" type="submit"&gt;$escapetool.xml($services.localization.render('openproject.config.addNewConnection'))&lt;/button&gt;
-  &lt;/form&gt;
-  #set ($query = "from doc.object($configClassName) as connection")
-  #set ($connectionsDocs = $services.query.xwql($query).execute())
-  #foreach($connectionDoc in $connectionsDocs)
-    #set ($document = $xwiki.getDocument($connectionDoc))
-    #set ($connection = $document.getObject($configClassName))
-    #set ($connectionName = $connection.get('connectionName'))
-    #set ($oauthConnection = $document.getObject($oidcClassName))
-    #set ($documentRef = $services.model.createDocumentReference($xcontext.getDatabase(), $configDocSpace, $connectionName))
-    #set ($oauthConnection = $document.getObject($oidcClassName))
-    &lt;div&gt;
-      &lt;div&gt;
-        #set($currentIndex = $foreach.index + 1)
-        $currentIndex
-      &lt;/div&gt;
-      &lt;form id="$escapetool.xml(${connectionName})" method="post" action="$document.getURL("save", "xredirect=$escapetool.url($redirect)")" class="withLock xform"&gt;
-        &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
-        &lt;div&gt;
-          &lt;input
-            id="${escapetool.xml("${configClassName}_0_${connectionName}_connectionName")}"
-            class="connection-name-input"
-            name="${escapetool.xml($configClassName)}_0_connectionName"
-            value="$escapetool.xml($connection.getValue('connectionName'))"
-            data-config-connection-name="${escapetool.xml($connectionName)}"
-            data-config-connection-class-name="${escapetool.xml($configClassName)}"
-            data-config-class-name="${escapetool.xml($oidcClassName)}"
-            type="text"
-            &gt;
-          &lt;input
-            id="${escapetool.xml("${configClassName}_${connectionName}_title")}"
-            value="${escapetool.xml(${document.getTitle()})}"
-            name="title"
-            type="hidden"
-            &gt;
-          &lt;input
-            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_configurationName")}"
-            name="${escapetool.xml($oidcClassName)}_0_configurationName"
-            value="$escapetool.xml($oauthConnection.getValue('configurationName'))"
-            type="hidden"
-          &gt;
+#macro (createConnectionModal)
+&lt;div class="modal" id="createConnectionModal" tabindex="-1" role="dialog" aria-labelledby="createConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
+  &lt;div class="modal-dialog" role="document"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;form id="create-connection-form" class="withLock xform"&gt;
+        &lt;div class="modal-header"&gt;
+          &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+            &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+          &lt;/button&gt;
+          &lt;div class="modal-title" id="createconnectionModal-label"&gt;
+            Create new connection
+          &lt;/div&gt;
         &lt;/div&gt;
-        &lt;div&gt;
-          &lt;input
-            id="${escapetool.xml("${configClassName}_0_${connectionName}_serverURL")}"
-            class="server-url-input"
-            name="${escapetool.xml($configClassName)}_0_serverURL"
-            value="$escapetool.xml($connection.getValue('serverURL'))"
-            data-config-class-name="${escapetool.xml($oidcClassName)}"
-            data-config-connection-name="${escapetool.xml($connectionName)}"
-            type="text"
-          &gt;
-          &lt;input
-            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_tokenEndpoint")}"
-            name="${escapetool.xml($oidcClassName)}_0_tokenEndpoint"
-            value="$escapetool.xml($oauthConnection.getValue('tokenEndpoint'))"
-            type="hidden"
-            &gt;
-          &lt;input
-            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_authorizationEndpoint")}"
-            name="${escapetool.xml($oidcClassName)}_0_authorizationEndpoint"
-            value="$escapetool.xml($oauthConnection.getValue('authorizationEndpoint'))"
-            type="hidden"
-          &gt;
+        &lt;div class="modal-body"&gt;
+          &lt;input id="connection_document_reference" type="hidden" name="document_reference" value=""&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="connectionName"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.connectionName'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionNameDescription'))&lt;/p&gt;
+            &lt;input id="connection-name" class="form-control" name="connectionName" type="text"&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="serverURL"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.serverURL'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.serverURLDescription'))&lt;/p&gt;
+            &lt;input id="server-url" class="form-control" name="serverURL" type="text"&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="clientId"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.clientId'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdFirstDescription'))&lt;/span&gt;
+            &lt;br&gt;
+            &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdSecondDescription'))&lt;/span&gt;
+            &lt;input id="client-id" class="form-control" name="clientId" type="text"&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="connectionName"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescriprion'))&lt;/p&gt;
+            &lt;input id="client-secret" class="form-control" name="clientSecret" type="text"&gt;
+          &lt;/div&gt;
         &lt;/div&gt;
-        &lt;div&gt;
-          &lt;input
-            id="${escapetool.xml("${configClassName}_${connectionName}_clientId")}"
-            class="client-id-input"
-            name="${escapetool.xml($configClassName)}_0_clientId"
-            value="$escapetool.xml($connection.getValue('clientId'))"
-            data-config-class-name="${escapetool.xml($oidcClassName)}"
-            data-config-connection-name="${escapetool.xml($connectionName)}"
-            type="text"
-          &gt;
-          &lt;input
-            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_clientId")}"
-            name="${escapetool.xml($oidcClassName)}_0_clientId"
-            value="$escapetool.xml($oauthConnection.getValue('clientId'))"
-            type="hidden"
-          &gt;
-        &lt;/div&gt;
-        &lt;div&gt;
-          &lt;input
-            id="${escapetool.xml("${configClassName}_${connectionName}_clientSecret")}"
-            class="client-secret-input"
-            name="${escapetool.xml($configClassName)}_0_clientSecret"
-            value="$escapetool.xml($connection.getValue('clientSecret'))"
-            data-config-class-name="${escapetool.xml($oidcClassName)}"
-            data-config-connection-name="${escapetool.xml($connectionName)}"
-            type="text"
-          &gt;
-          &lt;input
-            id="${escapetool.xml("${oidcClassName}_0_${connectionName}_clientSecret")}"
-            name="${escapetool.xml($oidcClassName)}_0_clientSecret"
-            value="$escapetool.xml($oauthConnection.getValue('clientSecret'))"
-            type="hidden"
-          &gt;
-        &lt;/div&gt;
-        &lt;div&gt;
-          &lt;a href="$document.getURL('delete', "&amp;amp;form_token=$!{services.csrf.getToken()}&amp;amp;confirm=1&amp;amp;xredirect=$escapetool.url($redirect)")"&gt;$escapetool.xml($services.localization.render('openproject.config.delete'))&lt;/a&gt;
-          &lt;button type="submit" for="$escapetool.xml(connectionName)"&gt;$escapetool.xml($services.localization.render('openproject.config.update'))&lt;/button&gt;
+        &lt;div class="modal-footer"&gt;
+          &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
+            $escapetool.xml($services.localization.render('cancel'))
+          &lt;/button&gt;
+          &lt;button type="submit" class="btn btn-primary"&gt;
+            $escapetool.xml($services.localization.render('create'))
+          &lt;/button&gt;
         &lt;/div&gt;
       &lt;/form&gt;
     &lt;/div&gt;
-  #end
+  &lt;/div&gt;
+&lt;/div&gt;
+#end
+
+#macro (editConnectionModal)
+  &lt;div class="modal" id="editConnectionModal" tabindex="-1" role="dialog" aria-labelledby="editConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
+  &lt;div class="modal-dialog" role="document"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;form id="edit-connection-form" class="withLock xform"&gt;
+        &lt;div class="modal-header"&gt;
+          &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+            &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+          &lt;/button&gt;
+          &lt;div class="modal-title" id="createconnectionModal-label"&gt;
+            Edit connection
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="modal-body"&gt;
+          &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
+          &lt;input id="edit-connection-document-reference" type="hidden" name="edit-connection-document-reference" value=""&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="connectionName"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.connectionName'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionNameDescription'))&lt;/p&gt;
+            &lt;input id="edit-connection-name" class="form-control" name="edit-connection-name" type="text" required&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="serverURL"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.serverURL'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.serverURLDescription'))&lt;/p&gt;
+            &lt;input id="edit-server-url" class="form-control" name="edit-server-url" type="text" required&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="clientId"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.clientId'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt;
+              &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdFirstDescription'))&lt;/span&gt;
+              &lt;br&gt;
+            &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdSecondDescription'))&lt;/span&gt;
+            &lt;/p&gt;
+            &lt;input id="edit-client-id" class="form-control" name="edit-client-id" type="text" required&gt;
+          &lt;/div&gt;
+          &lt;div class="form-group"&gt;
+            &lt;label class="h5" for="connectionName"&gt;
+              &lt;strong&gt;
+                $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
+              &lt;/strong&gt;
+            &lt;/label&gt;
+            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescriprion'))&lt;/p&gt;
+            &lt;input id="edit-client-secret" class="form-control" name="edit-client-secret" type="text" required&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="modal-footer"&gt;
+          &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
+            $escapetool.xml($services.localization.render('cancel'))
+          &lt;/button&gt;
+          &lt;button type="submit" class="btn btn-primary"&gt;
+            $escapetool.xml($services.localization.render('update'))
+          &lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+#end
+
+#macro (deleteConnectionModal)
+  &lt;div class="modal" id="deleteConnectionModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModal-label"&gt;
+    &lt;div class="modal-dialog" role="document"&gt;
+      &lt;div class="modal-content"&gt;
+        &lt;form id="delete-connection-form" class="withLock xform"&gt;
+          &lt;input id="delete-connection-document-reference" type="hidden" name="delete-connection-document-reference" value=""&gt;
+          &lt;div class="modal-header"&gt;
+            &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+              &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+            &lt;/button&gt;
+            &lt;div class="modal-title" id="deleteConnectionModal-label"&gt;
+              $escapetool.xml($services.localization.render('openproject.config.deleteConnection'))
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="modal-body"&gt;
+            &lt;p&gt;
+              $escapetool.xml($services.localization.render('openproject.config.deleteConnectionFirstDescription'))
+              &lt;br&gt;
+              $escapetool.xml($services.localization.render('openproject.config.deleteConnectionSecondDescription'))
+            &lt;/p&gt;
+          &lt;/div&gt;
+          &lt;div class="modal-footer"&gt;
+            &lt;button type="button" class="btn btn-default"&gt;
+              $escapetool.xml($services.localization.render('cancel'))
+            &lt;/button&gt;
+            &lt;button type="submit" class="btn btn-danger"&gt;
+              $escapetool.xml($services.localization.render('delete'))
+            &lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+#end
+
+#if($hasAdmin)
+{{html clean="false"}}
+  &lt;button type="button" class="btn btn-primary" data-toggle="modal" data-target="${escapetool.h}createConnectionModal"
+        &gt;
+        &lt;i class="fa fa-plus"&gt;&lt;/i&gt;
+        $services.localization.render('openproject.config.addNewConnection')
+    &lt;/button&gt;
+  #createConnectionModal
+  #editConnectionModal
+  #deleteConnectionModal
   {{/html}}
+
+    {{liveData
+  id="openproject_connections"
+  properties="connectionName,serverURL,clientId,clientSecret,actions"
+  source="liveTable"
+  sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=ProjectManagement.OpenProjectSourceJson"
+}}
+{
+  "meta": {
+    "propertyDescriptors": [
+      {
+        "id": "actions",
+        "displayer": "html",
+        "sortable": false,
+        "filterable": false
+      },
+      {
+        "id": "connectionName",
+        "displayer": "html",
+        "sortable": false,
+        "filterable": false
+      },
+      {
+      "id": "serverURL",
+      "displayer": "html",
+      "sortable": false,
+        "filterable": false
+      },
+      {
+      "id": "clientId",
+      "displayer": "html",
+      "sortable": false,
+        "filterable": false
+      },
+      {
+      "id": "clientSecret",
+      "displayer": "html",
+      "sortable": false,
+        "filterable": false
+      }
+    ]
+  }
+}
+{{/liveData}}
+
 #else
   {{info}}
     $escapetool.xml($services.localization.render('openproject.config.noRights'))
@@ -204,7 +276,7 @@
     <name>ProjectManagement.OpenProjectSheet</name>
     <number>0</number>
     <className>XWiki.JavaScriptExtension</className>
-    <guid>e7168df2-04d4-422c-96c7-5341c12085ce</guid>
+    <guid>053eb192-29cc-4325-9786-7db3f34fac1f</guid>
     <class>
       <name>XWiki.JavaScriptExtension</name>
       <customClass/>
@@ -290,76 +362,153 @@
     <property>
       <code>require(["jquery"], function ($) {
   $(document).ready(function () {
-    $(".connection-name-input").on("input", function () {
-      const configClassName = $(this).data("config-class-name");
-      const configConnectionClassName = $(this).data(
-        "config-connection-class-name"
-      );
-      const connectionName = $(this).data("config-connection-name");
-      const hiddenConfigurationNameInput =
-        `${configClassName}_0_${connectionName}_configurationName`.replace(
-          /\./g,
-          "\\."
-        );
-      const hiddenTitleInput =
-        `${configConnectionClassName}_${connectionName}_title`.replace(
-          /\./g,
-          "\\."
-        );
-      $(`#${hiddenConfigurationNameInput}`).val($(this).val());
-      $(`#${hiddenTitleInput}`).val(`${$(this).val()}InstanceConfiguration`);
+    $(document).on("click", ".edit-button", function () {
+      $("#editConnectionModal").modal("show");
+      const connectionName = $(this).data("connectionname");
+      const serverURL = $(this).data("serverurl");
+      const clientId = $(this).data("clientid");
+      const clientSecret = $(this).data("clientsecret");
+      const documentReference = $(this).data("documentreference");
+      $("#edit-connection-name").val(connectionName);
+      $("#edit-server-url").val(serverURL.replace(/\\\//g, "/"));
+      $("#edit-client-id").val(clientId);
+      $("#edit-client-secret").val(clientSecret);
+      $("#edit-connection-document-reference").val(documentReference);
     });
 
-    $(".server-url-input").on("input", function () {
-      const configClassName = $(this).data("config-class-name");
-      const connectionName = $(this).data("config-connection-name");
-      const currentInputValue = $(this).val();
-      const hiddenTokenEndpointInput =
-        `${configClassName}_0_${connectionName}_tokenEndpoint`.replace(
-          /\./g,
-          "\\."
-        );
-      const hiddenAuthorizationEndpointInput =
-        `${configClassName}_0_${connectionName}_authorizationEndpoint`.replace(
-          /\./g,
-          "\\."
-        );
-      $(`#${hiddenTokenEndpointInput}`).val(`${currentInputValue}/oauth/token`);
-      $(`#${hiddenAuthorizationEndpointInput}`).val(
-        `${currentInputValue}/oauth/authorize`
+    $(document).on("click", ".delete-button", function () {
+      $("#deleteConnectionModal").modal("show");
+      let connectionName = $(this).data("connectionname");
+      let deleteDocumentReference = $(this).data("document-reference");
+      $("#delete-connection-document-reference").val(deleteDocumentReference);
+      $("#deleteConnectionModal-label").text(
+        `Delete connection ${connectionName}?`
       );
     });
 
-    $(".client-id-input").on("input", function () {
-      const configClassName = $(this).data("config-class-name");
-      const connectionName = $(this).data("config-connection-name");
-      const hiddenClientIdInput =
-        `${configClassName}_0_${connectionName}_clientId`.replace(/\./g, "\\.");
-      $(`#${hiddenClientIdInput}`).val($(this).val());
+    $("#edit-connection-form").on("submit", async function (e) {
+      e.preventDefault();
+      let connectionName = $("#edit-connection-name").val();
+      let serverURL = $("#edit-server-url").val();
+      let clientId = $("#edit-client-id").val();
+      let clientSecret = $("#edit-client-secret").val();
+      let documentReference = $("#edit-connection-document-reference").val();
+      let connectionObjectPath =
+        "objects/ProjectManagement.OpenProjectConnectionClass/0";
+      let oidcObjectPath = "objects/XWiki.OIDC.ClientConfigurationClass/0";
+      let documentRestUrl = new XWiki.Document(
+        XWiki.Model.resolve(documentReference, XWiki.EntityType.DOCUMENT)
+      ).getRestURL();
+
+      let connectionRestEndpointUrl = `${documentRestUrl}/${connectionObjectPath}`;
+      let oidcConnectionRestEndpointUrl = `${documentRestUrl}/${oidcObjectPath}`;
+
+      try {
+        await $.ajax({
+          method: "PUT",
+          url: connectionRestEndpointUrl,
+          data: {
+            "property#connectionName": connectionName,
+            "property#serverURL": serverURL,
+            "property#clientId": clientId,
+            "property#clientSecret": clientSecret,
+          },
+        });
+
+        await $.ajax({
+          method: "PUT",
+          url: oidcConnectionRestEndpointUrl,
+          data: {
+            "property#configurationName": connectionName,
+            "property#authorizationEndpoint": `${serverURL}/oauth/authorize`,
+            "property#tokenEndpoint": `${serverURL}/oauth/token`,
+            "property#clientId": clientId,
+            "property#clientSecret": clientSecret,
+            "property#serverURL": serverURL,
+          },
+        });
+
+        new XWiki.widgets.Notification(
+          `Connection ${connectionName} has been updated.`,
+          "done"
+        );
+      } catch (error) {
+        new XWiki.widgets.Notification(
+          `Error! Connection ${connectionName} was not updated`,
+          "error"
+        );
+      } finally {
+        $("#openproject_connections").data("liveData").updateEntries();
+        $("#editConnectionModal").modal("hide");
+      }
     });
 
-    $(".client-secret-input").on("input", function () {
-      const configClassName = $(this).data("config-class-name");
-      const connectionName = $(this).data("config-connection-name");
-      const hiddenClientSecretInput =
-        `${configClassName}_0_${connectionName}_clientSecret`.replace(
-          /\./g,
-          "\\."
+    $("#delete-connection-form").on("submit", async function (e) {
+      e.preventDefault();
+      let documentReference = $("#delete-connection-document-reference").val();
+      let documentRestUrl = new XWiki.Document(
+        XWiki.Model.resolve(documentReference, XWiki.EntityType.DOCUMENT)
+      ).getRestURL();
+      try {
+        await $.ajax({
+          method: "DELETE",
+          url: documentRestUrl,
+        });
+
+        new XWiki.widgets.Notification(`Connection has been deleted.`, "done");
+      } catch (e) {
+        new XWiki.widgets.Notification(
+          "An error occurred while deleting the connection.",
+          "error"
         );
-      $(`#${hiddenClientSecretInput}`).val($(this).val());
+      } finally {
+        $("#openproject_connections").data("liveData").updateEntries();
+        $("#deleteConnectionModal").modal("hide");
+      }
+    });
+
+    $("#create-connection-form").on("submit", async function (e) {
+      e.preventDefault();
+      let connectionName = $("#connection-name").val();
+      let serverURL = $("#server-url").val();
+      let clientId = $("#client-id").val();
+      let clientSecret = $("#client-secret").val();
+      try {
+        await $.ajax({
+          method: "POST",
+          contentType: "application/json",
+          url: `${window.location.origin}/xwiki/rest/openproject/connections/create`,
+          data: JSON.stringify({
+            connectionName: connectionName,
+            serverURL: serverURL,
+            clientId: clientId,
+            clientSecret: clientSecret,
+          }),
+        });
+
+        new XWiki.widgets.Notification(
+          `Connection ${connectionName} has been created.`,
+          "done"
+        );
+      } catch (e) {
+        new XWiki.widgets.Notification(
+          "An error occurred while creating the connection.",
+          "error"
+        );
+      }
     });
   });
 });
 </code>
     </property>
     <property>
-      <name/>
+      <name>Javascript extension</name>
     </property>
     <property>
       <parse/>
     </property>
     <property>
-      <use>onDemand</use>
+      <use>always</use>
     </property>
   </object>
 </xwikidoc>

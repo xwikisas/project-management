@@ -36,21 +36,43 @@
   <minorEdit>false</minorEdit>
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
-  <content>openproject.config.addNewConnection=Add new connection
-openproject.config.clientId=Client Id
-openproject.config.clientSecret=Client Secret
-openproject.config.connectionName=Connection name
+  <content>openproject.livedatalabels.clientId=Client ID
+openproject.livedatalabels.clientSecret=Client Secret
+openproject.livedatalabels.connectionName=Connection name
+openproject.livedatalabels.serverURL=Server URL
+openproject.livedatalabels.actions = Actions
 openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various Open Project Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
 openproject.config.connectionsTitle=OpenProject Instance Connections
+openproject.config.addNewConnection=Add new connection
 openproject.config.delete=Delete
+openproject.config.update=Update
+openproject.config.create=Create
+openproject.config.cancel=Cancel
 openproject.config.noRights=No Rights
 openproject.config.serverUrl=Server URL
-openproject.config.update=Update</content>
+openproject.config.update=Update
+
+openproject.config.connectionName=Connection Name
+openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
+openproject.config.serverURL=Server URL
+openproject.config.serverURLDescription=Copy the link from your browser’s adress bar when you are in your OpenProject instance. Paste it below.
+openproject.config.clientId=Client ID
+openproject.config.clientIdFirstDescription=Go to OpenProject Administration &gt; Wiki connection.
+openproject.config.clientIdSecondDescription=Start the setup &amp; copy the OpenProject OAuth Client ID. Paste it below.
+openproject.config.clientSecret=Client Secret
+openproject.config.clientSecretDescription=In OpenProject Administration &gt; Wiki connection, copy the OpenProject OAuth Client Secret. Paste it below.
+openproject.config.deleteConnection=Delete connection
+openproject.config.deleteConnectionFirstDescription=This will delete the connection to the OpenProject instance.
+openproject.config.deleteConnectionSecondDescription=Are you sure you want to proceed?
+
+
+
+</content>
   <object>
     <name>ProjectManagement.Translations</name>
     <number>0</number>
     <className>XWiki.TranslationDocumentClass</className>
-    <guid>60d031df-e1d4-40f5-95a6-80941fb52261</guid>
+    <guid>8ebdffe0-112f-486c-b84a-ce6d184b892b</guid>
     <class>
       <name>XWiki.TranslationDocumentClass</name>
       <customClass/>
