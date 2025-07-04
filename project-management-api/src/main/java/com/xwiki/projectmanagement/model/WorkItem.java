@@ -20,14 +20,18 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.DatatypeConverter;
+
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -168,16 +172,16 @@ public class WorkItem extends HashMap<String, Object>
      *     GitHub identify work packages numerically: '1001', Jira using a key: 'XWIKI-1001'.
      */
     @JsonProperty(KEY_IDENTIFIER)
-    public Linkable<String> getIdentifier()
+    public Linkable getIdentifier()
     {
-        return (Linkable<String>) get(KEY_IDENTIFIER);
+        return (Linkable) get(KEY_IDENTIFIER);
     }
 
     /**
      * @param identifier see {@link #getIdentifier()}.
      */
     @JsonProperty(KEY_IDENTIFIER)
-    public void setIdentifier(Linkable<String> identifier)
+    public void setIdentifier(Linkable identifier)
     {
         put(KEY_IDENTIFIER, identifier);
     }
@@ -187,16 +191,16 @@ public class WorkItem extends HashMap<String, Object>
      *     translates to the issue title.
      */
     @JsonProperty(KEY_SUMMARY)
-    public Linkable<String> getSummary()
+    public Linkable getSummary()
     {
-        return (Linkable<String>) get(KEY_SUMMARY);
+        return (Linkable) get(KEY_SUMMARY);
     }
 
     /**
      * @param summary see {@link #getSummary()}.
      */
     @JsonProperty(KEY_SUMMARY)
-    public void setSummary(Linkable<String> summary)
+    public void setSummary(Linkable summary)
     {
         put(KEY_SUMMARY, summary);
     }
@@ -314,16 +318,16 @@ public class WorkItem extends HashMap<String, Object>
      *     link to their profile location.
      */
     @JsonProperty(KEY_CREATOR)
-    public Linkable<String> getCreator()
+    public Linkable getCreator()
     {
-        return (Linkable<String>) get(KEY_CREATOR);
+        return (Linkable) get(KEY_CREATOR);
     }
 
     /**
      * @param creator see {@link #getCreator()}.
      */
     @JsonProperty(KEY_CREATOR)
-    public void setCreator(Linkable<String> creator)
+    public void setCreator(Linkable creator)
     {
         put(KEY_CREATOR, creator);
     }
@@ -333,16 +337,16 @@ public class WorkItem extends HashMap<String, Object>
      *     location to their profile location.
      */
     @JsonProperty(KEY_ASSIGNEES)
-    public List<Linkable<String>> getAssignees()
+    public List<Linkable> getAssignees()
     {
-        return (List<Linkable<String>>) get(KEY_ASSIGNEES);
+        return (List<Linkable>) get(KEY_ASSIGNEES);
     }
 
     /**
      * @param assignees see {@link #getAssignees()}.
      */
     @JsonProperty(KEY_ASSIGNEES)
-    public void setAssignees(List<Linkable<String>> assignees)
+    public void setAssignees(List<Linkable> assignees)
     {
         put(KEY_ASSIGNEES, assignees);
     }
@@ -370,16 +374,16 @@ public class WorkItem extends HashMap<String, Object>
      *     project and a link to its location.
      */
     @JsonProperty(KEY_PROJECT)
-    public Linkable<String> getProject()
+    public Linkable getProject()
     {
-        return (Linkable<String>) get(KEY_PROJECT);
+        return (Linkable) get(KEY_PROJECT);
     }
 
     /**
      * @param project see {@link #getProject()}.
      */
     @JsonProperty(KEY_PROJECT)
-    public void setProject(Linkable<String> project)
+    public void setProject(Linkable project)
     {
         put(KEY_PROJECT, project);
     }
@@ -407,16 +411,16 @@ public class WorkItem extends HashMap<String, Object>
      *     bug, it could be that somebody reported it and someone else created the ticket.
      */
     @JsonProperty(KEY_REPORTER)
-    public Linkable<String> getReporter()
+    public Linkable getReporter()
     {
-        return (Linkable<String>) get(KEY_REPORTER);
+        return (Linkable) get(KEY_REPORTER);
     }
 
     /**
      * @param reporter see {@link #getReporter()}.
      */
     @JsonProperty(KEY_REPORTER)
-    public void setReporter(Linkable<String> reporter)
+    public void setReporter(Linkable reporter)
     {
         put(KEY_REPORTER, reporter);
     }
@@ -499,16 +503,16 @@ public class WorkItem extends HashMap<String, Object>
      *     a closed issue to a software milestone, in the case of Jira, an issue can have a 'fix version'.
      */
     @JsonProperty(KEY_MILESTONES)
-    public Linkable<String> getMilestones()
+    public Linkable getMilestones()
     {
-        return (Linkable<String>) get(KEY_MILESTONES);
+        return (Linkable) get(KEY_MILESTONES);
     }
 
     /**
      * @param milestones see {@link #getMilestones()}.
      */
     @JsonProperty(KEY_MILESTONES)
-    public void setMilestones(Linkable<String> milestones)
+    public void setMilestones(Linkable milestones)
     {
         put(KEY_MILESTONES, milestones);
     }
@@ -518,16 +522,16 @@ public class WorkItem extends HashMap<String, Object>
      *     name and a link to the location of their profile.
      */
     @JsonProperty(KEY_CLOSED_BY)
-    public Linkable<String> getClosedBy()
+    public Linkable getClosedBy()
     {
-        return (Linkable<String>) get(KEY_CLOSED_BY);
+        return (Linkable) get(KEY_CLOSED_BY);
     }
 
     /**
      * @param closedBy see {@link #getClosedBy()}.
      */
     @JsonProperty(KEY_CLOSED_BY)
-    public void setClosedBy(Linkable<String> closedBy)
+    public void setClosedBy(Linkable closedBy)
     {
         put(KEY_CLOSED_BY, closedBy);
     }
@@ -572,10 +576,10 @@ public class WorkItem extends HashMap<String, Object>
      * @param key the key of the linkable property. i.e. identifier, summary.
      * @return the value of the linkable property or null if the linkable property does not exist.
      */
-    public Object getLinkableValue(String key)
+    public String getLinkableValue(String key)
     {
 
-        return getLinkable(key).get(Linkable.KEY_VALUE);
+        return (String) getLinkable(key).get(Linkable.KEY_VALUE);
     }
 
     /**
@@ -584,9 +588,9 @@ public class WorkItem extends HashMap<String, Object>
      * @param key the key of the linkable property. i.e. identifier, summary.
      * @return the location of the linkable property or null if the linkable property does not exist.
      */
-    public Object getLinkableLocation(String key)
+    public String getLinkableLocation(String key)
     {
 
-        return getLinkable(key).get(Linkable.KEY_VALUE);
+        return (String) getLinkable(key).get(Linkable.KEY_VALUE);
     }
 }

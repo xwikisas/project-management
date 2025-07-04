@@ -163,7 +163,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
 
     private void translateProperty(String translationPrefix, LiveDataPropertyDescriptor property)
     {
-        String translationPlain = this.l10n.getTranslationPlain(translationPrefix + property.getId());
+        String translationPlain = this.l10n.getTranslationPlain(translationPrefix + "property." + property.getId());
         if (translationPlain != null) {
             property.setName(translationPlain);
         }
@@ -171,7 +171,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             property.setName(property.getId());
         }
         if (property.getDescription() == null) {
-            property.setDescription(this.l10n.getTranslationPlain(translationPrefix + property.getId() + ".hint"));
+            property.setDescription(this.l10n.getTranslationPlain(translationPrefix + "property." + property.getId() + ".hint"));
         }
     }
 }

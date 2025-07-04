@@ -54,5 +54,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         addToSourceParams(parameters, "instance", parameters.getInstance());
 
         addToSourceParams(parameters, "identifier", parameters.getIdentifier());
+
+        addToSourceParams(parameters, "translationPrefix", "openproject.property.");
     }
 }

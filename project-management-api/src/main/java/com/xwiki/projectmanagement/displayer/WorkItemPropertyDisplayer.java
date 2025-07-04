@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
+package com.xwiki.projectmanagement.displayer;
 
-<!--
+/*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
  *
@@ -18,22 +18,28 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
+ */
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
-    <version>1.0.136-SNAPSHOT</version>
-  </parent>
-  <packaging>pom</packaging>
-  <artifactId>project-management-openproject</artifactId>
+import java.util.List;
+import java.util.Map;
 
-  <modules>
-    <module>project-management-openproject-api</module>
-    <module>project-management-openproject-macro</module>
-    <module>project-management-openproject-ui</module>
-  </modules>
+import org.xwiki.component.annotation.Role;
+import org.xwiki.rendering.block.Block;
 
-</project>
+/**
+ * Defines the rendering blocks that should be used in order to display a Work Item property.
+ *
+ * @version $Id$
+ */
+@Role
+public interface WorkItemPropertyDisplayer
+{
+    /**
+     * Generates a list of blocks that can be used to render the property in different contexts.
+     *
+     * @param property the property value that will be displayed.
+     * @param params any additional params that the displayer might need (i.e. translation prefix).
+     * @return a list of blocks that define how the property should be displayed.
+     */
+    List<Block> display(Object property, Map<String, String> params);
+}

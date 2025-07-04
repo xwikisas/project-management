@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.xml.XMLUtils;
 
 import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -45,28 +46,47 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagementLiveDataDisplayer
 {
-    private static final List<String> DATE_PROPERTIES = List.of(WorkItem.KEY_CLOSE_DATE, WorkItem.KEY_CREATION_DATE,
-        WorkItem.KEY_DUE_DATE, WorkItem.KEY_START_DATE, WorkItem.KEY_UPDATE_DATE);
-
     @Override
     public void display(Collection<WorkItem> workItems)
     {
         for (WorkItem item : workItems) {
-            Object assignees = item.get(WorkItem.KEY_ASSIGNEES);
-            if (assignees instanceof Collection) {
-                String displayVal = ((Collection<Map<String, Object>>) assignees).stream()
-                    .map(assignee -> String.format("<a href=\"%s\">%s</a>",
-                        assignee.getOrDefault(Linkable.KEY_LOCATION, ""), assignee.getOrDefault(Linkable.KEY_VALUE,
-                            ""))).collect(Collectors.joining("<br/>"));
-                item.put(WorkItem.KEY_ASSIGNEES, displayVal);
-            }
-
-            DATE_PROPERTIES.forEach(prop -> {
-                Object dateProp = item.get(prop);
-                if (dateProp instanceof Date) {
-                    item.put(prop, ((Date) dateProp).getTime());
+            for (Map.Entry<String, Object> itemProperty : item.entrySet()) {
+                if (itemProperty.getValue() instanceof List) {
+                    displayListProperty(itemProperty);
+                } else if (itemProperty.getValue() instanceof Date) {
+                    displayDateProperty(itemProperty);
                 }
-            });
+            }
+        }
+    }
+
+    private void displayDateProperty(Map.Entry<String, Object> itemProperty)
+    {
+        itemProperty.setValue(((Date) itemProperty.getValue()).getTime());
+    }
+
+    private void displayListProperty(Map.Entry<String, Object> itemProperty)
+    {
+        if (((List<?>) itemProperty.getValue()).isEmpty()) {
+            return;
+        }
+        if (((List<?>) itemProperty.getValue()).get(0) instanceof Linkable) {
+            String listPropValue = ((List<Linkable>) itemProperty.getValue())
+                .stream()
+                .map(linkable -> String.format(
+                        "<a href=\"%s\">%s</a>",
+                        XMLUtils.escape((String) linkable.getOrDefault(Linkable.KEY_LOCATION, "")),
+                        XMLUtils.escape((String) linkable.getOrDefault(Linkable.KEY_VALUE, ""))
+                    )
+                )
+                .collect(Collectors.joining("<br/>"));
+            itemProperty.setValue(listPropValue);
+        } else {
+            String listPropValue = ((List<?>) itemProperty.getValue())
+                .stream()
+                .map(Object::toString)
+                .collect(Collectors.joining(", "));
+            itemProperty.setValue(listPropValue);
         }
     }
 }

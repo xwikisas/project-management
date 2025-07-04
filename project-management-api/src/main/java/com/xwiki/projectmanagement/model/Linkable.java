@@ -27,12 +27,11 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 /**
  * Describes a property that be accessed through a URL.
  *
- * @param <T> the type of the value - typically a string.
  * @version $Id$
  * @since 1.0
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class Linkable<T> extends HashMap<String, Object>
+public class Linkable extends HashMap<String, Object>
 {
     /**
      * The key identifying the value property of the linkable item.
@@ -56,7 +55,7 @@ public class Linkable<T> extends HashMap<String, Object>
      * @param value the value this object wraps.
      * @param location the location where the resource represented by this object can be accessed.
      */
-    public Linkable(T value, String location)
+    public Linkable(String value, String location)
     {
         put(KEY_VALUE, value);
         put(KEY_LOCATION, location);
@@ -81,15 +80,15 @@ public class Linkable<T> extends HashMap<String, Object>
     /**
      * @return the value of this property. i.e. a username.
      */
-    public T getValue()
+    public String getValue()
     {
-        return (T) get(KEY_VALUE);
+        return (String) get(KEY_VALUE);
     }
 
     /**
      * @param value see {@link #getValue()}.
      */
-    public void setValue(T value)
+    public void setValue(String value)
     {
         put(KEY_VALUE, value);
     }
