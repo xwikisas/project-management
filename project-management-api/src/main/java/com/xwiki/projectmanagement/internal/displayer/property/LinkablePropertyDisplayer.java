@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,16 +63,14 @@ public class LinkablePropertyDisplayer implements WorkItemPropertyDisplayer
     @Override
     public List<Block> display(Object property, Map<String, String> params)
     {
-        if (!(property instanceof Linkable) || "".equals(((Linkable) property).getValue()) || "".equals(
-            ((Linkable) property).getLocation()))
-        {
+        if (!(property instanceof Linkable) || StringUtils.isEmpty(((Linkable) property).getValue())) {
             return Collections.emptyList();
         }
         Linkable linkableProp = (Linkable) property;
         List<Block> linkAnchorBlocks = Collections.emptyList();
         try {
             linkAnchorBlocks =
-                plainTextParser.parse(new StringReader(linkableProp.getValue().toString())).getChildren();
+                plainTextParser.parse(new StringReader(linkableProp.getValue())).getChildren();
         } catch (ParseException parseException) {
             logger.warn("Failed to parse the value [{}] of a linkable property. Cause: [{}].",
                 linkableProp.getValue(), ExceptionUtils.getRootCauseMessage(parseException));
@@ -80,8 +79,13 @@ public class LinkablePropertyDisplayer implements WorkItemPropertyDisplayer
             linkAnchorBlocks = linkAnchorBlocks.get(0).getChildren();
         }
         boolean freeStanding = linkAnchorBlocks.isEmpty();
-        return Collections.singletonList(
-            new LinkBlock(linkAnchorBlocks, new ResourceReference(linkableProp.getLocation(), ResourceType.URL),
-                freeStanding));
+
+        if (StringUtils.isEmpty(linkableProp.getLocation())) {
+            return linkAnchorBlocks;
+        } else {
+            return Collections.singletonList(
+                new LinkBlock(linkAnchorBlocks, new ResourceReference(linkableProp.getLocation(), ResourceType.URL),
+                    freeStanding));
+        }
     }
 }

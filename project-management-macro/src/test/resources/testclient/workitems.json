@@ -47,5 +47,18 @@
       "value": "Teo",
       "location": "http://xwiki.com/user/teo"
     }
+  },
+  {
+    "identifier": {
+      "value": "WorkItem2"
+    },
+    "summary": {
+      "value": "Do this thing!",
+      "location": "http://xwiki.com/id/1"
+    },
+    "reporter": {
+      "location": "http://xwiki.com/id/1"
+    },
+    "description": "This is some nice description"
   }
 ]

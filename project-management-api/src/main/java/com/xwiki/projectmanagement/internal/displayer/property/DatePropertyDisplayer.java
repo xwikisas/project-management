@@ -51,12 +51,19 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
 
     private SimpleDateFormat dateFormatter;
 
+    /**
+     * @param parser used to parse the serialized date value as a list of blocks.
+     */
     public DatePropertyDisplayer(Parser parser)
     {
         this.parser = parser;
         dateFormatter = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
     }
 
+    /**
+     * @param parser used to parse the serialized date value as a list of blocks.
+     * @param dateFormat the format that should be used to serialize the date.
+     */
     public DatePropertyDisplayer(Parser parser, String dateFormat)
     {
         this(parser);

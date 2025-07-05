@@ -21,7 +21,9 @@ package com.xwiki.projectmanagement.internal.utility;
  */
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.TableBlock;
@@ -48,16 +50,27 @@ public class TableBuilder
     }
 
     /**
-     * Add a new row to the table - this should be called before adding any cells.
+     * Add a new row to the table without any parameters.
      *
      * @return this object.
      */
     public TableBuilder newRow()
     {
+        return newRow(Collections.emptyMap());
+    }
+
+    /**
+     * Add a new row to the table - this should be called before adding any cells.
+     *
+     * @param params a map of parameters that will get passed to the new row.
+     * @return this object.
+     */
+    public TableBuilder newRow(Map<String, String> params)
+    {
         if (currentRow != null) {
             root.addChild(currentRow);
         }
-        currentRow = new TableRowBlock(new ArrayList<>());
+        currentRow = new TableRowBlock(new ArrayList<>(), params);
         return this;
     }
 
@@ -70,10 +83,23 @@ public class TableBuilder
      */
     public TableBuilder newCell(List<Block> content)
     {
+        return newCell(content, Collections.emptyMap());
+    }
+
+    /**
+     * Create a new cell inside the current row.
+     *
+     * @param content the list of blocks that should be added to this table cell.
+     * @param params a map of parameters that will be passed to the new cell.
+     * @return this object.
+     * @throws UnsupportedOperationException if no row was created before adding a cell.
+     */
+    public TableBuilder newCell(List<Block> content, Map<String, String> params)
+    {
         if (currentRow == null) {
             throw new UnsupportedOperationException("Can't create a new cell without having a row.");
         }
-        currentRow.addChild(new TableCellBlock(content));
+        currentRow.addChild(new TableCellBlock(content, params));
         return this;
     }
 

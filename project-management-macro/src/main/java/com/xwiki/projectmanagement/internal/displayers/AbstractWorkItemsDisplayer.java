@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -37,6 +38,7 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
@@ -57,6 +59,10 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectMa
     private static final String KEY_CLIENT = "client";
 
     @Inject
+    @Named("ssfx")
+    protected SkinExtension ssx;
+
+    @Inject
     protected ProjectManagementManager projectManagementManager;
 
     @Inject
@@ -73,6 +79,7 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectMa
 
     /**
      * @param name the name of the work item.
+     * @param description the description of the implemented macro.
      */
     public AbstractWorkItemsDisplayer(String name, String description)
     {

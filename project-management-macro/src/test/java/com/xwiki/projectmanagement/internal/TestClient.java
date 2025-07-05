@@ -1,5 +1,25 @@
 package com.xwiki.projectmanagement.internal;
 
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -116,15 +136,33 @@ public class TestClient implements ProjectManagementClient, Initializable
         throws WorkItemRetrievalException
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        result.setTotalItems(workItems.size());
         result.setPage(page);
         result.setPageSize(pageSize);
-        // GET ENTRIES FROM RESOURCE ---------------
+
+        List<WorkItem> filteredWorkItem = workItems.stream().filter(wi -> {
+            boolean matchesFilters = true;
+            for (LiveDataQuery.Filter filter : filters) {
+                Object propVal = wi.get(filter.getProperty());
+                Object valToMatch;
+                if (propVal instanceof Linkable) {
+                    valToMatch = ((Linkable) propVal).getValue();
+                } else {
+                    valToMatch = propVal;
+                }
+                // We currently assume that all operators are "equals".
+                Boolean matchesConstraints =
+                    filter.getConstraints().stream().map(constraint -> constraint.getValue().equals(valToMatch))
+                        .reduce(false, (a, b) -> a || b);
+                matchesFilters &= matchesConstraints;
+            }
+            return matchesFilters;
+        }).collect(Collectors.toList());
+        result.setTotalItems(workItems.size());
         int index = page * pageSize;
-        if (index > workItems.size()) {
+        if (index > filteredWorkItem.size()) {
             return result;
         }
-        result.getItems().addAll(workItems.subList(index, Math.min(workItems.size(), index + pageSize)));
+        result.getItems().addAll(filteredWorkItem.subList(index, Math.min(filteredWorkItem.size(), index + pageSize)));
         return result;
     }
 

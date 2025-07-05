@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.0.136-SNAPSHOT</version>
+    <version>1.0.139-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-macro</artifactId>
@@ -58,7 +58,7 @@
     <dependency>
       <groupId>org.xwiki.rendering</groupId>
       <artifactId>xwiki-rendering-macro-message</artifactId>
-      <version>${platform.version}</version>
+      <version>${rendering.version}</version>
       <scope>runtime</scope>
     </dependency>
     <!-- Test dependencies-->

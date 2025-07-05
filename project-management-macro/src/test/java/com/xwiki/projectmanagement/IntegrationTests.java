@@ -26,6 +26,7 @@ import org.junit.runner.RunWith;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.icon.IconManager;
 import org.xwiki.rendering.test.integration.RenderingTestSuite;
+import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.annotation.AllComponents;
 import org.xwiki.test.mockito.MockitoComponentManager;
 
@@ -57,6 +58,7 @@ public class IntegrationTests
         ConfigurationSource wikiCfg = componentManager.registerMockComponent(ConfigurationSource.class, "wiki");
         when(wikiCfg.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss")).thenReturn("dd/MM/yyyy");
 
+        componentManager.registerMockComponent(SkinExtension.class, "ssfx");
 //        componentManager.registerComponent(Parser.class, "plain/1.0");
     }
 }

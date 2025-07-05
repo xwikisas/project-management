@@ -30,7 +30,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.ecs.wml.P;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.LocalizationManager;
@@ -74,6 +73,14 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     private static final Map<String, String> CLASS_COL_1 =
         Collections.singletonMap(ATTRIBUTE_CLASS, "col-md-12");
 
+    private static final Map<String, String> PROP_NAME_PARAMS =
+        Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-property-name");
+
+    private static final Map<String, String> VALUE_PARAMS =
+        Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-property-value");
+
+    private static final String PREFIX_PROPERTY = "property.";
+
     @Inject
     private LocalizationManager localizationManager;
 
@@ -103,13 +110,17 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     protected List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
         ProjectManagementMacroParameters parameters, MacroTransformationContext context)
     {
+        this.ssx.use("css/projectmanagement/displayer/single.css", Collections.singletonMap("forceSkinAction", true));
         String translationPrefix = (String) macroContext.get("translationPrefix");
         if (workItemList.getItems().size() <= 0) {
-            String noWorkItemMessage = "There are no work items matching this filter.";
+            String noWorkItemMessage = null;
             if (translationPrefix != null) {
                 noWorkItemMessage =
                     localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"),
                         localizationManager.getDefaultLocale());
+            }
+            if (noWorkItemMessage == null) {
+                noWorkItemMessage = "There are no work items matching this filter.";
             }
             return Collections.singletonList(
                 new MacroBlock("warning", Collections.emptyMap(), noWorkItemMessage, false));
@@ -118,10 +129,24 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
 
         Block header = getHeaderBlock(translationPrefix, workItem);
         Block project = getProjectBlock(translationPrefix, workItem);
+        Block description = getDescriptionBlock(translationPrefix, workItem);
         Block bodyBlocks = getBodyBlocks(workItem, translationPrefix);
 
-        return Collections.singletonList(new GroupBlock(Arrays.asList(header, project, bodyBlocks),
+        return Collections.singletonList(new GroupBlock(Arrays.asList(header, project, bodyBlocks, description),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-page-displayer")));
+    }
+
+    private Block getDescriptionBlock(String translationPrefix, WorkItem workItem)
+    {
+        String description = (String) workItem.remove(WorkItem.KEY_DESCRIPTION);
+        List<Block> propertyNameBlock =
+            getTranslationBlocks(WorkItem.KEY_DESCRIPTION, translationPrefix + PREFIX_PROPERTY);
+        List<Block> descriptionBlocks =
+            getPropertyDisplayerManager().displayProperty(WorkItem.KEY_DESCRIPTION, description,
+                Collections.emptyMap());
+
+        return new GroupBlock(
+            Arrays.asList(new GroupBlock(propertyNameBlock, PROP_NAME_PARAMS), new ParagraphBlock(descriptionBlocks)));
     }
 
     private Block getBodyBlocks(WorkItem workItem, String translationPrefix)
@@ -129,7 +154,8 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         TableBuilder tableGeneralProps = new TableBuilder();
         TableBuilder tableLinkables = new TableBuilder();
         TableBuilder tableTimeProps = new TableBuilder();
-        String propertyPrefix = translationPrefix +  "property.";
+        String propertyPrefix = translationPrefix + PREFIX_PROPERTY;
+
         for (Map.Entry<String, Object> property : workItem.entrySet()) {
             List<Block> propertyNameBlock = getTranslationBlocks(property.getKey(), propertyPrefix);
             propertyNameBlock.add(new SpecialSymbolBlock(':'));
@@ -145,7 +171,8 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
             {
                 chosenSection = tableLinkables;
             }
-            chosenSection.newRow().newCell(propertyNameBlock).newCell(propertyValueBlock);
+            chosenSection.newRow().newCell(propertyNameBlock, PROP_NAME_PARAMS).newCell(propertyValueBlock,
+                VALUE_PARAMS);
         }
 
         Block generalPropsBlock = getBootstrap3Col(Collections.singletonList(tableGeneralProps.build()));
@@ -208,9 +235,8 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
             new ResourceReference(workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER), ResourceType.URL),
             false
         ));
-        List<Block> headerName =
-            getPropertyDisplayerManager().displayProperty(String.class.getName(), workItem.getSummary().getValue(),
-                Collections.emptyMap());
+        List<Block> headerName = getPropertyDisplayerManager().displayProperty(String.class.getName(),
+            workItem.getLinkableValue(WorkItem.KEY_SUMMARY), Collections.emptyMap());
         // Remove id and summary so they won't be displayed again.
         workItem.remove(WorkItem.KEY_IDENTIFIER);
         workItem.remove(WorkItem.KEY_SUMMARY);

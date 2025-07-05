@@ -1,0 +1,85 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Single displayer test - display a filter that returns no work items.
+.#-----------------------------------------------------
+{{workItemsSingle sourceParams="client=test"}}
+{
+  "query": {
+    "filters": [
+      {
+        "property": "identifier",
+        "constraints": [
+          {
+            "operator": "equals",
+            "value": "NonExistentWorkItem"
+          }
+        ]
+      }
+    ]
+  }
+}
+{{/workItemsSingle}}
+.#-----------------------------------------------------
+.expect|event/1.0
+.#-----------------------------------------------------
+beginDocument
+beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
+  "query": {
+    "filters": [
+      {
+        "property": "identifier",
+        "constraints": [
+          {
+            "operator": "equals",
+            "value": "NonExistentWorkItem"
+          }
+        ]
+      }
+    ]
+  }
+}]
+beginMacroMarkerStandalone [warning] [] [There are no work items matching this filter.]
+beginGroup [[class]=[box warningmessage]]
+beginMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]
+beginParagraph
+onWord [There]
+onSpace
+onWord [are]
+onSpace
+onWord [no]
+onSpace
+onWord [work]
+onSpace
+onWord [items]
+onSpace
+onWord [matching]
+onSpace
+onWord [this]
+onSpace
+onWord [filter]
+onSpecialSymbol [.]
+endParagraph
+endMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]
+endGroup [[class]=[box warningmessage]]
+endMacroMarkerStandalone [warning] [] [There are no work items matching this filter.]
+endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
+  "query": {
+    "filters": [
+      {
+        "property": "identifier",
+        "constraints": [
+          {
+            "operator": "equals",
+            "value": "NonExistentWorkItem"
+          }
+        ]
+      }
+    ]
+  }
+}]
+endDocument
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<div class="box warningmessage"><p>There are no work items matching this filter.</p></div>

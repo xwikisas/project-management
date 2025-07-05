@@ -1,13 +1,372 @@
 .runTransformations
 .#-----------------------------------------------------
 .input|xwiki/2.0
-.# Single displayer test - no client parameter should result in an error.
+.# Single displayer test - display a work item with all values present.
 .#-----------------------------------------------------
 {{workItemsSingle sourceParams="client=test"/}}
 .#-----------------------------------------------------
 .expect|event/1.0
 .#-----------------------------------------------------
-
+beginDocument
+beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test]
+beginGroup [[class]=[work-item-page-displayer]]
+beginGroup [[class]=[work-item-header]]
+beginParagraph
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [displayer]
+onSpecialSymbol [.]
+onWord [single]
+onSpecialSymbol [.]
+onWord [header]
+onSpecialSymbol [.]
+onWord [workItem]
+onSpace
+onSpecialSymbol [#]
+beginLink [Typed = [true] Type = [url] Reference = [WorkItem1]] [false]
+onWord [WorkItem1]
+endLink [Typed = [true] Type = [url] Reference = [WorkItem1]] [false]
+endParagraph
+beginParagraph
+onWord [Do]
+onSpace
+onWord [this]
+onSpace
+onWord [thing]
+onSpecialSymbol [!]
+endParagraph
+endGroup [[class]=[work-item-header]]
+beginGroup [[class]=[row]]
+beginGroup [[class]=[col-md-12]]
+beginParagraph
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [displayer]
+onSpecialSymbol [.]
+onWord [single]
+onSpecialSymbol [.]
+onWord [project]
+onSpecialSymbol [.]
+onWord [prefix]
+onSpecialSymbol [:]
+onSpace
+beginLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/project/importantproject]] [false]
+onWord [Important]
+onSpace
+onWord [Project]
+endLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/project/importantproject]] [false]
+endParagraph
+endGroup [[class]=[col-md-12]]
+endGroup [[class]=[row]]
+beginGroup [[class]=[row]]
+beginGroup [[class]=[col-md-4 col-xs-12]]
+beginTable
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [assignees]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginGroup
+beginLink [Typed = [true] Type = [url] Reference = [Teo]] [false]
+onWord [Teo]
+endLink [Typed = [true] Type = [url] Reference = [Teo]] [false]
+endGroup
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [type]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [bug]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [priority]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [CRITICAL]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [resolution]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [closed]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [labels]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginGroup
+onWord [xwiki]
+endGroup
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [progress]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [100]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [status]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [Done]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [resolved]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+onWord [true]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+endTable
+endGroup [[class]=[col-md-4 col-xs-12]]
+beginGroup [[class]=[col-md-4 col-xs-12]]
+beginTable
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [closedBy]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/teo]] [false]
+onWord [Teo]
+endLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/teo]] [false]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [creator]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/teo]] [false]
+onWord [Teo]
+endLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/teo]] [false]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [reporter]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/rares]] [false]
+onWord [Rares]
+endLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/user/rares]] [false]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [milestones]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/milestone/1dot0rc]] [false]
+onWord [1]
+onSpecialSymbol [.]
+onWord [0]
+onSpecialSymbol [-]
+onWord [RC]
+onSpecialSymbol [-]
+onWord [1]
+endLink [Typed = [true] Type = [url] Reference = [http://xwiki.com/milestone/1dot0rc]] [false]
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+endTable
+endGroup [[class]=[col-md-4 col-xs-12]]
+beginGroup [[class]=[col-md-4 col-xs-12]]
+beginTable
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [updateDate]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginParagraph
+onWord [10]
+onSpecialSymbol [/]
+onWord [10]
+onSpecialSymbol [/]
+onWord [2010]
+endParagraph
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [dueDate]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginParagraph
+onWord [23]
+onSpecialSymbol [/]
+onWord [06]
+onSpecialSymbol [/]
+onWord [2024]
+endParagraph
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [creationDate]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginParagraph
+onWord [10]
+onSpecialSymbol [/]
+onWord [10]
+onSpecialSymbol [/]
+onWord [2010]
+endParagraph
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [closeDate]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginParagraph
+onWord [10]
+onSpecialSymbol [/]
+onWord [10]
+onSpecialSymbol [/]
+onWord [2010]
+endParagraph
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+beginTableRow
+beginTableCell [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [startDate]
+onSpecialSymbol [:]
+endTableCell [[class]=[work-item-property-name]]
+beginTableCell [[class]=[work-item-property-value]]
+beginParagraph
+onWord [10]
+onSpecialSymbol [/]
+onWord [10]
+onSpecialSymbol [/]
+onWord [2010]
+endParagraph
+endTableCell [[class]=[work-item-property-value]]
+endTableRow
+endTable
+endGroup [[class]=[col-md-4 col-xs-12]]
+endGroup [[class]=[row]]
+beginGroup
+beginGroup [[class]=[work-item-property-name]]
+onWord [projectmanagement]
+onSpecialSymbol [.]
+onWord [property]
+onSpecialSymbol [.]
+onWord [description]
+endGroup [[class]=[work-item-property-name]]
+beginParagraph
+onWord [This]
+onSpace
+onWord [is]
+onSpace
+onWord [some]
+onSpace
+onWord [nice]
+onSpace
+onWord [description]
+endParagraph
+endGroup
+endGroup [[class]=[work-item-page-displayer]]
+endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test]
+endDocument
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
+<div class="work-item-page-displayer"><div class="work-item-header"><p>projectmanagement.displayer.single.header.workItem #<span class="wikiexternallink"><a href="WorkItem1">WorkItem1</a></span></p><p>Do this thing!</p></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix: <span class="wikiexternallink"><a href="http://xwiki.com/project/importantproject">Important Project</a></span></p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.assignees:</td><td class="work-item-property-value"><div><span class="wikiexternallink"><a href="Teo">Teo</a></span></div></td></tr><tr><td class="work-item-property-name">projectmanagement.property.type:</td><td class="work-item-property-value">bug</td></tr><tr><td class="work-item-property-name">projectmanagement.property.priority:</td><td class="work-item-property-value">CRITICAL</td></tr><tr><td class="work-item-property-name">projectmanagement.property.resolution:</td><td class="work-item-property-value">closed</td></tr><tr><td class="work-item-property-name">projectmanagement.property.labels:</td><td class="work-item-property-value"><div>xwiki</div></td></tr><tr><td class="work-item-property-name">projectmanagement.property.progress:</td><td class="work-item-property-value">100</td></tr><tr><td class="work-item-property-name">projectmanagement.property.status:</td><td class="work-item-property-value">Done</td></tr><tr><td class="work-item-property-name">projectmanagement.property.resolved:</td><td class="work-item-property-value">true</td></tr></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.closedBy:</td><td class="work-item-property-value"><span class="wikiexternallink"><a href="http://xwiki.com/user/teo">Teo</a></span></td></tr><tr><td class="work-item-property-name">projectmanagement.property.creator:</td><td class="work-item-property-value"><span class="wikiexternallink"><a href="http://xwiki.com/user/teo">Teo</a></span></td></tr><tr><td class="work-item-property-name">projectmanagement.property.reporter:</td><td class="work-item-property-value"><span class="wikiexternallink"><a href="http://xwiki.com/user/rares">Rares</a></span></td></tr><tr><td class="work-item-property-name">projectmanagement.property.milestones:</td><td class="work-item-property-value"><span class="wikiexternallink"><a href="http://xwiki.com/milestone/1dot0rc">1.0-RC-1</a></span></td></tr></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.updateDate:</td><td class="work-item-property-value"><p>10/10/2010</p></td></tr><tr><td class="work-item-property-name">projectmanagement.property.dueDate:</td><td class="work-item-property-value"><p>23/06/2024</p></td></tr><tr><td class="work-item-property-name">projectmanagement.property.creationDate:</td><td class="work-item-property-value"><p>10/10/2010</p></td></tr><tr><td class="work-item-property-name">projectmanagement.property.closeDate:</td><td class="work-item-property-value"><p>10/10/2010</p></td></tr><tr><td class="work-item-property-name">projectmanagement.property.startDate:</td><td class="work-item-property-value"><p>10/10/2010</p></td></tr></table></div></div><div><div class="work-item-property-name">projectmanagement.property.description</div><p>This is some nice description</p></div></div>
