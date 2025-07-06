@@ -37,7 +37,6 @@ import static org.mockito.Mockito.when;
  * conventions described in {@link org.xwiki.rendering.test.integration.TestDataParser}.
  *
  * @version $Id$
- * @since 3.0
  */
 @RunWith(RenderingTestSuite.class)
 @AllComponents
@@ -59,6 +58,5 @@ public class IntegrationTests
         when(wikiCfg.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss")).thenReturn("dd/MM/yyyy");
 
         componentManager.registerMockComponent(SkinExtension.class, "ssfx");
-//        componentManager.registerComponent(Parser.class, "plain/1.0");
     }
 }

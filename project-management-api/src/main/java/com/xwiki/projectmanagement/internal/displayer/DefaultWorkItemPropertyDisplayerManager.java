@@ -68,13 +68,6 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
 
     private final Map<String, WorkItemPropertyDisplayer> displayers = new HashMap<>();
 
-    /**
-     * Default constructor that initializes the known {@link WorkItemPropertyDisplayer}.
-     */
-    public DefaultWorkItemPropertyDisplayerManager()
-    {
-    }
-
     @Override
     public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, String> parameters)
     {

@@ -57,8 +57,6 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
-// TODO: To be removed before release.
-
 /**
  * Test client retrieving entries from local files and other sources.
  *
@@ -71,8 +69,6 @@ public class TestClient implements ProjectManagementClient, Initializable
 {
     private static final Set<String> KNOWN_DATE_TYPES = Set.of(WorkItem.KEY_CLOSE_DATE,
         WorkItem.KEY_CREATION_DATE, WorkItem.KEY_DUE_DATE, WorkItem.KEY_START_DATE, WorkItem.KEY_UPDATE_DATE);
-
-//    private static final SimpleDateFormat EXPECTED_JSON_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
 
     private static final DateTimeFormatter EXPECTED_JSON_DATE_FORMAT = new DateTimeFormatterBuilder()
         .appendPattern("dd/MM/yyyy")

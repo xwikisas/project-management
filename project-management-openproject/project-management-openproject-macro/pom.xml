@@ -26,7 +26,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-openproject</artifactId>
-    <version>1.0.139-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-openproject-macro</artifactId>
