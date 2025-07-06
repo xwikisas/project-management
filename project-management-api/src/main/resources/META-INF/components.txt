@@ -2,3 +2,4 @@ com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionCont
 com.xwiki.projectmanagement.internal.DefaultProjectManagementManager
 com.xwiki.projectmanagement.internal.DefaultWorkItemsResource
 com.xwiki.projectmanagement.internal.TestClient
+com.xwiki.projectmanagement.internal.displayer.DefaultWorkItemPropertyDisplayerManager

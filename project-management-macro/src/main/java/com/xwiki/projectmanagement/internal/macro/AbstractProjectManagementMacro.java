@@ -27,15 +27,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
-import org.xwiki.livedata.macro.LiveDataMacroParameters;
-import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
@@ -45,6 +41,8 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 /**
  * Something.
@@ -57,10 +55,6 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
 {
     @Inject
     protected ProjectManagementClientExecutionContext projectManagementMacroContext;
-
-    @Inject
-    @Named("liveData")
-    private Macro<LiveDataMacroParameters> liveDataMacro;
 
     @Inject
     private ComponentManager componentManager;
@@ -113,7 +107,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             parameters.setFilters("");
         }
         try {
-            Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.toString());
+            Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.name());
 
             return displayerMacro.execute(parameters, newContent, context);
         } catch (ComponentLookupException e) {

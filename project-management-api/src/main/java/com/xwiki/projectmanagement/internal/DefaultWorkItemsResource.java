@@ -54,7 +54,7 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     public Response getWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
         WorkItem tmp = new WorkItem();
-        tmp.setIdentifier(new Linkable<>("smth", "https://store.xwiki.com"));
+        tmp.setIdentifier(new Linkable("smth", "https://store.xwiki.com"));
         tmp.setCloseDate(new Date());
         tmp.setDescription("Some nice description");
         tmp.setProgress(100);

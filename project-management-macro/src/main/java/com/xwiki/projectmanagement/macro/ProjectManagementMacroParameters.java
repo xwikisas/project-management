@@ -41,7 +41,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     private String url;
 
-    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.LIVEDATA;
+    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.liveData;
 
     /**
      * Default constructor.

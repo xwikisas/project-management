@@ -31,6 +31,7 @@
   <artifactId>project-management-macro</artifactId>
 
   <dependencies>
+    <!--  Needed to access the ProjectManagement manager, clients, and other things.  -->
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-livedata</artifactId>
@@ -41,15 +42,55 @@
       <artifactId>xwiki-commons-properties</artifactId>
       <version>${commons.version}</version>
     </dependency>
+    <!--  Livedata is a major dependency for this app since we display the work packages mainly in livedata.  -->
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-livedata-macro</artifactId>
       <version>${platform.version}</version>
     </dependency>
+    <!--  Needed in order to display the pickers for the ProjectManagementMacroParameters.  -->
     <dependency>
       <groupId>com.xwiki.commons</groupId>
       <artifactId>xwiki-pro-commons-pickers-api</artifactId>
       <version>${xwikipro.commons.version}</version>
+    </dependency>
+    <!--  Macros needed in order to display error/warning messages. -->
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-macro-message</artifactId>
+      <version>${rendering.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- Test dependencies-->
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-syntax-xwiki21</artifactId>
+      <version>${rendering.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-syntax-xhtml</artifactId>
+      <version>${rendering.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-test</artifactId>
+      <version>${rendering.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-syntax-event</artifactId>
+      <version>${rendering.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

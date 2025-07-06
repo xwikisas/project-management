@@ -26,7 +26,10 @@ import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
@@ -35,9 +38,11 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
+import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -47,11 +52,16 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * Abstract macro that processes the parameters before sending them to the project management client, retrieving the
  * work items.
  *
- * @param <T> the type of the macro parameters.
  * @version $Id$
  */
-public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacroParameters> extends AbstractMacro<T>
+public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectManagementMacroParameters>
 {
+    private static final String KEY_CLIENT = "client";
+
+    @Inject
+    @Named("ssfx")
+    protected SkinExtension ssx;
+
     @Inject
     protected ProjectManagementManager projectManagementManager;
 
@@ -61,19 +71,27 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
     @Inject
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
+    @Inject
+    private WorkItemPropertyDisplayerManager displayerManager;
+
+    @Inject
+    private ComponentManager componentManager;
+
     /**
      * @param name the name of the work item.
+     * @param description the description of the implemented macro.
      */
-    public AbstractWorkItemsDisplayer(String name)
+    public AbstractWorkItemsDisplayer(String name, String description)
     {
-        super(name);
+        super(name, description, ProjectManagementMacroParameters.class);
     }
 
     @Override
-    public List<Block> execute(T parameters, String content, MacroTransformationContext context)
+    public List<Block> execute(ProjectManagementMacroParameters parameters, String content,
+        MacroTransformationContext context)
         throws MacroExecutionException
     {
-        String clientId = (String) macroContext.get("client");
+        String clientId = (String) macroContext.get(KEY_CLIENT);
 
         if (clientId == null || clientId.isEmpty()) {
             throw new MacroExecutionException("Failed to retrieve the client id from the source params.");
@@ -90,8 +108,7 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
         PaginatedResult<WorkItem> workItemList = null;
         try {
             // TODO: Maybe separate this logic in a separate method and allow the implementations to override it?
-            workItemList = projectManagementManager.getWorkItems(clientId,
-                Math.toIntExact(parameters.getOffset()), parameters.getLimit(), filters, sortEntries);
+            workItemList = getWorkItems(clientId, parameters, filters, sortEntries);
         } catch (WorkItemException e) {
             throw new MacroExecutionException(
                 String.format("Failed to retrieve the work items from the client [%s].", clientId), e);
@@ -109,7 +126,8 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
      *     call of the macro is inline or not.
      * @return a list of blocks that will be rendered.
      */
-    protected abstract List<Block> internalExecute(PaginatedResult<WorkItem> workItemList, T parameters,
+    protected abstract List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
+        ProjectManagementMacroParameters parameters,
         MacroTransformationContext context);
 
     @Override
@@ -118,10 +136,31 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
         super.setDefaultCategories(Collections.singleton("Internal"));
     }
 
+    protected PaginatedResult<WorkItem> getWorkItems(String clientId, ProjectManagementMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
+    {
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
+        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset),
+            parameters.getLimit(), filters, sortEntries);
+    }
+
+    protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()
+    {
+        String clientId = (String) macroContext.get(KEY_CLIENT);
+        if (clientId == null || clientId.isEmpty()) {
+            return displayerManager;
+        }
+        try {
+            return componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
+        } catch (ComponentLookupException e) {
+            return displayerManager;
+        }
+    }
+
     private List<LiveDataQuery.Filter> getFilters(String filtersString) throws LiveDataException
     {
-
-        LiveDataConfiguration configuration = this.stringLiveDataConfigResolver.resolve(filtersString);
+        String serializedCfg = filtersString == null ? "" : filtersString;
+        LiveDataConfiguration configuration = this.stringLiveDataConfigResolver.resolve(serializedCfg);
         if (configuration == null) {
             return Collections.emptyList();
         }

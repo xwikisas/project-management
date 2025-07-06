@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal;
+package com.xwiki.projectmanagement.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,27 +20,26 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.List;
+import java.util.Map;
+
+import org.xwiki.component.annotation.Role;
+import org.xwiki.rendering.block.Block;
+
 /**
- * An enum listing the different ways a list of work items can be displayed.
+ * Defines the rendering blocks that should be used in order to display a Work Item property.
  *
  * @version $Id$
  */
-public enum WorkItemsDisplayer
+@Role
+public interface WorkItemPropertyDisplayer
 {
     /**
-     * Display the work items using a livedata.
+     * Generates a list of blocks that can be used to render the property in different contexts.
+     *
+     * @param property the property value that will be displayed.
+     * @param params any additional params that the displayer might need (i.e. translation prefix).
+     * @return a list of blocks that define how the property should be displayed.
      */
-    liveData,
-    /**
-     * Display the items using a card style.
-     */
-    workItemsCards,
-    /**
-     * Display the work items in a list.
-     */
-    workItemsList,
-    /**
-     * Display a single work item in a page structure.
-     */
-    workItemsSingle;
+    List<Block> display(Object property, Map<String, String> params);
 }

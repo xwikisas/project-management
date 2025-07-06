@@ -54,6 +54,8 @@ import org.xwiki.localization.ContextualLocalizationManager;
 @Named("projectmanagement")
 public class ProjectManagementConfigurationResolver implements LiveDataConfigurationResolver<LiveDataConfiguration>
 {
+    private static final String PREFIX_PROPERTY = "property.";
+
     @Inject
     private ContextualLocalizationManager l10n;
 
@@ -163,7 +165,8 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
 
     private void translateProperty(String translationPrefix, LiveDataPropertyDescriptor property)
     {
-        String translationPlain = this.l10n.getTranslationPlain(translationPrefix + property.getId());
+        String translationPlain =
+            this.l10n.getTranslationPlain(String.join("", translationPrefix, PREFIX_PROPERTY, property.getId()));
         if (translationPlain != null) {
             property.setName(translationPlain);
         }
@@ -171,7 +174,9 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             property.setName(property.getId());
         }
         if (property.getDescription() == null) {
-            property.setDescription(this.l10n.getTranslationPlain(translationPrefix + property.getId() + ".hint"));
+            property.setDescription(
+                this.l10n.getTranslationPlain(
+                    String.join("", translationPrefix, PREFIX_PROPERTY, property.getId(), ".hint")));
         }
     }
 }

@@ -72,8 +72,8 @@ public class IdSuggest extends XWikiResource implements Initializable
     {
         for (int i = 0; i < 100; i++) {
             WorkItem workItem = new WorkItem();
-            workItem.setIdentifier(new Linkable<String>(Integer.toString(i), XWIKI_URL + i));
-            workItem.setSummary(new Linkable<String>("Nice title" + i, XWIKI_URL + i));
+            workItem.setIdentifier(new Linkable(Integer.toString(i), XWIKI_URL + i));
+            workItem.setSummary(new Linkable("Nice title" + i, XWIKI_URL + i));
             workItem.setDescription("This is a nice description " + i);
             database.add(workItem);
         }

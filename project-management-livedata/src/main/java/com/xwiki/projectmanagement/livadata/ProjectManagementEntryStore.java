@@ -126,6 +126,8 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         return ld;
     }
 
+    // TODO: Use the WorkItemPropertyDisplayerManager in order to display certain properties. (linkables, props that
+    //  generate html structures).
     private void applyDisplayers(List<WorkItem> workItems, String clientId)
     {
         if (!componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)) {
