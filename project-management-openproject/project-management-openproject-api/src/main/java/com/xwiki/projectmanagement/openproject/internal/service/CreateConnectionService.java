@@ -20,16 +20,19 @@
 package com.xwiki.projectmanagement.openproject.internal.service;
 
 import java.util.Arrays;
+import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.query.Query;
+import org.xwiki.query.QueryManager;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 
@@ -56,14 +59,17 @@ public class CreateConnectionService
 
     private static final String INSTANCE_CONFIGURATION = "InstanceConfiguration";
 
-    @Inject
-    private DocumentAccessBridge documentAccessBridge;
+    private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
+    @Inject
+    private QueryManager queryManager;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
+     *
      * @param connectionName the unique name used to identify the connection. It will be used as part of the
      *     document name.
      * @param serverURL the base URL of the OpenProject server.
@@ -74,6 +80,31 @@ public class CreateConnectionService
     public void createConnection(String connectionName, String serverURL, String clientId,
         String clientSecret) throws Exception
     {
+
+        List<String> result =  queryManager.createQuery(
+                "select obj.name from BaseObject obj, StringProperty configName "
+                    + "where obj.className = :className and obj.id = configName.id.id "
+                    + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
+            .bindValue("className", PROJECT_MANAGEMENT + "." + OPEN_PROJECT_CONNECTION_CLASS)
+            .bindValue("configFieldName", CONNECTION_NAME)
+            .bindValue("config", connectionName).execute();
+
+        if (!result.isEmpty()) {
+            throw new RuntimeException(
+                "Connection" + connectionName + "already exists"
+            );
+        }
+
+        try {
+            createConnectionObjects(connectionName, serverURL, clientId, clientSecret);
+        } catch (XWikiException e) {
+            throw new RuntimeException("Failed to create connection: " + connectionName, e);
+        }
+    }
+
+    private void createConnectionObjects(String connectionName, String serverURL,
+        String clientId, String clientSecret) throws XWikiException
+    {
         XWikiContext context = this.xcontextProvider.get();
         String wikiName = context.getWikiId();
 
@@ -83,16 +114,12 @@ public class CreateConnectionService
             connectionName + INSTANCE_CONFIGURATION
         );
 
-        if (documentAccessBridge.exists(docRef)) {
-            throw new RuntimeException("Connection already exists with name: " + connectionName);
-        }
-
         XWikiDocument doc = context.getWiki().getDocument(docRef, context);
         doc.setTitle(connectionName + INSTANCE_CONFIGURATION);
         doc.setHidden(true);
 
         DocumentReference configClassRef =
-            new DocumentReference(wikiName, PROJECT_MANAGEMENT, "OpenProjectConnectionClass");
+            new DocumentReference(wikiName, PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS);
         BaseObject configObj = doc.getXObject(configClassRef, true, context);
         configObj.setStringValue(CONNECTION_NAME, connectionName);
         configObj.setStringValue(SERVER_URL, serverURL);

@@ -27,6 +27,7 @@
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
+  <parent>ProjectManagement.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -36,6 +37,7 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
+#set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
 #macro (createConnectionModal)
 &lt;div class="modal" id="createConnectionModal" tabindex="-1" role="dialog" aria-labelledby="createConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
   &lt;div class="modal-dialog" role="document"&gt;
@@ -52,25 +54,25 @@
         &lt;div class="modal-body"&gt;
           &lt;input id="connection_document_reference" type="hidden" name="document_reference" value=""&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="connectionName"&gt;
+            &lt;label class="h5" for="connection-name"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.connectionName'))
               &lt;/strong&gt;
             &lt;/label&gt;
             &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionNameDescription'))&lt;/p&gt;
-            &lt;input id="connection-name" class="form-control" name="connectionName" type="text"&gt;
+            &lt;input id="connection-name" class="form-control" name="connection-name" type="text"&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="serverURL"&gt;
+            &lt;label class="h5" for="server-url"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.serverURL'))
               &lt;/strong&gt;
             &lt;/label&gt;
             &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.serverURLDescription'))&lt;/p&gt;
-            &lt;input id="server-url" class="form-control" name="serverURL" type="text"&gt;
+            &lt;input id="server-url" class="form-control" name="server-url" type="text"&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="clientId"&gt;
+            &lt;label class="h5" for="client-id"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.clientId'))
               &lt;/strong&gt;
@@ -78,24 +80,24 @@
             &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdFirstDescription'))&lt;/span&gt;
             &lt;br&gt;
             &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdSecondDescription'))&lt;/span&gt;
-            &lt;input id="client-id" class="form-control" name="clientId" type="text"&gt;
+            &lt;input id="client-id" class="form-control" name="client-id" type="text"&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="connectionName"&gt;
+            &lt;label class="h5" for="client-secret"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
               &lt;/strong&gt;
             &lt;/label&gt;
-            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescriprion'))&lt;/p&gt;
-            &lt;input id="client-secret" class="form-control" name="clientSecret" type="text"&gt;
+            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))&lt;/p&gt;
+            &lt;input id="client-secret" class="form-control" name="client-secret" type="text"&gt;
           &lt;/div&gt;
         &lt;/div&gt;
         &lt;div class="modal-footer"&gt;
           &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
-            $escapetool.xml($services.localization.render('cancel'))
+            $escapetool.xml($services.localization.render('openproject.config.cancel'))
           &lt;/button&gt;
           &lt;button type="submit" class="btn btn-primary"&gt;
-            $escapetool.xml($services.localization.render('create'))
+            $escapetool.xml($services.localization.render('openproject.config.create'))
           &lt;/button&gt;
         &lt;/div&gt;
       &lt;/form&gt;
@@ -121,7 +123,7 @@
           &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" /&gt;
           &lt;input id="edit-connection-document-reference" type="hidden" name="edit-connection-document-reference" value=""&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="connectionName"&gt;
+            &lt;label class="h5" for="edit-connection-name"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.connectionName'))
               &lt;/strong&gt;
@@ -130,7 +132,7 @@
             &lt;input id="edit-connection-name" class="form-control" name="edit-connection-name" type="text" required&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="serverURL"&gt;
+            &lt;label class="h5" for="edit-server-url"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.serverURL'))
               &lt;/strong&gt;
@@ -139,7 +141,7 @@
             &lt;input id="edit-server-url" class="form-control" name="edit-server-url" type="text" required&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="clientId"&gt;
+            &lt;label class="h5" for="edit-client-id"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.clientId'))
               &lt;/strong&gt;
@@ -152,21 +154,21 @@
             &lt;input id="edit-client-id" class="form-control" name="edit-client-id" type="text" required&gt;
           &lt;/div&gt;
           &lt;div class="form-group"&gt;
-            &lt;label class="h5" for="connectionName"&gt;
+            &lt;label class="h5" for="edit-client-secret"&gt;
               &lt;strong&gt;
                 $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
               &lt;/strong&gt;
             &lt;/label&gt;
-            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescriprion'))&lt;/p&gt;
+            &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))&lt;/p&gt;
             &lt;input id="edit-client-secret" class="form-control" name="edit-client-secret" type="text" required&gt;
           &lt;/div&gt;
         &lt;/div&gt;
         &lt;div class="modal-footer"&gt;
           &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
-            $escapetool.xml($services.localization.render('cancel'))
+            $escapetool.xml($services.localization.render('openproject.config.cancel'))
           &lt;/button&gt;
           &lt;button type="submit" class="btn btn-primary"&gt;
-            $escapetool.xml($services.localization.render('update'))
+            $escapetool.xml($services.localization.render('openproject.config.update'))
           &lt;/button&gt;
         &lt;/div&gt;
       &lt;/form&gt;
@@ -176,7 +178,7 @@
 #end
 
 #macro (deleteConnectionModal)
-  &lt;div class="modal" id="deleteConnectionModal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModal-label"&gt;
+  &lt;div class="modal" id="deleteConnectionModal" tabindex="-1" role="dialog" aria-labelledby="deleteConnectionModal-label"&gt;
     &lt;div class="modal-dialog" role="document"&gt;
       &lt;div class="modal-content"&gt;
         &lt;form id="delete-connection-form" class="withLock xform"&gt;
@@ -197,11 +199,11 @@
             &lt;/p&gt;
           &lt;/div&gt;
           &lt;div class="modal-footer"&gt;
-            &lt;button type="button" class="btn btn-default"&gt;
-              $escapetool.xml($services.localization.render('cancel'))
+            &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
+              $escapetool.xml($services.localization.render('openproject.config.cancel'))
             &lt;/button&gt;
             &lt;button type="submit" class="btn btn-danger"&gt;
-              $escapetool.xml($services.localization.render('delete'))
+              $escapetool.xml($services.localization.render('openproject.config.delete'))
             &lt;/button&gt;
           &lt;/div&gt;
         &lt;/form&gt;
@@ -212,8 +214,10 @@
 
 #if($hasAdmin)
 {{html clean="false"}}
-  &lt;button type="button" class="btn btn-primary" data-toggle="modal" data-target="${escapetool.h}createConnectionModal"
-        &gt;
+  &lt;button
+   id="create-connection-button"
+   type="button" class="btn btn-primary"
+  &gt;
         &lt;i class="fa fa-plus"&gt;&lt;/i&gt;
         $services.localization.render('openproject.config.addNewConnection')
     &lt;/button&gt;
@@ -230,6 +234,9 @@
 }}
 {
   "meta": {
+    "entryDescriptor": {
+      "idProperty": "connectionName"
+    },
     "propertyDescriptors": [
       {
         "id": "actions",
@@ -376,6 +383,14 @@
       $("#edit-connection-document-reference").val(documentReference);
     });
 
+    $("#create-connection-button").on("click", function () {
+      $("#createConnectionModal").modal("show");
+      $("#connection-name").val("");
+      $("#server-url").val("");
+      $("#client-id").val("");
+      $("#client-secret").val("");
+    });
+
     $(document).on("click", ".delete-button", function () {
       $("#deleteConnectionModal").modal("show");
       let connectionName = $(this).data("connectionname");
@@ -388,11 +403,21 @@
 
     $("#edit-connection-form").on("submit", async function (e) {
       e.preventDefault();
-      let connectionName = $("#edit-connection-name").val();
-      let serverURL = $("#edit-server-url").val();
-      let clientId = $("#edit-client-id").val();
-      let clientSecret = $("#edit-client-secret").val();
-      let documentReference = $("#edit-connection-document-reference").val();
+      let connectionName = $("#edit-connection-name").val().trim();
+      let serverURL = $("#edit-server-url").val().trim();
+      let clientId = $("#edit-client-id").val().trim();
+      let clientSecret = $("#edit-client-secret").val().trim();
+
+      if (!connectionName || !serverURL || !clientId || !clientSecret) {
+        return new XWiki.widgets.Notification(
+          `Please fill in all fields.`,
+          "error"
+        );
+      }
+
+      let documentReference = $("#edit-connection-document-reference")
+        .val()
+        .trim();
       let connectionObjectPath =
         "objects/ProjectManagement.OpenProjectConnectionClass/0";
       let oidcObjectPath = "objects/XWiki.OIDC.ClientConfigurationClass/0";
@@ -469,10 +494,18 @@
 
     $("#create-connection-form").on("submit", async function (e) {
       e.preventDefault();
-      let connectionName = $("#connection-name").val();
-      let serverURL = $("#server-url").val();
-      let clientId = $("#client-id").val();
-      let clientSecret = $("#client-secret").val();
+      let connectionName = $("#connection-name").val().trim();
+      let serverURL = $("#server-url").val().trim();
+      let clientId = $("#client-id").val().trim();
+      let clientSecret = $("#client-secret").val().trim();
+
+      if (!connectionName || !serverURL || !clientId || !clientSecret) {
+        return new XWiki.widgets.Notification(
+          `Please fill in all fields.`,
+          "error"
+        );
+      }
+
       try {
         await $.ajax({
           method: "POST",
@@ -491,10 +524,14 @@
           "done"
         );
       } catch (e) {
+        console.log(e);
         new XWiki.widgets.Notification(
-          "An error occurred while creating the connection.",
+          e.responseText ?? "An error occurred while creating the connection.",
           "error"
         );
+      } finally {
+        $("#openproject_connections").data("liveData").updateEntries();
+        $("#createConnectionModal").modal("hide");
       }
     });
   });
@@ -508,7 +545,7 @@
       <parse/>
     </property>
     <property>
-      <use>always</use>
+      <use>onDemand</use>
     </property>
   </object>
 </xwikidoc>

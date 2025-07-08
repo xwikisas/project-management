@@ -86,7 +86,6 @@
     &lt;i class='fa fa-trash text-danger'&gt;&lt;/i&gt;
   &lt;/button&gt;
 ")
-
   #set ($actionsJSON = $jsontool.serialize($actionsHTML))
   #if($foreach.count &gt; 1),#end
   {
