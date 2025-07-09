@@ -26,14 +26,16 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
+import org.xwiki.contrib.oidc.OAuth2Exception;
 import org.xwiki.script.service.ScriptService;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
 /**
@@ -56,34 +58,37 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     private ComponentManager componentManager;
 
     @Override
-    public List<OpenProjectConnection> getOpenProjectConnections() throws AuthenticationException
+    public List<OpenProjectConnection> getOpenProjectConnections()
     {
         return openProjectConfiguration.getProperty("openprojectConnections");
     }
 
     @Override
-    public String getConnectionUrl(String connectionName) throws AuthenticationException
+    public String getConnectionUrl(String connectionName)
     {
         List<OpenProjectConnection> connections = getOpenProjectConnections();
-        OpenProjectConnection searchedConnection = connections
+        return connections
             .stream()
             .filter(connection -> connection.getConnectionName()
                 .equals(connectionName))
             .findFirst()
-            .orElseThrow();
-        return searchedConnection.getServerURL();
+            .map(OpenProjectConnection::getServerURL)
+            .orElse(null);
     }
 
     @Override
-    public String getTokenForCurrentConfig(String connectionName) throws AuthenticationException
+    public String getAccessTokenForConfiguration(String connectionName) throws AuthenticationException
     {
         String accessToken;
         try {
             OAuth2ClientScriptService oauth2Client = componentManager.getInstance(ScriptService.class,
                 OAUTH_COMPONENT_NAME);
             accessToken = oauth2Client.getAccessToken(connectionName);
-        } catch (Exception e) {
-            throw new AuthenticationException("The selected connection" + connectionName + "is not available", e);
+        } catch (ComponentLookupException e) {
+            throw new AuthenticationException("OAuth component not available for connection " + connectionName, e);
+        } catch (OAuth2Exception e) {
+            throw new AuthenticationException("Failed to retrieve access for " + connectionName,
+                e);
         }
         return accessToken;
     }
@@ -103,8 +108,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     @Override
     public OpenProjectApiClient getOpenProjectApiClient(String connectionName) throws AuthenticationException
     {
-
         return new OpenProjectApiClient(getConnectionUrl(connectionName),
-            getTokenForCurrentConfig(connectionName));
+            getAccessTokenForConfiguration(connectionName));
     }
 }

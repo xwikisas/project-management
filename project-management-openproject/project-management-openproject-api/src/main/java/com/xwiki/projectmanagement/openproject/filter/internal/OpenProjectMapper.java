@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.filterconverter.internal;
+package com.xwiki.projectmanagement.openproject.filter.internal;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +27,7 @@ import java.util.Map;
  *
  * @version $Id$
  */
-public final class FilterConverter
+public final class OpenProjectMapper
 {
     /**
      * The mapping between original and converted key.
@@ -49,7 +49,7 @@ public final class FilterConverter
         OPERATOR_MAPPING.put("contains", "=");
     }
 
-    private FilterConverter()
+    private OpenProjectMapper()
     {
 
     }
@@ -60,7 +60,7 @@ public final class FilterConverter
      * @param key original filter key
      * @return the converted key if the mapping exists. otherwise, returns the original key
      */
-    public static String convertKey(String key)
+    public static String mapLivedataProperty(String key)
     {
         return KEY_MAPPING.getOrDefault(key, key);
     }
@@ -71,7 +71,7 @@ public final class FilterConverter
      * @param operator original filter operator
      * @return the converted operator if the mapping exists. otherwise, returns the original operator
      */
-    public static String convertOperator(String operator)
+    public static String mapLivedataOperator(String operator)
     {
         return OPERATOR_MAPPING.getOrDefault(operator, operator);
     }

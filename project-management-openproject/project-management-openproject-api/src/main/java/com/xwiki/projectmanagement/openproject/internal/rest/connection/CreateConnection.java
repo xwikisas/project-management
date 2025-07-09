@@ -36,7 +36,7 @@ import org.xwiki.rest.XWikiResource;
 import com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService;
 
 /**
- * Create connection REST resource.
+ * REST Resource used for creating OpenProject configuration pages.
  *
  * @version $Id$
  */

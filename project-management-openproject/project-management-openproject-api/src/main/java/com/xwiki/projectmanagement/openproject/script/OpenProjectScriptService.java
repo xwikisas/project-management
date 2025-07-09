@@ -33,7 +33,7 @@ import org.xwiki.script.service.ScriptService;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
  * @version $Id$

@@ -20,9 +20,9 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.HandleOAuthConnection" locale="">
+<xwikidoc version="1.5" reference="ProjectManagement.RenewOAuthConnection" locale="">
   <web>ProjectManagement</web>
-  <name>HandleOAuthConnection</name>
+  <name>RenewOAuthConnection</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
@@ -31,16 +31,18 @@
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>HandleOAuthConnection</title>
+  <title>RenewOAuthConnection</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#set ($connectionName = $request.getParameter("connectionName"))
-#set ($redirectUrl = $request.getParameter("redirectUrl"))
-#if ("$redirectUrl" != "" &amp;&amp; "$connectionName" != "")
-  $services.oauth2client.authorize($connectionName, $redirectUrl)
+#if ($services.csrf.isTokenValid($request.token))
+  #set ($connectionName = $request.getParameter("connectionName"))
+  #set ($redirectUrl = $request.getParameter("redirectUrl"))
+  #if ("$redirectUrl" != "" &amp;&amp; "$connectionName" != "")
+    $services.oauth2client.authorize($connectionName, $redirectUrl)
+  #end
 #end
 {{/velocity}}
 </content>

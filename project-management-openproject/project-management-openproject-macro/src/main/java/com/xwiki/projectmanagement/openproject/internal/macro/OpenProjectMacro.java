@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  */
 
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import javax.inject.Singleton;
 
 import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.csrf.CSRFToken;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.LinkBlock;
@@ -66,6 +68,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Inject
     private Provider<XWikiContext> xContextProvider;
 
+    @Inject
+    private CSRFToken csrfToken;
+
     /**
      * Default constructor.
      */
@@ -80,13 +85,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         addToSourceParams(parameters, "client", "openproject");
 
         String instance = parameters.getInstance();
-        String identifier = parameters.getIdentifier();
         if (instance == null || instance.isEmpty()) {
             return;
-        }
-        if (identifier != null) {
-            String encodedIdentifier = URLEncoder.encode(identifier);
-            addToSourceParams(parameters, "identifier", encodedIdentifier);
         }
         addToSourceParams(parameters, "instance", instance);
     }
@@ -110,7 +110,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (xContext.getAction().equals(viewAction)) {
             String connectionName = parameters.getInstance();
             try {
-                String token = openProjectConfiguration.getTokenForCurrentConfig(connectionName);
+                String token = openProjectConfiguration.getAccessTokenForConfiguration(connectionName);
                 if (token == null || token.isEmpty()) {
                     String currentDocumentUrl =
                         xContext.getWiki().getURL(documentAccessBridge.getCurrentDocumentReference(),
@@ -120,6 +120,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                     String redirectUrl = xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext);
                     redirectUrl = redirectUrl + "?connectionName=" + connectionName;
                     redirectUrl = redirectUrl + "&redirectUrl=" + currentDocumentUrl;
+                    redirectUrl = redirectUrl + "&token=" + URLEncoder.encode(csrfToken.getToken(),
+                        StandardCharsets.UTF_8);
                     return Collections.singletonList(new LinkBlock(
                         Collections.singletonList(new WordBlock("Connect")),
                         new ResourceReference(redirectUrl, ResourceType.URL),

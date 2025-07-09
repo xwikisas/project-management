@@ -91,7 +91,7 @@ public class CreateConnectionService
 
         if (!result.isEmpty()) {
             throw new RuntimeException(
-                "Connection" + connectionName + "already exists"
+                "Connection " + connectionName + " already exists"
             );
         }
 

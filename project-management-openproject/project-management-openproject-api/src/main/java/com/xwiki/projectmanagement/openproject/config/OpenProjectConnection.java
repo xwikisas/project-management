@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.model;
+package com.xwiki.projectmanagement.openproject.config;
 
 /**
  * Represents the connection configuration for an OpenProject instance.
@@ -35,7 +35,7 @@ public class OpenProjectConnection
     private String clientSecret;
 
     /**
-     * Constructs a new {@code OpenProjectConnection} with the provided values.
+     * Constructs a new {@link OpenProjectConnection} with the provided values.
      *
      * @param connectionName the name of the configuration
      * @param serverURL the URL of the OpenProject server

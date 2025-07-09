@@ -27,7 +27,6 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.component.phase.InitializationException;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,7 +43,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.filterconverter.internal.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.filter.internal.OpenProjectFilterHandler;
 
 /**
  * Open project client.
@@ -83,30 +82,14 @@ public class OpenProjectClient implements ProjectManagementClient
                 String connectionName = (String) executionContext.get("instance");
                 openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
             } catch (Exception e) {
-                throw new InitializationException("Cannot initialize OpenProjectApiClient", e);
+                throw new WorkItemRetrievalException("Cannot initialize OpenProjectApiClient", e);
             }
             String filtersString;
             if (identifier != null) {
                 String parameterName = "query_props=";
-//                String queryParam =
-//                    identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
+                String queryParam =
+                    identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
                 ObjectMapper mapper = new ObjectMapper();
-                String queryParam = "{\n"
-                    + "  \"c\": [\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\",\"project\"],\n"
-                    + "  \"hi\": true,\n"
-                    + "  \"g\": \"\",\n"
-                    + "  \"is\": true,\n"
-                    + "  \"tv\": false,\n"
-                    + "  \"hl\": \"none\",\n"
-                    + "  \"t\": \"id:asc\",\n"
-                    + "  \"f\": [\n"
-                    + "    { \"n\": \"status\",  \"o\": \"o\", \"v\": []    },\n"
-                    + "    { \"n\": \"subject\", \"o\": \"~\", \"v\": [\"te\"] }\n"
-                    + "  ],\n"
-                    + "  \"ts\": \"PT0S\",\n"
-                    + "  \"pp\": 20,\n"
-                    + "  \"pa\": 1\n"
-                    + "}";
                 JsonNode queriesNode = mapper.readTree(queryParam);
                 JsonNode filtersNode = queriesNode.path("f");
                 List<Map<String, Object>> filtersList =

@@ -41,7 +41,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
  * Extracts data from the OpenProjectConnection Class.

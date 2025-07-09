@@ -51,61 +51,57 @@ import com.xwiki.projectmanagement.openproject.model.User;
  */
 public class OpenProjectApiClient
 {
-    private static final String AUTHOR = "author";
+    private static final String OP_RESPONSE_AUTHOR = "author";
 
-    private static final String EMBEDDED = "_embedded";
+    private static final String OP_RESPONSE_EMBEDDED = "_embedded";
 
-    private static final String ELEMENTS = "elements";
+    private static final String OP_RESPONSE_ELEMENTS = "elements";
 
-    private static final String FILTERS = "filters";
+    private static final String OP_FILTERS = "filters";
 
-    private static final String SELECT = "select";
+    private static final String OP_SELECT = "select";
 
-    private static final String ID = "id";
+    private static final String OP_RESPONSE_ID = "id";
 
-    private static final String LINKS = "_links";
+    private static final String OP_RESPONSE_LINKS = "_links";
 
-    private static final String SELF = "self";
+    private static final String OP_RESPONSE_SELF = "self";
 
-    private static final String SUBJECT = "subject";
+    private static final String OP_RESPONSE_SUBJECT = "subject";
 
-    private static final String STATUS = "status";
+    private static final String OP_RESPONSE_STATUS = "status";
 
     private static final String PAGE_SIZE = "pageSize";
 
-    private static final String PROJECT = "project";
+    private static final String OP_RESPONSE_PROJECT = "project";
 
-    private static final String NAME = "name";
+    private static final String OP_RESPONSE_NAME = "name";
 
-    private static final String PRIORITY = "priority";
+    private static final String OP_RESPONSE_PRIORITY = "priority";
 
-    private static final String TITLE = "title";
+    private static final String OP_RESPONSE_TITLE = "title";
 
     private static final String HREF = "href";
 
-    private static final String ASSIGNEE = "assignee";
+    private static final String OP_RESPONSE_ASSIGNEE = "assignee";
 
-    private static final String TYPE = "type";
-
-    private static final String WORK_PACKAGES = "work_packages";
-
-    private static final String ACTIVITY = "activity";
+    private static final String OP_RESPONSE_TYPE = "type";
 
     private static final String API_URL_PART = "/api/v3";
 
-    private static final String WORK_PACKAGES_API_URL = "/api/v3/work_packages";
+    private static final String API_URL_WORK_PACKAGES = "/api/v3/work_packages";
 
-    private static final String TYPES_API_URL = "/api/v3/types";
+    private static final String API_URL_TYPES = "/api/v3/types";
 
-    private static final String STATUSES_API_URL = "/api/v3/statuses";
+    private static final String API_URL_STATUSES = "/api/v3/statuses";
 
-    private static final String PRIORITIES_API_URL = "/api/v3/priorities";
+    private static final String API_URL_PRIORITIES = "/api/v3/priorities";
 
-    private static final String USERS_API_URL = "/api/v3/users";
+    private static final String API_URL_USERS = "/api/v3/users";
 
-    private static final String PROJECTS_API_URL = "/api/v3/projects";
+    private static final String API_URL_PROJECTS = "/api/v3/projects";
 
-    private static final String SELECT_ELEMENTS_FROM_API_URL_PARAM = "elements/id,elements/name";
+    private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
 
     private final HttpClient client = HttpClient.newHttpClient();
 
@@ -138,10 +134,10 @@ public class OpenProjectApiClient
     public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String filters)
     {
         try {
-            URIBuilder uriBuilder = new URIBuilder(connectionUrl + WORK_PACKAGES_API_URL);
+            URIBuilder uriBuilder = new URIBuilder(connectionUrl + API_URL_WORK_PACKAGES);
             uriBuilder.addParameter("offset", String.valueOf(offset));
             uriBuilder.addParameter(PAGE_SIZE, String.valueOf(pageSize));
-            uriBuilder.addParameter(FILTERS, filters);
+            uriBuilder.addParameter(OP_FILTERS, filters);
 
             PaginatedResult<WorkItem> paginatedResult = new PaginatedResult<>();
             HttpRequest request =
@@ -150,9 +146,11 @@ public class OpenProjectApiClient
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             String body = response.body();
 
-            int totalNumberOfWorkItems = getTotalNumberOfWorkItems(body);
+            JsonNode mainNode = objectMapper.readTree(body);
 
-            List<WorkItem> workItems = getWorkItemsFromResponse(body);
+            int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
+
+            List<WorkItem> workItems = getWorkItemsFromResponse(mainNode);
 
             paginatedResult.setItems(workItems);
             paginatedResult.setPage(offset);
@@ -168,19 +166,19 @@ public class OpenProjectApiClient
      * Retrieves a paginated list of work package identifiers based on the specified page size and filter criteria.
      *
      * @param pageSize the number of work packages id's to retrieve per page
-     * @param filters a JSON-formatted string representing filter criteria to apply to the request
+     * @param filters a OpenProject-compliant JSON-formatted string representing filter criteria to apply to the
+     *     request
      * @return a list of maps
      */
     public List<Identifier> getIdentifiers(int pageSize, String filters)
     {
-        JsonNode elements = getSuggestionsMainNode(WORK_PACKAGES_API_URL, String.valueOf(pageSize),
+        JsonNode elements = getSuggestionsMainNode(API_URL_WORK_PACKAGES, String.valueOf(pageSize),
             filters, "elements/id,elements/subject");
         List<Identifier> identifiers = new ArrayList<>();
         for (JsonNode element : elements) {
             Identifier identifier = new Identifier();
-            int id = element.path(ID).asInt();
-            String name = element.path(SUBJECT).asText();
-            String url = String.format("%s/%s/%s/%s", connectionUrl, WORK_PACKAGES, id, ACTIVITY);
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_SUBJECT).asText();
             identifier.setName(name);
             identifier.setId(id);
             identifiers.add(identifier);
@@ -199,17 +197,17 @@ public class OpenProjectApiClient
     {
         JsonNode elements =
             getSuggestionsMainNode(
-                USERS_API_URL,
+                API_URL_USERS,
                 String.valueOf(pageSize),
                 filters,
-                SELECT_ELEMENTS_FROM_API_URL_PARAM
+                API_URL_SELECT_ELEMENTS_PARAM
             );
         List<User> users = new ArrayList<>();
         for (JsonNode element : elements) {
             User user = new User();
-            int id = element.path(ID).asInt();
+            int id = element.path(OP_RESPONSE_ID).asInt();
 
-            String name = element.path(NAME).asText();
+            String name = element.path(OP_RESPONSE_NAME).asText();
             user.setId(id);
             user.setName(name);
             users.add(user);
@@ -228,17 +226,16 @@ public class OpenProjectApiClient
     {
         JsonNode elements =
             getSuggestionsMainNode(
-                PROJECTS_API_URL,
+                API_URL_PROJECTS,
                 String.valueOf(pageSize),
                 filters,
-                SELECT_ELEMENTS_FROM_API_URL_PARAM
+                API_URL_SELECT_ELEMENTS_PARAM
             );
         List<Project> projects = new ArrayList<>();
         for (JsonNode element : elements) {
             Project project = new Project();
-            int id = element.path(ID).asInt();
-            String name = element.path(NAME).asText();
-            String url = String.format("%s/projects/%s", connectionUrl, id);
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
             project.setId(id);
             project.setName(name);
             projects.add(project);
@@ -253,12 +250,12 @@ public class OpenProjectApiClient
      */
     public List<Type> getTypes()
     {
-        JsonNode elements = getSuggestionsMainNode(TYPES_API_URL, "", "", "");
+        JsonNode elements = getSuggestionsMainNode(API_URL_TYPES, "", "", "");
         List<Type> types = new ArrayList<>();
         for (JsonNode element : elements) {
             Type type = new Type();
-            int id = element.path(ID).asInt();
-            String name = element.path(NAME).asText();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
             type.setName(name);
             type.setId(id);
             types.add(type);
@@ -273,12 +270,12 @@ public class OpenProjectApiClient
      */
     public List<Status> getStatuses()
     {
-        JsonNode elements = getSuggestionsMainNode(STATUSES_API_URL, "", "", "");
+        JsonNode elements = getSuggestionsMainNode(API_URL_STATUSES, "", "", "");
         List<Status> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
             Status status = new Status();
-            int id = element.path(ID).asInt();
-            String labelName = element.path(NAME).asText();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String labelName = element.path(OP_RESPONSE_NAME).asText();
             status.setId(id);
             status.setName(labelName);
             statuses.add(status);
@@ -293,12 +290,12 @@ public class OpenProjectApiClient
      */
     public List<Priority> getPriorities()
     {
-        JsonNode elements = getSuggestionsMainNode(PRIORITIES_API_URL, "", "", "");
+        JsonNode elements = getSuggestionsMainNode(API_URL_PRIORITIES, "", "", "");
         List<Priority> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
             Priority priority = new Priority();
-            int id = element.path(ID).asInt();
-            String name = element.path(NAME).asText();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
             priority.setId(id);
             priority.setName(name);
             priorities.add(priority);
@@ -312,10 +309,10 @@ public class OpenProjectApiClient
         try {
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + urlPart);
             if (!filtersString.isEmpty()) {
-                uriBuilder.addParameter(FILTERS, filtersString);
+                uriBuilder.addParameter(OP_FILTERS, filtersString);
             }
             if (!selectedElementsString.isEmpty()) {
-                uriBuilder.addParameter(SELECT, selectedElementsString);
+                uriBuilder.addParameter(OP_SELECT, selectedElementsString);
             }
             if (!pageSize.isEmpty()) {
                 uriBuilder.addParameter(PAGE_SIZE, pageSize);
@@ -324,23 +321,23 @@ public class OpenProjectApiClient
                 createGetHttpRequest(uriBuilder.build());
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             String body = response.body();
-            return objectMapper.readTree(body).path(EMBEDDED).path(ELEMENTS);
+            return objectMapper.readTree(body).path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private int getTotalNumberOfWorkItems(String body) throws JsonProcessingException
+    private int getTotalNumberOfWorkItems(JsonNode mainNode) throws JsonProcessingException
     {
-        return objectMapper.readTree(body).path("total").asInt();
+        return mainNode.path("total").asInt();
     }
 
-    private List<WorkItem> getWorkItemsFromResponse(String body)
+    private List<WorkItem> getWorkItemsFromResponse(JsonNode mainNode)
         throws IOException, URISyntaxException, InterruptedException
     {
         List<WorkItem> workItems = new ArrayList<>();
 
-        JsonNode elementsNode = objectMapper.readTree(body).path(EMBEDDED).path(ELEMENTS);
+        JsonNode elementsNode = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         for (JsonNode element : elementsNode) {
             workItems.add(createWorkItemFromJson(element));
         }
@@ -352,7 +349,7 @@ public class OpenProjectApiClient
     {
 
         WorkItem workItem = new WorkItem();
-        int id = element.path(ID).asInt();
+        int id = element.path(OP_RESPONSE_ID).asInt();
         workItem.setDescription(element.path("description").path("raw").asText());
 
         JsonNode startDate = element.get("startDate");
@@ -361,33 +358,33 @@ public class OpenProjectApiClient
         JsonNode updatedAtDate = element.get("updatedAt");
         setDates(workItem, startDate, dueDate, createdAtDate, updatedAtDate);
 
-        JsonNode linksNode = element.path(LINKS);
-        workItem.setType(linksNode.path(TYPE).path(TITLE).asText());
-        JsonNode selfNode = linksNode.path(SELF);
-        String issueName = selfNode.get(TITLE).asText();
+        JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
+        workItem.setType(linksNode.path(OP_RESPONSE_TYPE).path(OP_RESPONSE_TITLE).asText());
+        JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
+        String issueName = selfNode.get(OP_RESPONSE_TITLE).asText();
         String issueUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
         workItem.setIdentifier(new Linkable<>(issueName, issueUrl));
-        workItem.setSummary(new Linkable<>(element.path(SUBJECT).asText(), issueUrl));
+        workItem.setSummary(new Linkable<>(element.path(OP_RESPONSE_SUBJECT).asText(), issueUrl));
 
-        JsonNode statusNode = linksNode.path(STATUS);
-        workItem.setStatus(statusNode.path(TITLE).asText());
-        String statusUrl = connectionUrl + linksNode.path(STATUS).get(HREF).asText();
+        JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
+        workItem.setStatus(statusNode.path(OP_RESPONSE_TITLE).asText());
+        String statusUrl = connectionUrl + linksNode.path(OP_RESPONSE_STATUS).get(HREF).asText();
         setWorkItemIsResolved(new URI(statusUrl), workItem);
 
-        JsonNode authorNode = linksNode.path(AUTHOR);
-        workItem.setCreator(new Linkable<>(authorNode.path(TITLE).asText(),
+        JsonNode authorNode = linksNode.path(OP_RESPONSE_AUTHOR);
+        workItem.setCreator(new Linkable<>(authorNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + authorNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
 
-        JsonNode assigneeNode = linksNode.path(ASSIGNEE);
-        workItem.setAssignees(List.of(new Linkable<>(assigneeNode.path(TITLE).asText(),
+        JsonNode assigneeNode = linksNode.path(OP_RESPONSE_ASSIGNEE);
+        workItem.setAssignees(List.of(new Linkable<>(assigneeNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + assigneeNode.path(HREF).asText().replaceFirst(API_URL_PART, ""))));
 
-        JsonNode projectNode = linksNode.path(PROJECT);
-        workItem.setProject(new Linkable<>(projectNode.path(TITLE).asText(),
+        JsonNode projectNode = linksNode.path(OP_RESPONSE_PROJECT);
+        workItem.setProject(new Linkable<>(projectNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
 
-        JsonNode priorityNode = linksNode.path(PRIORITY);
-        workItem.setPriority(priorityNode.path(TITLE).asText());
+        JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);
+        workItem.setPriority(priorityNode.path(OP_RESPONSE_TITLE).asText());
 
         return workItem;
     }

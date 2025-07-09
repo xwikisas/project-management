@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.filterconverter.internal;
+package com.xwiki.projectmanagement.openproject.filter.internal;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -70,7 +70,7 @@ public final class OpenProjectFilterHandler
             }
             List<Map<String, Object>> filterConstraints = new ArrayList<>();
             for (LiveDataQuery.Constraint constraint : validConstraints) {
-                String operatorValue = FilterConverter.convertOperator(constraint.getOperator());
+                String operatorValue = OpenProjectMapper.mapLivedataOperator(constraint.getOperator());
                 Map<String, Object> existingOperator =
                     filterConstraints.stream()
                         .filter(fc -> fc.get(OPERATOR).equals(operatorValue))
@@ -92,7 +92,7 @@ public final class OpenProjectFilterHandler
 
             for (Map<String, Object> filterConstraint : filterConstraints) {
                 Map<String, Object> convertedFilter = new HashMap<>();
-                convertedFilter.put(FilterConverter.convertKey(filter.getProperty()), filterConstraint);
+                convertedFilter.put(OpenProjectMapper.mapLivedataProperty(filter.getProperty()), filterConstraint);
                 convertedFilters.add(convertedFilter);
             }
         }
@@ -131,9 +131,4 @@ public final class OpenProjectFilterHandler
             throw new RuntimeException(e);
         }
     }
-
-//    public static String intersectFilterStrings(String firstFilterString, String secondFilterString) throws
-//        JsonProcessingException
-//    {
-//    }
 }
