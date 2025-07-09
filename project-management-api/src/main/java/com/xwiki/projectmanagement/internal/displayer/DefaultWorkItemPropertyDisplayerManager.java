@@ -79,6 +79,11 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         if (propertyDisplayer == null) {
             propertyDisplayer = getDisplayerForProperty(propertyValue.getClass().getName());
         }
+        if (propertyValue instanceof Map && ((Map<?, ?>) propertyValue).containsKey(Linkable.KEY_VALUE) && ((Map<?,
+            ?>) propertyValue).containsKey(Linkable.KEY_LOCATION))
+        {
+            propertyDisplayer = getDisplayerForProperty(Linkable.class.getName());
+        }
         if (propertyDisplayer != null) {
             return propertyDisplayer.display(propertyValue, parameters);
         }

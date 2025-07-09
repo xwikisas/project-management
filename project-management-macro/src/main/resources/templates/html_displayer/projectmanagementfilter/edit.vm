@@ -20,8 +20,12 @@
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js'))
 #template("filter_builder.vm")
 #filterBuilder({})
+#set ($deps = {
+  'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
+})
 <textarea id="proj-manag-filter" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
+  data-deps="$escapetool.xml($jsontool.serialize($deps))"
 />

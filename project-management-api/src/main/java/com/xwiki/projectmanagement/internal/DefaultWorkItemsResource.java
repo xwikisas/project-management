@@ -69,7 +69,11 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     @Override
     public Response getWorkItems(String wiki, String projectManagementHint, int page, int pageSize)
     {
-        return Response.ok().entity(new PaginatedResult<>(workItems, 1, 10, workItems.size())).build();
+        List<WorkItem> returnedItems = new ArrayList<>();
+        for (WorkItem workItem : workItems) {
+            returnedItems.add((WorkItem) workItem.clone());
+        }
+        return Response.ok().entity(new PaginatedResult<>(returnedItems, 1, 10, workItems.size())).build();
     }
 
     @Override
