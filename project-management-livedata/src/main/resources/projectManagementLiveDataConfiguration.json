@@ -23,7 +23,7 @@
         "id": "type",
         "type": "String",
         "name": "Type",
-        "displayer": "html"
+        "displayer": "text"
       },
       {
         "id": "summary.value",
@@ -126,7 +126,7 @@
         "id": "labels",
         "type": "String",
         "name": "Labels",
-        "displayer": "text"
+        "displayer": "html"
       },
       {
         "id": "closeDate",

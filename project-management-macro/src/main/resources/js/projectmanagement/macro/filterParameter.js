@@ -17,47 +17,47 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-require.config({
-  paths: {
-    'filterBuilder': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=false')
-  }
-});
-require(['filterBuilder'], function () {
-  require(['jquery', 'project-management-filter-builder'], function($, builder) {
-    console.log('smth');
-    builder.element.on('constraintsUpdated', function(e, constraints) {
-      console.log("constraints: " + constraints);
-      let livedataCfg = { query: { filters: [] } };
-      for (key in constraints) {
-        livedataCfg.query.filters.push(constraints[key]);
-      }
-      $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
-    });
-    let initBuilder = function () {
-      console.log('builder initiated.');
-      let initialFilter = $('#proj-manag-filter').val();
-      if (!initialFilter) {
-        console.log('no initial filter.');
-        return;
-      }
-      const filterCfg = JSON.parse(initialFilter);
-      let filters = (filterCfg.query && filterCfg.query.filters) || [];
-      filters.forEach((filter) => {
-        filter.constraints.forEach((constraint) => {
-          let filterCopy = { ...filter };
-          filterCopy.constraints = [constraint];
-          builder.addFilter(filterCopy);
-        });
+setTimeout(function () {
+  let projManagFilterDeps = JSON.parse(document.getElementById('proj-manag-filter').getAttribute('data-deps')) || {};
+  projManagFilterDeps.filterBuilder = new XWiki.Document(
+    new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
+  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=false')
+  require.config({
+    paths: projManagFilterDeps
+  });
+  require(['filterBuilder'], function () {
+    require(['jquery', 'project-management-filter-builder'], function ($, builder) {
+      builder.element.on('constraintsUpdated', function (e, constraints) {
+        let livedataCfg = { query: { filters: [] } };
+        for (key in constraints) {
+          livedataCfg.query.filters.push(constraints[key]);
+        }
+        $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
       });
-    };
-    initBuilder();
-    $(document).on('hide.bs.modal', '.modal', function () {
-      builder.clean();
-    });
-    $(document).on('shown.bs.modal', '.modal', function () {
-      builder.clean();
-      builder.init();
+      let initBuilder = function () {
+        let initialFilter = $('#proj-manag-filter').val();
+        if (!initialFilter) {
+          return;
+        }
+        const filterCfg = JSON.parse(initialFilter);
+        let filters = (filterCfg.query && filterCfg.query.filters) || [];
+        filters.forEach((filter) => {
+          filter.constraints.forEach((constraint) => {
+            let filterCopy = { ...filter };
+            filterCopy.constraints = [constraint];
+            builder.addFilter(filterCopy);
+          });
+        });
+      };
       initBuilder();
+      $(document).on('hide.bs.modal', '.modal', function () {
+        builder.clean();
+      });
+      $(document).on('shown.bs.modal', '.modal', function () {
+        builder.clean();
+        builder.init();
+        initBuilder();
+      });
     });
   });
 });

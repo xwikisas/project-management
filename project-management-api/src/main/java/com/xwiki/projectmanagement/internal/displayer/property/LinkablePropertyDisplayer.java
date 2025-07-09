@@ -63,28 +63,32 @@ public class LinkablePropertyDisplayer implements WorkItemPropertyDisplayer
     @Override
     public List<Block> display(Object property, Map<String, String> params)
     {
-        if (!(property instanceof Linkable) || StringUtils.isEmpty(((Linkable) property).getValue())) {
+        if (!(property instanceof Map)) {
             return Collections.emptyList();
         }
-        Linkable linkableProp = (Linkable) property;
+        String anchor = (String) ((Map<?, ?>) property).get(Linkable.KEY_VALUE);
+        String url = (String) ((Map<?, ?>) property).get(Linkable.KEY_LOCATION);
+        if (anchor == null || anchor.isEmpty()) {
+            return Collections.emptyList();
+        }
         List<Block> linkAnchorBlocks = Collections.emptyList();
         try {
             linkAnchorBlocks =
-                plainTextParser.parse(new StringReader(linkableProp.getValue())).getChildren();
+                plainTextParser.parse(new StringReader(anchor)).getChildren();
         } catch (ParseException parseException) {
             logger.warn("Failed to parse the value [{}] of a linkable property. Cause: [{}].",
-                linkableProp.getValue(), ExceptionUtils.getRootCauseMessage(parseException));
+                anchor, ExceptionUtils.getRootCauseMessage(parseException));
         }
         if (!linkAnchorBlocks.isEmpty() && linkAnchorBlocks.get(0) instanceof ParagraphBlock) {
             linkAnchorBlocks = linkAnchorBlocks.get(0).getChildren();
         }
         boolean freeStanding = linkAnchorBlocks.isEmpty();
 
-        if (StringUtils.isEmpty(linkableProp.getLocation())) {
+        if (StringUtils.isEmpty(url)) {
             return linkAnchorBlocks;
         } else {
             return Collections.singletonList(
-                new LinkBlock(linkAnchorBlocks, new ResourceReference(linkableProp.getLocation(), ResourceType.URL),
+                new LinkBlock(linkAnchorBlocks, new ResourceReference(url, ResourceType.URL),
                     freeStanding));
         }
     }
