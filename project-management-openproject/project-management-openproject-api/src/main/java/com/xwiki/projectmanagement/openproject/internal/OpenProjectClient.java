@@ -1,4 +1,3 @@
-package com.xwiki.projectmanagement.internal;
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,12 +17,8 @@ package com.xwiki.projectmanagement.internal;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject.internal;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -31,12 +26,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.NotImplementedException;
-import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.rest.XWikiRestComponent;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -50,32 +41,32 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.filter.internal.OpenProjectFilterHandler;
 
 /**
- * Test client retrieving entries from local files and other sources.
+ * Open project client.
  *
  * @version $Id$
  */
 @Component
-@Named("openproject-1")
+@Named("openproject")
 @Singleton
-public class OpenProjClient implements ProjectManagementClient
+public class OpenProjectClient implements ProjectManagementClient
 {
-    // For testing. REMOVE
     @Inject
-    @Named("com.xwiki.projectmanagement.internal.DefaultWorkItemsResource")
-    private XWikiRestComponent workItemsResource;
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
 
-    @Inject
-    private Logger logger;
+    private OpenProjectApiClient openProjectApiClient;
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     @Override
@@ -83,68 +74,53 @@ public class OpenProjClient implements ProjectManagementClient
         List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
-        Map<String, Object> map = executionContext.getContext();
-
-        executionContext.getContext();
-        PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        // GET ENTRIES FROM RESOURCE ---------------
         try {
+            int offset = (page / pageSize) + 1;
 
-            PaginatedResult<WorkItem> paginatedResult =
-                (PaginatedResult<WorkItem>) ((DefaultWorkItemsResource) workItemsResource).getWorkItems("wiki",
-                    "smth",
-                    0, 10).getEntity();
-            result.getItems().addAll(paginatedResult.getItems());
+            String identifier = (String) executionContext.get("identifier");
+            try {
+                String connectionName = (String) executionContext.get("instance");
+                openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
+            } catch (Exception e) {
+                throw new WorkItemRetrievalException("Cannot initialize OpenProjectApiClient", e);
+            }
+            String filtersString;
+            if (identifier != null) {
+                String parameterName = "query_props=";
+                String queryParam =
+                    identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode queriesNode = mapper.readTree(queryParam);
+                JsonNode filtersNode = queriesNode.path("f");
+                List<Map<String, Object>> filtersList =
+                    mapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
+                    {
+                    });
+                filtersString = OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+            } else {
+                filtersString = OpenProjectFilterHandler.convertFilters(filters);
+            }
+            return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
         } catch (Exception e) {
-
+            throw new WorkItemRetrievalException("An error occurred while trying to get the work items");
         }
-
-        // GET ENTRIES FROM TEST FILE --------------
-        Map<String, WorkItem> newDb = maybeGetTestEntries();
-        if (newDb != null) {
-            List<WorkItem> workItems = new ArrayList<>(newDb.values());
-            result.getItems().addAll(workItems);
-        }
-
-        return result;
     }
 
     @Override
     public WorkItem createWorkItem(WorkItem workItem) throws WorkItemCreationException
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     @Override
     public WorkItem updateWorkItem(WorkItem workItem) throws WorkItemUpdatingException
     {
-        throw new NotImplementedException();
+        return null;
     }
 
     @Override
     public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
     {
         return false;
-    }
-
-    private static Map<String, WorkItem> maybeGetTestEntries()
-    {
-        String testPath = "/home/teo/Desktop/customLiveDataStore.json";
-        File testFile = new File(testPath);
-        String foundEntriesJSON = "";
-        Map<String, WorkItem> newDb = null;
-        if (testFile.exists()) {
-            try (InputStream testFileInputStream = new FileInputStream(testFile)) {
-                foundEntriesJSON = IOUtils.toString(testFileInputStream, Charset.defaultCharset());
-
-                ObjectMapper objectMapper = new ObjectMapper();
-                JsonNode root = objectMapper.readTree(foundEntriesJSON);
-                newDb = objectMapper.readerFor(new TypeReference<Map<String, WorkItem>>()
-                {
-                }).readValue(root);
-            } catch (Exception e) {
-            }
-        }
-        return newDb;
     }
 }

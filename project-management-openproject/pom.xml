@@ -31,9 +31,14 @@
   <artifactId>project-management-openproject</artifactId>
 
   <modules>
-    <module>project-management-openproject-api</module>
     <module>project-management-openproject-macro</module>
     <module>project-management-openproject-ui</module>
+    <module>project-management-openproject-api</module>
   </modules>
+
+  <properties>
+    <contrib.oauth2.version>2.18.2</contrib.oauth2.version>
+    <com.nimbus-jose-jwt.version>10.3</com.nimbus-jose-jwt.version>
+  </properties>
 
 </project>

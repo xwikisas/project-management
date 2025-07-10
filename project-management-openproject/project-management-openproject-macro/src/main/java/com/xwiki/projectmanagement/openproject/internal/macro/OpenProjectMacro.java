@@ -20,12 +20,33 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.csrf.CSRFToken;
+import org.xwiki.model.reference.LocalDocumentReference;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.reference.ResourceReference;
+import org.xwiki.rendering.listener.reference.ResourceType;
+import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -38,6 +59,18 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Named("openproject")
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private DocumentAccessBridge documentAccessBridge;
+
+    @Inject
+    private Provider<XWikiContext> xContextProvider;
+
+    @Inject
+    private CSRFToken csrfToken;
+
     /**
      * Default constructor.
      */
@@ -56,5 +89,42 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         addToSourceParams(parameters, "identifier", parameters.getIdentifier());
 
         addToSourceParams(parameters, "translationPrefix", "openproject.");
+    }
+
+    @Override
+    public List<Block> execute(OpenProjectMacroParameters parameters, String content,
+        MacroTransformationContext context) throws MacroExecutionException
+    {
+        String viewAction = "view";
+        XWikiContext xContext = this.xContextProvider.get();
+        if (xContext.getAction().equals(viewAction)) {
+            String connectionName = parameters.getInstance();
+            try {
+                String token = openProjectConfiguration.getAccessTokenForConfiguration(connectionName);
+                if (token == null || token.isEmpty()) {
+                    String currentDocumentUrl =
+                        xContext.getWiki().getURL(documentAccessBridge.getCurrentDocumentReference(),
+                            xContext);
+                    LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
+                        "ProjectManagement", "RenewOAuthConnection");
+                    String redirectUrl = xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext);
+                    redirectUrl = redirectUrl + "?connectionName=" + connectionName;
+                    redirectUrl = redirectUrl + "&redirectUrl=" + currentDocumentUrl;
+                    redirectUrl = redirectUrl + "&token=" + URLEncoder.encode(csrfToken.getToken(),
+                        StandardCharsets.UTF_8);
+                    return Collections.singletonList(new LinkBlock(
+                        Collections.singletonList(new WordBlock("Connect")),
+                        new ResourceReference(redirectUrl, ResourceType.URL),
+                        false,
+                        Map.of(
+                            "class", "btn btn-default"
+                        )
+                    ));
+                }
+            } catch (AuthenticationException e) {
+                throw new MacroExecutionException(e.getMessage());
+            }
+        }
+        return super.execute(parameters, content, context);
     }
 }

@@ -1,2 +1,13 @@
+com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
+com.xwiki.projectmanagement.openproject.config.internal.DefaultOpenProjectConfiguration
+com.xwiki.projectmanagement.openproject.config.internal.OpenProjectDocumentConfigurationSource
+com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.IdSuggest
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.TypeSuggest
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.StatusesSuggest
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.UsersSuggest
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.ProjectsSuggest
+com.xwiki.projectmanagement.openproject.internal.rest.suggest.PrioritiesSuggest
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
+com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection
+com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService

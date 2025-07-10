@@ -26,7 +26,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-openproject</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.16.23-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-openproject-macro</artifactId>
@@ -46,6 +46,11 @@
       <artifactId>xwiki-pro-commons-pickers-api</artifactId>
       <version>${xwikipro.commons.version}</version>
       <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-openproject-api</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 

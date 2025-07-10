@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +17,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,19 +41,19 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.model.Identifier;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 /**
- * Rest endpoint that suggests ids based on some query string.
+ * Rest endpoint that suggests projects based on some query string.
  *
  * @version $Id$
  * @since 1.0
  */
 @Component
-@Named("com.xwiki.projectmanagement.openproject.internal.rest.suggest.IdSuggest")
+@Named("com.xwiki.projectmanagement.openproject.internal.rest.suggest.ProjectsSuggest")
 @Singleton
-@Path("/wikis/{wikiName}/openproject/instance/{instance}/id")
-public class IdSuggest extends XWikiResource
+@Path("/wikis/{wikiName}/openproject/instance/{instance}/projects")
+public class ProjectsSuggest extends XWikiResource
 {
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
@@ -68,7 +67,7 @@ public class IdSuggest extends XWikiResource
      */
     @GET
     @Produces({ MediaType.APPLICATION_JSON })
-    public Response getWorkItems(
+    public Response getProjects(
         @PathParam("wikiName") String wiki,
         @PathParam("instance") String instance,
         @QueryParam("search") @DefaultValue("") String search,
@@ -84,20 +83,18 @@ public class IdSuggest extends XWikiResource
         } catch (Exception e) {
             return Response.serverError().entity(e.getMessage()).build();
         }
-        String filter = lowerSearch.isEmpty() ? "[]" : String.format("[{\"subject\":{\"operator\":\"~\","
+        String filter = lowerSearch.isEmpty() ? "[]" : String.format("[{\"name\":{\"operator\":\"~\","
                 + "\"values\":[\"%s\"]}}]",
             lowerSearch);
-
-        List<Identifier> identifiersResponse = openProjectApiClient.getIdentifiers(pageSize, filter);
-        List<Map<String, String>> identifiersSuggestions = new ArrayList<>();
-        for (Identifier identifier : identifiersResponse) {
-            Map<String, String> identifierSuggestion = new HashMap<>();
-            identifierSuggestion.put("value", identifier.getId().toString());
-            identifierSuggestion.put("label", identifier.getName());
-            identifierSuggestion.put("url", String.format("%s/work_packages/%s/activity", connectionUrl,
-                identifier.getId()));
-            identifiersSuggestions.add(identifierSuggestion);
+        List<Project> projectApiResponse = openProjectApiClient.getProjects(pageSize, filter);
+        List<Map<String, String>> projectsSuggestions = new ArrayList<>();
+        for (Project project : projectApiResponse) {
+            Map<String, String> projectSuggestion = new HashMap<>();
+            projectSuggestion.put("value", project.getId().toString());
+            projectSuggestion.put("label", project.getName());
+            projectSuggestion.put("url", String.format("%s/projects/%s", connectionUrl, project.getId()));
+            projectsSuggestions.add(projectSuggestion);
         }
-        return Response.ok(identifiersSuggestions).build();
+        return Response.ok(projectsSuggestions).build();
     }
 }
