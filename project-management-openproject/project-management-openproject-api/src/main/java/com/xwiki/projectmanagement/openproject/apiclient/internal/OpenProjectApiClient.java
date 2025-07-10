@@ -31,7 +31,6 @@ import java.util.List;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -327,7 +326,7 @@ public class OpenProjectApiClient
         }
     }
 
-    private int getTotalNumberOfWorkItems(JsonNode mainNode) throws JsonProcessingException
+    private int getTotalNumberOfWorkItems(JsonNode mainNode)
     {
         return mainNode.path("total").asInt();
     }
@@ -363,8 +362,8 @@ public class OpenProjectApiClient
         JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
         String issueName = selfNode.get(OP_RESPONSE_TITLE).asText();
         String issueUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
-        workItem.setIdentifier(new Linkable<>(issueName, issueUrl));
-        workItem.setSummary(new Linkable<>(element.path(OP_RESPONSE_SUBJECT).asText(), issueUrl));
+        workItem.setIdentifier(new Linkable(issueName, issueUrl));
+        workItem.setSummary(new Linkable(element.path(OP_RESPONSE_SUBJECT).asText(), issueUrl));
 
         JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
         workItem.setStatus(statusNode.path(OP_RESPONSE_TITLE).asText());
@@ -372,15 +371,15 @@ public class OpenProjectApiClient
         setWorkItemIsResolved(new URI(statusUrl), workItem);
 
         JsonNode authorNode = linksNode.path(OP_RESPONSE_AUTHOR);
-        workItem.setCreator(new Linkable<>(authorNode.path(OP_RESPONSE_TITLE).asText(),
+        workItem.setCreator(new Linkable(authorNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + authorNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
 
         JsonNode assigneeNode = linksNode.path(OP_RESPONSE_ASSIGNEE);
-        workItem.setAssignees(List.of(new Linkable<>(assigneeNode.path(OP_RESPONSE_TITLE).asText(),
+        workItem.setAssignees(List.of(new Linkable(assigneeNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + assigneeNode.path(HREF).asText().replaceFirst(API_URL_PART, ""))));
 
         JsonNode projectNode = linksNode.path(OP_RESPONSE_PROJECT);
-        workItem.setProject(new Linkable<>(projectNode.path(OP_RESPONSE_TITLE).asText(),
+        workItem.setProject(new Linkable(projectNode.path(OP_RESPONSE_TITLE).asText(),
             connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
 
         JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);

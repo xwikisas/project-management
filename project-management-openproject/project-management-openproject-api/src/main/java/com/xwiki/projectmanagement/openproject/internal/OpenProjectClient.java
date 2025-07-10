@@ -70,7 +70,8 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     @Override
-    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters)
+    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
         try {
@@ -78,7 +79,6 @@ public class OpenProjectClient implements ProjectManagementClient
 
             String identifier = (String) executionContext.get("identifier");
             try {
-
                 String connectionName = (String) executionContext.get("instance");
                 openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
             } catch (Exception e) {
