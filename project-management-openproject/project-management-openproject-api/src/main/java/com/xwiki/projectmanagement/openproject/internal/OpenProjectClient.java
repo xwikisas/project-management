@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -89,6 +91,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 String parameterName = "query_props=";
                 String queryParam =
                     identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
+                queryParam = URLDecoder.decode(queryParam, StandardCharsets.UTF_8);
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode queriesNode = mapper.readTree(queryParam);
                 JsonNode filtersNode = queriesNode.path("f");
@@ -102,7 +105,7 @@ public class OpenProjectClient implements ProjectManagementClient
             }
             return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
         } catch (Exception e) {
-            throw new WorkItemRetrievalException("An error occurred while trying to get the work items");
+            throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
 

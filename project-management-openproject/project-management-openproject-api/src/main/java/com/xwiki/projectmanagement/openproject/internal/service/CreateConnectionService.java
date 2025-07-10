@@ -23,13 +23,17 @@ import java.util.Arrays;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryManager;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceResolver;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -67,6 +71,10 @@ public class CreateConnectionService
     @Inject
     private QueryManager queryManager;
 
+    @Inject
+    @Named("document")
+    private UserReferenceResolver<DocumentReference> userRefResolver;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
@@ -81,7 +89,7 @@ public class CreateConnectionService
         String clientSecret) throws Exception
     {
 
-        List<String> result =  queryManager.createQuery(
+        List<String> result = queryManager.createQuery(
                 "select obj.name from BaseObject obj, StringProperty configName "
                     + "where obj.className = :className and obj.id = configName.id.id "
                     + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
@@ -115,8 +123,7 @@ public class CreateConnectionService
         );
 
         XWikiDocument doc = context.getWiki().getDocument(docRef, context);
-        doc.setTitle(connectionName + INSTANCE_CONFIGURATION);
-        doc.setHidden(true);
+        setDocMetaData(connectionName, context, doc);
 
         DocumentReference configClassRef =
             new DocumentReference(wikiName, PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS);
@@ -126,7 +133,8 @@ public class CreateConnectionService
         configObj.setStringValue(CLIENT_ID, clientId);
         configObj.setStringValue(CLIENT_SECRET, clientSecret);
 
-        DocumentReference oidcClassRef = new DocumentReference(wikiName, "XWiki", "OIDC.ClientConfigurationClass");
+        DocumentReference oidcClassRef =
+            new DocumentReference(wikiName, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");
 
         BaseObject oidcObj = doc.getXObject(oidcClassRef, true, context);
         oidcObj.setStringValue("configurationName", connectionName);
@@ -142,5 +150,17 @@ public class CreateConnectionService
         oidcObj.setStringValue("tokenStorageScope", "USER");
 
         context.getWiki().saveDocument(doc, "Created OpenProject and OIDC config via REST", context);
+    }
+
+    private void setDocMetaData(String connectionName, XWikiContext context, XWikiDocument doc)
+    {
+        UserReference currentUser = userRefResolver.resolve(context.getUserReference());
+        DocumentAuthors documentAuthors = doc.getAuthors();
+        documentAuthors.setCreator(currentUser);
+        documentAuthors.setEffectiveMetadataAuthor(currentUser);
+        documentAuthors.setContentAuthor(currentUser);
+        documentAuthors.setOriginalMetadataAuthor(currentUser);
+        doc.setTitle(connectionName + INSTANCE_CONFIGURATION);
+        doc.setHidden(true);
     }
 }
