@@ -33,15 +33,17 @@
   <packaging>xar</packaging>
 
   <name>Project Management Open Project UI</name>
-  <properties>
-    <oidc.version>2.17.3</oidc.version>
-  </properties>
   <dependencies>
     <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>
       <artifactId>oauth2-client</artifactId>
-      <version>${oidc.version}</version>
+      <version>${contrib.oauth2.version}</version>
       <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-openproject-macro</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
