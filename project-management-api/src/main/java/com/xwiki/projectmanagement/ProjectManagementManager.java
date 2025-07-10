@@ -42,9 +42,9 @@ public interface ProjectManagementManager
     /**
      * Retrieve a work item from a specific project management client.
      *
-     * @param client the hint of the client implementation
+     * @param client the hint of the client implementation.
      * @param workItemId the identifier of the work item that needs retrieval.
-     * @return the work item if it was found or null if nothing was found
+     * @return the work item matching the id.
      * @throws WorkItemException if the work item was not found.
      */
     WorkItem getWorkItem(String client, String workItemId) throws WorkItemException;
@@ -56,10 +56,12 @@ public interface ProjectManagementManager
      * @param page the number identifying the page that needs retrieval.
      * @param pageSize the maximum number of items the result can have.
      * @param filters a list of filters that the returned items must satisfy.
+     * @param sortEntries a list of sort entries that denote how the results should be arranged.
      * @return a paginated result containing the list of items that satisfy the filters.
      * @throws WorkItemException if there was an exception during the retrieval of the tasks.
      */
-    PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize, List<LiveDataQuery.Filter> filters)
+    PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemException;
 
     /**

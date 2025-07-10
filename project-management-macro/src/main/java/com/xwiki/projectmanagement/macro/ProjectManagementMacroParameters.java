@@ -21,12 +21,14 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
-import com.xwiki.projectmanagement.ProjectManagementFilter;
-import com.xwiki.projectmanagement.ProjectManagementProperties;
-import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.stability.Unstable;
+
+import com.xwiki.projectmanagement.ProjectManagementFilter;
+import com.xwiki.projectmanagement.ProjectManagementProperties;
+import com.xwiki.projectmanagement.ProjectManagementSortEntry;
+import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 
 /**
  * @version $Id$
@@ -39,7 +41,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     private String url;
 
-    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.LIVEDATA;
+    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.liveData;
 
     /**
      * Default constructor.
@@ -86,6 +88,13 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     public void setFilters(String filters)
     {
         super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(ProjectManagementSortEntry.class)
+    @Override
+    public void setSort(String sort)
+    {
+        super.setSort(sort);
     }
 
     /**

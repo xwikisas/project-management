@@ -36,6 +36,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.rest.WorkItemsResource;
 
+// Todo: to be removed or modified to use a ProjectManagementManager and actually function.
 /**
  * Default implementation of {@link WorkItemsResource}.
  *
@@ -53,7 +54,7 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     public Response getWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
         WorkItem tmp = new WorkItem();
-        tmp.setIdentifier(new Linkable<>("smth", "https://store.xwiki.com"));
+        tmp.setIdentifier(new Linkable("smth", "https://store.xwiki.com"));
         tmp.setCloseDate(new Date());
         tmp.setDescription("Some nice description");
         tmp.setProgress(100);
@@ -68,7 +69,11 @@ public class DefaultWorkItemsResource extends XWikiResource implements WorkItems
     @Override
     public Response getWorkItems(String wiki, String projectManagementHint, int page, int pageSize)
     {
-        return Response.ok().entity(new PaginatedResult<>(workItems, 1, 10, workItems.size())).build();
+        List<WorkItem> returnedItems = new ArrayList<>();
+        for (WorkItem workItem : workItems) {
+            returnedItems.add((WorkItem) workItem.clone());
+        }
+        return Response.ok().entity(new PaginatedResult<>(returnedItems, 1, 10, workItems.size())).build();
     }
 
     @Override

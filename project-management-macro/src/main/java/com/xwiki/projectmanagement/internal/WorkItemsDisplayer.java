@@ -30,23 +30,17 @@ public enum WorkItemsDisplayer
     /**
      * Display the work items using a livedata.
      */
-    LIVEDATA,
+    liveData,
     /**
      * Display the items using a card style.
      */
-    CARD,
+    workItemsCards,
     /**
      * Display the work items in a list.
      */
-    LIST;
-
-    @Override
-    public String toString()
-    {
-        switch (this) {
-            case CARD: return "workItemsCards";
-            case LIST: return "workItemsList";
-            default: return "liveData";
-        }
-    }
+    workItemsList,
+    /**
+     * Display a single work item in a page structure.
+     */
+    workItemsSingle;
 }

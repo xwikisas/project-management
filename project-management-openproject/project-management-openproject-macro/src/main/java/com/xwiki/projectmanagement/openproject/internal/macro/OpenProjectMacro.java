@@ -84,21 +84,11 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     {
         addToSourceParams(parameters, "client", "openproject");
 
-        String instance = parameters.getInstance();
-        if (instance == null || instance.isEmpty()) {
-            return;
-        }
-        addToSourceParams(parameters, "instance", instance);
-    }
+        addToSourceParams(parameters, "instance", parameters.getInstance());
 
-    private void addToSourceParams(OpenProjectMacroParameters parameters, String key, String value)
-    {
-        String sourceParameters = parameters.getSourceParameters();
-        if (sourceParameters == null || sourceParameters.isEmpty()) {
-            parameters.setSourceParameters(String.format("%s=%s", key, value));
-        } else {
-            parameters.setSourceParameters(String.format("%s&%s=%s", sourceParameters, key, value));
-        }
+        addToSourceParams(parameters, "identifier", parameters.getIdentifier());
+
+        addToSourceParams(parameters, "translationPrefix", "openproject.");
     }
 
     @Override

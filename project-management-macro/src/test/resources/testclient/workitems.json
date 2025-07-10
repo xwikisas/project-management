@@ -1,0 +1,64 @@
+[
+  {
+    "identifier": {
+      "value": "WorkItem1",
+      "location": "http://xwiki.com/id/1"
+    },
+    "type": "bug",
+    "summary": {
+      "value": "Do this thing!",
+      "location": "http://xwiki.com/id/1"
+    },
+    "description": "This is some nice description",
+    "startDate": "10/10/2010",
+    "dueDate": 1719110400000,
+    "progress": 100,
+    "creationDate": "10/10/2010",
+    "updateDate": "10/10/2010",
+    "creator": {
+      "value": "Teo",
+      "location": "http://xwiki.com/user/teo"
+    },
+    "assignees": [
+      {
+        "value": "Teo",
+        "location": "http://xwiki.com/user/teo"
+      }
+    ],
+    "priority": "CRITICAL",
+    "project": {
+      "value": "Important Project",
+      "location": "http://xwiki.com/project/importantproject"
+    },
+    "status": "Done",
+    "reporter": {
+      "value": "Rares",
+      "location": "http://xwiki.com/user/rares"
+    },
+    "resolution": "closed",
+    "resolved": true,
+    "labels": ["xwiki"],
+    "closeDate": "10/10/2010",
+    "milestones": {
+      "value": "1.0-RC-1",
+      "location": "http://xwiki.com/milestone/1dot0rc"
+    },
+    "closedBy": {
+      "value": "Teo",
+      "location": "http://xwiki.com/user/teo"
+    }
+  },
+  {
+    "identifier": {
+      "value": "WorkItem2"
+    },
+    "summary": {
+      "value": "Do this thing!",
+      "location": "http://xwiki.com/id/1"
+    },
+    "reporter": {
+      "location": "http://xwiki.com/id/1"
+    },
+    "description": "This is some nice description"
+  }
+]

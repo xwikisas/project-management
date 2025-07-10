@@ -2,7 +2,7 @@
   "query": {
     "source": {
       "id": "projectmanagement",
-      "translationPrefix": "openproject.livedata.property."
+      "translationPrefix": "openproject."
     }
   },
   "meta": {

@@ -30,7 +30,7 @@ import org.xwiki.livedata.LiveDataPropertyDescriptorStore;
 import org.xwiki.livedata.LiveDataSource;
 
 /**
- * Something.
+ * Provides the project management livedata entries and their metadata.
  *
  * @version $Id$
  */

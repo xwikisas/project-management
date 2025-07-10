@@ -20,30 +20,31 @@ package com.xwiki.projectmanagement.internal.displayers;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
-import org.apache.commons.lang3.StringUtils;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataConfiguration;
+import org.xwiki.livedata.LiveDataConfigurationResolver;
+import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
+import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -51,47 +52,63 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * Abstract macro that processes the parameters before sending them to the project management client, retrieving the
  * work items.
  *
- * @param <T> the type of the macro parameters.
  * @version $Id$
  */
-public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacroParameters> extends AbstractMacro<T>
+public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectManagementMacroParameters>
 {
+    private static final String KEY_CLIENT = "client";
+
+    @Inject
+    @Named("ssfx")
+    protected SkinExtension ssx;
+
     @Inject
     protected ProjectManagementManager projectManagementManager;
 
     @Inject
     protected ProjectManagementClientExecutionContext macroContext;
 
+    @Inject
+    private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
+
+    @Inject
+    private WorkItemPropertyDisplayerManager displayerManager;
+
+    @Inject
+    private ComponentManager componentManager;
+
     /**
      * @param name the name of the work item.
+     * @param description the description of the implemented macro.
      */
-    public AbstractWorkItemsDisplayer(String name)
+    public AbstractWorkItemsDisplayer(String name, String description)
     {
-        super(name);
+        super(name, description, ProjectManagementMacroParameters.class);
     }
 
     @Override
-    public List<Block> execute(T parameters, String content, MacroTransformationContext context)
+    public List<Block> execute(ProjectManagementMacroParameters parameters, String content,
+        MacroTransformationContext context)
         throws MacroExecutionException
     {
-        String clientId = (String) macroContext.get("client");
+        String clientId = (String) macroContext.get(KEY_CLIENT);
 
         if (clientId == null || clientId.isEmpty()) {
             throw new MacroExecutionException("Failed to retrieve the client id from the source params.");
         }
 
-        List<LiveDataQuery.Filter> filters = null;
+        List<LiveDataQuery.Filter> filters;
         try {
-            filters = getFilters(parameters.getFilters());
-        } catch (Exception e) {
+            filters = getFilters(content);
+        } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the filters.");
         }
+        List<LiveDataQuery.SortEntry> sortEntries = getSortEntries(parameters.getSort());
 
         PaginatedResult<WorkItem> workItemList = null;
         try {
             // TODO: Maybe separate this logic in a separate method and allow the implementations to override it?
-            workItemList = projectManagementManager.getWorkItems(clientId,
-                Math.toIntExact(parameters.getOffset()), parameters.getLimit(), filters);
+            workItemList = getWorkItems(clientId, parameters, filters, sortEntries);
         } catch (WorkItemException e) {
             throw new MacroExecutionException(
                 String.format("Failed to retrieve the work items from the client [%s].", clientId), e);
@@ -109,7 +126,8 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
      *     call of the macro is inline or not.
      * @return a list of blocks that will be rendered.
      */
-    protected abstract List<Block> internalExecute(PaginatedResult<WorkItem> workItemList, T parameters,
+    protected abstract List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
+        ProjectManagementMacroParameters parameters,
         MacroTransformationContext context);
 
     @Override
@@ -118,56 +136,57 @@ public abstract class AbstractWorkItemsDisplayer<T extends ProjectManagementMacr
         super.setDefaultCategories(Collections.singleton("Internal"));
     }
 
-    private Map<String, Object> getSourceParameters(String sourceParametersString) throws Exception
+    protected PaginatedResult<WorkItem> getWorkItems(String clientId, ProjectManagementMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
     {
-        if (StringUtils.isEmpty(sourceParametersString)) {
-            return Collections.emptyMap();
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
+        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset),
+            parameters.getLimit(), filters, sortEntries);
+    }
+
+    protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()
+    {
+        String clientId = (String) macroContext.get(KEY_CLIENT);
+        if (clientId == null || clientId.isEmpty()) {
+            return displayerManager;
+        }
+        try {
+            return componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
+        } catch (ComponentLookupException e) {
+            return displayerManager;
+        }
+    }
+
+    private List<LiveDataQuery.Filter> getFilters(String filtersString) throws LiveDataException
+    {
+        String serializedCfg = filtersString == null ? "" : filtersString;
+        LiveDataConfiguration configuration = this.stringLiveDataConfigResolver.resolve(serializedCfg);
+        if (configuration == null) {
+            return Collections.emptyList();
         }
 
-        Map<String, List<String>> urlParams = getURLParameters('?' + sourceParametersString);
-        Map<String, Object> sourceParams = new HashMap<>();
-        for (Map.Entry<String, List<String>> entry : urlParams.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                sourceParams.put(entry.getKey(), entry.getValue());
-            } else {
-                sourceParams.put(entry.getKey(), entry.getValue().get(0));
+        if (configuration.getQuery() == null || configuration.getQuery().getFilters() == null) {
+            return Collections.emptyList();
+        }
+        return configuration.getQuery().getFilters();
+    }
+
+    private List<LiveDataQuery.SortEntry> getSortEntries(String sort)
+    {
+        if (sort == null || sort.trim().isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
+        for (String strSortEntry : sort.split("\\s*,\\s*")) {
+            String[] components = strSortEntry.split(":");
+            String property = components[0];
+            LiveDataQuery.SortEntry sortEntry = new LiveDataQuery.SortEntry(property);
+            if (components.length >= 2) {
+                sortEntry.setDescending("desc".equals(components[1]));
             }
+            sortEntries.add(sortEntry);
         }
-        return sourceParams;
-    }
-
-    private List<LiveDataQuery.Filter> getFilters(String filtersString) throws Exception
-    {
-        List<LiveDataQuery.Filter> filters =
-            getURLParameters('?' + StringUtils.defaultString(filtersString)).entrySet().stream()
-                .map(this::getFilter).collect(Collectors.toList());
-        return filters.isEmpty() ? null : filters;
-    }
-
-    private LiveDataQuery.Filter getFilter(Map.Entry<String, List<String>> entry)
-    {
-        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
-        filter.setProperty(entry.getKey());
-        filter.getConstraints()
-            .addAll(entry.getValue().stream().map(LiveDataQuery.Constraint::new).collect(Collectors.toList()));
-        return filter;
-    }
-
-    private Map<String, List<String>> getURLParameters(String url) throws Exception
-    {
-        URL baseURL = new URL("http://www.xwiki.org");
-        String queryString = new URL(baseURL, url).getQuery();
-        Map<String, List<String>> parameters = new HashMap<>();
-        for (String entry : queryString.split("&")) {
-            String[] parts = entry.split("=", 2);
-            String key = URLDecoder.decode(parts[0], StandardCharsets.UTF_8);
-            if (key.isEmpty()) {
-                continue;
-            }
-            String value = parts.length == 2 ? URLDecoder.decode(parts[1], StandardCharsets.UTF_8) : "";
-            List<String> values = parameters.computeIfAbsent(key, k -> new ArrayList<>());
-            values.add(value);
-        }
-        return parameters;
+        return sortEntries;
     }
 }

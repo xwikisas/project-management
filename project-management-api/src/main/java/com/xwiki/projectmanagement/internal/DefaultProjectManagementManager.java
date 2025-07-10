@@ -37,7 +37,8 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Default implementation.
+ * Default implementation of the {@link ProjectManagementManager}. It searches the component manager for the client
+ * implementation matching the hint and passes the parameters further.
  *
  * @version $Id$
  * @since 1.0
@@ -57,9 +58,9 @@ public class DefaultProjectManagementManager implements ProjectManagementManager
 
     @Override
     public PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize,
-        List<LiveDataQuery.Filter> filters) throws WorkItemException
+        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
     {
-        return getClient(client).getWorkItems(page, pageSize, filters);
+        return getClient(client).getWorkItems(page, pageSize, filters, sortEntries);
     }
 
     @Override

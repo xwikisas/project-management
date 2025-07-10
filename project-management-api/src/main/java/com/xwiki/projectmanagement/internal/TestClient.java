@@ -50,6 +50,7 @@ import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
+// TODO: To be removed before release.
 /**
  * Test client retrieving entries from local files and other sources.
  *
@@ -72,7 +73,8 @@ public class TestClient implements ProjectManagementClient
     }
 
     @Override
-    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters)
+    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();

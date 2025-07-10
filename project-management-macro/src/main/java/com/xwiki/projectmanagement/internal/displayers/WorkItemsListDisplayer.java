@@ -28,7 +28,9 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BulletedListBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -48,14 +50,14 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Component
 @Singleton
 @Named("workItemsList")
-public class WorkItemsListDisplayer extends AbstractWorkItemsDisplayer<ProjectManagementMacroParameters>
+public class WorkItemsListDisplayer extends AbstractWorkItemsDisplayer
 {
     /**
      * Default constructor.
      */
     public WorkItemsListDisplayer()
     {
-        super("Work items list displayer");
+        super("Work items list displayer", "Display the work items in a list.");
     }
 
     @Override

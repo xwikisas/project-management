@@ -37,7 +37,8 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataPropertyDescriptorStore;
 
 /**
- * Something.
+ * Provide the generic descriptors of the project management properties merged with the descriptors coming from
+ * eventual {@link com.xwiki.projectmanagement.ProjectManagementClient} implementations, if any.
  *
  * @version $Id$
  */
