@@ -485,7 +485,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         );
       } catch (error) {
         new XWiki.widgets.Notification(
-          l10n("update.notUpdated", connectionName),
+          l10n.get("update.notUpdated", connectionName),
           "error"
         );
       }
