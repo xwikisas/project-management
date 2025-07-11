@@ -19,9 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.apiclient.internal;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -35,13 +33,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.model.Identifier;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
  * Default Open project get items client helper.
@@ -79,6 +76,20 @@ public class OpenProjectApiClient
     private static final String OP_RESPONSE_PRIORITY = "priority";
 
     private static final String OP_RESPONSE_TITLE = "title";
+
+    private static final String OP_DESCRIPTION = "description";
+
+    private static final String OP_START_DATE = "startDate";
+
+    private static final String OP_DUE_DATE = "dueDate";
+
+    private static final String OP_CREATED_AT = "createdAt";
+
+    private static final String OP_UPDATED_AT = "updatedAt";
+
+    private static final String OP_DERIVED_START_DATE = "derivedStartDate";
+
+    private static final String OP_DERIVED_DUE_DATE = "derivedDueDate";
 
     private static final String HREF = "href";
 
@@ -123,14 +134,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves a paginated list of {@link WorkItem} objects from the OpenProject API.
+     * Retrieves a list of {@link WorkPackage} objects from the OpenProject API.
      *
      * @param offset the offset index from which to start retrieving work items
      * @param pageSize the maximum number of work items to return
      * @param filters optional filters to apply (e.g. query parameters encoded as a string)
-     * @return a {@link PaginatedResult} containing the list of work items and pagination metadata
+     * @return a {@link PaginatedResult} containing the list of work packages and pagination metadata
      */
-    public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, String filters)
+    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters)
     {
         try {
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + API_URL_WORK_PACKAGES);
@@ -138,7 +149,7 @@ public class OpenProjectApiClient
             uriBuilder.addParameter(PAGE_SIZE, String.valueOf(pageSize));
             uriBuilder.addParameter(OP_FILTERS, filters);
 
-            PaginatedResult<WorkItem> paginatedResult = new PaginatedResult<>();
+            PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
             HttpRequest request =
                 createGetHttpRequest(uriBuilder.build());
 
@@ -149,9 +160,9 @@ public class OpenProjectApiClient
 
             int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
 
-            List<WorkItem> workItems = getWorkItemsFromResponse(mainNode);
+            List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
 
-            paginatedResult.setItems(workItems);
+            paginatedResult.setItems(workPackages);
             paginatedResult.setPage(offset);
             paginatedResult.setPageSize(pageSize);
             paginatedResult.setTotalItems(totalNumberOfWorkItems);
@@ -159,30 +170,6 @@ public class OpenProjectApiClient
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    /**
-     * Retrieves a paginated list of work package identifiers based on the specified page size and filter criteria.
-     *
-     * @param pageSize the number of work packages id's to retrieve per page
-     * @param filters a OpenProject-compliant JSON-formatted string representing filter criteria to apply to the
-     *     request
-     * @return a list of maps
-     */
-    public List<Identifier> getIdentifiers(int pageSize, String filters)
-    {
-        JsonNode elements = getSuggestionsMainNode(API_URL_WORK_PACKAGES, String.valueOf(pageSize),
-            filters, "elements/id,elements/subject");
-        List<Identifier> identifiers = new ArrayList<>();
-        for (JsonNode element : elements) {
-            Identifier identifier = new Identifier();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_SUBJECT).asText();
-            identifier.setName(name);
-            identifier.setId(id);
-            identifiers.add(identifier);
-        }
-        return identifiers;
     }
 
     /**
@@ -331,97 +318,117 @@ public class OpenProjectApiClient
         return mainNode.path("total").asInt();
     }
 
-    private List<WorkItem> getWorkItemsFromResponse(JsonNode mainNode)
-        throws IOException, URISyntaxException, InterruptedException
+    private List<WorkPackage> getWorkPackagesFromResponse(JsonNode mainNode)
     {
-        List<WorkItem> workItems = new ArrayList<>();
+        List<WorkPackage> workItems = new ArrayList<>();
 
         JsonNode elementsNode = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         for (JsonNode element : elementsNode) {
-            workItems.add(createWorkItemFromJson(element));
+            workItems.add(createWorkPackageFromJson(element));
         }
         return workItems;
     }
 
-    private WorkItem createWorkItemFromJson(JsonNode element)
-        throws URISyntaxException, InterruptedException, IOException
+    private WorkPackage createWorkPackageFromJson(JsonNode element)
     {
+        WorkPackage workPackage = new WorkPackage();
 
-        WorkItem workItem = new WorkItem();
+        workPackage.setDescription(element.path(OP_DESCRIPTION).path("raw").asText());
         int id = element.path(OP_RESPONSE_ID).asInt();
-        workItem.setDescription(element.path("description").path("raw").asText());
+        workPackage.setId(id);
 
-        JsonNode startDate = element.get("startDate");
-        JsonNode dueDate = element.get("dueDate");
-        JsonNode createdAtDate = element.get("createdAt");
-        JsonNode updatedAtDate = element.get("updatedAt");
-        setDates(workItem, startDate, dueDate, createdAtDate, updatedAtDate);
+        setDates(workPackage, element);
+        setCreatedAndUpdatedDates(workPackage, element);
+        setWorkPackageLinksNodeProperties(workPackage, element);
 
+        workPackage.setType(element.path("_type").asText());
+
+        workPackage.setSubject(element.path(OP_RESPONSE_SUBJECT).asText());
+
+        return workPackage;
+    }
+
+    private void setWorkPackageLinksNodeProperties(WorkPackage workPackage, JsonNode element)
+    {
+        String editCreateUrlString = "%s/%s/edit";
         JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
-        workItem.setType(linksNode.path(OP_RESPONSE_TYPE).path(OP_RESPONSE_TITLE).asText());
+        int id = element.path(OP_RESPONSE_ID).asInt();
+
+        String typeName = linksNode.path(OP_RESPONSE_TYPE).path(OP_RESPONSE_TITLE).asText();
+        String typeUrl = String.format(editCreateUrlString, connectionUrl,
+            linksNode.path(OP_RESPONSE_TYPE).path(HREF).asText()).replaceFirst(API_URL_PART, "");
+        workPackage.setTypeOfWorkPackage(new Linkable(typeName, typeUrl));
+
         JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
-        String issueName = selfNode.get(OP_RESPONSE_TITLE).asText();
+        String issueName = selfNode.path(OP_RESPONSE_TITLE).asText();
         String issueUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
-        workItem.setIdentifier(new Linkable(issueName, issueUrl));
-        workItem.setSummary(new Linkable(element.path(OP_RESPONSE_SUBJECT).asText(), issueUrl));
+        workPackage.setSelf(new Linkable(issueUrl, issueName));
 
         JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
-        workItem.setStatus(statusNode.path(OP_RESPONSE_TITLE).asText());
-        String statusUrl = connectionUrl + linksNode.path(OP_RESPONSE_STATUS).get(HREF).asText();
-        setWorkItemIsResolved(new URI(statusUrl), workItem);
+        String statusName = statusNode.path(OP_RESPONSE_TITLE).asText();
+        String statusUrl =
+            String.format(editCreateUrlString, connectionUrl,
+                statusNode.path(HREF).asText().replaceFirst(API_URL_PART, ""));
+        workPackage.setStatus(new Linkable(statusName, statusUrl));
 
         JsonNode authorNode = linksNode.path(OP_RESPONSE_AUTHOR);
-        workItem.setCreator(new Linkable(authorNode.path(OP_RESPONSE_TITLE).asText(),
-            connectionUrl + authorNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
+        String authorName = authorNode.path(OP_RESPONSE_TITLE).asText();
+        String authorUrl = connectionUrl + authorNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        workPackage.setAuthor(new Linkable(authorName, authorUrl));
 
         JsonNode assigneeNode = linksNode.path(OP_RESPONSE_ASSIGNEE);
-        workItem.setAssignees(List.of(new Linkable(assigneeNode.path(OP_RESPONSE_TITLE).asText(),
-            connectionUrl + assigneeNode.path(HREF).asText().replaceFirst(API_URL_PART, ""))));
+        String assigneeName = assigneeNode.path(OP_RESPONSE_TITLE).asText();
+        String assigneeUrl = connectionUrl + assigneeNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        workPackage.setAssignee(new Linkable(assigneeName, assigneeUrl));
 
         JsonNode projectNode = linksNode.path(OP_RESPONSE_PROJECT);
-        workItem.setProject(new Linkable(projectNode.path(OP_RESPONSE_TITLE).asText(),
-            connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
+        String projectName = projectNode.path(OP_RESPONSE_TITLE).asText();
+        String projectUrl = connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        workPackage.setProject(new Linkable(projectName, projectUrl));
 
         JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);
-        workItem.setPriority(priorityNode.path(OP_RESPONSE_TITLE).asText());
-
-        return workItem;
+        String priorityName = priorityNode.path(OP_RESPONSE_TITLE).asText();
+        String priorityUrl = String.format("%s/%s/activity", connectionUrl,
+            priorityNode.path(HREF).asText().replaceFirst(API_URL_PART, ""));
+        workPackage.setPriority(new Linkable(priorityName, priorityUrl));
     }
 
-    private void setDates(WorkItem workItem, JsonNode startDate, JsonNode dueDate, JsonNode createdAtDate,
-        JsonNode updatedAtDate)
+    private void setDates(WorkPackage wp, JsonNode node)
     {
-        if (startDate != null && !startDate.isNull()) {
-            workItem.setStartDate(LocalDate.parse(startDate.asText()).toDate());
-        }
-        if (dueDate != null && !dueDate.isNull()) {
-            workItem.setDueDate(LocalDate.parse(dueDate.asText()).toDate());
+        if (!node.path(OP_START_DATE).isNull() && !node.path(OP_START_DATE).asText().isBlank()) {
+            wp.setStartDate(LocalDate.parse(node.path(OP_START_DATE).asText()).toDate());
         }
 
-        if (createdAtDate != null && !createdAtDate.isNull()) {
-            String iso = createdAtDate.asText();
-            String dateOnly = iso.substring(0, 10);
-            workItem.setCreationDate(LocalDate.parse(dateOnly).toDate());
+        if (!node.path(OP_DUE_DATE).isNull() && !node.path(OP_DUE_DATE).asText().isBlank()) {
+            wp.setDueDate(LocalDate.parse(node.path(OP_DUE_DATE).asText()).toDate());
         }
 
-        if (updatedAtDate != null && !updatedAtDate.isNull()) {
-            String iso = updatedAtDate.asText();
-            String dateOnly = iso.substring(0, 10);
-            workItem.setUpdateDate(LocalDate.parse(dateOnly).toDate());
+        if (!node.path(OP_DERIVED_START_DATE).isNull() && !node.path(OP_DERIVED_START_DATE).asText().isBlank()) {
+            wp.setDerivedStartDate(LocalDate.parse(node.path(OP_DERIVED_START_DATE).asText()).toDate());
+        }
+
+        if (!node.path(OP_DERIVED_DUE_DATE).isNull() && !node.path(OP_DERIVED_DUE_DATE).asText().isBlank()) {
+            wp.setDerivedDueDate(LocalDate.parse(node.path(OP_DERIVED_DUE_DATE).asText()).toDate());
         }
     }
 
-    private void setWorkItemIsResolved(URI statusUri, WorkItem workItem)
-        throws InterruptedException, IOException
+    private void setCreatedAndUpdatedDates(WorkPackage wp, JsonNode node)
     {
-        HttpRequest request = createGetHttpRequest(statusUri);
+        if (!node.path(OP_CREATED_AT).isNull()) {
+            String createdAtText = node.path(OP_CREATED_AT).asText();
+            if (!createdAtText.isBlank() && createdAtText.length() >= 10) {
+                String dateOnly = createdAtText.substring(0, 10);
+                wp.setCreatedAt(LocalDate.parse(dateOnly).toDate());
+            }
+        }
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        String statusBody = response.body();
-
-        JsonNode statusJson = objectMapper.readTree(statusBody);
-        boolean isResolved = statusJson.get("isClosed").asBoolean();
-        workItem.setResolved(isResolved);
+        if (!node.path(OP_UPDATED_AT).isNull()) {
+            String updatedAtText = node.path(OP_UPDATED_AT).asText();
+            if (!updatedAtText.isBlank() && updatedAtText.length() >= 10) {
+                String dateOnly = updatedAtText.substring(0, 10);
+                wp.setUpdatedAt(LocalDate.parse(dateOnly).toDate());
+            }
+        }
     }
 
     private HttpRequest createGetHttpRequest(URI uri)
