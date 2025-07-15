@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -44,7 +45,8 @@ import com.xwiki.projectmanagement.openproject.internal.service.CreateConnection
  * @version $Id$
  */
 @Component
-@Path("/wikis/{wikiName}/spaces/{spaceName: .+}/pages/{pageName}/openproject/configuration")
+@Named("com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection")
+@Path("wikis/{wikiName}/spaces/{spaceName: .+}/pages/{pageName}/openproject/configurations")
 public class CreateConnection extends XWikiResource
 {
     @Inject
@@ -62,7 +64,7 @@ public class CreateConnection extends XWikiResource
      * @return a response indicating the result of the operation
      */
     @POST
-    @Path("/create")
+    @Path("create")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     public Response createConnection(

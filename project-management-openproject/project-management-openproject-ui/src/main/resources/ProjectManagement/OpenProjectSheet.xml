@@ -39,6 +39,7 @@
   <content>{{velocity}}
 #set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
 #macro (createConnectionModal)
+#set ($configurationsSpaceReference = $xwiki.getDocument('ProjectManagement.OpenProjectConfigurations').getDocumentReference())
 &lt;div class="modal" id="createConnectionModal" tabindex="-1" role="dialog" aria-labelledby="createConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
   &lt;div class="modal-dialog" role="document"&gt;
     &lt;div class="modal-content"&gt;
@@ -53,7 +54,7 @@
         &lt;/div&gt;
         &lt;div class="modal-body"&gt;
           &lt;input id="create-connection-form-token" type="hidden" name="form_token" value="${escapetool.xml($services.csrf.token)}" /&gt;
-          &lt;input id="connection_document_reference" type="hidden" name="document_reference" value=""&gt;
+          &lt;input id ="configurations-space-reference" type="hidden" name="configurations_space_reference" value="$configurationsSpaceReference"&gt;
           &lt;div class="form-group"&gt;
             &lt;label class="h5" for="connection-name"&gt;
               &lt;strong&gt;
@@ -381,7 +382,7 @@
     "update.updated",
     "update.notUpdated",
     "delete.deleted",
-    "delete.errorOccured",
+    "delete.errorOccurred",
     "create.errorOccurred",
   ],
 });
@@ -515,7 +516,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         new XWiki.widgets.Notification(l10n.get("delete.deleted"), "done");
       } catch (e) {
         new XWiki.widgets.Notification(
-          l10n.get("delete.errorOccured"),
+          l10n.get("delete.errorOccurred"),
           "error"
         );
       }
@@ -528,6 +529,16 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $("#server-url").val().trim();
       const clientId = $("#client-id").val().trim();
       const clientSecret = $("#client-secret").val().trim();
+      const connectionsDocumentReference = $(
+        "#configurations-space-reference"
+      ).val();
+
+      let connectionsDocumentUrl = new XWiki.Document(
+        XWiki.Model.resolve(
+          connectionsDocumentReference,
+          XWiki.EntityType.DOCUMENT
+        )
+      ).getRestURL();
 
       if (!connectionName || !serverURL || !clientId || !clientSecret) {
         return new XWiki.widgets.Notification(
@@ -540,7 +551,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         await $.ajax({
           method: "POST",
           contentType: "application/json",
-          url: `${window.location.origin}/xwiki/rest/openproject/connections/create`,
+          url: `${connectionsDocumentUrl}/openproject/configurations/create`,
           headers: {
             "XWiki-Form-Token": csrfToken,
           },

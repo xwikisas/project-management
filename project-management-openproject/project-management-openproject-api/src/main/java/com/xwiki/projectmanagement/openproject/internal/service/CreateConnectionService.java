@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -86,14 +87,24 @@ public class CreateConnectionService
     public void createConnection(OpenProjectConnection openProjectConnection, String wikiName, List<String> spaceName,
         String pageName) throws Exception
     {
+        String spacePath = String.join(".", spaceName) + '.' + pageName;
 
         List<String> result = queryManager.createQuery(
-                "select obj.name from BaseObject obj, StringProperty configName "
-                    + "where obj.className = :className and obj.id = configName.id.id "
-                    + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
-            .bindValue("className", PROJECT_MANAGEMENT + "." + OPEN_PROJECT_CONNECTION_CLASS)
+                "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
+                    + "where doc.fullName = obj.name "
+                    + "and doc.space = :spaceName "
+                    + "and obj.className = :className "
+                    + "and obj.id = configName.id.id "
+                    + "and configName.id.name = :configFieldName "
+                    + "and configName.value = :config", Query.HQL)
+            .bindValue("spaceName", spacePath)
+            .bindValue(
+                "className",
+                String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
+            )
             .bindValue("configFieldName", CONNECTION_NAME)
-            .bindValue("config", openProjectConnection.getConnectionName()).execute();
+            .bindValue("config", openProjectConnection.getConnectionName())
+            .execute();
 
         if (!result.isEmpty()) {
             throw new RuntimeException(
@@ -114,10 +125,13 @@ public class CreateConnectionService
     {
         XWikiContext context = this.xcontextProvider.get();
 
+        List<String> space = new ArrayList<>(spaceName);
+        space.add(pageName);
+
         DocumentReference docRef = new DocumentReference(
             wikiName,
-            spaceName,
-            pageName + INSTANCE_CONFIGURATION
+            space,
+            openProjectConnection.getConnectionName() + INSTANCE_CONFIGURATION
         );
 
         XWikiDocument doc = context.getWiki().getDocument(docRef, context);
