@@ -142,7 +142,6 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
             logger.warn("Failed to find the project management livedata displayer with hint [{}].",
                 clientId);
         }
-        defaultDisplayer.display(workItems);
     }
 
     // TODO: Have a more generic method of flattening a work item.

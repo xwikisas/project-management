@@ -35,8 +35,8 @@ import org.xwiki.script.service.ScriptService;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
  * Default implementation of {@link OpenProjectConfiguration}. This class retrieves configuration values and tokens

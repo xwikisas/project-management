@@ -25,6 +25,6 @@ package com.xwiki.projectmanagement.openproject.model;
  * @version $Id$
  * @since 1.0
  */
-public class Priority extends BaseOpenProjectObject
+public class Priority extends ColoredOpenProjectObject
 {
 }
