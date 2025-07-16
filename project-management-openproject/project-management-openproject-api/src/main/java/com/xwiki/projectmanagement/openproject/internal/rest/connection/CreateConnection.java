@@ -19,10 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.connection;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.Consumes;
@@ -34,6 +30,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
@@ -46,7 +43,7 @@ import com.xwiki.projectmanagement.openproject.internal.service.CreateConnection
  */
 @Component
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection")
-@Path("wikis/{wikiName}/spaces/{spaceName: .+}/pages/{pageName}/openproject/configurations")
+@Path("wikis/{wikiName}/spaces/{spaceName:.+}/pages/{pageName}/openproject/configurations")
 public class CreateConnection extends XWikiResource
 {
     @Inject
@@ -59,29 +56,22 @@ public class CreateConnection extends XWikiResource
      * @param wikiName the name of the wiki where the connection page will be created
      * @param spaceName the full space path where the page resides
      * @param pageName the name of the page where the connection configuration will be stored
-     * @param data a map containing the connection configuration fields: "connectionName", "serverURL", "clientId",
-     *     and "clientSecret"
+     * @param openProjectConnection the {@link OpenProjectConnection} to store
      * @return a response indicating the result of the operation
      */
     @POST
-    @Path("create")
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     public Response createConnection(
         @PathParam("wikiName") String wikiName,
         @PathParam("spaceName") String spaceName,
         @PathParam("pageName") String pageName,
-        Map<String, Object> data)
+        OpenProjectConnection openProjectConnection)
     {
-        String connectionName = (String) data.get("connectionName");
-        String serverURL = (String) data.get("serverURL");
-        String clientId = (String) data.get("clientId");
-        String clientSecret = (String) data.get("clientSecret");
         try {
-            List<String> spaceNames = Arrays.asList(spaceName.split("/spaces/"));
-            OpenProjectConnection openProjectConnection = new OpenProjectConnection(connectionName, serverURL, clientId,
-                clientSecret);
-            createConnectionService.createConnection(openProjectConnection, wikiName, spaceNames, pageName);
+            DocumentReference documentReference =
+                new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
+            createConnectionService.createConnection(openProjectConnection, documentReference);
         } catch (Exception e) {
             return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
         }

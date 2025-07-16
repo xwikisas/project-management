@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.service;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -31,6 +30,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryManager;
 import org.xwiki.user.UserReference;
@@ -75,20 +75,20 @@ public class CreateConnectionService
     @Named("document")
     private UserReferenceResolver<DocumentReference> userRefResolver;
 
+    @Inject
+    @Named("compactwiki")
+    private EntityReferenceSerializer<String> compactSerializer;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
      * @param openProjectConnection the connection data to be saved
-     * @param wikiName the name of the wiki that where the document will be stored
-     * @param spaceName list of space names that define the document location
-     * @param pageName the name of the page where the connection will be created
+     * @param documentReference the document reference where the connection document will be stored
      * @throws Exception if an error occurs while creating or saving the document
      */
-    public void createConnection(OpenProjectConnection openProjectConnection, String wikiName, List<String> spaceName,
-        String pageName) throws Exception
+    public void createConnection(OpenProjectConnection openProjectConnection, DocumentReference documentReference)
+        throws Exception
     {
-        String spacePath = String.join(".", spaceName) + '.' + pageName;
-
         List<String> result = queryManager.createQuery(
                 "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
                     + "where doc.fullName = obj.name "
@@ -97,13 +97,16 @@ public class CreateConnectionService
                     + "and obj.id = configName.id.id "
                     + "and configName.id.name = :configFieldName "
                     + "and configName.value = :config", Query.HQL)
-            .bindValue("spaceName", spacePath)
+            .bindValue("spaceName",
+                compactSerializer.serialize(documentReference.getLastSpaceReference()))
             .bindValue(
                 "className",
                 String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
             )
             .bindValue("configFieldName", CONNECTION_NAME)
             .bindValue("config", openProjectConnection.getConnectionName())
+            .setWiki(this.xcontextProvider.get().getWikiId())
+            .setLimit(1)
             .execute();
 
         if (!result.isEmpty()) {
@@ -113,32 +116,24 @@ public class CreateConnectionService
         }
 
         try {
-            createConnectionObjects(openProjectConnection, wikiName, spaceName, pageName);
+            createConnectionObjects(openProjectConnection, documentReference);
         } catch (XWikiException e) {
             throw new RuntimeException("Failed to create connection: " + openProjectConnection.getConnectionName(), e);
         }
     }
 
     private void createConnectionObjects(OpenProjectConnection openProjectConnection,
-        String wikiName, List<String> spaceName,
-        String pageName) throws XWikiException
+        DocumentReference documentReference) throws XWikiException
     {
+        String wikiName = documentReference.getWikiReference().getName();
         XWikiContext context = this.xcontextProvider.get();
+        XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
 
-        List<String> space = new ArrayList<>(spaceName);
-        space.add(pageName);
-
-        DocumentReference docRef = new DocumentReference(
-            wikiName,
-            space,
-            openProjectConnection.getConnectionName() + INSTANCE_CONFIGURATION
-        );
-
-        XWikiDocument doc = context.getWiki().getDocument(docRef, context);
         setDocMetaData(openProjectConnection.getConnectionName(), context, doc);
 
         DocumentReference configClassRef =
-            new DocumentReference(wikiName, PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS);
+            new DocumentReference(wikiName, PROJECT_MANAGEMENT,
+                OPEN_PROJECT_CONNECTION_CLASS);
         BaseObject configObj = doc.getXObject(configClassRef, true, context);
         configObj.setStringValue(CONNECTION_NAME, openProjectConnection.getConnectionName());
         configObj.setStringValue(SERVER_URL, openProjectConnection.getServerURL());

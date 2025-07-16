@@ -39,7 +39,6 @@
   <content>{{velocity}}
 #set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
 #macro (createConnectionModal)
-#set ($configurationsSpaceReference = $xwiki.getDocument('ProjectManagement.OpenProjectConfigurations').getDocumentReference())
 &lt;div class="modal" id="createConnectionModal" tabindex="-1" role="dialog" aria-labelledby="createConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
   &lt;div class="modal-dialog" role="document"&gt;
     &lt;div class="modal-content"&gt;
@@ -54,7 +53,6 @@
         &lt;/div&gt;
         &lt;div class="modal-body"&gt;
           &lt;input id="create-connection-form-token" type="hidden" name="form_token" value="${escapetool.xml($services.csrf.token)}" /&gt;
-          &lt;input id ="configurations-space-reference" type="hidden" name="configurations_space_reference" value="$configurationsSpaceReference"&gt;
           &lt;div class="form-group"&gt;
             &lt;label class="h5" for="connection-name"&gt;
               &lt;strong&gt;
@@ -533,13 +531,6 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         "#configurations-space-reference"
       ).val();
 
-      let connectionsDocumentUrl = new XWiki.Document(
-        XWiki.Model.resolve(
-          connectionsDocumentReference,
-          XWiki.EntityType.DOCUMENT
-        )
-      ).getRestURL();
-
       if (!connectionName || !serverURL || !clientId || !clientSecret) {
         return new XWiki.widgets.Notification(
           l10n.get("fillInAllFields"),
@@ -547,11 +538,28 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         );
       }
 
+      const connectionsSpace = XWiki.Model.resolve(
+        "ProjectManagement.OpenProjectConfigurations",
+        XWiki.EntityType.SPACE,
+        XWiki.currentDocument.getDocumentReference()
+      );
+
+      const configurationName = connectionName + "Configuration";
+      const connectionRef = XWiki.Model.resolve(
+        configurationName,
+        XWiki.EntityType.DOCUMENT,
+        connectionsSpace
+      );
+
+      const url = new XWiki.Document(connectionRef).getRestURL(
+        "openproject/configurations"
+      );
+
       try {
         await $.ajax({
           method: "POST",
           contentType: "application/json",
-          url: `${connectionsDocumentUrl}/openproject/configurations/create`,
+          url: url,
           headers: {
             "XWiki-Form-Token": csrfToken,
           },
