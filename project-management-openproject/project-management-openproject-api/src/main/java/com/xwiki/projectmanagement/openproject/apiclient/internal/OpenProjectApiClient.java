@@ -23,7 +23,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.http.client.utils.URIBuilder;
@@ -33,6 +36,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.model.AbstractOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -141,7 +145,7 @@ public class OpenProjectApiClient
      * @param filters optional filters to apply (e.g. query parameters encoded as a string)
      * @return a {@link PaginatedResult} containing the list of work packages and pagination metadata
      */
-    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters)
+    public PaginatedResult<AbstractOpenProjectObject> getWorkPackages(int offset, int pageSize, String filters)
     {
         try {
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + API_URL_WORK_PACKAGES);
@@ -149,7 +153,7 @@ public class OpenProjectApiClient
             uriBuilder.addParameter(PAGE_SIZE, String.valueOf(pageSize));
             uriBuilder.addParameter(OP_FILTERS, filters);
 
-            PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
+            PaginatedResult<AbstractOpenProjectObject> paginatedResult = new PaginatedResult<>();
             HttpRequest request =
                 createGetHttpRequest(uriBuilder.build());
 
@@ -160,7 +164,7 @@ public class OpenProjectApiClient
 
             int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
 
-            List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
+            List<AbstractOpenProjectObject> workPackages = getWorkPackagesFromResponse(mainNode);
 
             paginatedResult.setItems(workPackages);
             paginatedResult.setPage(offset);
@@ -179,7 +183,7 @@ public class OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of maps
      */
-    public List<User> getUsers(int pageSize, String filters)
+    public List<AbstractOpenProjectObject> getUsers(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -188,7 +192,7 @@ public class OpenProjectApiClient
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
-        List<User> users = new ArrayList<>();
+        List<AbstractOpenProjectObject> users = new ArrayList<>();
         for (JsonNode element : elements) {
             User user = new User();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -196,6 +200,8 @@ public class OpenProjectApiClient
             String name = element.path(OP_RESPONSE_NAME).asText();
             user.setId(id);
             user.setName(name);
+            user.setSelf(new Linkable("", String.format("%s/users/%s", connectionUrl,
+                user.getId())));
             users.add(user);
         }
         return users;
@@ -208,7 +214,7 @@ public class OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of maps
      */
-    public List<Project> getProjects(int pageSize, String filters)
+    public List<AbstractOpenProjectObject> getProjects(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -217,13 +223,14 @@ public class OpenProjectApiClient
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
-        List<Project> projects = new ArrayList<>();
+        List<AbstractOpenProjectObject> projects = new ArrayList<>();
         for (JsonNode element : elements) {
             Project project = new Project();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String name = element.path(OP_RESPONSE_NAME).asText();
             project.setId(id);
             project.setName(name);
+            project.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
             projects.add(project);
         }
         return projects;
@@ -234,16 +241,17 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Type> getTypes()
+    public List<AbstractOpenProjectObject> getTypes()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_TYPES, "", "", "");
-        List<Type> types = new ArrayList<>();
+        List<AbstractOpenProjectObject> types = new ArrayList<>();
         for (JsonNode element : elements) {
             Type type = new Type();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String name = element.path(OP_RESPONSE_NAME).asText();
             type.setName(name);
             type.setId(id);
+            type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
             types.add(type);
         }
         return types;
@@ -254,16 +262,17 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Status> getStatuses()
+    public List<AbstractOpenProjectObject> getStatuses()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_STATUSES, "", "", "");
-        List<Status> statuses = new ArrayList<>();
+        List<AbstractOpenProjectObject> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
             Status status = new Status();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String labelName = element.path(OP_RESPONSE_NAME).asText();
             status.setId(id);
             status.setName(labelName);
+            status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
             statuses.add(status);
         }
         return statuses;
@@ -274,16 +283,17 @@ public class OpenProjectApiClient
      *
      * @return a List of Maps
      */
-    public List<Priority> getPriorities()
+    public List<AbstractOpenProjectObject> getPriorities()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_PRIORITIES, "", "", "");
-        List<Priority> priorities = new ArrayList<>();
+        List<AbstractOpenProjectObject> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
             Priority priority = new Priority();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String name = element.path(OP_RESPONSE_NAME).asText();
             priority.setId(id);
             priority.setName(name);
+            priority.setSelf(new Linkable("", buildEditUrl(connectionUrl, "priorities", id)));
             priorities.add(priority);
         }
         return priorities;
@@ -318,9 +328,9 @@ public class OpenProjectApiClient
         return mainNode.path("total").asInt();
     }
 
-    private List<WorkPackage> getWorkPackagesFromResponse(JsonNode mainNode)
+    private List<AbstractOpenProjectObject> getWorkPackagesFromResponse(JsonNode mainNode)
     {
-        List<WorkPackage> workItems = new ArrayList<>();
+        List<AbstractOpenProjectObject> workItems = new ArrayList<>();
 
         JsonNode elementsNode = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         for (JsonNode element : elementsNode) {
@@ -395,20 +405,34 @@ public class OpenProjectApiClient
 
     private void setDates(WorkPackage wp, JsonNode node)
     {
-        if (!node.path(OP_START_DATE).isNull() && !node.path(OP_START_DATE).asText().isBlank()) {
-            wp.setStartDate(LocalDate.parse(node.path(OP_START_DATE).asText()).toDate());
+        wp.setStartDate(getDateFromNode(OP_START_DATE, node));
+        wp.setDueDate(getDateFromNode(OP_DUE_DATE, node));
+        wp.setDerivedStartDate(getIsoDateFromNode(OP_DERIVED_START_DATE, node));
+        wp.setDerivedDueDate(getIsoDateFromNode(OP_DERIVED_DUE_DATE, node));
+    }
+
+    private Date getDateFromNode(String prop, JsonNode node)
+    {
+        JsonNode date = node.path(prop);
+        if (date.isNull() || date.asText().isBlank()) {
+            return null;
+        }
+        return LocalDate.parse(node.path(prop).asText()).toDate();
+    }
+
+    private Date getIsoDateFromNode(String prop, JsonNode node)
+    {
+        JsonNode date = node.path(prop);
+
+        if (date.isNull() || date.asText().isBlank()) {
+            return null;
         }
 
-        if (!node.path(OP_DUE_DATE).isNull() && !node.path(OP_DUE_DATE).asText().isBlank()) {
-            wp.setDueDate(LocalDate.parse(node.path(OP_DUE_DATE).asText()).toDate());
-        }
-
-        if (!node.path(OP_DERIVED_START_DATE).isNull() && !node.path(OP_DERIVED_START_DATE).asText().isBlank()) {
-            wp.setDerivedStartDate(LocalDate.parse(node.path(OP_DERIVED_START_DATE).asText()).toDate());
-        }
-
-        if (!node.path(OP_DERIVED_DUE_DATE).isNull() && !node.path(OP_DERIVED_DUE_DATE).asText().isBlank()) {
-            wp.setDerivedDueDate(LocalDate.parse(node.path(OP_DERIVED_DUE_DATE).asText()).toDate());
+        DateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        try {
+            return dataFormat.parse(date.asText());
+        } catch (Exception e) {
+            return null;
         }
     }
 
@@ -429,6 +453,11 @@ public class OpenProjectApiClient
                 wp.setUpdatedAt(LocalDate.parse(dateOnly).toDate());
             }
         }
+    }
+
+    private String buildEditUrl(String connectionUrl, String entity, Object id)
+    {
+        return String.format("%s/%s/%s/edit", connectionUrl, entity, id);
     }
 
     private HttpRequest createGetHttpRequest(URI uri)

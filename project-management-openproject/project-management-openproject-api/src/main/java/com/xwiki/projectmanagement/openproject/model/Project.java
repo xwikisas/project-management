@@ -19,83 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
- * Describes the project of work package.
+ * Describes the project object of a work package.
  *
  * @version $Id$
  * @since 1.0
  */
-public class Project extends HashMap<String, Object>
+public class Project extends AbstractOpenProjectObject
 {
-    /**
-     * The key identifying the id property of the project.
-     */
-    public static final String KEY_ID = "id";
-
-    /**
-     * The key identifying the name property of the project.
-     */
-    public static final String KEY_NAME = "name";
-
-    /**
-     * @return the id of the work item project.
-     */
-    @JsonProperty
-    public Integer getId()
-    {
-        return (Integer) get(KEY_ID);
-    }
-
-    /**
-     * @param id see {@link #getId()}.
-     */
-    @JsonProperty(KEY_ID)
-    public void setId(int id)
-    {
-        put(KEY_ID, id);
-    }
-
-    /**
-     * @return the name of the work item project.
-     */
-    @JsonProperty
-    public String getName()
-    {
-        return (String) get(KEY_NAME);
-    }
-
-    /**
-     * @param name see {@link #getName()}.
-     */
-    @JsonProperty
-    public void setName(String name)
-    {
-        put(KEY_NAME, name);
-    }
-
-    /**
-     * @return the map.
-     */
-    @JsonAnyGetter
-    public Map<String, Object> getMapEntries()
-    {
-        return this;
-    }
-
-    /**
-     * @param key the key.
-     * @param value the value.
-     */
-    @JsonAnySetter
-    public void putEntry(String key, Object value)
-    {
-        this.put(key, value);
-    }
 }

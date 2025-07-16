@@ -20,7 +20,6 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.Date;
-import java.util.HashMap;
 
 import com.xwiki.projectmanagement.model.Linkable;
 
@@ -30,7 +29,7 @@ import com.xwiki.projectmanagement.model.Linkable;
  * @version $Id$
  * @since 1.0
  */
-public class WorkPackage extends HashMap<String, Object>
+public class WorkPackage extends AbstractOpenProjectObject
 {
     /**
      * The key identifying the derived start date of the work package.
@@ -46,11 +45,6 @@ public class WorkPackage extends HashMap<String, Object>
      * The key identifying the internal type of the work package.
      */
     private static final String TYPE = "_type";
-
-    /**
-     * The key identifying the ID of the work package.
-     */
-    private static final String ID = "id";
 
     /**
      * The key identifying the subject or title of the work package.
@@ -113,11 +107,6 @@ public class WorkPackage extends HashMap<String, Object>
     private static final String ASSIGNEE = "assignee";
 
     /**
-     * The key identifying the work package itself.
-     */
-    private static final String SELF = "self";
-
-    /**
      * Gets the derived start date of the work package.
      *
      * @return the derived start date
@@ -175,26 +164,6 @@ public class WorkPackage extends HashMap<String, Object>
     public void setType(String type)
     {
         put(TYPE, type);
-    }
-
-    /**
-     * Gets the unique identifier of the work package.
-     *
-     * @return the ID
-     */
-    public int getId()
-    {
-        return (int) get(ID);
-    }
-
-    /**
-     * Sets the unique identifier of the work package.
-     *
-     * @param id the ID to set
-     */
-    public void setId(int id)
-    {
-        put(ID, id);
     }
 
     /**
@@ -437,23 +406,15 @@ public class WorkPackage extends HashMap<String, Object>
         put(ASSIGNEE, assignee);
     }
 
-    /**
-     * Gets the reference to itself, including their value and reference link.
-     *
-     * @return the assignee as a {@link Linkable}
-     */
-    public Linkable getSelf()
+    @Override
+    public String getName()
     {
-        return (Linkable) get(SELF);
+        return this.getSubject();
     }
 
-    /**
-     * Sets the reference to itself, including their value and reference link.
-     *
-     * @param self the self to set as a {@link Linkable}
-     */
-    public void setSelf(Linkable self)
+    @Override
+    public void setName(String name)
     {
-        put(SELF, self);
+        this.setSubject(name);
     }
 }
