@@ -40,7 +40,6 @@ import javax.ws.rs.core.Response;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
-import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.AbstractOpenProjectObject;
@@ -138,47 +137,36 @@ public class Suggest extends XWikiResource
         int pageSize)
     {
         String filter = buildFilter("subject", searchString);
-        PaginatedResult<AbstractOpenProjectObject> workPackages =
-            openProjectApiClient.getWorkPackages(0, pageSize, filter);
-        return getSuggestions(workPackages.getItems());
+        return getSuggestions(openProjectApiClient.getWorkPackages(0, pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)
     {
-        List<AbstractOpenProjectObject> priorities = openProjectApiClient
-            .getPriorities();
-        return getSuggestions(priorities);
+        return getSuggestions(openProjectApiClient.getPriorities());
     }
 
     private List<Map<String, String>> getStatusesSuggestions(OpenProjectApiClient openProjectApiClient)
     {
-        List<AbstractOpenProjectObject> statuses = openProjectApiClient
-            .getStatuses();
-        return getSuggestions(statuses);
+        return getSuggestions(openProjectApiClient.getStatuses());
     }
 
     private List<Map<String, String>> getProjectsSuggestions(OpenProjectApiClient openProjectApiClient,
         String searchString, int pageSize)
     {
         String filter = buildFilter(NAME, searchString);
-        List<AbstractOpenProjectObject> projects = openProjectApiClient
-            .getProjects(pageSize, filter);
-        return getSuggestions(projects);
+        return getSuggestions(openProjectApiClient.getProjects(pageSize, filter));
     }
 
     private List<Map<String, String>> getTypesSuggestions(OpenProjectApiClient openProjectApiClient)
     {
-        List<AbstractOpenProjectObject> types = openProjectApiClient
-            .getTypes();
-        return getSuggestions(types);
+        return getSuggestions(openProjectApiClient.getTypes());
     }
 
     private List<Map<String, String>> getUsersSuggestions(OpenProjectApiClient openProjectApiClient,
         String searchString, int pageSize)
     {
         String filter = buildFilter(NAME, searchString);
-        List<AbstractOpenProjectObject> users = openProjectApiClient.getUsers(pageSize, filter);
-        return getSuggestions(users);
+        return getSuggestions(openProjectApiClient.getUsers(pageSize, filter));
     }
 
     private List<Map<String, String>> getSuggestions(
