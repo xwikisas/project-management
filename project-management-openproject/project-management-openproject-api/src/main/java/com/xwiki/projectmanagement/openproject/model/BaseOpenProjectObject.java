@@ -25,12 +25,12 @@ import java.util.Map;
 import com.xwiki.projectmanagement.model.Linkable;
 
 /**
- * Describes the base properties of open project objects.
+ * Describes the base object for Open Project objects.
  *
  * @version $Id$
  * @since 1.0
  */
-public abstract class AbstractOpenProjectObject extends HashMap<String, Object>
+public class BaseOpenProjectObject extends HashMap<String, Object>
 {
     /**
      * The key identifying the id property of the open project object.

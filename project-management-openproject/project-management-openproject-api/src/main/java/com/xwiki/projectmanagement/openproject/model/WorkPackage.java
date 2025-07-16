@@ -29,7 +29,7 @@ import com.xwiki.projectmanagement.model.Linkable;
  * @version $Id$
  * @since 1.0
  */
-public class WorkPackage extends AbstractOpenProjectObject
+public class WorkPackage extends BaseOpenProjectObject
 {
     /**
      * The key identifying the derived start date of the work package.

@@ -42,7 +42,7 @@ import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.model.AbstractOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
  * Rest endpoint that suggests ids based on some query string.
@@ -170,7 +170,7 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getSuggestions(
-        List<AbstractOpenProjectObject> openProjectObjects)
+        List<? extends BaseOpenProjectObject> openProjectObjects)
     {
         return openProjectObjects
             .stream()

@@ -25,6 +25,6 @@ package com.xwiki.projectmanagement.openproject.model;
  * @version $Id$
  * @since 1.0
  */
-public class User extends AbstractOpenProjectObject
+public class User extends BaseOpenProjectObject
 {
 }

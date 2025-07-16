@@ -36,7 +36,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.openproject.model.AbstractOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -117,6 +116,8 @@ public class OpenProjectApiClient
 
     private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
 
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
     private final HttpClient client = HttpClient.newHttpClient();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -138,14 +139,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves a list of {@link WorkPackage} objects from the OpenProject API.
+     * Retrieves a list of available work packages from the current OpenProject configuration.
      *
      * @param offset the offset index from which to start retrieving work items
      * @param pageSize the maximum number of work items to return
      * @param filters optional filters to apply (e.g. query parameters encoded as a string)
-     * @return a {@link PaginatedResult} containing the list of work packages and pagination metadata
+     * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata
      */
-    public PaginatedResult<AbstractOpenProjectObject> getWorkPackages(int offset, int pageSize, String filters)
+    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters)
     {
         try {
             URIBuilder uriBuilder = new URIBuilder(connectionUrl + API_URL_WORK_PACKAGES);
@@ -153,7 +154,7 @@ public class OpenProjectApiClient
             uriBuilder.addParameter(PAGE_SIZE, String.valueOf(pageSize));
             uriBuilder.addParameter(OP_FILTERS, filters);
 
-            PaginatedResult<AbstractOpenProjectObject> paginatedResult = new PaginatedResult<>();
+            PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
             HttpRequest request =
                 createGetHttpRequest(uriBuilder.build());
 
@@ -164,7 +165,7 @@ public class OpenProjectApiClient
 
             int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
 
-            List<AbstractOpenProjectObject> workPackages = getWorkPackagesFromResponse(mainNode);
+            List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
 
             paginatedResult.setItems(workPackages);
             paginatedResult.setPage(offset);
@@ -177,13 +178,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves a paginated list of users based on the specified page size and filter criteria.
+     * Retrieves a list of available users based on the specified page size and filter criteria  from the current
+     * OpenProject configuration.
      *
      * @param pageSize the number of users to retrieve per page
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
-     * @return a list of maps
+     * @return a list of {@link User}
      */
-    public List<AbstractOpenProjectObject> getUsers(int pageSize, String filters)
+    public List<User> getUsers(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -192,7 +194,7 @@ public class OpenProjectApiClient
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
-        List<AbstractOpenProjectObject> users = new ArrayList<>();
+        List<User> users = new ArrayList<>();
         for (JsonNode element : elements) {
             User user = new User();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -208,13 +210,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves a paginated list of projects based on the specified page size and filter criteria.
+     * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
+     * current OpenProject configuration.
      *
      * @param pageSize the number of users to retrieve per page
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
-     * @return a list of maps
+     * @return a list of {@link Project}
      */
-    public List<AbstractOpenProjectObject> getProjects(int pageSize, String filters)
+    public List<Project> getProjects(int pageSize, String filters)
     {
         JsonNode elements =
             getSuggestionsMainNode(
@@ -223,7 +226,7 @@ public class OpenProjectApiClient
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
-        List<AbstractOpenProjectObject> projects = new ArrayList<>();
+        List<Project> projects = new ArrayList<>();
         for (JsonNode element : elements) {
             Project project = new Project();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -237,14 +240,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves all available work-package types from the current OpenProject configuration.
+     * Retrieves all available types from the current OpenProject configuration.
      *
-     * @return a List of Maps
+     * @return a List of {@link Type}
      */
-    public List<AbstractOpenProjectObject> getTypes()
+    public List<Type> getTypes()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_TYPES, "", "", "");
-        List<AbstractOpenProjectObject> types = new ArrayList<>();
+        List<Type> types = new ArrayList<>();
         for (JsonNode element : elements) {
             Type type = new Type();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -258,14 +261,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves all available work-package statuses from the current OpenProject configuration.
+     * Retrieves all available statuses from the current OpenProject configuration.
      *
-     * @return a List of Maps
+     * @return a List of {@link Status}
      */
-    public List<AbstractOpenProjectObject> getStatuses()
+    public List<Status> getStatuses()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_STATUSES, "", "", "");
-        List<AbstractOpenProjectObject> statuses = new ArrayList<>();
+        List<Status> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
             Status status = new Status();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -279,14 +282,14 @@ public class OpenProjectApiClient
     }
 
     /**
-     * Retrieves all available work-package priorities from the current OpenProject configuration.
+     * Retrieves all available priorities from the current OpenProject configuration.
      *
-     * @return a List of Maps
+     * @return a List of {@link Priority}
      */
-    public List<AbstractOpenProjectObject> getPriorities()
+    public List<Priority> getPriorities()
     {
         JsonNode elements = getSuggestionsMainNode(API_URL_PRIORITIES, "", "", "");
-        List<AbstractOpenProjectObject> priorities = new ArrayList<>();
+        List<Priority> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
             Priority priority = new Priority();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -328,9 +331,9 @@ public class OpenProjectApiClient
         return mainNode.path("total").asInt();
     }
 
-    private List<AbstractOpenProjectObject> getWorkPackagesFromResponse(JsonNode mainNode)
+    private List<WorkPackage> getWorkPackagesFromResponse(JsonNode mainNode)
     {
-        List<AbstractOpenProjectObject> workItems = new ArrayList<>();
+        List<WorkPackage> workItems = new ArrayList<>();
 
         JsonNode elementsNode = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         for (JsonNode element : elementsNode) {
@@ -428,9 +431,8 @@ public class OpenProjectApiClient
             return null;
         }
 
-        DateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         try {
-            return dataFormat.parse(date.asText());
+            return DATE_FORMAT.parse(date.asText());
         } catch (Exception e) {
             return null;
         }
