@@ -22,32 +22,34 @@ package com.xwiki.projectmanagement.openproject.model;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.xwiki.projectmanagement.model.Linkable;
 
 /**
- * Describes the identifier of work package.
+ * Describes the base object for Open Project objects.
  *
  * @version $Id$
  * @since 1.0
  */
-public class Identifier extends HashMap<String, Object>
+public class BaseOpenProjectObject extends HashMap<String, Object>
 {
     /**
-     * The key identifying the id property of the identifier.
+     * The key identifying the id property of the open project object.
      */
     public static final String KEY_ID = "id";
 
     /**
-     * The key identifying the name property of the identifier.
+     * The key identifying the name property of the open project object.
      */
     public static final String KEY_NAME = "name";
 
     /**
-     * @return the id of the work item identifier.
+     * The key identifying the open project object itself.
      */
-    @JsonProperty
+    private static final String SELF = "self";
+
+    /**
+     * @return the id of the work item project.
+     */
     public Integer getId()
     {
         return (Integer) get(KEY_ID);
@@ -56,16 +58,14 @@ public class Identifier extends HashMap<String, Object>
     /**
      * @param id see {@link #getId()}.
      */
-    @JsonProperty(KEY_ID)
     public void setId(int id)
     {
         put(KEY_ID, id);
     }
 
     /**
-     * @return the name of the work item identifier.
+     * @return the name of the work item project.
      */
-    @JsonProperty
     public String getName()
     {
         return (String) get(KEY_NAME);
@@ -74,16 +74,34 @@ public class Identifier extends HashMap<String, Object>
     /**
      * @param name see {@link #getName()}.
      */
-    @JsonProperty
     public void setName(String name)
     {
         put(KEY_NAME, name);
     }
 
     /**
+     * Gets the reference to itself, including their value and reference link.
+     *
+     * @return the assignee as a {@link Linkable}
+     */
+    public Linkable getSelf()
+    {
+        return (Linkable) get(SELF);
+    }
+
+    /**
+     * Sets the reference to itself, including their value and reference link.
+     *
+     * @param self the self to set as a {@link Linkable}
+     */
+    public void setSelf(Linkable self)
+    {
+        put(SELF, self);
+    }
+
+    /**
      * @return the map.
      */
-    @JsonAnyGetter
     public Map<String, Object> getMapEntries()
     {
         return this;
@@ -93,7 +111,6 @@ public class Identifier extends HashMap<String, Object>
      * @param key the key.
      * @param value the value.
      */
-    @JsonAnySetter
     public void putEntry(String key, Object value)
     {
         this.put(key, value);
