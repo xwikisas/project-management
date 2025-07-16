@@ -52,6 +52,9 @@ import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
 /**
+ * Using the {@link OpenProjectApiClient} retrieve the colors for the OpenProject properties that support customization
+ * and generate a style sheet for each configured OpenProject instance.
+ *
  * @version $Id$
  */
 public class StylingSetupJob extends AbstractJob
@@ -77,19 +80,6 @@ public class StylingSetupJob extends AbstractJob
     private static final String BRACKET_END = "\n}\n";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(StylingSetupJob.class);
-
-//    @Inject
-//    private DocumentReferenceResolver<EntityReference> documentReferenceResolver;
-//
-//    @Inject
-//    private OpenProjectConfiguration opConfiguration;
-//
-//    @Inject
-//    @Named("document")
-//    private UserReferenceResolver<DocumentReference> userRefResolver;
-//
-//    @Inject
-//    private Logger logger;
 
     @Override
     protected void executeJob(JobExecutionContext jobContext)

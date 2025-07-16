@@ -140,16 +140,16 @@
       </status>
     </class>
     <property>
-      <contextDatabase>xwiki</contextDatabase>
+      <contextDatabase></contextDatabase>
     </property>
     <property>
       <contextLang>en</contextLang>
     </property>
     <property>
-      <contextUser>XWiki.Admin</contextUser>
+      <contextUser></contextUser>
     </property>
     <property>
-      <cron>0 0 12 * * ?</cron>
+      <cron>0 0 * * *</cron>
     </property>
     <property>
       <jobClass>com.xwiki.projectmanagement.openproject.internal.job.StylingSetupJob</jobClass>

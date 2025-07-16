@@ -47,7 +47,10 @@ import com.xpn.xwiki.plugin.scheduler.JobState;
 import com.xpn.xwiki.plugin.scheduler.SchedulerPlugin;
 
 /**
- * Event listener that watches changes on OpenProject configuration documents and performs various.
+ * Event listener that watches changes on OpenProject configuration documents and schedules the
+ * {@link com.xwiki.projectmanagement.openproject.internal.job.StylingSetupJob} with the context user equal to the
+ * one that created the Open Project configuration. This assures us that the job will execute with a user that is
+ * active in the wiki and has logged in with OpenProject
  *
  * @version $Id$
  */
@@ -59,7 +62,6 @@ public class ConfigurationChangeListener extends AbstractEventListener
     private static final String SPACE_PROJECT_MANAGEMENT = "ProjectManagement";
 
     private static final EntityReference CLASS_OPEN_PROJECT =
-//        new LocalDocumentReference(SPACE_PROJECT_MANAGEMENT, "OpenProjectConnectionClass");
         BaseObjectReference.any("ProjectManagement.OpenProjectConnectionClass");
 
     private static final EntityReference DOC_SCHEDULER_JOB =
@@ -95,11 +97,11 @@ public class ConfigurationChangeListener extends AbstractEventListener
 
             if (jobState.getQuartzState().equals(Trigger.TriggerState.NORMAL)) {
                 scheduler.unscheduleJob(job, xcontext);
+                scheduler.scheduleJob(job, xcontext);
+            } else if (jobState.getQuartzState().equals(Trigger.TriggerState.NONE)) {
                 job.setStringValue("contextUser", serializer.serialize(xcontext.getUserReference()));
                 xcontext.getWiki().saveDocument(jobDoc, String.format("Updated context user to [%s].",
                     xcontext.getUserReference()), xcontext);
-                scheduler.scheduleJob(job, xcontext);
-            } else if (jobState.getQuartzState().equals(Trigger.TriggerState.NONE)) {
                 scheduler.scheduleJob(job, xcontext);
             }
         } catch (XWikiException | SchedulerException e) {
