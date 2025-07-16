@@ -20,7 +20,6 @@ package com.xwiki.projectmanagement.internal.displayer;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -45,6 +44,7 @@ import com.xwiki.projectmanagement.internal.displayer.property.LinkablePropertyD
 import com.xwiki.projectmanagement.internal.displayer.property.ListPropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.StringPropertyDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
  * The default implementation of the {@link WorkItemPropertyDisplayerManager} that registers all the known
@@ -102,8 +102,8 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         displayers.put(Linkable.class.getName(), new LinkablePropertyDisplayer(plainParser));
         displayers.put(String.class.getName(), new StringPropertyDisplayer(plainParser));
         WorkItemPropertyDisplayer propertyDisplayer = new ListPropertyDisplayer(this);
-        displayers.put(List.class.getName(), propertyDisplayer);
-        displayers.put(ArrayList.class.getName(), propertyDisplayer);
+        displayers.put(WorkItem.KEY_ASSIGNEES, propertyDisplayer);
+        displayers.put(WorkItem.KEY_LABELS, propertyDisplayer);
         String format = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss");
         displayers.put(Date.class.getName(), new DatePropertyDisplayer(plainParser, format));
     }

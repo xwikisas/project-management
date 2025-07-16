@@ -100,6 +100,8 @@ public class OpenProjectApiClient
 
     private static final String OP_RESPONSE_TYPE = "type";
 
+    private static final String OP_RESPONSE_COLOR = "color";
+
     private static final String API_URL_PART = "/api/v3";
 
     private static final String API_URL_WORK_PACKAGES = "/api/v3/work_packages";
@@ -252,8 +254,10 @@ public class OpenProjectApiClient
             Type type = new Type();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String name = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
             type.setName(name);
             type.setId(id);
+            type.setColor(color);
             type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
             types.add(type);
         }
@@ -273,8 +277,10 @@ public class OpenProjectApiClient
             Status status = new Status();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String labelName = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
             status.setId(id);
             status.setName(labelName);
+            status.setColor(color);
             status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
             statuses.add(status);
         }
@@ -294,9 +300,11 @@ public class OpenProjectApiClient
             Priority priority = new Priority();
             int id = element.path(OP_RESPONSE_ID).asInt();
             String name = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
             priority.setId(id);
             priority.setName(name);
             priority.setSelf(new Linkable("", buildEditUrl(connectionUrl, "priorities", id)));
+            priority.setColor(color);
             priorities.add(priority);
         }
         return priorities;

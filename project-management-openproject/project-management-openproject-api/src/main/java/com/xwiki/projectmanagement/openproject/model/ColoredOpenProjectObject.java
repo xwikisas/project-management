@@ -17,14 +17,36 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+
 package com.xwiki.projectmanagement.openproject.model;
 
 /**
- * Describes the type object of a work package.
+ * Describes the Open Project entities that can have custom colors associated to them such as Status and Type.
  *
  * @version $Id$
  * @since 1.0
  */
-public class Type extends ColoredOpenProjectObject
+public class ColoredOpenProjectObject extends BaseOpenProjectObject
 {
+    /**
+     * The key that retrieves the color attribute of this entity.
+     */
+    public static final String KEY_COLOR = "color";
+
+    /**
+     * @return the color associated to this entity. It is used by the client to display this property in a specific
+     *     color.
+     */
+    public String getColor()
+    {
+        return (String) get(KEY_COLOR);
+    }
+
+    /**
+     * @param color see {@link #getColor()}.
+     */
+    public void setColor(String color)
+    {
+        put(KEY_COLOR, color);
+    }
 }

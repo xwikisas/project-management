@@ -27,6 +27,7 @@
       },
       {
         "id": "type",
+        "displayer": "html",
         "filterable": true,
         "filter": {
           "id": "list",
@@ -413,6 +414,7 @@
       {
         "id": "status",
         "filterable": true,
+        "displayer": "html",
         "filter": {
           "id": "list",
           "operators": [

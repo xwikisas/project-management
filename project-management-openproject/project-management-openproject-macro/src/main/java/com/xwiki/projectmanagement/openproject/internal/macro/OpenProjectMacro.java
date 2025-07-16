@@ -42,6 +42,7 @@ import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
@@ -59,6 +60,14 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Named("openproject")
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
+    @Inject
+    @Named("ssrx")
+    private SkinExtension ssrx;
+
+    @Inject
+    @Named("ssx")
+    private SkinExtension ssx;
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -95,6 +104,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        ssrx.use("openproject/css/propertyStyles.css");
+        ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
         String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
         if (xContext.getAction().equals(viewAction)) {
