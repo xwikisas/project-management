@@ -30,6 +30,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryManager;
 import org.xwiki.user.UserReference;
@@ -39,6 +40,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
  * Class for creating the connection.
@@ -57,8 +59,6 @@ public class CreateConnectionService
 
     private static final String CLIENT_SECRET = "clientSecret";
 
-    private static final String OPEN_PROJECT_CONFIGURATIONS = "OpenProjectConfigurations";
-
     private static final String PROJECT_MANAGEMENT = "ProjectManagement";
 
     private static final String INSTANCE_CONFIGURATION = "InstanceConfiguration";
@@ -75,73 +75,80 @@ public class CreateConnectionService
     @Named("document")
     private UserReferenceResolver<DocumentReference> userRefResolver;
 
+    @Inject
+    @Named("compactwiki")
+    private EntityReferenceSerializer<String> compactSerializer;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
-     * @param connectionName the unique name used to identify the connection. It will be used as part of the
-     *     document name.
-     * @param serverURL the base URL of the OpenProject server.
-     * @param clientId the OAuth2 client ID used for authentication with OpenProject.
-     * @param clientSecret the OAuth2 client secret used for authentication with OpenProject.
-     * @throws Exception if there is any issue while creating or saving the document, or accessing the context.
+     * @param openProjectConnection the connection data to be saved
+     * @param documentReference the document reference where the connection document will be stored
+     * @throws Exception if an error occurs while creating or saving the document
      */
-    public void createConnection(String connectionName, String serverURL, String clientId,
-        String clientSecret) throws Exception
+    public void createConnection(OpenProjectConnection openProjectConnection, DocumentReference documentReference)
+        throws Exception
     {
-
         List<String> result = queryManager.createQuery(
-                "select obj.name from BaseObject obj, StringProperty configName "
-                    + "where obj.className = :className and obj.id = configName.id.id "
-                    + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
-            .bindValue("className", PROJECT_MANAGEMENT + "." + OPEN_PROJECT_CONNECTION_CLASS)
+                "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
+                    + "where doc.fullName = obj.name "
+                    + "and doc.space = :spaceName "
+                    + "and obj.className = :className "
+                    + "and obj.id = configName.id.id "
+                    + "and configName.id.name = :configFieldName "
+                    + "and configName.value = :config", Query.HQL)
+            .bindValue("spaceName",
+                compactSerializer.serialize(documentReference.getLastSpaceReference()))
+            .bindValue(
+                "className",
+                String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
+            )
             .bindValue("configFieldName", CONNECTION_NAME)
-            .bindValue("config", connectionName).execute();
+            .bindValue("config", openProjectConnection.getConnectionName())
+            .setWiki(this.xcontextProvider.get().getWikiId())
+            .setLimit(1)
+            .execute();
 
         if (!result.isEmpty()) {
             throw new RuntimeException(
-                "Connection " + connectionName + " already exists"
+                "Connection " + openProjectConnection.getConnectionName() + " already exists"
             );
         }
 
         try {
-            createConnectionObjects(connectionName, serverURL, clientId, clientSecret);
+            createConnectionObjects(openProjectConnection, documentReference);
         } catch (XWikiException e) {
-            throw new RuntimeException("Failed to create connection: " + connectionName, e);
+            throw new RuntimeException("Failed to create connection: " + openProjectConnection.getConnectionName(), e);
         }
     }
 
-    private void createConnectionObjects(String connectionName, String serverURL,
-        String clientId, String clientSecret) throws XWikiException
+    private void createConnectionObjects(OpenProjectConnection openProjectConnection,
+        DocumentReference documentReference) throws XWikiException
     {
+        String wikiName = documentReference.getWikiReference().getName();
         XWikiContext context = this.xcontextProvider.get();
-        String wikiName = context.getWikiId();
+        XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
 
-        DocumentReference docRef = new DocumentReference(
-            wikiName,
-            Arrays.asList(PROJECT_MANAGEMENT, OPEN_PROJECT_CONFIGURATIONS),
-            connectionName + INSTANCE_CONFIGURATION
-        );
-
-        XWikiDocument doc = context.getWiki().getDocument(docRef, context);
-        setDocMetaData(connectionName, context, doc);
+        setDocMetaData(openProjectConnection.getConnectionName(), context, doc);
 
         DocumentReference configClassRef =
-            new DocumentReference(wikiName, PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS);
+            new DocumentReference(wikiName, PROJECT_MANAGEMENT,
+                OPEN_PROJECT_CONNECTION_CLASS);
         BaseObject configObj = doc.getXObject(configClassRef, true, context);
-        configObj.setStringValue(CONNECTION_NAME, connectionName);
-        configObj.setStringValue(SERVER_URL, serverURL);
-        configObj.setStringValue(CLIENT_ID, clientId);
-        configObj.setStringValue(CLIENT_SECRET, clientSecret);
+        configObj.setStringValue(CONNECTION_NAME, openProjectConnection.getConnectionName());
+        configObj.setStringValue(SERVER_URL, openProjectConnection.getServerURL());
+        configObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
+        configObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
 
         DocumentReference oidcClassRef =
             new DocumentReference(wikiName, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");
 
         BaseObject oidcObj = doc.getXObject(oidcClassRef, true, context);
-        oidcObj.setStringValue("configurationName", connectionName);
-        oidcObj.setStringValue("authorizationEndpoint", serverURL + "/oauth/authorize");
-        oidcObj.setStringValue("tokenEndpoint", serverURL + "/oauth/token");
-        oidcObj.setStringValue(CLIENT_ID, clientId);
-        oidcObj.setStringValue(CLIENT_SECRET, clientSecret);
+        oidcObj.setStringValue("configurationName", openProjectConnection.getConnectionName());
+        oidcObj.setStringValue("authorizationEndpoint", openProjectConnection.getServerURL() + "/oauth/authorize");
+        oidcObj.setStringValue("tokenEndpoint", openProjectConnection.getServerURL() + "/oauth/token");
+        oidcObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
+        oidcObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
         oidcObj.setStringValue("tokenEndpointMethod", "client_secret_basic");
         oidcObj.setIntValue("skipped", 0);
         oidcObj.setStringValue("scope", "api_v3");

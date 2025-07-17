@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.config;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Represents the connection configuration for an OpenProject instance.
  *
@@ -42,7 +45,17 @@ public class OpenProjectConnection
      * @param clientId the client ID used for authentication
      * @param clientSecret the client secret used for authentication
      */
-    public OpenProjectConnection(String connectionName, String serverURL, String clientId, String clientSecret)
+    @JsonCreator
+    public OpenProjectConnection(
+        @JsonProperty("connectionName")
+        String connectionName,
+        @JsonProperty("serverURL")
+        String serverURL,
+        @JsonProperty("clientId")
+        String clientId,
+        @JsonProperty("clientSecret")
+        String clientSecret
+    )
     {
         this.connectionName = connectionName;
         this.serverURL = serverURL;
