@@ -34,7 +34,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService;
+import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 
 /**
  * REST Resource used for creating OpenProject configuration pages.
@@ -47,7 +47,7 @@ import com.xwiki.projectmanagement.openproject.internal.service.CreateConnection
 public class CreateConnection extends XWikiResource
 {
     @Inject
-    private CreateConnectionService createConnectionService;
+    private HandleConnectionsService handleConnectionsService;
 
     /**
      * Creates a new OpenProject connection configuration document in XWiki using the provided path parameters and
@@ -62,7 +62,7 @@ public class CreateConnection extends XWikiResource
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    public Response createConnection(
+    public Response handleConnection(
         @PathParam("wikiName") String wikiName,
         @PathParam("spaceName") String spaceName,
         @PathParam("pageName") String pageName,
@@ -71,7 +71,7 @@ public class CreateConnection extends XWikiResource
         try {
             DocumentReference documentReference =
                 new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
-            createConnectionService.createConnection(openProjectConnection, documentReference);
+            handleConnectionsService.createOrUpdateConnection(openProjectConnection, documentReference);
         } catch (Exception e) {
             return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
         }

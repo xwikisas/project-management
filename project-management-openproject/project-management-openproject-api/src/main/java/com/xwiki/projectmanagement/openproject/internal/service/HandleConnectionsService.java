@@ -47,9 +47,9 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
  *
  * @version $Id$
  */
-@Component(roles = CreateConnectionService.class)
+@Component(roles = HandleConnectionsService.class)
 @Singleton
-public class CreateConnectionService
+public class HandleConnectionsService
 {
     private static final String CONNECTION_NAME = "connectionName";
 
@@ -86,9 +86,10 @@ public class CreateConnectionService
      * @param documentReference the document reference where the connection document will be stored
      * @throws Exception if an error occurs while creating or saving the document
      */
-    public void createConnection(OpenProjectConnection openProjectConnection, DocumentReference documentReference)
+    public void createOrUpdateConnection(OpenProjectConnection openProjectConnection, DocumentReference documentReference)
         throws Exception
     {
+        String docRef = compactSerializer.serialize(documentReference);
         List<String> result = queryManager.createQuery(
                 "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
                     + "where doc.fullName = obj.name "
@@ -96,33 +97,33 @@ public class CreateConnectionService
                     + "and obj.className = :className "
                     + "and obj.id = configName.id.id "
                     + "and configName.id.name = :configFieldName "
-                    + "and configName.value = :config", Query.HQL)
-            .bindValue("spaceName",
-                compactSerializer.serialize(documentReference.getLastSpaceReference()))
+                    + "and configName.value = :config "
+                    + "and doc.fullName <> :serializedDocRef", Query.HQL
+            )
+            .bindValue("spaceName", docRef)
             .bindValue(
                 "className",
                 String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
             )
             .bindValue("configFieldName", CONNECTION_NAME)
             .bindValue("config", openProjectConnection.getConnectionName())
+            .bindValue("serializedDocRef", docRef)
             .setWiki(this.xcontextProvider.get().getWikiId())
             .setLimit(1)
             .execute();
 
         if (!result.isEmpty()) {
-            throw new RuntimeException(
-                "Connection " + openProjectConnection.getConnectionName() + " already exists"
-            );
+            throw new RuntimeException("There was a problem while handling the connection");
         }
 
         try {
-            createConnectionObjects(openProjectConnection, documentReference);
+            handleConnectionObjects(openProjectConnection, documentReference);
         } catch (XWikiException e) {
             throw new RuntimeException("Failed to create connection: " + openProjectConnection.getConnectionName(), e);
         }
     }
 
-    private void createConnectionObjects(OpenProjectConnection openProjectConnection,
+    private void handleConnectionObjects(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference) throws XWikiException
     {
         String wikiName = documentReference.getWikiReference().getName();

@@ -48,19 +48,12 @@ openproject.config.connectionName=Connection Name
 openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
 openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various Open Project Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
 openproject.config.connectionsTitle=OpenProject Instance Connections
-openproject.config.create=Create
-openproject.config.create.created=Connection {0} has been created!
-openproject.config.create.errorOccurred=An error occurred while creating the connection!
-openproject.config.createNewConnection=Create new connection
+openproject.config.save=Save
+openproject.config.save.saved=Connection {0} has been saved!
+openproject.config.save.errorOccurred=An error occurred while saving the connection!
+openproject.config.createConnection=Create new connection
+openproject.config.updateConnection=Update connection
 openproject.config.delete=Delete
-openproject.config.delete.deleted=Connection has been deleted!
-openproject.config.delete.errorOccurred=An error occurred while deleting the connection!
-openproject.config.delete.info=Delete connection
-openproject.config.deleteConnection=Delete connection
-openproject.config.deleteConnectionDescription.first=You will delete connection {0}
-openproject.config.deleteConnectionDescription.second=Are you sure you want to proceed?
-openproject.config.editConnection=Edit connection
-openproject.config.fillInAllFields=Please fill in all fields!
 openproject.config.noRights=No Rights
 openproject.config.serverURL=Server URL
 openproject.config.serverURLDescription=Copy the link from your browser’s adress bar when you are in your OpenProject instance. Paste it below.
@@ -73,8 +66,7 @@ openproject.livedatalabels.actions = Actions
 openproject.livedatalabels.clientId=Client ID
 openproject.livedatalabels.clientSecret=Client Secret
 openproject.livedatalabels.connectionName=Connection name
-openproject.livedatalabels.serverURL=Server URL
-</content>
+openproject.livedatalabels.serverURL=Server URL</content>
   <object>
     <name>ProjectManagement.Translations</name>
     <number>0</number>
