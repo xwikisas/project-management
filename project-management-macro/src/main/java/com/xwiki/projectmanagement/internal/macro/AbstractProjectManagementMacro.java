@@ -22,25 +22,27 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 import javax.inject.Inject;
 
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.job.JobException;
+import org.xwiki.rendering.RenderingException;
+import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
+import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.CompositeBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
-import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
-import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -54,10 +56,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     extends AbstractMacro<T>
 {
     @Inject
-    protected ProjectManagementClientExecutionContext projectManagementMacroContext;
+    private ComponentManager componentManager;
 
     @Inject
-    private ComponentManager componentManager;
+    private BlockAsyncRendererExecutor executor;
 
     /**
      * @param name smth
@@ -94,23 +96,25 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
-        if (projectManagementMacroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> clientContext =
-                URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8)
-                    .stream()
-                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
-            ((DefaultProjectManagementClientExecutionContext) projectManagementMacroContext).setContext(clientContext);
-        }
         String newContent = content;
         if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
             newContent = parameters.getFilters();
             parameters.setFilters("");
         }
         try {
-            Macro<T> displayerMacro = componentManager.getInstance(Macro.class, displayer.name());
-
+            Macro<ProjectManagementMacroParameters> displayerMacro =
+                componentManager.getInstance(Macro.class, displayer.name());
+            if (!WorkItemsDisplayer.liveData.equals(displayer)) {
+                AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
+                ProjectManagementAsyncRenderer asyncRenderer =
+                    componentManager.getInstance(ProjectManagementAsyncRenderer.class);
+                configuration.setContextEntries(Set.of(XWikiContextContextStore.PROP_USER));
+                asyncRenderer.initialize(displayerMacro, parameters, content, context);
+                Block result = executor.execute(asyncRenderer, configuration);
+                return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+            }
             return displayerMacro.execute(parameters, newContent, context);
-        } catch (ComponentLookupException e) {
+        } catch (ComponentLookupException | JobException | RenderingException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
         }
     }

@@ -57,6 +57,6 @@ public class IntegrationTests
         ConfigurationSource wikiCfg = componentManager.registerMockComponent(ConfigurationSource.class, "wiki");
         when(wikiCfg.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss")).thenReturn("dd/MM/yyyy");
 
-        componentManager.registerMockComponent(SkinExtension.class, "ssfx");
+        componentManager.registerMockComponent(SkinExtension.class, "ssrx");
     }
 }

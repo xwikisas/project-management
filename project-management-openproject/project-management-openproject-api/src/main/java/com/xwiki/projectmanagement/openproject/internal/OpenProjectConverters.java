@@ -53,7 +53,7 @@ final class OpenProjectConverters
         workItem.setCreationDate(workPackage.getCreatedAt());
         workItem.setUpdateDate(workPackage.getUpdatedAt());
         workItem.setType(workPackage.getTypeOfWorkPackage().getValue());
-        workItem.setIdentifier(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
+        workItem.setIdentifier(new Linkable(String.valueOf(workPackage.getId()), workPackage.getSelf().getLocation()));
         workItem.setSummary(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
         workItem.setStatus(workPackage.getStatus().getValue());
         workItem.setCreator(workPackage.getAuthor());

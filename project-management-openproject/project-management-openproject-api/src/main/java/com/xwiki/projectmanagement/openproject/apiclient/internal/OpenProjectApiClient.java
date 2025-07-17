@@ -383,7 +383,7 @@ public class OpenProjectApiClient
         JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
         String issueName = selfNode.path(OP_RESPONSE_TITLE).asText();
         String issueUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
-        workPackage.setSelf(new Linkable(issueUrl, issueName));
+        workPackage.setSelf(new Linkable(issueName, issueUrl));
 
         JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
         String statusName = statusNode.path(OP_RESPONSE_TITLE).asText();
