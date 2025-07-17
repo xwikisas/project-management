@@ -5,7 +5,6 @@ com.xwiki.projectmanagement.openproject.config.internal.OpenProjectDocumentConfi
 com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.Suggest
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
-com.xwiki.projectmanagement.openproject.internal.livedata.displayer.OpenProjectLivedataDisplayer
 com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener
 com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection
 com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService

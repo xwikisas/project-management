@@ -33,12 +33,15 @@ import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.renderer.PrintRenderer;
 import org.xwiki.rendering.renderer.PrintRendererFactory;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -67,6 +70,12 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     @Inject
     protected Logger logger;
 
+    @Inject
+    protected ComponentManager componentManager;
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
+
     @Override
     public void display(Collection<WorkItem> workItems)
     {
@@ -75,22 +84,20 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
 
         for (WorkItem item : workItems) {
             for (Map.Entry<String, Object> itemProperty : item.entrySet()) {
-                displayProperty(itemProperty, renderer);
+                WorkItemPropertyDisplayerManager displayerManager = getPropertyDisplayerManager();
+                displayProperty(itemProperty, renderer, displayerManager);
                 printer.clear();
             }
         }
     }
 
     @Override
-    public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer)
+    public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
+        WorkItemPropertyDisplayerManager displayerManager)
     {
-        // TODO: We know that, currently, only the assignees and labels properties are using the livedata
-        //  "html" displayers. If we don't handle them here, they will be displayed in a nasty way, as
-        //  List.toString(). We could inject/get our hands on the current LiveDataConfiguration and run the
-        //  work item prop displayer for all the eventual properties (defined in future clients) that will
-        //  use the html livedata displayer - instead of hard-coding the known properties.
-        if (KNOWN_HTML_PROPS.contains(itemProperty.getKey())) {
-            setValueFromBlocksDisplayer(itemProperty, renderer, defaultDisplayerManager, Collections.emptyMap());
+        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null)
+        {
+            setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager, Collections.emptyMap());
         } else if (itemProperty.getValue() instanceof Date) {
             displayDateProperty(itemProperty);
         }
@@ -117,5 +124,22 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     private void displayDateProperty(Map.Entry<String, Object> itemProperty)
     {
         itemProperty.setValue(((Date) itemProperty.getValue()).getTime());
+    }
+
+    protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()
+    {
+        String clientId = (String) executionContext.get("client");
+        if (clientId == null || clientId.isEmpty()) {
+            return defaultDisplayerManager;
+        }
+
+        if (!componentManager.hasComponent(WorkItemPropertyDisplayerManager.class, clientId)) {
+            return defaultDisplayerManager;
+        }
+        try {
+            return componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
+        } catch (ComponentLookupException e) {
+            return defaultDisplayerManager;
+        }
     }
 }
