@@ -66,6 +66,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         this.transformationContext = context;
         this.targetSyntax = context.getTransformationContext().getTargetSyntax();
 
+        // TODO: Maybe come up with a better way to generating an id.
         StringBuilder sb = new StringBuilder();
         sb.append(parameters.getId()).append(parameters.getProperties()).append(parameters.getFilters())
             .append(parameters.getSourceParameters());
@@ -89,7 +90,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             );
             return new CompositeBlock(result);
         } catch (MacroExecutionException e) {
-            throw new RuntimeException(e);
+            throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
         }
     }
 
@@ -114,6 +115,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     @Override
     public boolean isAsyncAllowed()
     {
+        // TODO: Not sure if we should take into consideration any external factors when deciding whether to render
+        //  this asynchronously or not.
         return true;
     }
 
