@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.displayer;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.xwiki.component.phase.InitializationException;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.parser.Parser;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.openproject.internal.displayer.property.StatusPropertyDisplayer;
@@ -49,8 +51,13 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.property.TypeP
 @Named("openproject")
 public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerManager, Initializable
 {
+    private static final String KEY_INSTANCE = "instance";
+
     @Inject
     private WorkItemPropertyDisplayerManager defaultDisplayerManager;
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
 
     @Inject
     @Named("plain/1.0")
@@ -69,7 +76,12 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, String> parameters)
     {
         if (registeredDisplayers.containsKey(propertyName)) {
-            return registeredDisplayers.get(propertyName).display(propertyValue, parameters);
+            Map<String, String> newParams = parameters;
+            if (parameters.isEmpty()) {
+                newParams = Collections.singletonMap(KEY_INSTANCE,
+                    executionContext.getContext().getOrDefault(KEY_INSTANCE, "").toString());
+            }
+            return registeredDisplayers.get(propertyName).display(propertyValue, newParams);
         }
         return defaultDisplayerManager.displayProperty(propertyName, propertyValue, parameters);
     }
@@ -77,6 +89,10 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     @Override
     public WorkItemPropertyDisplayer getDisplayerForProperty(String property)
     {
-        return null;
+        WorkItemPropertyDisplayer propertyDisplayer = registeredDisplayers.get(property);
+        if (propertyDisplayer == null) {
+            return defaultDisplayerManager.getDisplayerForProperty(property);
+        }
+        return propertyDisplayer;
     }
 }

@@ -108,14 +108,21 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
                 ProjectManagementAsyncRenderer asyncRenderer =
                     componentManager.getInstance(ProjectManagementAsyncRenderer.class);
-                configuration.setContextEntries(Set.of(XWikiContextContextStore.PROP_USER));
+                // Pass some properties that might be of interest to a potential displayer macro.
+                configuration.setContextEntries(
+                    Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
+                        XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
                 asyncRenderer.initialize(displayerMacro, parameters, content, context);
                 Block result = executor.execute(asyncRenderer, configuration);
                 return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
             }
             return displayerMacro.execute(parameters, newContent, context);
-        } catch (ComponentLookupException | JobException | RenderingException e) {
+        } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
+        } catch (JobException | RenderingException e) {
+            throw new MacroExecutionException(
+                String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer.name()),
+                e);
         }
     }
 
