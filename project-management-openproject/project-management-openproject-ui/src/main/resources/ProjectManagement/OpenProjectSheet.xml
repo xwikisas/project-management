@@ -222,61 +222,60 @@
    id="create-connection-button"
    type="button" class="btn btn-primary"
   &gt;
-        &lt;i class="fa fa-plus"&gt;&lt;/i&gt;
-        $services.localization.render('openproject.config.addNewConnection')
-    &lt;/button&gt;
+    &lt;i class="fa fa-plus"&gt;&lt;/i&gt;
+      $services.localization.render('openproject.config.addNewConnection')
+  &lt;/button&gt;
   #createConnectionModal
   #editConnectionModal
   #deleteConnectionModal
   {{/html}}
 
-    {{liveData
+  {{liveData
   id="openproject_connections"
   properties="connectionName,serverURL,clientId,clientSecret,actions"
   source="liveTable"
   sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=ProjectManagement.OpenProjectSourceJson"
-}}
-{
-  "meta": {
-    "entryDescriptor": {
-      "idProperty": "connectionName"
-    },
-    "propertyDescriptors": [
-      {
-        "id": "actions",
-        "displayer": "html",
-        "sortable": false,
-        "filterable": false
+  }}
+  {
+    "meta": {
+      "entryDescriptor": {
+        "idProperty": "connectionName"
       },
-      {
-        "id": "connectionName",
-        "displayer": "html",
-        "sortable": false,
-        "filterable": false
-      },
-      {
-      "id": "serverURL",
-      "displayer": "html",
-      "sortable": false,
-        "filterable": false
-      },
-      {
-      "id": "clientId",
-      "displayer": "html",
-      "sortable": false,
-        "filterable": false
-      },
-      {
-      "id": "clientSecret",
-      "displayer": "html",
-      "sortable": false,
-        "filterable": false
-      }
-    ]
+      "propertyDescriptors": [
+        {
+          "id": "actions",
+          "displayer": "html",
+          "sortable": false,
+          "filterable": false
+        },
+        {
+          "id": "connectionName",
+          "displayer": "html",
+          "sortable": false,
+          "filterable": true
+        },
+        {
+          "id": "serverURL",
+          "displayer": "html",
+          "sortable": false,
+          "filterable": true
+        },
+        {
+          "id": "clientId",
+          "displayer": "html",
+          "sortable": false,
+          "filterable": true
+        },
+        {
+          "id": "clientSecret",
+          "displayer": "html",
+          "sortable": false,
+          "filterable": false
+        }
+      ]
+    }
   }
-}
-{{/liveData}}
-
+  {{/liveData}}
 #else
   {{info}}
     $escapetool.xml($services.localization.render('openproject.config.noRights'))
