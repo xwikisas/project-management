@@ -120,5 +120,6 @@
     "actions" : $actionsHTML
       }))
 #end
-#jsonResponse($json)</content>
+#jsonResponse($json)
+{{/velocity}}</content>
 </xwikidoc>
