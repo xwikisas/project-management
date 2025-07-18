@@ -36,7 +36,7 @@
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>{{velocity wiki="false" output="false"}}
+  <content>{{velocity wiki="false"}}
 #set ($configClassName = 'ProjectManagement.OpenProjectConnectionClass')
 
 #set ($offset = $numbertool.toNumber($request.get('offset')).intValue())
@@ -53,11 +53,13 @@
 #set ($query =
   "from doc.object($configClassName) as connection where connection.connectionName like :connectionName and connection.serverURL like :serverURL and connection.clientId like :clientId")
 
-#set ($filterConnectionName = $escapetool.xml($stringtool.trim($request.get("connectionName"))))
-#set ($filterServerURL = $escapetool.xml($stringtool.trim($request.get("serverURL"))))
-#set ($filterClientId = $escapetool.xml($stringtool.trim($request.get("clientId"))))
-
-#set ($bindedQuery = $services.query.xwql($query).bindValue('connectionName', "%$!{filterConnectionName}%").bindValue('serverURL', "%$!{filterServerURL}%").bindValue('clientId', "%$!{filterClientId}%"))
+#set ($filterConnectionName = $request.get("connectionName"))
+#set ($filterServerURL = $request.get("serverURL"))
+#set ($filterClientId = $request.get("clientId"))
+#set ($connectionNameParameter = $services.query.parameter().anyChars().literal("$!filterConnectionName").anyChars()))
+#set ($serverURLParameter = $services.query.parameter().anyChars().literal("$!filterServerURL").anyChars()))
+#set ($clientIdParameter = $services.query.parameter().anyChars().literal("$!filterClientId").anyChars()))
+#set ($bindedQuery = $services.query.xwql($query).bindValue('connectionName', $connectionNameParameter).bindValue('serverURL', $serverURLParameter).bindValue('clientId', $clientIdParameter))
 
 #set ($totalRows = $bindedQuery.count())
 
@@ -118,8 +120,5 @@
     "actions" : $actionsHTML
       }))
 #end
-{{/velocity}}
-{{velocity wiki="false"}}
-$jsontool.serialize($json)
-{{/velocity}}</content>
+#jsonResponse($json)</content>
 </xwikidoc>
