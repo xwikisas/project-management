@@ -38,65 +38,88 @@
   <hidden>true</hidden>
   <content>{{velocity wiki="false"}}
 #set ($configClassName = 'ProjectManagement.OpenProjectConnectionClass')
-#set ($query = "from doc.object($configClassName) as connection")
-#set ($connectionsDocs = $services.query.xwql($query).execute())
-#set ($connObjects = [])
-#foreach($connectionDoc in $connectionsDocs)
-    #set ($document = $xwiki.getDocument($connectionDoc))
-    #set ($connection = $document.getObject($configClassName))
-    #set ($discard = $connObjects.add($connection))
+
+#set ($offset = $numbertool.toNumber($request.get('offset')).intValue())
+#set ($offset = $offset - 1)
+#if(!$offset || $offset &lt;= 0)
+  #set ($offset = 0)
 #end
-#set ($results = $connObjects)
-{
-  "totalrows": $results.size(),
+
+#set ($limit = $numbertool.toNumber($request.get('limit')).intValue())
+#if (!$limit)
+  #set ($limit = 10)
+#end
+
+#set ($query =
+  "from doc.object($configClassName) as connection where connection.connectionName like :connectionName and connection.serverURL like :serverURL and connection.clientId like :clientId")
+
+#set ($filterConnectionName = $request.get("connectionName"))
+#set ($filterServerURL = $request.get("serverURL"))
+#set ($filterClientId = $request.get("clientId"))
+#set ($connectionNameParameter = $services.query.parameter().anyChars().literal("$!filterConnectionName").anyChars()))
+#set ($serverURLParameter = $services.query.parameter().anyChars().literal("$!filterServerURL").anyChars()))
+#set ($clientIdParameter = $services.query.parameter().anyChars().literal("$!filterClientId").anyChars()))
+#set ($bindedQuery = $services.query.xwql($query).bindValue('connectionName', $connectionNameParameter).bindValue('serverURL', $serverURLParameter).bindValue('clientId', $clientIdParameter))
+
+#set ($totalRows = $bindedQuery.count())
+
+#set ($connectionsDocs = $bindedQuery.setOffset($offset).setLimit($limit).execute())
+
+#set ($results = [])
+
+#foreach ($connectionDoc in $connectionsDocs)
+  #set ($document = $xwiki.getDocument($connectionDoc))
+  #set ($connection = $document.getObject($configClassName))
+  #set ($discard = $results.add($connection))
+#end
+
+#set ($json = {
+  "totalrows": $totalRows,
   "matchingtags": {},
   "tags" : [],
   "returnedrows": $results.size(),
-  "offset": 0,
-  "sort": "$request.sort",
-  "dir": "$request.dir",
+  "offset": $offset,
   "reqNo": $numbertool.toNumber($request.reqNo).intValue(),
-  "rows" : [
-  #foreach($result in $results)
+  "rows" : []
+})
+
+#foreach ($result in $results)
   #set ($documentReference = $result.getDocumentReference())
-  #set ($connectionName = "&lt;span class='text-muted'&gt;$!result.get('connectionName')&lt;/span&gt;")
-  #set ($serverURL = "&lt;a href='http://$!result.get('serverURL')' target='_blank'&gt;$!result.get('serverURL')&lt;/a&gt;")
-  #set ($clientId = "&lt;span class='text-primary'&gt;$!result.get('clientId')&lt;/span&gt;")
-  #set ($clientSecret = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
-  #set ($conn = $jsontool.serialize($result.get("connectionName")))
-  #set ($sURL = $jsontool.serialize($result.get("serverURL")))
-  #set ($cId = $jsontool.serialize($result.get("clientId")))
-  #set ($cS = $jsontool.serialize($result.get("clientSecret")))
+  #set ($connectionName = $escapetool.xml($result.get("connectionName")))
+  #set ($serverURL = $escapetool.xml($result.get("serverURL")))
+  #set ($clientId = $escapetool.xml($result.get("clientId")))
+  #set ($clientSecret = $escapetool.xml($result.get("clientSecret")))
+  #set ($connectionNameHtml = "&lt;span class='text-muted'&gt;$connectionName&lt;/span&gt;")
+  #set ($serverURLHtml = "&lt;a href='$serverURL' target='_blank'&gt;$!result.get('serverURL')&lt;/a&gt;")
+  #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$clientId&lt;/span&gt;")
+  #set ($clientSecretHtml = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
   #set ($actionsHTML = "
   &lt;button
-    class='edit-button btn btn-link'
-    data-connectionName=$conn
-    data-serverURL=$sURL
-    data-clientId=$cId
-    data-clientSecret=$cS
+    class='edit-button btn-link'
+    data-connectionName=$connectionName
+    data-serverURL=$serverURL
+    data-clientId=$clientId
+    data-clientSecret=$clientSecret
     data-documentReference=$documentReference
   &gt;
     &lt;i class='fa fa-pencil text-muted'&gt;&lt;/i&gt;
   &lt;/button&gt;
   &lt;button
-    class='delete-button btn btn-link'
-    data-connectionName=$conn
+    class='delete-button btn-link'
+    data-connectionName=$connectionname
     data-document-reference=$documentReference
   &gt;
     &lt;i class='fa fa-trash text-danger'&gt;&lt;/i&gt;
   &lt;/button&gt;
 ")
-  #set ($actionsJSON = $jsontool.serialize($actionsHTML))
-  #if($foreach.count &gt; 1),#end
-  {
-    "connectionName" : $jsontool.serialize($connectionName),
-    "serverURL" : $jsontool.serialize($serverURL),
-    "clientId" : $jsontool.serialize($clientId),
-    "clientSecret" : $jsontool.serialize($clientSecret),
-    "actions" : $actionsJSON
-  }
+  #set($discard = $json.rows.add({
+    "connectionName" : $connectionNameHtml,
+    "serverURL" : $serverURLHtml,
+    "clientId" : $clientIdHtml,
+    "clientSecret" : $clientSecretHtml,
+    "actions" : $actionsHTML
+      }))
 #end
-  ]
-}
+#jsonResponse($json)
 {{/velocity}}</content>
 </xwikidoc>
