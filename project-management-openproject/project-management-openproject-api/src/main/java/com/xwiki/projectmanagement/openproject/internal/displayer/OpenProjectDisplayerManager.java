@@ -38,6 +38,8 @@ import org.xwiki.rendering.parser.Parser;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
+import com.xwiki.projectmanagement.internal.displayer.property.StringPropertyDisplayer;
+import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.displayer.property.StatusPropertyDisplayer;
 import com.xwiki.projectmanagement.openproject.internal.displayer.property.TypePropertyDisplayer;
 
@@ -63,13 +65,18 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     @Named("plain/1.0")
     private Parser plainTextParser;
 
+    @Inject
+    @Named("html/5.0")
+    private Parser htmlParser;
+
     private final Map<String, WorkItemPropertyDisplayer> registeredDisplayers = new HashMap<>();
 
     @Override
     public void initialize() throws InitializationException
     {
-        registeredDisplayers.put("type", new TypePropertyDisplayer(plainTextParser));
-        registeredDisplayers.put("status", new StatusPropertyDisplayer(plainTextParser));
+        registeredDisplayers.put(WorkItem.KEY_TYPE, new TypePropertyDisplayer(plainTextParser));
+        registeredDisplayers.put(WorkItem.KEY_STATUS, new StatusPropertyDisplayer(plainTextParser));
+        registeredDisplayers.put(WorkItem.KEY_DESCRIPTION, new StringPropertyDisplayer(htmlParser));
     }
 
     @Override

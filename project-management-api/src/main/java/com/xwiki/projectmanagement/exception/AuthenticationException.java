@@ -25,7 +25,7 @@ package com.xwiki.projectmanagement.exception;
  * @version $Id$
  * @since 1.0
  */
-public class AuthenticationException extends Exception
+public class AuthenticationException extends ProjectManagementException
 {
     /**
      * Class ID for serialization.

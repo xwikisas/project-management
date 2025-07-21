@@ -1,7 +1,7 @@
 com.xwiki.projectmanagement.openproject.internal.displayer.OpenProjectDisplayerManager
 com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
-com.xwiki.projectmanagement.openproject.config.internal.DefaultOpenProjectConfiguration
-com.xwiki.projectmanagement.openproject.config.internal.OpenProjectDocumentConfigurationSource
+com.xwiki.projectmanagement.openproject.internal.config.DefaultOpenProjectConfiguration
+com.xwiki.projectmanagement.openproject.internal.config.OpenProjectDocumentConfigurationSource
 com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.Suggest
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver

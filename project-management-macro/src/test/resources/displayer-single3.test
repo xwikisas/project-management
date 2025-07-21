@@ -52,10 +52,10 @@ onWord [header]
 onSpecialSymbol [.]
 onWord [workItem]
 onSpace
-beginLink [Typed = [true] Type = [url] Reference = [WorkItem2]] [false]
+beginLink [Typed = [true] Type = [url]] [false]
 onSpecialSymbol [#]
 onWord [WorkItem2]
-endLink [Typed = [true] Type = [url] Reference = [WorkItem2]] [false]
+endLink [Typed = [true] Type = [url]] [false]
 endParagraph
 beginParagraph
 onWord [Do]
@@ -149,4 +149,4 @@ endDocument
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<div class="work-item-page-displayer"><div class="work-item-header"><p>projectmanagement.displayer.single.header.workItem <span class="wikiexternallink"><a href="WorkItem2">#WorkItem2</a></span></p><p>Do this thing!</p></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.reporter:</td><td class="work-item-property-value"></td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div><div class="work-item-property-name">projectmanagement.property.description</div><p>This is some nice description</p></div></div>
+<div class="work-item-page-displayer"><div class="work-item-header"><p>projectmanagement.displayer.single.header.workItem <span class="wikiexternallink"><a>#WorkItem2</a></span></p><p>Do this thing!</p></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.reporter:</td><td class="work-item-property-value"></td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div><div class="work-item-property-name">projectmanagement.property.description</div><p>This is some nice description</p></div></div>

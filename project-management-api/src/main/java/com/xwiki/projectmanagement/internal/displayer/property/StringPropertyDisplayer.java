@@ -62,7 +62,7 @@ public class StringPropertyDisplayer implements WorkItemPropertyDisplayer
                 return Collections.emptyList();
             }
 
-            if (!blocks.isEmpty() && blocks.get(0) instanceof ParagraphBlock) {
+            if (blocks.size() == 1 && blocks.get(0) instanceof ParagraphBlock) {
                 blocks = blocks.get(0).getChildren();
             }
             return blocks;

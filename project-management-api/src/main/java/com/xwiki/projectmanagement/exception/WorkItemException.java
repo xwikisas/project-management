@@ -26,7 +26,7 @@ package com.xwiki.projectmanagement.exception;
  * @version $Id$
  * @since 1.0
  */
-public class WorkItemException extends Exception
+public class WorkItemException extends ProjectManagementException
 {
     /**
      * Class ID for serialization.

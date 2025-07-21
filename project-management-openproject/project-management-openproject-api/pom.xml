@@ -30,6 +30,9 @@
 
   <artifactId>project-management-openproject-api</artifactId>
 
+  <properties>
+    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
@@ -67,6 +70,11 @@
       <artifactId>xwiki-platform-scheduler-api</artifactId>
       <version>${platform.version}</version>
     </dependency>
+    <!--  Needed for parsing the html work package description.  -->
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-syntax-html5</artifactId>
+      <version>${rendering.version}</version>
+    </dependency>
   </dependencies>
-
 </project>

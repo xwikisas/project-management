@@ -44,16 +44,16 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.plugin.scheduler.AbstractJob;
 import com.xpn.xwiki.web.Utils;
-import com.xwiki.projectmanagement.exception.AuthenticationException;
-import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
 /**
- * Using the {@link OpenProjectApiClient} retrieve the colors for the OpenProject properties that support customization
- * and generate a style sheet for each configured OpenProject instance.
+ * Using the {@link OpenProjectApiClient} retrieve the colors for the OpenProject properties that support
+ * customization and generate a style sheet for each configured OpenProject instance.
  *
  * @version $Id$
  */
@@ -93,15 +93,10 @@ public class StylingSetupJob extends AbstractJob
                 "document");
         XWikiContext context = getXWikiContext();
         List<String> instanceIds = null;
-        try {
-            instanceIds =
-                opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
-                    .collect(Collectors.toList());
-        } catch (AuthenticationException e) {
-            LOGGER.warn("Failed to retrieve the configured instance ids. Cause: [{}].",
-                ExceptionUtils.getRootCauseMessage(e));
-            return;
-        }
+        instanceIds =
+            opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
+                .collect(Collectors.toList());
+
         LOGGER.debug("Found [{}] configured OpenProject instances.", instanceIds);
         computeStylesheet(instanceIds, context, opConfiguration, documentReferenceResolver, userRefResolver);
     }
@@ -116,6 +111,10 @@ public class StylingSetupJob extends AbstractJob
             LOGGER.debug("Generating style for instance [{}] at document [{}].", openProjCfgName, stylesDocRef);
             try {
                 OpenProjectApiClient apiClient = opConfiguration.getOpenProjectApiClient(openProjCfgName);
+                if (apiClient == null) {
+                    LOGGER.debug("Didn't get a client for instance [{}].", openProjCfgName);
+                    continue;
+                }
 
                 StringBuilder stringBuilder = new StringBuilder();
 
@@ -129,7 +128,7 @@ public class StylingSetupJob extends AbstractJob
                 }
 
                 updateStylePage(context, stylesDocRef, stringBuilder, userRefResolver);
-            } catch (AuthenticationException | XWikiException e) {
+            } catch (XWikiException | ProjectManagementException e) {
                 LOGGER.warn("Failed to update the styling for the configured open project instance [{}]. Cause: [{}].",
                     openProjCfgName, ExceptionUtils.getRootCauseMessage(e));
             }
@@ -137,8 +136,9 @@ public class StylingSetupJob extends AbstractJob
     }
 
     private void composeTypeStyles(String openProjCfgName, OpenProjectApiClient apiClient, StringBuilder stringBuilder)
+        throws ProjectManagementException
     {
-        List<Type> types = apiClient.getTypes();
+        List<Type> types = apiClient.getTypes().getItems();
         LOGGER.debug("Retrieved [{}] types.", types.size());
         for (Type type : types) {
             if (type.getColor() == null || type.getColor().isEmpty()) {
@@ -157,9 +157,9 @@ public class StylingSetupJob extends AbstractJob
     }
 
     private void composeStatusStyles(String openProjCfgName, OpenProjectApiClient apiClient,
-        StringBuilder stringBuilder) throws AuthenticationException
+        StringBuilder stringBuilder) throws ProjectManagementException
     {
-        List<Status> statuses = apiClient.getStatuses();
+        List<Status> statuses = apiClient.getStatuses().getItems();
         LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
         for (Status status : statuses) {
             if (status.getColor() == null || status.getColor().isEmpty()) {

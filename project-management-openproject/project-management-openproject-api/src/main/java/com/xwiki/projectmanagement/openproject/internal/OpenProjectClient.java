@@ -44,9 +44,9 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.filter.internal.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.filter.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -83,12 +83,15 @@ public class OpenProjectClient implements ProjectManagementClient
             int offset = (page / pageSize) + 1;
 
             String identifier = (String) executionContext.get("identifier");
-            try {
-                String connectionName = (String) executionContext.get("instance");
-                openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
-            } catch (Exception e) {
-                throw new WorkItemRetrievalException("Cannot initialize OpenProjectApiClient", e);
+
+            String connectionName = (String) executionContext.get("instance");
+            openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
+
+            if (openProjectApiClient == null) {
+                throw new WorkItemRetrievalException(
+                    String.format("No configuration for instance [%s] was found.", connectionName));
             }
+
             String filtersString;
             if (identifier != null) {
                 String parameterName = "query_props=";

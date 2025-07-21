@@ -17,9 +17,11 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.apiclient.internal;
+package com.xwiki.projectmanagement.openproject.internal;
 
+import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -32,10 +34,13 @@ import java.util.List;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -48,7 +53,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
  *
  * @version $Id$
  */
-public class OpenProjectApiClient
+public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 {
     private static final String OP_RESPONSE_AUTHOR = "author";
 
@@ -120,6 +125,8 @@ public class OpenProjectApiClient
 
     private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
+    private static final String OP_OFFSET = "offset";
+
     private final HttpClient client = HttpClient.newHttpClient();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -134,64 +141,39 @@ public class OpenProjectApiClient
      * @param token the API authentication token used to access the OpenProject API
      * @param connectionUrl the base URL of the OpenProject instance
      */
-    public OpenProjectApiClient(String connectionUrl, String token)
+    public DefaultOpenProjectApiClient(String connectionUrl, String token)
     {
         this.connectionUrl = connectionUrl;
         this.token = token;
     }
 
-    /**
-     * Retrieves a list of available work packages from the current OpenProject configuration.
-     *
-     * @param offset the offset index from which to start retrieving work items
-     * @param pageSize the maximum number of work items to return
-     * @param filters optional filters to apply (e.g. query parameters encoded as a string)
-     * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata
-     */
-    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters)
+    @Override
+    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters) throws
+        ProjectManagementException
     {
-        try {
-            URIBuilder uriBuilder = new URIBuilder(connectionUrl + API_URL_WORK_PACKAGES);
-            uriBuilder.addParameter("offset", String.valueOf(offset));
-            uriBuilder.addParameter(PAGE_SIZE, String.valueOf(pageSize));
-            uriBuilder.addParameter(OP_FILTERS, filters);
+        JsonNode mainNode =
+            getOpenProjectResponse(API_URL_WORK_PACKAGES, String.valueOf(offset), String.valueOf(pageSize), filters,
+                "");
+        PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
 
-            PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
-            HttpRequest request =
-                createGetHttpRequest(uriBuilder.build());
+        int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            String body = response.body();
+        List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
 
-            JsonNode mainNode = objectMapper.readTree(body);
-
-            int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
-
-            List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
-
-            paginatedResult.setItems(workPackages);
-            paginatedResult.setPage(offset);
-            paginatedResult.setPageSize(pageSize);
-            paginatedResult.setTotalItems(totalNumberOfWorkItems);
-            return paginatedResult;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        paginatedResult.setItems(workPackages);
+        paginatedResult.setPage(offset);
+        paginatedResult.setPageSize(pageSize);
+        paginatedResult.setTotalItems(totalNumberOfWorkItems);
+        return paginatedResult;
     }
 
-    /**
-     * Retrieves a list of available users based on the specified page size and filter criteria  from the current
-     * OpenProject configuration.
-     *
-     * @param pageSize the number of users to retrieve per page
-     * @param filters a JSON-formatted string representing filter criteria to apply to the request
-     * @return a list of {@link User}
-     */
-    public List<User> getUsers(int pageSize, String filters)
+    @Override
+    public PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException
     {
         JsonNode elements =
-            getSuggestionsMainNode(
+            getOpenProjectResponse(
                 API_URL_USERS,
+                "",
                 String.valueOf(pageSize),
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
@@ -208,22 +190,16 @@ public class OpenProjectApiClient
                 user.getId())));
             users.add(user);
         }
-        return users;
+        return new PaginatedResult<>(users, 0, users.size(), users.size());
     }
 
-    /**
-     * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
-     * current OpenProject configuration.
-     *
-     * @param pageSize the number of users to retrieve per page
-     * @param filters a JSON-formatted string representing filter criteria to apply to the request
-     * @return a list of {@link Project}
-     */
-    public List<Project> getProjects(int pageSize, String filters)
+    @Override
+    public PaginatedResult<Project> getProjects(int pageSize, String filters) throws ProjectManagementException
     {
         JsonNode elements =
-            getSuggestionsMainNode(
+            getOpenProjectResponse(
                 API_URL_PROJECTS,
+                "",
                 String.valueOf(pageSize),
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
@@ -238,17 +214,13 @@ public class OpenProjectApiClient
             project.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
             projects.add(project);
         }
-        return projects;
+        return new PaginatedResult<>(projects, 0, projects.size(), projects.size());
     }
 
-    /**
-     * Retrieves all available types from the current OpenProject configuration.
-     *
-     * @return a List of {@link Type}
-     */
-    public List<Type> getTypes()
+    @Override
+    public PaginatedResult<Type> getTypes() throws ProjectManagementException
     {
-        JsonNode elements = getSuggestionsMainNode(API_URL_TYPES, "", "", "");
+        JsonNode elements = getOpenProjectResponse(API_URL_TYPES, "", "", "", "");
         List<Type> types = new ArrayList<>();
         for (JsonNode element : elements) {
             Type type = new Type();
@@ -261,17 +233,13 @@ public class OpenProjectApiClient
             type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
             types.add(type);
         }
-        return types;
+        return new PaginatedResult<>(types, 0, types.size(), types.size());
     }
 
-    /**
-     * Retrieves all available statuses from the current OpenProject configuration.
-     *
-     * @return a List of {@link Status}
-     */
-    public List<Status> getStatuses()
+    @Override
+    public PaginatedResult<Status> getStatuses() throws ProjectManagementException
     {
-        JsonNode elements = getSuggestionsMainNode(API_URL_STATUSES, "", "", "");
+        JsonNode elements = getOpenProjectResponse(API_URL_STATUSES, "", "", "", "");
         List<Status> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
             Status status = new Status();
@@ -284,17 +252,13 @@ public class OpenProjectApiClient
             status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
             statuses.add(status);
         }
-        return statuses;
+        return new PaginatedResult<>(statuses, 0, statuses.size(), statuses.size());
     }
 
-    /**
-     * Retrieves all available priorities from the current OpenProject configuration.
-     *
-     * @return a List of {@link Priority}
-     */
-    public List<Priority> getPriorities()
+    @Override
+    public PaginatedResult<Priority> getPriorities() throws ProjectManagementException
     {
-        JsonNode elements = getSuggestionsMainNode(API_URL_PRIORITIES, "", "", "");
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_PRIORITIES, "", "", "", "");
         List<Priority> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
             Priority priority = new Priority();
@@ -307,14 +271,18 @@ public class OpenProjectApiClient
             priority.setColor(color);
             priorities.add(priority);
         }
-        return priorities;
+        return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
     }
 
-    private JsonNode getSuggestionsMainNode(String urlPart, String pageSize, String filtersString,
-        String selectedElementsString)
+    private JsonNode getOpenProjectResponse(String urlPart, String offset, String pageSize, String filtersString,
+        String selectedElementsString) throws ProjectManagementException
     {
+        String uri = connectionUrl + urlPart;
         try {
-            URIBuilder uriBuilder = new URIBuilder(connectionUrl + urlPart);
+            URIBuilder uriBuilder = new URIBuilder(uri);
+            if (!offset.isEmpty()) {
+                uriBuilder.addParameter(OP_OFFSET, offset);
+            }
             if (!filtersString.isEmpty()) {
                 uriBuilder.addParameter(OP_FILTERS, filtersString);
             }
@@ -327,11 +295,30 @@ public class OpenProjectApiClient
             HttpRequest request =
                 createGetHttpRequest(uriBuilder.build());
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400) {
+                throw new ProjectManagementException(
+                    String.format("Failed to retrieve the open project entities from the url [%s] with message [%s].",
+                        uri, response.body()));
+            }
             String body = response.body();
-            return objectMapper.readTree(body).path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            return objectMapper.readTree(body);
+        } catch (URISyntaxException e) {
+            throw new ProjectManagementException(
+                String.format("Failed to build the open project entity retrieval url [%s].", uri), e);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(
+                String.format("Error trying to read the open project response from [%s].", uri), e);
+        } catch (IOException | InterruptedException | SecurityException e) {
+            throw new ProjectManagementException(
+                String.format("There was an issue in communicating with [%s].", uri), e);
         }
+    }
+
+    private JsonNode getOpenProjectResponseEntities(String urlPart, String offset, String pageSize,
+        String filtersString, String selectedElementsString) throws ProjectManagementException
+    {
+        return getOpenProjectResponse(urlPart, offset, pageSize, filtersString, selectedElementsString).path(
+            OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
     }
 
     private int getTotalNumberOfWorkItems(JsonNode mainNode)
@@ -354,7 +341,7 @@ public class OpenProjectApiClient
     {
         WorkPackage workPackage = new WorkPackage();
 
-        workPackage.setDescription(element.path(OP_DESCRIPTION).path("raw").asText());
+        workPackage.setDescription(element.path(OP_DESCRIPTION).path("html").asText());
         int id = element.path(OP_RESPONSE_ID).asInt();
         workPackage.setId(id);
 

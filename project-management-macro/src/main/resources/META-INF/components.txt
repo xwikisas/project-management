@@ -1,4 +1,3 @@
-com.xwiki.projectmanagement.internal.OpenProjClient
 com.xwiki.projectmanagement.internal.macro.TestMacro
 com.xwiki.projectmanagement.internal.displayers.WorkItemsCardsDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsListDisplayer

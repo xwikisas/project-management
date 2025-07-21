@@ -31,7 +31,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
  * @version $Id$
  * @since 1.0
  */
-final class OpenProjectConverters
+public final class OpenProjectConverters
 {
     private OpenProjectConverters()
     {

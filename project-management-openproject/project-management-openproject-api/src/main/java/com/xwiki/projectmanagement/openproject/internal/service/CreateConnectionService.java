@@ -31,6 +31,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.query.Query;
+import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
@@ -39,6 +40,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 /**
  * Class for creating the connection.
@@ -83,31 +85,32 @@ public class CreateConnectionService
      * @param serverURL the base URL of the OpenProject server.
      * @param clientId the OAuth2 client ID used for authentication with OpenProject.
      * @param clientSecret the OAuth2 client secret used for authentication with OpenProject.
-     * @throws Exception if there is any issue while creating or saving the document, or accessing the context.
+     * @throws ProjectManagementException if a configuration with the same name already exists.
+     * @throws XWikiException if the query failed or the document retrieval/creation fails.
      */
     public void createConnection(String connectionName, String serverURL, String clientId,
-        String clientSecret) throws Exception
+        String clientSecret) throws ProjectManagementException, XWikiException
     {
 
-        List<String> result = queryManager.createQuery(
-                "select obj.name from BaseObject obj, StringProperty configName "
-                    + "where obj.className = :className and obj.id = configName.id.id "
-                    + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
-            .bindValue("className", PROJECT_MANAGEMENT + "." + OPEN_PROJECT_CONNECTION_CLASS)
-            .bindValue("configFieldName", CONNECTION_NAME)
-            .bindValue("config", connectionName).execute();
+        List<String> result = null;
+        try {
+            result = queryManager.createQuery(
+                    "select obj.name from BaseObject obj, StringProperty configName "
+                        + "where obj.className = :className and obj.id = configName.id.id "
+                        + "and configName.id.name = :configFieldName and configName.value = :config", Query.HQL)
+                .bindValue("className", PROJECT_MANAGEMENT + "." + OPEN_PROJECT_CONNECTION_CLASS)
+                .bindValue("configFieldName", CONNECTION_NAME)
+                .bindValue("config", connectionName).execute();
+        } catch (QueryException e) {
+            throw new XWikiException(
+                String.format("Failed to check whether the id [%s] already exists or not.", connectionName), e);
+        }
 
         if (!result.isEmpty()) {
-            throw new RuntimeException(
-                "Connection " + connectionName + " already exists"
-            );
+            throw new ProjectManagementException(String.format("Connection [%s] already exists.", connectionName));
         }
 
-        try {
-            createConnectionObjects(connectionName, serverURL, clientId, clientSecret);
-        } catch (XWikiException e) {
-            throw new RuntimeException("Failed to create connection: " + connectionName, e);
-        }
+        createConnectionObjects(connectionName, serverURL, clientId, clientSecret);
     }
 
     private void createConnectionObjects(String connectionName, String serverURL,

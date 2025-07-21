@@ -25,7 +25,7 @@ import java.util.List;
 import org.xwiki.component.annotation.Role;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
-import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 
 /**
  * Provides methods for retrieving OpenProject configuration properties and access tokens.
@@ -39,37 +39,32 @@ public interface OpenProjectConfiguration
      * Retrieves a list of available OpenProject connections.
      *
      * @return a list of {@code OpenProjectConnection} instances;
-     * @throws AuthenticationException when the connection list cannot be retrieved due to the current user not
-     *     having the required rights.
      */
-    List<OpenProjectConnection> getOpenProjectConnections() throws AuthenticationException;
+    List<OpenProjectConnection> getOpenProjectConnections();
 
     /**
      * Retrieves the server URL associated with a given connection name.
      *
      * @param connectionName the name of the OpenProject connection configuration
      * @return the server URL associated with the given connection
-     * @throws AuthenticationException when the connection URL cannot be retrieved due to the current user not
-     *     having the required rights.
      */
-    String getConnectionUrl(String connectionName) throws AuthenticationException;
+    OpenProjectConnection getConnection(String connectionName);
 
     /**
      * Retrieves the server URL associated with a given connection name.
      *
      * @param connectionName the name of the OpenProject connection configuration
      * @return the server URL associated with the given connection
-     * @throws AuthenticationException when the connection does not exist.
      */
-    String getAccessTokenForConfiguration(String connectionName) throws AuthenticationException;
+    String getAccessTokenForConfiguration(String connectionName);
 
     /**
      * Creates a new OAuth token using the specified connection name and redirect URL.
      *
      * @param connectionName the name of the connection to use for creating the OAuth token
      * @param redirectUrl the URL to which the OAuth provider will redirect after authorization
-     * @throws AuthenticationException when a new token cannot be created due to the current user not having the
-     *     required rights.
+     * @throws AuthenticationException when the OAuth2 protocol between xwiki and the configured Open Project
+     *     instance failed.
      */
     void createNewToken(String connectionName, String redirectUrl) throws AuthenticationException;
 
@@ -78,7 +73,6 @@ public interface OpenProjectConfiguration
      *
      * @param connectionName the name of the connection from which to obtain data
      * @return a configured {@code OpenProjectApiClient} ready for use
-     * @throws AuthenticationException if the client cannot be initialized due to missing configuration
      */
-    OpenProjectApiClient getOpenProjectApiClient(String connectionName) throws AuthenticationException;
+    OpenProjectApiClient getOpenProjectApiClient(String connectionName);
 }

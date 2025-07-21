@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.internal;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,23 +18,35 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+package com.xwiki.projectmanagement.exception;
+
 /**
- * An enum listing the different ways a list of work items can be displayed.
+ * Base exception for project management.
  *
  * @version $Id$
+ * @since 1.0
  */
-public enum WorkItemsDisplayer
+public class ProjectManagementException extends Exception
 {
     /**
-     * Display the work items using a livedata.
+     * Class ID for serialization.
      */
-    liveData,
+    private static final long serialVersionUID = 1L;
+
     /**
-     * Display the work items using a livedata in the card layout.
+     * @param message the detail message for this exception.
      */
-    liveDataCards,
+    public ProjectManagementException(String message)
+    {
+        super(message);
+    }
+
     /**
-     * Display a single work item in a page structure.
+     * @param message the detail message for this exception.
+     * @param throwable the cause for this exception or null if none exists.
      */
-    workItemsSingle;
+    public ProjectManagementException(String message, Throwable throwable)
+    {
+        super(message, throwable);
+    }
 }

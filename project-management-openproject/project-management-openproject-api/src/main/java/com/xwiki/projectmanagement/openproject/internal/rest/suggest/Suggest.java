@@ -40,7 +40,8 @@ import javax.ws.rs.core.Response;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
-import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
@@ -99,74 +100,83 @@ public class Suggest extends XWikiResource
         OpenProjectApiClient openProjectApiClient;
 
         String lowerSearch = search.toLowerCase();
-        try {
-            openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
-        } catch (Exception e) {
-            return Response.serverError().entity(e.getMessage()).build();
+
+        openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        if (openProjectApiClient == null) {
+            // No configuration was found.
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
+
         List<Map<String, String>> response;
 
-        switch (suggest) {
-            case ID:
-                response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize);
-                break;
-            case PRIORITIES:
-                response = getPrioritiesSuggestions(openProjectApiClient);
-                break;
-            case STATUSES:
-                response = getStatusesSuggestions(openProjectApiClient);
-                break;
-            case PROJECTS:
-                response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize);
-                break;
-            case TYPE:
-                response = getTypesSuggestions(openProjectApiClient);
-                break;
-            case USERS:
-                response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize);
-                break;
-            default:
-                response = Collections.emptyList();
-                break;
+        try {
+            switch (suggest) {
+                case ID:
+                    response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    break;
+                case PRIORITIES:
+                    response = getPrioritiesSuggestions(openProjectApiClient);
+                    break;
+                case STATUSES:
+                    response = getStatusesSuggestions(openProjectApiClient);
+                    break;
+                case PROJECTS:
+                    response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    break;
+                case TYPE:
+                    response = getTypesSuggestions(openProjectApiClient);
+                    break;
+                case USERS:
+                    response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    break;
+                default:
+                    response = Collections.emptyList();
+                    break;
+            }
+        } catch (ProjectManagementException e) {
+            return Response.serverError().entity(e).build();
         }
         return Response.ok(response).build();
     }
 
     private List<Map<String, String>> getIdentifiersSuggestions(OpenProjectApiClient openProjectApiClient,
         String searchString,
-        int pageSize)
+        int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter("subject", searchString);
         return getSuggestions(openProjectApiClient.getWorkPackages(0, pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)
+        throws ProjectManagementException
     {
-        return getSuggestions(openProjectApiClient.getPriorities());
+        return getSuggestions(openProjectApiClient.getPriorities().getItems());
     }
 
     private List<Map<String, String>> getStatusesSuggestions(OpenProjectApiClient openProjectApiClient)
+        throws ProjectManagementException
     {
-        return getSuggestions(openProjectApiClient.getStatuses());
+        return getSuggestions(openProjectApiClient.getStatuses().getItems());
     }
 
     private List<Map<String, String>> getProjectsSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize)
+        String searchString, int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter(NAME, searchString);
-        return getSuggestions(openProjectApiClient.getProjects(pageSize, filter));
+        return getSuggestions(openProjectApiClient.getProjects(pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getTypesSuggestions(OpenProjectApiClient openProjectApiClient)
+        throws ProjectManagementException
     {
-        return getSuggestions(openProjectApiClient.getTypes());
+        return getSuggestions(openProjectApiClient.getTypes().getItems());
     }
 
     private List<Map<String, String>> getUsersSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize)
+        String searchString, int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter(NAME, searchString);
-        return getSuggestions(openProjectApiClient.getUsers(pageSize, filter));
+        return getSuggestions(openProjectApiClient.getUsers(pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getSuggestions(

@@ -102,9 +102,14 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             parameters.setFilters("");
         }
         try {
+            String displayerId = displayer.name();
+            if (WorkItemsDisplayer.liveDataCards.equals(displayer)) {
+                parameters.setLayouts("cards");
+                displayerId = WorkItemsDisplayer.liveData.name();
+            }
             Macro<ProjectManagementMacroParameters> displayerMacro =
-                componentManager.getInstance(Macro.class, displayer.name());
-            if (!WorkItemsDisplayer.liveData.equals(displayer)) {
+                componentManager.getInstance(Macro.class, displayerId);
+            if (!WorkItemsDisplayer.liveData.equals(displayer) && !WorkItemsDisplayer.liveDataCards.equals(displayer)) {
                 AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
                 ProjectManagementAsyncRenderer asyncRenderer =
                     componentManager.getInstance(ProjectManagementAsyncRenderer.class);
@@ -116,6 +121,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 Block result = executor.execute(asyncRenderer, configuration);
                 return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
             }
+
             return displayerMacro.execute(parameters, newContent, context);
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);

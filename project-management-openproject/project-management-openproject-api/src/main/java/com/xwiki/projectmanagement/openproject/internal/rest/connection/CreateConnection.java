@@ -30,9 +30,12 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
+import com.xpn.xwiki.XWikiException;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService;
 
 /**
@@ -47,9 +50,12 @@ public class CreateConnection extends XWikiResource
 {
     @Inject
     private CreateConnectionService createConnectionService;
+
     /**
-     * @param data dasdsads
-     * @return things.
+     * @param data the {@link com.xwiki.projectmanagement.openproject.config.OpenProjectConnection} that will be
+     *     created or updated.
+     * @return 200 if the creation/update was successful; 409 if an instance with the same connection name exists; 500
+     *     if any error was encountered.
      */
     @POST
     @Path("/create")
@@ -63,8 +69,10 @@ public class CreateConnection extends XWikiResource
         String clientSecret = (String) data.get("clientSecret");
         try {
             createConnectionService.createConnection(connectionName, serverURL, clientId, clientSecret);
-        } catch (Exception e) {
-            return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+        } catch (XWikiException e) {
+            return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
+        } catch (ProjectManagementException e) {
+            return Response.status(Response.Status.CONFLICT).build();
         }
 
         return Response.ok().build();
