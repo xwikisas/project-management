@@ -96,18 +96,18 @@
   #set ($actionsHTML = "
   &lt;button
     class='edit-button btn-link'
-    data-connectionName=$connectionName
-    data-serverURL=$serverURL
-    data-clientId=$clientId
-    data-clientSecret=$clientSecret
-    data-documentReference=$documentReference
+    data-connection-name=$connectionName
+    data-server-url=$serverURL
+    data-client-id=$clientId
+    data-client-secret=$clientSecret
+    data-edit-document-reference=$documentReference
   &gt;
     &lt;i class='fa fa-pencil text-muted'&gt;&lt;/i&gt;
   &lt;/button&gt;
   &lt;button
     class='delete-button btn-link'
-    data-connectionName=$connectionname
-    data-document-reference=$documentReference
+    data-connection-name=$connectionName
+    data-delete-document-reference=$documentReference
   &gt;
     &lt;i class='fa fa-trash text-danger'&gt;&lt;/i&gt;
   &lt;/button&gt;

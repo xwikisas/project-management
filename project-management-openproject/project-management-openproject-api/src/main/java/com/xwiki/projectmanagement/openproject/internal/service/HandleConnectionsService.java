@@ -32,6 +32,7 @@ import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
+import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
 import org.xwiki.refactoring.internal.ModelBridge;
 import org.xwiki.user.UserReference;
@@ -91,38 +92,43 @@ public class HandleConnectionsService
      * @param oldDocumentReference the document reference
      * @param newDocumentReference the new document reference of an updated object
      * @throws ProjectManagementException if a configuration with the same name already exists.
-     * @throws XWikiException if the query failed or the document retrieval/creation fails.
+     * @throws ProjectManagementException if the query failed or the document retrieval/creation fails.
      */
     public void createOrUpdateConnection(OpenProjectConnection openProjectConnection,
         DocumentReference oldDocumentReference, DocumentReference newDocumentReference)
-        throws Exception
+        throws ProjectManagementException
     {
+        List<String> result;
+        try {
+            result = queryManager.createQuery(
+                    "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
+                        + "where doc.fullName = obj.name "
+                        + "and doc.space = :spaceName "
+                        + "and obj.className = :className "
+                        + "and obj.id = configName.id.id "
+                        + "and configName.id.name = :configFieldName "
+                        + "and configName.value = :config", Query.HQL)
+                .bindValue("spaceName",
+                    compactSerializer.serialize(newDocumentReference.getLastSpaceReference()))
+                .bindValue(
+                    "className",
+                    String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
+                )
+                .bindValue("configFieldName", CONNECTION_NAME)
+                .bindValue("config", openProjectConnection.getConnectionName())
+                .setWiki(this.xcontextProvider.get().getWikiId())
+                .execute();
 
-        List<String> result = queryManager.createQuery(
-                "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
-                    + "where doc.fullName = obj.name "
-                    + "and doc.space = :spaceName "
-                    + "and obj.className = :className "
-                    + "and obj.id = configName.id.id "
-                    + "and configName.id.name = :configFieldName "
-                    + "and configName.value = :config", Query.HQL)
-            .bindValue("spaceName",
-                compactSerializer.serialize(newDocumentReference.getLastSpaceReference()))
-            .bindValue(
-                "className",
-                String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
-            )
-            .bindValue("configFieldName", CONNECTION_NAME)
-            .bindValue("config", openProjectConnection.getConnectionName())
-            .setWiki(this.xcontextProvider.get().getWikiId())
-            .execute();
+            if (!result.isEmpty()) {
+                throw new ProjectManagementException(
+                    String.format("Connection %s already exists. Use another connection name.",
+                        openProjectConnection.getConnectionName()));
+            }
 
-        if (!result.isEmpty()) {
-            throw new ProjectManagementException(String.format("Connection [%s] already exists.",
-                openProjectConnection.getConnectionName()));
+            handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
+        } catch (QueryException | XWikiException e) {
+            throw new ProjectManagementException("There was a problem while saving the connection", e);
         }
-
-        handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
     }
 
     private void handleConnectionObjects(OpenProjectConnection openProjectConnection,

@@ -30,18 +30,17 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.rest.XWikiResource;
+import org.xwiki.rest.XWikiRestException;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.Right;
 
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService;
 
 /**
  * REST Resource used for creating OpenProject configuration pages.
@@ -101,7 +100,9 @@ public class CreateConnection extends XWikiResource
                 new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
             handleConnectionsService.createOrUpdateConnection(openProjectConnection, oldDocumentRef, documentReference);
         } catch (ProjectManagementException e) {
-            return Response.status(Response.Status.CONFLICT).build();
+            return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+        } catch (XWikiRestException e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
         }
 
         return Response.ok().build();

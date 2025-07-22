@@ -318,11 +318,11 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
     $(document).on("click", ".edit-button", function () {
       $("#handleConnectionModal").modal("show");
       $("#handleConnectionModal-label").text(l10n.get("updateConnection"));
-      const connectionName = $(this).data("connectionname");
-      const serverURL = $(this).data("serverurl");
-      const clientId = $(this).data("clientid");
-      const clientSecret = $(this).data("clientsecret");
-      const documentReference = $(this).data("documentreference");
+      const connectionName = $(this).data("connection-name");
+      const serverURL = $(this).data("server-url");
+      const clientId = $(this).data("client-id");
+      const clientSecret = $(this).data("client-secret");
+      const documentReference = $(this).data("edit-document-reference");
       $("#connection-name").val(connectionName);
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
@@ -342,8 +342,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
 
     $(document).on("click", ".delete-button", function () {
       $("#deleteConnectionModal").modal("show");
-      let connectionName = $(this).data("connectionname");
-      let deleteDocumentReference = $(this).data("document-reference");
+      const connectionName = $(this).data("connection-name");
+      const deleteDocumentReference = $(this).data("delete-document-reference");
       $("#delete-connection-document-reference").val(deleteDocumentReference);
       $("#delete-connection-name").val(connectionName);
       $("#delete-connection-confirmation-message").text(
