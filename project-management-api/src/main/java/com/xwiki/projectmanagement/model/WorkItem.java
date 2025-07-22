@@ -587,6 +587,6 @@ public class WorkItem extends HashMap<String, Object>
     public String getLinkableLocation(String key)
     {
 
-        return (String) getLinkable(key).get(Linkable.KEY_VALUE);
+        return (String) getLinkable(key).get(Linkable.KEY_LOCATION);
     }
 }

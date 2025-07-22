@@ -20,14 +20,19 @@ package com.xwiki.projectmanagement.internal.displayers;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataConfiguration;
@@ -44,6 +49,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -59,8 +65,8 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectMa
     private static final String KEY_CLIENT = "client";
 
     @Inject
-    @Named("ssfx")
-    protected SkinExtension ssx;
+    @Named("ssrx")
+    protected SkinExtension ssrx;
 
     @Inject
     protected ProjectManagementManager projectManagementManager;
@@ -91,6 +97,13 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectMa
         MacroTransformationContext context)
         throws MacroExecutionException
     {
+        if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
+            Map<String, Object> clientContext =
+                URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8)
+                    .stream()
+                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
+            ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);
+        }
         String clientId = (String) macroContext.get(KEY_CLIENT);
 
         if (clientId == null || clientId.isEmpty()) {

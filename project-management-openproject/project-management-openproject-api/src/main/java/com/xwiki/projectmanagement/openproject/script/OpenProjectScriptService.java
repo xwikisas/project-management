@@ -40,7 +40,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
  * @since 1.0
  */
 @Component
-@Named("openprojectservice")
+@Named("openproject")
 @Singleton
 public class OpenProjectScriptService implements ScriptService
 {

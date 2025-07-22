@@ -22,11 +22,12 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/id?search={encodedQuery}"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/id?search={encodedQuery}"
         }
       },
       {
         "id": "type",
+        "displayer": "html",
         "filterable": true,
         "filter": {
           "id": "list",
@@ -40,7 +41,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/type"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/type"
         }
       },
       {
@@ -63,6 +64,7 @@
       },
       {
         "id": "description",
+        "displayer": "html",
         "filterable": true,
         "filter": {
           "id": "text",
@@ -349,7 +351,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/users"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users"
         }
       },
       {
@@ -375,7 +377,7 @@
               "name": "Empty"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/users"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users"
         }
       },
       {
@@ -393,7 +395,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/priorities"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/priorities"
         }
       },
       {
@@ -407,12 +409,13 @@
               "name": "Equals"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/projects"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects"
         }
       },
       {
         "id": "status",
         "filterable": true,
+        "displayer": "html",
         "filter": {
           "id": "list",
           "operators": [
@@ -437,7 +440,7 @@
               "name": "not empty"
             }
           ],
-          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/statuses"
+          "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses"
         }
       }
     ],

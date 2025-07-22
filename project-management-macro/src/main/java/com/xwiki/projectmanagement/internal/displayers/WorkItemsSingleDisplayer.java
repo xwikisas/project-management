@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.displayers;
  */
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -64,6 +65,8 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
 {
     private static final String ATTRIBUTE_CLASS = "class";
+
+    private static final String KEY_INSTANCE = "instance";
 
     private static final Map<String, String> CLASS_ROW = Collections.singletonMap(ATTRIBUTE_CLASS, "row");
 
@@ -110,7 +113,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     protected List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
         ProjectManagementMacroParameters parameters, MacroTransformationContext context)
     {
-        this.ssx.use("css/projectmanagement/displayer/single.css", Collections.singletonMap("forceSkinAction", true));
+        this.ssrx.use("css/projectmanagement/displayer/single.css", Collections.singletonMap("forceSkinAction", true));
         String translationPrefix = (String) macroContext.get("translationPrefix");
         if (workItemList.getItems().size() <= 0) {
             String noWorkItemMessage = null;
@@ -156,19 +159,21 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         TableBuilder tableTimeProps = new TableBuilder();
         String propertyPrefix = translationPrefix + PREFIX_PROPERTY;
 
+        Map<String, String> displayerParams =
+            Collections.singletonMap(KEY_INSTANCE, macroContext.getContext().getOrDefault(KEY_INSTANCE, "").toString());
         for (Map.Entry<String, Object> property : workItem.entrySet()) {
+            if (property.getValue() == null) {
+                continue;
+            }
             List<Block> propertyNameBlock = getTranslationBlocks(property.getKey(), propertyPrefix);
             propertyNameBlock.add(new SpecialSymbolBlock(':'));
             List<Block> propertyValueBlock = getPropertyDisplayerManager().displayProperty(property.getKey(),
-                property.getValue(), Collections.emptyMap());
+                property.getValue(), displayerParams);
             // Group them per type.
             TableBuilder chosenSection = tableGeneralProps;
             if (property.getValue() instanceof Date) {
                 chosenSection = tableTimeProps;
-            } else if (property.getValue() instanceof Linkable
-                || (property instanceof List<?> && !((List<?>) property).isEmpty()) && ((List<?>) property).get(
-                0) instanceof Linkable)
-            {
+            } else if (property.getValue() instanceof Linkable || isCollectionOfLinkables(property)) {
                 chosenSection = tableLinkables;
             }
             chosenSection.newRow().newCell(propertyNameBlock, PROP_NAME_PARAMS).newCell(propertyValueBlock,
@@ -180,6 +185,20 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         Block timePropsBlock = getBootstrap3Col(Collections.singletonList(tableTimeProps.build()));
 
         return getBootstrapRow(Arrays.asList(generalPropsBlock, linkablePropsBlock, timePropsBlock));
+    }
+
+    private static boolean isCollectionOfLinkables(Map.Entry<String, Object> property)
+    {
+        Object value = property.getValue();
+        if (!(value instanceof Collection)) {
+            return false;
+        }
+        if (((Collection<?>) value).isEmpty()) {
+            return false;
+        }
+        Object valueFromCollection = ((Collection<?>) value).iterator().next();
+
+        return valueFromCollection instanceof Linkable;
     }
 
     // <div class="row">
@@ -229,12 +248,13 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     {
         List<Block> headerId = getTranslationBlocks("displayer.single.header.workItem", translationPrefix);
         headerId.add(new SpaceBlock());
-        headerId.add(new SpecialSymbolBlock('#'));
-        headerId.add(new LinkBlock(
-            Collections.singletonList(new WordBlock(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER))),
-            new ResourceReference(workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER), ResourceType.URL),
-            false
-        ));
+        headerId.add(
+            new LinkBlock(
+                Arrays.asList(new SpecialSymbolBlock('#'),
+                    new WordBlock(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER))),
+                new ResourceReference(workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER), ResourceType.URL),
+                false
+            ));
         List<Block> headerName = getPropertyDisplayerManager().displayProperty(String.class.getName(),
             workItem.getLinkableValue(WorkItem.KEY_SUMMARY), Collections.emptyMap());
         // Remove id and summary so they won't be displayed again.

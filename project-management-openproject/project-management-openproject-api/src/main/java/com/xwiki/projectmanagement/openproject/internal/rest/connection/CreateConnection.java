@@ -30,6 +30,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
@@ -39,6 +40,8 @@ import org.xwiki.security.authorization.Right;
 
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService;
 
 /**
  * REST Resource used for creating OpenProject configuration pages.
@@ -69,7 +72,8 @@ public class CreateConnection extends XWikiResource
      * @param pageName the name of the page where the connection configuration will be stored
      * @param openProjectConnection the {@link OpenProjectConnection} to store
      * @param oldDocumentReference the old document reference used when updating the connection
-     * @return a response indicating the result of the operation
+     * @return 200 if the creation/update was successful; 409 if an instance with the same connection name exists; 500
+     *     if any error was encountered.
      */
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -96,8 +100,8 @@ public class CreateConnection extends XWikiResource
             DocumentReference documentReference =
                 new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
             handleConnectionsService.createOrUpdateConnection(openProjectConnection, oldDocumentRef, documentReference);
-        } catch (Exception e) {
-            return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+        } catch (ProjectManagementException e) {
+            return Response.status(Response.Status.CONFLICT).build();
         }
 
         return Response.ok().build();

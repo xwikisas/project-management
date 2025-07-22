@@ -40,7 +40,6 @@ import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.renderer.PrintRenderer;
 import org.xwiki.rendering.renderer.PrintRendererFactory;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
-import org.xwiki.rendering.renderer.printer.WikiPrinter;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
@@ -62,59 +61,57 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     private static final Set<String> KNOWN_HTML_PROPS = Set.of("assignees", "labels");
 
     @Inject
-    private ProjectManagementClientExecutionContext executionContext;
-
-    @Inject
-    private ComponentManager componentManager;
-
-    @Inject
-    private WorkItemPropertyDisplayerManager defaultDisplayerManager;
+    protected WorkItemPropertyDisplayerManager defaultDisplayerManager;
 
     @Inject
     @Named("html/5.0")
-    private PrintRendererFactory htmlRendererFactory;
+    protected PrintRendererFactory htmlRendererFactory;
 
     @Inject
-    private Logger logger;
+    protected Logger logger;
+
+    @Inject
+    protected ComponentManager componentManager;
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
 
     @Override
     public void display(Collection<WorkItem> workItems)
     {
-        String clientId = (String) executionContext.get("client");
-        WorkItemPropertyDisplayerManager displayerManager = defaultDisplayerManager;
-        if (clientId != null && !clientId.isEmpty()) {
-            try {
-                displayerManager = componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
-            } catch (ComponentLookupException ignored) {
-                logger.debug("No WorkItemPropertyDisplayerManager with id [{}] found. Using the default displayer.",
-                    clientId);
-            }
-        }
-
-        WikiPrinter printer = new DefaultWikiPrinter();
+        DefaultWikiPrinter printer = new DefaultWikiPrinter();
         PrintRenderer renderer = htmlRendererFactory.createRenderer(printer);
 
         for (WorkItem item : workItems) {
             for (Map.Entry<String, Object> itemProperty : item.entrySet()) {
-                // TODO: We know that, currently, only the assignees and labels properties are using the livedata
-                //  "html" displayers. If we don't handle them here, they will be displayed in a nasty way, as
-                //  List.toString(). We could inject/get our hands on the current LiveDataConfiguration and run the
-                //  work item prop displayer for all the eventual properties (defined in future clients) that will
-                //  use the html livedata displayer - instead of hard-coding the known properties.
-                if (KNOWN_HTML_PROPS.contains(itemProperty.getKey())) {
-                    List<Block> representation =
-                        displayerManager.displayProperty(itemProperty.getKey(), itemProperty.getValue(),
-                            Collections.emptyMap());
-                    XDOM xdom = new XDOM(representation);
-                    xdom.traverse(renderer);
-                    String html = printer.toString();
-                    itemProperty.setValue(html);
-                    ((DefaultWikiPrinter) printer).clear();
-                } else if (itemProperty.getValue() instanceof Date) {
-                    displayDateProperty(itemProperty);
-                }
+                WorkItemPropertyDisplayerManager displayerManager = getPropertyDisplayerManager();
+                displayProperty(itemProperty, renderer, displayerManager);
+                printer.clear();
             }
         }
+    }
+
+    @Override
+    public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
+        WorkItemPropertyDisplayerManager displayerManager)
+    {
+        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null)
+        {
+            setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager, Collections.emptyMap());
+        } else if (itemProperty.getValue() instanceof Date) {
+            displayDateProperty(itemProperty);
+        }
+    }
+
+    protected void setValueFromBlocksDisplayer(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
+        WorkItemPropertyDisplayerManager propertyDisplayerManager, Map<String, String> displayerParams)
+    {
+        List<Block> representation =
+            propertyDisplayerManager.displayProperty(itemProperty.getKey(), itemProperty.getValue(), displayerParams);
+        XDOM xdom = new XDOM(representation);
+        xdom.traverse(renderer);
+        String html = renderer.getPrinter().toString();
+        itemProperty.setValue(html);
     }
 
     /**
@@ -127,5 +124,22 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     private void displayDateProperty(Map.Entry<String, Object> itemProperty)
     {
         itemProperty.setValue(((Date) itemProperty.getValue()).getTime());
+    }
+
+    protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()
+    {
+        String clientId = (String) executionContext.get("client");
+        if (clientId == null || clientId.isEmpty()) {
+            return defaultDisplayerManager;
+        }
+
+        if (!componentManager.hasComponent(WorkItemPropertyDisplayerManager.class, clientId)) {
+            return defaultDisplayerManager;
+        }
+        try {
+            return componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
+        } catch (ComponentLookupException e) {
+            return defaultDisplayerManager;
+        }
     }
 }

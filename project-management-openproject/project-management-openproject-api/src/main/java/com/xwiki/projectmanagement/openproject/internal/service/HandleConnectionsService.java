@@ -41,6 +41,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
@@ -89,7 +90,8 @@ public class HandleConnectionsService
      * @param openProjectConnection the connection data to be saved
      * @param oldDocumentReference the document reference
      * @param newDocumentReference the new document reference of an updated object
-     * @throws Exception if an error occurs while creating or saving the document
+     * @throws ProjectManagementException if a configuration with the same name already exists.
+     * @throws XWikiException if the query failed or the document retrieval/creation fails.
      */
     public void createOrUpdateConnection(OpenProjectConnection openProjectConnection,
         DocumentReference oldDocumentReference, DocumentReference newDocumentReference)
@@ -116,14 +118,11 @@ public class HandleConnectionsService
             .execute();
 
         if (!result.isEmpty()) {
-            throw new RuntimeException("The connection name already exists! Please use a different connection name!");
+            throw new ProjectManagementException(String.format("Connection [%s] already exists.",
+                openProjectConnection.getConnectionName()));
         }
 
-        try {
-            handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
-        } catch (XWikiException e) {
-            throw new RuntimeException("Failed to create connection: " + openProjectConnection.getConnectionName(), e);
-        }
+        handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
     }
 
     private void handleConnectionObjects(OpenProjectConnection openProjectConnection,

@@ -24,27 +24,27 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.csrf.CSRFToken;
+import org.xwiki.localization.LocalizationManager;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
-import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xpn.xwiki.XWikiContext;
-import com.xwiki.projectmanagement.exception.AuthenticationException;
+import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -60,16 +60,27 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    @Named("ssrx")
+    private SkinExtension ssrx;
 
     @Inject
-    private DocumentAccessBridge documentAccessBridge;
+    @Named("ssx")
+    private SkinExtension ssx;
+
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
     private Provider<XWikiContext> xContextProvider;
 
     @Inject
     private CSRFToken csrfToken;
+
+    @Inject
+    private WorkItemPropertyDisplayerManager displayerManager;
+
+    @Inject
+    private LocalizationManager l10n;
 
     /**
      * Default constructor.
@@ -95,34 +106,43 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        ssrx.use("openproject/css/propertyStyles.css");
+        ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
         String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
         if (xContext.getAction().equals(viewAction)) {
             String connectionName = parameters.getInstance();
-            try {
-                String token = openProjectConfiguration.getAccessTokenForConfiguration(connectionName);
-                if (token == null || token.isEmpty()) {
-                    String currentDocumentUrl =
-                        xContext.getWiki().getURL(documentAccessBridge.getCurrentDocumentReference(),
-                            xContext);
-                    LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                        "ProjectManagement", "RenewOAuthConnection");
-                    String redirectUrl = xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext);
-                    redirectUrl = redirectUrl + "?connectionName=" + connectionName;
-                    redirectUrl = redirectUrl + "&redirectUrl=" + currentDocumentUrl;
-                    redirectUrl = redirectUrl + "&token=" + URLEncoder.encode(csrfToken.getToken(),
-                        StandardCharsets.UTF_8);
-                    return Collections.singletonList(new LinkBlock(
-                        Collections.singletonList(new WordBlock("Connect")),
-                        new ResourceReference(redirectUrl, ResourceType.URL),
-                        false,
-                        Map.of(
-                            "class", "btn btn-default"
-                        )
-                    ));
-                }
-            } catch (AuthenticationException e) {
-                throw new MacroExecutionException(e.getMessage());
+
+            String token = openProjectConfiguration.getAccessTokenForConfiguration(connectionName);
+            if (token == null || token.isEmpty()) {
+                String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
+                LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
+                    "ProjectManagement", "RenewOAuthConnection");
+                String redirectUrl =
+                    xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext) + "?connectionName="
+                        + connectionName
+                        + "&redirectUrl="
+                        + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
+                        + "&token="
+                        + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+
+                List<Block> linkContentBlocks = displayerManager.displayProperty(
+                    "",
+                    l10n.getTranslationPlain("openproject.oauth.notauthorized.link",
+                        xContext.getLocale()), Collections.emptyMap()
+                );
+
+                LinkBlock link = new LinkBlock(
+                    linkContentBlocks,
+                    new ResourceReference(redirectUrl, ResourceType.URL),
+                    false
+                );
+
+                List<Block> message = displayerManager.displayProperty("", "openproject.oauth.notauthorized.hint",
+                    Collections.emptyMap());
+                message.add(link);
+                return Collections.singletonList(
+                    new GroupBlock(message, Collections.singletonMap("class", "box warningmessage")));
             }
         }
         return super.execute(parameters, content, context);

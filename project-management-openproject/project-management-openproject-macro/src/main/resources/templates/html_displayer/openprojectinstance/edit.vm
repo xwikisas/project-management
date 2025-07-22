@@ -20,7 +20,8 @@
 #template("pickers_macros.vm")
 
 #set ($parameters = {
-  'options': $services.openprojectservice.getConnectionOptions()
+  'options': $services.openproject.getConnectionOptions(),
+  'prefix': ' '
 })
 #set ($discard = $parameters.putAll($displayer.parameters))
 #staticSelectPicker($parameters)

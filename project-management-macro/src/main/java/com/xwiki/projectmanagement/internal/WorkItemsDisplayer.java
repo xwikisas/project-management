@@ -32,13 +32,9 @@ public enum WorkItemsDisplayer
      */
     liveData,
     /**
-     * Display the items using a card style.
+     * Display the work items using a livedata in the card layout.
      */
-    workItemsCards,
-    /**
-     * Display the work items in a list.
-     */
-    workItemsList,
+    liveDataCards,
     /**
      * Display a single work item in a page structure.
      */

@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -43,9 +44,10 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.apiclient.internal.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.filter.internal.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.filter.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
  * Open project client.
@@ -76,16 +78,20 @@ public class OpenProjectClient implements ProjectManagementClient
         List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
+        PaginatedResult<WorkItem> workItemsPaginatedResult = new PaginatedResult<>();
         try {
             int offset = (page / pageSize) + 1;
 
             String identifier = (String) executionContext.get("identifier");
-            try {
-                String connectionName = (String) executionContext.get("instance");
-                openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
-            } catch (Exception e) {
-                throw new WorkItemRetrievalException("Cannot initialize OpenProjectApiClient", e);
+
+            String connectionName = (String) executionContext.get("instance");
+            openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
+
+            if (openProjectApiClient == null) {
+                throw new WorkItemRetrievalException(
+                    String.format("No configuration for instance [%s] was found.", connectionName));
             }
+
             String filtersString;
             if (identifier != null) {
                 String parameterName = "query_props=";
@@ -103,7 +109,18 @@ public class OpenProjectClient implements ProjectManagementClient
             } else {
                 filtersString = OpenProjectFilterHandler.convertFilters(filters);
             }
-            return openProjectApiClient.getWorkItems(offset, pageSize, filtersString);
+            PaginatedResult<WorkPackage> workPackagesPaginatedResult =
+                openProjectApiClient.getWorkPackages(offset,
+                    pageSize, filtersString);
+            List<WorkItem> workItems = new ArrayList<>();
+            for (WorkPackage wp : workPackagesPaginatedResult.getItems()) {
+                workItems.add(OpenProjectConverters.convertWorkPackageToWorkItem(wp));
+            }
+            workItemsPaginatedResult.setItems(workItems);
+            workItemsPaginatedResult.setPage(workPackagesPaginatedResult.getPage());
+            workItemsPaginatedResult.setPageSize(workPackagesPaginatedResult.getPageSize());
+            workItemsPaginatedResult.setTotalItems(workPackagesPaginatedResult.getTotalItems());
+            return workItemsPaginatedResult;
         } catch (Exception e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }

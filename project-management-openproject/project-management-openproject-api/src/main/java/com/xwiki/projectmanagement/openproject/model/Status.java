@@ -19,83 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
- * Describes the type of work package.
+ * Describes the type object of a work package.
  *
  * @version $Id$
  * @since 1.0
  */
-public class Status extends HashMap<String, Object>
+public class Status extends ColoredOpenProjectObject
 {
-    /**
-     * The key identifying the id property of the status.
-     */
-    public static final String KEY_ID = "id";
-
-    /**
-     * The key identifying the name property of the status.
-     */
-    public static final String KEY_NAME = "name";
-
-    /**
-     * @return the id of the work item status.
-     */
-    @JsonProperty
-    public Integer getId()
-    {
-        return (Integer) get(KEY_ID);
-    }
-
-    /**
-     * @param id see {@link #getId()}.
-     */
-    @JsonProperty(KEY_ID)
-    public void setId(int id)
-    {
-        put(KEY_ID, id);
-    }
-
-    /**
-     * @return the name of the work item status.
-     */
-    @JsonProperty
-    public String getName()
-    {
-        return (String) get(KEY_NAME);
-    }
-
-    /**
-     * @param name see {@link #getName()}.
-     */
-    @JsonProperty
-    public void setName(String name)
-    {
-        put(KEY_NAME, name);
-    }
-
-    /**
-     * @return the map.
-     */
-    @JsonAnyGetter
-    public Map<String, Object> getMapEntries()
-    {
-        return this;
-    }
-
-    /**
-     * @param key the key.
-     * @param value the value.
-     */
-    @JsonAnySetter
-    public void putEntry(String key, Object value)
-    {
-        this.put(key, value);
-    }
 }

@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.config.internal;
+package com.xwiki.projectmanagement.openproject.internal.config;
 
 import java.util.ArrayList;
 import java.util.List;

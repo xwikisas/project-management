@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.filter.internal;
+package com.xwiki.projectmanagement.openproject.internal.filter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,9 @@ import java.util.stream.Collectors;
 
 import org.xwiki.livedata.LiveDataQuery;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 /**
  * Filter converter handler.
@@ -51,7 +53,7 @@ public final class OpenProjectFilterHandler
      * @param filters the list of LiveData filters to be converted
      * @return a JSON string representing the filters in the format expected by the OpenProject API
      */
-    public static String convertFilters(List<LiveDataQuery.Filter> filters)
+    public static String convertFilters(List<LiveDataQuery.Filter> filters) throws ProjectManagementException
     {
         List<Map<String, Object>> convertedFilters = new ArrayList<>();
 
@@ -96,11 +98,13 @@ public final class OpenProjectFilterHandler
                 convertedFilters.add(convertedFilter);
             }
         }
+
+        ObjectMapper mapper = new ObjectMapper();
         try {
-            ObjectMapper mapper = new ObjectMapper();
             return mapper.writeValueAsString(convertedFilters);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(
+                "Failed to convert the project management filters into Open Project filters.", e);
         }
     }
 
@@ -108,7 +112,7 @@ public final class OpenProjectFilterHandler
      * @param filterList the list of filters from the OpenProject instance
      * @return a JSON string representing the filters in the format expected by the OpenProject API
      */
-    public static String convertFiltersFromQuery(List<Map<String, Object>> filterList)
+    public static String convertFiltersFromQuery(List<Map<String, Object>> filterList) throws ProjectManagementException
     {
         List<Map<String, Object>> convertedFilters = new ArrayList<>();
         try {
@@ -127,8 +131,8 @@ public final class OpenProjectFilterHandler
             }
             ObjectMapper mapper = new ObjectMapper();
             return mapper.writeValueAsString(convertedFilters);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException("Failed to serialize the Open Project filter.", e);
         }
     }
 }
