@@ -58,8 +58,6 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
 
     private static final String SPACE = "ProjectManagement";
 
-    private static final String CONNECTIONS_SPACE = SPACE + ".OpenProjectConfigurations";
-
     private static final LocalDocumentReference CLASS_REFERENCE =
         new LocalDocumentReference(SPACE, OPENPROJECT_CONNECTION_CLASS);
 
@@ -100,10 +98,10 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
         XWikiContext xContext = this.xcontextProvider.get();
         List<OpenProjectConnection> objects = new ArrayList<>();
         try {
-            String query = "where doc.space like :space or doc.space like  ':space.%'";
+            String query = "from doc.object(ProjectManagement.OpenProjectConnectionClass) as cfg";
             List<String> results =
                 this.queryManager.createQuery(query, Query.XWQL)
-                    .bindValue("space", CONNECTIONS_SPACE)
+                    .setWiki(xContext.getWikiId())
                     .execute();
             for (String docName : results) {
                 EntityReference entityReference =
@@ -112,6 +110,9 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 DocumentReference docRef = new DocumentReference(entityReference);
                 XWikiDocument xwikiDocument = xContext.getWiki().getDocument(docRef, xContext);
                 BaseObject baseObject = xwikiDocument.getXObject(getClassReference());
+                if (baseObject == null) {
+                    continue;
+                }
                 String connectionName = baseObject.getStringValue("connectionName");
                 String serverURL = baseObject.getStringValue("serverURL");
                 String clientId = baseObject.getStringValue("clientId");
