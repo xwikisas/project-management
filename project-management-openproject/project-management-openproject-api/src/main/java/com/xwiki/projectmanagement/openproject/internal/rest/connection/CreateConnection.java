@@ -26,12 +26,16 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.rest.XWikiResource;
+import org.xwiki.security.authorization.AuthorizationManager;
+import org.xwiki.security.authorization.Right;
 
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
@@ -49,6 +53,13 @@ public class CreateConnection extends XWikiResource
     @Inject
     private HandleConnectionsService handleConnectionsService;
 
+    @Inject
+    @Named("current")
+    private DocumentReferenceResolver<String> documentReferenceResolver;
+
+    @Inject
+    private AuthorizationManager authorizationManager;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki using the provided path parameters and
      * configuration data.
@@ -57,6 +68,7 @@ public class CreateConnection extends XWikiResource
      * @param spaceName the full space path where the page resides
      * @param pageName the name of the page where the connection configuration will be stored
      * @param openProjectConnection the {@link OpenProjectConnection} to store
+     * @param oldDocumentReference the old document reference used when updating the connection
      * @return a response indicating the result of the operation
      */
     @POST
@@ -66,12 +78,24 @@ public class CreateConnection extends XWikiResource
         @PathParam("wikiName") String wikiName,
         @PathParam("spaceName") String spaceName,
         @PathParam("pageName") String pageName,
+        @QueryParam("oldDocumentReference") String oldDocumentReference,
         OpenProjectConnection openProjectConnection)
     {
+        DocumentReference currentUserRef = getXWikiContext().getUserReference();
+        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, getXWikiContext().getWikiReference())) {
+            return Response.status(Response.Status.FORBIDDEN)
+                .entity("You need Admin rights to perform this operation.")
+                .build();
+        }
         try {
+            DocumentReference oldDocumentRef = null;
+            if (oldDocumentReference != null && !oldDocumentReference.trim().isEmpty()) {
+                oldDocumentRef = documentReferenceResolver.resolve(oldDocumentReference);
+            }
+
             DocumentReference documentReference =
                 new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
-            handleConnectionsService.createOrUpdateConnection(openProjectConnection, documentReference);
+            handleConnectionsService.createOrUpdateConnection(openProjectConnection, oldDocumentRef, documentReference);
         } catch (Exception e) {
             return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
         }

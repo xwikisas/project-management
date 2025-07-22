@@ -27,6 +27,7 @@
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
+  <parent>ProjectManagement.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -51,6 +52,7 @@
         &lt;/div&gt;
         &lt;div class="modal-body"&gt;
           &lt;input id="handle-connection-form-token" type="hidden" name="form_token" value="${escapetool.xml($services.csrf.token)}" /&gt;
+          &lt;input id="old-document-reference" type="hidden" name="old-document-reference" value=""&gt;
           &lt;div class="form-group"&gt;
             &lt;label class="h5" for="connection-name"&gt;
               &lt;strong&gt;
@@ -113,6 +115,7 @@
         &lt;form id="delete-connection-form" class="withLock xform"&gt;
           &lt;input id="delete-connection-form-token" type="hidden" name="form_token" value="${escapetool.xml($services.csrf.token)}" /&gt;
           &lt;input id="delete-connection-document-reference" type="hidden" name="delete-connection-document-reference" value=""&gt;
+          &lt;input id="delete-connection-name" type="hidden" name="delete-connection-name" value=""&gt;
           &lt;div class="modal-header"&gt;
             &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
               &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
@@ -125,7 +128,7 @@
             &lt;p class="text-muted" id="delete-connection-confirmation-message"&gt;
             &lt;/p&gt;
             &lt;p class="text-muted"&gt;
-              $escapetool.xml($services.localization.render('openproject.config.deleteConnectionDescription.second'))
+              $escapetool.xml($services.localization.render('openproject.config.delete.description.second'))
             &lt;/p&gt;
           &lt;/div&gt;
           &lt;div class="modal-footer"&gt;
@@ -298,17 +301,14 @@
       <code>define("openproject.config", {
   prefix: "openproject.config.",
   keys: [
-    "deleteConnectionDescription.first",
-    "delete.deleted",
-    "fillInAllFields",
-    "create.created",
+    "delete.description.first",
     "delete.deleted",
     "delete.errorOccurred",
+    "fillInAllFields",
     "save",
     "save.saved",
     "save.errorOccurred",
     "updateConnection",
-    "editConnection",
     "createConnection",
   ],
 });
@@ -322,10 +322,12 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $(this).data("serverurl");
       const clientId = $(this).data("clientid");
       const clientSecret = $(this).data("clientsecret");
+      const documentReference = $(this).data("documentreference");
       $("#connection-name").val(connectionName);
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       $("#client-secret").val(clientSecret);
+      $("#old-document-reference").val(documentReference);
     });
 
     $("#create-connection-button").on("click", function () {
@@ -335,6 +337,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val("");
       $("#client-id").val("");
       $("#client-secret").val("");
+      $("#old-document-reference").val("");
     });
 
     $(document).on("click", ".delete-button", function () {
@@ -342,14 +345,16 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       let connectionName = $(this).data("connectionname");
       let deleteDocumentReference = $(this).data("document-reference");
       $("#delete-connection-document-reference").val(deleteDocumentReference);
+      $("#delete-connection-name").val(connectionName);
       $("#delete-connection-confirmation-message").text(
-        `${l10n.get("deleteConnectionDescription.first")}?`
+        `${l10n.get("delete.description.first", connectionName)}?`
       );
     });
 
     $("#delete-connection-form").on("submit", async function (e) {
       e.preventDefault();
       const csrfToken = $("#delete-connection-form-token").val();
+      const connectionName = $("#delete-connection-name").val();
       const documentReference = $(
         "#delete-connection-document-reference"
       ).val();
@@ -368,7 +373,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         $("#openproject_connections").data("liveData").updateEntries();
         $("#deleteConnectionModal").modal("hide");
 
-        new XWiki.widgets.Notification(l10n.get("delete.deleted"), "done");
+        new XWiki.widgets.Notification(l10n.get("delete.deleted", connectionName), "done");
       } catch (e) {
         new XWiki.widgets.Notification(
           l10n.get("delete.errorOccurred"),
@@ -384,6 +389,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $("#server-url").val().trim();
       const clientId = $("#client-id").val().trim();
       const clientSecret = $("#client-secret").val().trim();
+      const oldDocumentReference = $("#old-document-reference").val();
 
       if (!connectionName || !serverURL || !clientId || !clientSecret) {
         return new XWiki.widgets.Notification(
@@ -398,7 +404,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         XWiki.currentDocument.getDocumentReference()
       );
 
-      const configurationName = connectionName + "Configuration";
+      const configurationName = connectionName + "InstanceConfiguration";
       const connectionRef = XWiki.Model.resolve(
         configurationName,
         XWiki.EntityType.DOCUMENT,
@@ -413,7 +419,9 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         await $.ajax({
           method: "POST",
           contentType: "application/json",
-          url: url,
+          url: !oldDocumentReference
+            ? url
+            : `${url}?oldDocumentReference=${oldDocumentReference}`,
           headers: {
             "XWiki-Form-Token": csrfToken,
           },

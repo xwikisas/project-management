@@ -33,6 +33,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryManager;
+import org.xwiki.refactoring.internal.ModelBridge;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
 
@@ -79,17 +80,22 @@ public class HandleConnectionsService
     @Named("compactwiki")
     private EntityReferenceSerializer<String> compactSerializer;
 
+    @Inject
+    private ModelBridge modelBridge;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
      * @param openProjectConnection the connection data to be saved
-     * @param documentReference the document reference where the connection document will be stored
+     * @param oldDocumentReference the document reference
+     * @param newDocumentReference the new document reference of an updated object
      * @throws Exception if an error occurs while creating or saving the document
      */
-    public void createOrUpdateConnection(OpenProjectConnection openProjectConnection, DocumentReference documentReference)
+    public void createOrUpdateConnection(OpenProjectConnection openProjectConnection,
+        DocumentReference oldDocumentReference, DocumentReference newDocumentReference)
         throws Exception
     {
-        String docRef = compactSerializer.serialize(documentReference);
+
         List<String> result = queryManager.createQuery(
                 "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
                     + "where doc.fullName = obj.name "
@@ -97,38 +103,41 @@ public class HandleConnectionsService
                     + "and obj.className = :className "
                     + "and obj.id = configName.id.id "
                     + "and configName.id.name = :configFieldName "
-                    + "and configName.value = :config "
-                    + "and doc.fullName <> :serializedDocRef", Query.HQL
-            )
-            .bindValue("spaceName", docRef)
+                    + "and configName.value = :config", Query.HQL)
+            .bindValue("spaceName",
+                compactSerializer.serialize(newDocumentReference.getLastSpaceReference()))
             .bindValue(
                 "className",
                 String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
             )
             .bindValue("configFieldName", CONNECTION_NAME)
             .bindValue("config", openProjectConnection.getConnectionName())
-            .bindValue("serializedDocRef", docRef)
             .setWiki(this.xcontextProvider.get().getWikiId())
-            .setLimit(1)
             .execute();
 
         if (!result.isEmpty()) {
-            throw new RuntimeException("There was a problem while handling the connection");
+            throw new RuntimeException("The connection name already exists! Please use a different connection name!");
         }
 
         try {
-            handleConnectionObjects(openProjectConnection, documentReference);
+            handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
         } catch (XWikiException e) {
             throw new RuntimeException("Failed to create connection: " + openProjectConnection.getConnectionName(), e);
         }
     }
 
     private void handleConnectionObjects(OpenProjectConnection openProjectConnection,
-        DocumentReference documentReference) throws XWikiException
+        DocumentReference oldDocumentReference, DocumentReference newDocumentReference) throws XWikiException
     {
-        String wikiName = documentReference.getWikiReference().getName();
+        String wikiName = newDocumentReference.getWikiReference().getName();
         XWikiContext context = this.xcontextProvider.get();
-        XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+        XWikiDocument doc;
+
+        if (oldDocumentReference != null) {
+            doc = context.getWiki().getDocument(oldDocumentReference, context);
+        } else {
+            doc = context.getWiki().getDocument(newDocumentReference, context);
+        }
 
         setDocMetaData(openProjectConnection.getConnectionName(), context, doc);
 
@@ -157,7 +166,13 @@ public class HandleConnectionsService
         oidcObj.setIntValue("enableUser", 1);
         oidcObj.setStringValue("tokenStorageScope", "USER");
 
-        context.getWiki().saveDocument(doc, "Created OpenProject and OIDC config via REST", context);
+        context.getWiki().saveDocument(doc, "Saved OpenProject and OIDC config via REST", context);
+
+        if (oldDocumentReference != null && !oldDocumentReference.equals(newDocumentReference)) {
+            modelBridge.rename(oldDocumentReference, newDocumentReference);
+            XWikiDocument newDoc = context.getWiki().getDocument(newDocumentReference, context);
+            context.getWiki().saveDocument(newDoc, "Created OpenProject and OIDC config via REST", context);
+        }
     }
 
     private void setDocMetaData(String connectionName, XWikiContext context, XWikiDocument doc)
