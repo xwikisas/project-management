@@ -72,7 +72,6 @@ public class HandleConnections extends XWikiResource
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    @Path("")
     public Response createConnection(
         @PathParam("wikiName") String wikiName,
         @PathParam("spaceName") String spaceName,
@@ -96,7 +95,6 @@ public class HandleConnections extends XWikiResource
     @PUT
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    @Path("")
     public Response updateConnection(
         @PathParam("wikiName") String wikiName,
         @PathParam("spaceName") String spaceName,
