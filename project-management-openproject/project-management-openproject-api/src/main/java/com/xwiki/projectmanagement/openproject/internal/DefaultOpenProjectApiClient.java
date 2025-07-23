@@ -63,6 +63,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_FILTERS = "filters";
 
+    private static final String OP_SORT_BY = "sortBy";
+
     private static final String OP_SELECT = "select";
 
     private static final String OP_RESPONSE_ID = "id";
@@ -148,12 +150,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters) throws
+    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters, String sortBy) throws
         ProjectManagementException
     {
         JsonNode mainNode =
             getOpenProjectResponse(API_URL_WORK_PACKAGES, String.valueOf(offset), String.valueOf(pageSize), filters,
-                "");
+                sortBy, "");
         PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
 
         int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
@@ -176,6 +178,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 "",
                 String.valueOf(pageSize),
                 filters,
+                "",
                 API_URL_SELECT_ELEMENTS_PARAM
             );
         List<User> users = new ArrayList<>();
@@ -202,6 +205,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 "",
                 String.valueOf(pageSize),
                 filters,
+                "",
                 API_URL_SELECT_ELEMENTS_PARAM
             );
         List<Project> projects = new ArrayList<>();
@@ -220,7 +224,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public PaginatedResult<Type> getTypes() throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponse(API_URL_TYPES, "", "", "", "");
+        JsonNode elements = getOpenProjectResponse(API_URL_TYPES, "", "", "", "", "");
         List<Type> types = new ArrayList<>();
         for (JsonNode element : elements) {
             Type type = new Type();
@@ -239,7 +243,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public PaginatedResult<Status> getStatuses() throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponse(API_URL_STATUSES, "", "", "", "");
+        JsonNode elements = getOpenProjectResponse(API_URL_STATUSES, "", "", "", "", "");
         List<Status> statuses = new ArrayList<>();
         for (JsonNode element : elements) {
             Status status = new Status();
@@ -258,7 +262,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public PaginatedResult<Priority> getPriorities() throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponseEntities(API_URL_PRIORITIES, "", "", "", "");
+        JsonNode elements = getOpenProjectResponse(API_URL_PRIORITIES, "", "", "", "", "").path(
+            OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
+
         List<Priority> priorities = new ArrayList<>();
         for (JsonNode element : elements) {
             Priority priority = new Priority();
@@ -275,7 +281,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     private JsonNode getOpenProjectResponse(String urlPart, String offset, String pageSize, String filtersString,
-        String selectedElementsString) throws ProjectManagementException
+        String sortByString, String selectedElementsString) throws ProjectManagementException
     {
         String uri = connectionUrl + urlPart;
         try {
@@ -285,6 +291,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             }
             if (!filtersString.isEmpty()) {
                 uriBuilder.addParameter(OP_FILTERS, filtersString);
+            }
+            if (!sortByString.isEmpty()) {
+                uriBuilder.addParameter(OP_SORT_BY, sortByString);
             }
             if (!selectedElementsString.isEmpty()) {
                 uriBuilder.addParameter(OP_SELECT, selectedElementsString);
@@ -312,13 +321,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new ProjectManagementException(
                 String.format("There was an issue in communicating with [%s].", uri), e);
         }
-    }
-
-    private JsonNode getOpenProjectResponseEntities(String urlPart, String offset, String pageSize,
-        String filtersString, String selectedElementsString) throws ProjectManagementException
-    {
-        return getOpenProjectResponse(urlPart, offset, pageSize, filtersString, selectedElementsString).path(
-            OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
     }
 
     private int getTotalNumberOfWorkItems(JsonNode mainNode)
