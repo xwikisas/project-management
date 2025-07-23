@@ -20,14 +20,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.OpenProjectSheet" locale="">
-  <web>ProjectManagement</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.OpenProjectSheet" locale="">
+  <web>OpenProject.Code</web>
   <name>OpenProjectSheet</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -37,7 +37,7 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#set ($discard = $xwiki.jsx.use('ProjectManagement.OpenProjectSheet'))
+#set ($discard = $xwiki.jsx.use('OpenProject.Code.OpenProjectSheet'))
 #macro (handleConnectionModal)
 &lt;div class="modal" id="handleConnectionModal" tabindex="-1" role="dialog" aria-labelledby="handleConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
   &lt;div class="modal-dialog" role="document"&gt;
@@ -163,7 +163,7 @@
   id="openproject_connections"
   properties="connectionName,serverURL,clientId,clientSecret,actions"
   source="liveTable"
-  sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=ProjectManagement.OpenProjectSourceJson"
+  sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=OpenProject.Code.OpenProjectSourceJson"
   }}
   {
     "meta": {
@@ -212,7 +212,7 @@
 #end
 {{/velocity}}</content>
   <object>
-    <name>ProjectManagement.OpenProjectSheet</name>
+    <name>OpenProject.Code.OpenProjectSheet</name>
     <number>0</number>
     <className>XWiki.JavaScriptExtension</className>
     <guid>053eb192-29cc-4325-9786-7db3f34fac1f</guid>
@@ -341,7 +341,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#client-secret").val("");
 
       const connectionsSpace = XWiki.Model.resolve(
-        "ProjectManagement.OpenProjectConfigurations",
+        "OpenProject.Code.OpenProjectConfigurations",
         XWiki.EntityType.SPACE,
         XWiki.currentDocument.getDocumentReference()
       );

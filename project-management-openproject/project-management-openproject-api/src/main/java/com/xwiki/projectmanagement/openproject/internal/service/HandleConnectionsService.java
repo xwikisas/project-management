@@ -60,11 +60,11 @@ public class HandleConnectionsService
 
     private static final String CLIENT_SECRET = "clientSecret";
 
-    private static final String PROJECT_MANAGEMENT = "ProjectManagement";
+    private static final String OPEN_PROJECT = "OpenProject";
+
+    private static final String CODE = "Code";
 
     private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
-
-    private static final String CONNECTION = "connection";
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
@@ -99,7 +99,7 @@ public class HandleConnectionsService
                         + "and configName.value = :config", Query.HQL)
                 .bindValue(
                     "className",
-                    String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
+                    String.format("%s.%s.%s", OPEN_PROJECT, CODE, OPEN_PROJECT_CONNECTION_CLASS)
                 )
                 .bindValue("configFieldName", CONNECTION_NAME)
                 .bindValue("config", openProjectConnection.getConnectionName())
@@ -130,7 +130,7 @@ public class HandleConnectionsService
         setDocMetaData(context, doc);
 
         DocumentReference configClassRef =
-            new DocumentReference(wikiName, PROJECT_MANAGEMENT,
+            new DocumentReference(wikiName, Arrays.asList(OPEN_PROJECT, CODE),
                 OPEN_PROJECT_CONNECTION_CLASS);
         BaseObject configObj = doc.getXObject(configClassRef, true, context);
         configObj.setStringValue(CONNECTION_NAME, openProjectConnection.getConnectionName());

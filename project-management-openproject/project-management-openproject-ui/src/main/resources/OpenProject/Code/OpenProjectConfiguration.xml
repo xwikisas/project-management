@@ -20,25 +20,25 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.ProjectManagementConfiguration" locale="">
-  <web>ProjectManagement</web>
-  <name>ProjectManagementConfiguration</name>
+<xwikidoc version="1.5" reference="OpenProject.Code.OpenProjectConfiguration" locale="">
+  <web>OpenProject.Code</web>
+  <name>OpenProjectConfiguration</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>ProjectManagementConfiguration</title>
+  <title>OpenProjectConfiguration</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content/>
   <object>
-    <name>ProjectManagement.ProjectManagementConfiguration</name>
+    <name>OpenProject.Code.OpenProjectConfiguration</name>
     <number>0</number>
     <className>XWiki.ConfigurableClass</className>
     <guid>d94a8b83-c7be-4b15-9dc9-61d6f51935de</guid>
@@ -264,7 +264,15 @@
     </property>
     <property>
       <codeToExecute>{{velocity}}
-{{include reference="ProjectManagement.ProjectManagementAdministration"/}}
+#set ($title = $services.localization.render('openproject.config.connectionsTitle'))
+#set ($description = $services.localization.render('openproject.config.connectionsDescription'))
+==$services.rendering.escape($title, 'xwiki/2.1')==
+$services.rendering.escape($description, 'xwiki/2.1')
+
+{{html wiki="false"}}
+$xwiki.includeTopic("OpenProject.Code.OpenProjectSheet")
+{{/html}}
+
 {{/velocity}}</codeToExecute>
     </property>
     <property>
@@ -277,7 +285,7 @@
       <displayInCategory/>
     </property>
     <property>
-      <displayInSection>Project Management</displayInSection>
+      <displayInSection>OpenProject</displayInSection>
     </property>
     <property>
       <heading/>

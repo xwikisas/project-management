@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -56,13 +57,24 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
 {
     private static final String OPENPROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
 
-    private static final String SPACE = "ProjectManagement";
+    private static final String OPEN_PROJECT = "OpenProject";
+
+    private static final String CODE = "code";
+
+    private static final String OPEN_PROJECT_CONFIGURATIONS = "OpenProjectConfigurations";
 
     private static final LocalDocumentReference CLASS_REFERENCE =
-        new LocalDocumentReference(SPACE, OPENPROJECT_CONNECTION_CLASS);
+        new LocalDocumentReference(Arrays.asList(OPEN_PROJECT, CODE), OPENPROJECT_CONNECTION_CLASS);
 
     private static final LocalDocumentReference DOC_REFERENCE =
-        new LocalDocumentReference(SPACE, OPENPROJECT_CONNECTION_CLASS);
+        new LocalDocumentReference(
+            Arrays.asList(
+                OPEN_PROJECT,
+                CODE,
+                OPEN_PROJECT_CONFIGURATIONS
+            ),
+            OPENPROJECT_CONNECTION_CLASS
+        );
 
     @Inject
     private QueryManager queryManager;

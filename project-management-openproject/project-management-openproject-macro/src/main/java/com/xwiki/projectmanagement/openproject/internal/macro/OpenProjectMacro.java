@@ -117,7 +117,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
             if (token == null || token.isEmpty()) {
                 String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
                 LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                    "ProjectManagement", "RenewOAuthConnection");
+                    "OpenProject", "RenewOAuthConnection");
                 String redirectUrl =
                     xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext) + "?connectionName="
                         + connectionName
