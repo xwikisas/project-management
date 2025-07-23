@@ -30,11 +30,9 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
-import org.xwiki.refactoring.internal.ModelBridge;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
 
@@ -64,9 +62,9 @@ public class HandleConnectionsService
 
     private static final String PROJECT_MANAGEMENT = "ProjectManagement";
 
-    private static final String INSTANCE_CONFIGURATION = "InstanceConfiguration";
-
     private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
+
+    private static final String CONNECTION = "connection";
 
     @Inject
     private Provider<XWikiContext> xcontextProvider;
@@ -76,26 +74,18 @@ public class HandleConnectionsService
 
     @Inject
     @Named("document")
-    private UserReferenceResolver<DocumentReference> userRefResolver;
-
-    @Inject
-    @Named("compactwiki")
-    private EntityReferenceSerializer<String> compactSerializer;
-
-    @Inject
-    private ModelBridge modelBridge;
+    private UserReferenceResolver<DocumentReference> userReferenceResolver;
 
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
      * @param openProjectConnection the connection data to be saved
-     * @param oldDocumentReference the document reference
-     * @param newDocumentReference the new document reference of an updated object
+     * @param documentReference the document reference
      * @throws ProjectManagementException if a configuration with the same name already exists.
      * @throws ProjectManagementException if the query failed or the document retrieval/creation fails.
      */
-    public void createOrUpdateConnection(OpenProjectConnection openProjectConnection,
-        DocumentReference oldDocumentReference, DocumentReference newDocumentReference)
+    public void handleConnection(OpenProjectConnection openProjectConnection,
+        DocumentReference documentReference)
         throws ProjectManagementException
     {
         List<String> result;
@@ -103,13 +93,10 @@ public class HandleConnectionsService
             result = queryManager.createQuery(
                     "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
                         + "where doc.fullName = obj.name "
-                        + "and doc.space = :spaceName "
                         + "and obj.className = :className "
                         + "and obj.id = configName.id.id "
                         + "and configName.id.name = :configFieldName "
                         + "and configName.value = :config", Query.HQL)
-                .bindValue("spaceName",
-                    compactSerializer.serialize(newDocumentReference.getLastSpaceReference()))
                 .bindValue(
                     "className",
                     String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
@@ -125,26 +112,22 @@ public class HandleConnectionsService
                         openProjectConnection.getConnectionName()));
             }
 
-            handleConnectionObjects(openProjectConnection, oldDocumentReference, newDocumentReference);
+            handleConnectionObjects(openProjectConnection, documentReference);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
         }
     }
 
     private void handleConnectionObjects(OpenProjectConnection openProjectConnection,
-        DocumentReference oldDocumentReference, DocumentReference newDocumentReference) throws XWikiException
+        DocumentReference documentReference) throws XWikiException
     {
-        String wikiName = newDocumentReference.getWikiReference().getName();
+        String wikiName = documentReference.getWikiReference().getName();
         XWikiContext context = this.xcontextProvider.get();
         XWikiDocument doc;
 
-        if (oldDocumentReference != null) {
-            doc = context.getWiki().getDocument(oldDocumentReference, context);
-        } else {
-            doc = context.getWiki().getDocument(newDocumentReference, context);
-        }
+        doc = context.getWiki().getDocument(documentReference, context);
 
-        setDocMetaData(openProjectConnection.getConnectionName(), context, doc);
+        setDocMetaData(context, doc);
 
         DocumentReference configClassRef =
             new DocumentReference(wikiName, PROJECT_MANAGEMENT,
@@ -172,23 +155,15 @@ public class HandleConnectionsService
         oidcObj.setStringValue("tokenStorageScope", "USER");
 
         context.getWiki().saveDocument(doc, "Saved OpenProject and OIDC config via REST", context);
-
-        if (oldDocumentReference != null && !oldDocumentReference.equals(newDocumentReference)) {
-            modelBridge.rename(oldDocumentReference, newDocumentReference);
-            XWikiDocument newDoc = context.getWiki().getDocument(newDocumentReference, context);
-            context.getWiki().saveDocument(newDoc, "Created OpenProject and OIDC config via REST", context);
-        }
     }
 
-    private void setDocMetaData(String connectionName, XWikiContext context, XWikiDocument doc)
+    private void setDocMetaData(XWikiContext context, XWikiDocument doc)
     {
-        UserReference currentUser = userRefResolver.resolve(context.getUserReference());
+        UserReference currentUser = userReferenceResolver.resolve(context.getUserReference());
         DocumentAuthors documentAuthors = doc.getAuthors();
         documentAuthors.setCreator(currentUser);
         documentAuthors.setEffectiveMetadataAuthor(currentUser);
         documentAuthors.setContentAuthor(currentUser);
         documentAuthors.setOriginalMetadataAuthor(currentUser);
-        doc.setTitle(connectionName + INSTANCE_CONFIGURATION);
-        doc.setHidden(true);
     }
 }

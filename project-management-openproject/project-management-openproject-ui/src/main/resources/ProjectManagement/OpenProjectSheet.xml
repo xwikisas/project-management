@@ -52,7 +52,8 @@
         &lt;/div&gt;
         &lt;div class="modal-body"&gt;
           &lt;input id="handle-connection-form-token" type="hidden" name="form_token" value="${escapetool.xml($services.csrf.token)}" /&gt;
-          &lt;input id="old-document-reference" type="hidden" name="old-document-reference" value=""&gt;
+          &lt;input id="document-reference" type="hidden" name="document-reference" value=""&gt;
+          &lt;input id="connection-action" type="hidden" name="connection-action" value=""&gt;
           &lt;div class="form-group"&gt;
             &lt;label class="h5" for="connection-name"&gt;
               &lt;strong&gt;
@@ -327,7 +328,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       $("#client-secret").val(clientSecret);
-      $("#old-document-reference").val(documentReference);
+      $("#document-reference").val(documentReference);
+      $("#connection-action").val("edit");
     });
 
     $("#create-connection-button").on("click", function () {
@@ -337,7 +339,22 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val("");
       $("#client-id").val("");
       $("#client-secret").val("");
-      $("#old-document-reference").val("");
+
+      const connectionsSpace = XWiki.Model.resolve(
+        "ProjectManagement.OpenProjectConfigurations",
+        XWiki.EntityType.SPACE,
+        XWiki.currentDocument.getDocumentReference()
+      );
+
+      const configurationName = "Connection" + crypto.randomUUID();
+      const connectionRef = XWiki.Model.resolve(
+        configurationName,
+        XWiki.EntityType.DOCUMENT,
+        connectionsSpace
+      );
+
+      $("#document-reference").val(connectionRef);
+      $("#connection-action").val("create");
     });
 
     $(document).on("click", ".delete-button", function () {
@@ -373,7 +390,10 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         $("#openproject_connections").data("liveData").updateEntries();
         $("#deleteConnectionModal").modal("hide");
 
-        new XWiki.widgets.Notification(l10n.get("delete.deleted", connectionName), "done");
+        new XWiki.widgets.Notification(
+          l10n.get("delete.deleted", connectionName),
+          "done"
+        );
       } catch (e) {
         new XWiki.widgets.Notification(
           l10n.get("delete.errorOccurred"),
@@ -389,7 +409,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $("#server-url").val().trim();
       const clientId = $("#client-id").val().trim();
       const clientSecret = $("#client-secret").val().trim();
-      const oldDocumentReference = $("#old-document-reference").val();
+      const documentReference = $("#document-reference").val();
+      const connectionAction = $("#connection-action").val();
 
       if (!connectionName || !serverURL || !clientId || !clientSecret) {
         return new XWiki.widgets.Notification(
@@ -398,30 +419,19 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         );
       }
 
-      const connectionsSpace = XWiki.Model.resolve(
-        "ProjectManagement.OpenProjectConfigurations",
-        XWiki.EntityType.SPACE,
-        XWiki.currentDocument.getDocumentReference()
-      );
-
-      const configurationName = connectionName + "InstanceConfiguration";
       const connectionRef = XWiki.Model.resolve(
-        configurationName,
-        XWiki.EntityType.DOCUMENT,
-        connectionsSpace
+        documentReference,
+        XWiki.EntityType.DOCUMENT
       );
-
       const url = new XWiki.Document(connectionRef).getRestURL(
         "openproject/configurations"
       );
 
       try {
         await $.ajax({
-          method: "POST",
+          method: connectionAction == "create" ? "POST" : "PUT",
           contentType: "application/json",
-          url: !oldDocumentReference
-            ? url
-            : `${url}?oldDocumentReference=${oldDocumentReference}`,
+          url: url,
           headers: {
             "XWiki-Form-Token": csrfToken,
           },
