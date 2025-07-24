@@ -55,16 +55,16 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 @Singleton
 public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConfigurationSource
 {
-    private static final String OPENPROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
+    private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
 
     private static final String OPEN_PROJECT = "OpenProject";
 
-    private static final String CODE = "code";
+    private static final String CODE = "Code";
 
     private static final String OPEN_PROJECT_CONFIGURATIONS = "OpenProjectConfigurations";
 
     private static final LocalDocumentReference CLASS_REFERENCE =
-        new LocalDocumentReference(Arrays.asList(OPEN_PROJECT, CODE), OPENPROJECT_CONNECTION_CLASS);
+        new LocalDocumentReference(Arrays.asList(OPEN_PROJECT, CODE), OPEN_PROJECT_CONNECTION_CLASS);
 
     private static final LocalDocumentReference DOC_REFERENCE =
         new LocalDocumentReference(
@@ -73,7 +73,7 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 CODE,
                 OPEN_PROJECT_CONFIGURATIONS
             ),
-            OPENPROJECT_CONNECTION_CLASS
+            OPEN_PROJECT_CONNECTION_CLASS
         );
 
     @Inject
@@ -110,7 +110,8 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
         XWikiContext xContext = this.xcontextProvider.get();
         List<OpenProjectConnection> objects = new ArrayList<>();
         try {
-            String query = "from doc.object(ProjectManagement.OpenProjectConnectionClass) as cfg";
+            String query = String.format("from doc.object(%s.%s.%s) as "
+                + "cfg", OPEN_PROJECT, CODE, OPEN_PROJECT_CONNECTION_CLASS);
             List<String> results =
                 this.queryManager.createQuery(query, Query.XWQL)
                     .setWiki(xContext.getWikiId())
