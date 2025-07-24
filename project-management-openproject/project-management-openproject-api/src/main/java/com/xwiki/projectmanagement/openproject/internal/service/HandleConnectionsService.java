@@ -30,6 +30,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
@@ -76,6 +77,10 @@ public class HandleConnectionsService
     @Named("document")
     private UserReferenceResolver<DocumentReference> userReferenceResolver;
 
+    @Inject
+    @Named("compactwiki")
+    private EntityReferenceSerializer<String> compactSerializer;
+
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
      *
@@ -96,13 +101,15 @@ public class HandleConnectionsService
                         + "and obj.className = :className "
                         + "and obj.id = configName.id.id "
                         + "and configName.id.name = :configFieldName "
-                        + "and configName.value = :config", Query.HQL)
+                        + "and configName.value = :config "
+                        + "and doc.fullName <> :serializedDocRef", Query.HQL)
                 .bindValue(
                     "className",
                     String.format("%s.%s", PROJECT_MANAGEMENT, OPEN_PROJECT_CONNECTION_CLASS)
                 )
                 .bindValue("configFieldName", CONNECTION_NAME)
                 .bindValue("config", openProjectConnection.getConnectionName())
+                .bindValue("serializedDocRef", compactSerializer.serialize(documentReference))
                 .setWiki(this.xcontextProvider.get().getWikiId())
                 .execute();
 
