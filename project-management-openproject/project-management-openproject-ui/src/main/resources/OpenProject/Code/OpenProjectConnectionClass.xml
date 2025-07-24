@@ -20,14 +20,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.OpenProjectConnectionClass" locale="">
-  <web>ProjectManagement</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.OpenProjectConnectionClass" locale="">
+  <web>OpenProject.Code</web>
   <name>OpenProjectConnectionClass</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>XWiki.XWikiClasses</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -38,7 +38,7 @@
   <hidden>true</hidden>
   <content/>
   <class>
-    <name>ProjectManagement.OpenProjectConnectionClass</name>
+    <name>OpenProject.Code.OpenProjectConnectionClass</name>
     <customClass/>
     <customMapping/>
     <defaultViewSheet/>
@@ -104,7 +104,7 @@
     </serverURL>
   </class>
   <object>
-    <name>ProjectManagement.OpenProjectConnectionClass</name>
+    <name>OpenProject.Code.OpenProjectConnectionClass</name>
     <number>0</number>
     <className>XWiki.DocumentSheetBinding</className>
     <guid>ebe3fa45-302a-4fab-929e-56e6cbbca779</guid>

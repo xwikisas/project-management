@@ -20,14 +20,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.OpenProjectSourceJson" locale="">
-  <web>ProjectManagement</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.OpenProjectSourceJson" locale="">
+  <web>OpenProject.Code</web>
   <name>OpenProjectSourceJson</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -37,7 +37,7 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity wiki="false"}}
-#set ($configClassName = 'ProjectManagement.OpenProjectConnectionClass')
+#set ($configClassName = 'OpenProject.Code.OpenProjectConnectionClass')
 
 #set ($offset = $numbertool.toNumber($request.get('offset')).intValue())
 #set ($offset = $offset - 1)
