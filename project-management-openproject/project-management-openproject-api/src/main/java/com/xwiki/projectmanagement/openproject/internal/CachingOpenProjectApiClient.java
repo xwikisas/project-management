@@ -76,6 +76,19 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey(String.format("project%sWorkItems", project), offset, pageSize, filters);
+        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getProjectWorkPackages(project, offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
     public PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException
     {
         String cacheKey = getCacheKey("users", 0, pageSize, filters);

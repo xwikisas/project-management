@@ -87,6 +87,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_DESCRIPTION = "description";
 
+    private static final String OP_PROJECTS = "projects";
+
     private static final String OP_START_DATE = "startDate";
 
     private static final String OP_DUE_DATE = "dueDate";
@@ -154,17 +156,20 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         JsonNode mainNode =
             getOpenProjectResponse(API_URL_WORK_PACKAGES, String.valueOf(offset), String.valueOf(pageSize), filters,
                 "");
-        PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
 
-        int totalNumberOfWorkItems = getTotalNumberOfWorkItems(mainNode);
+        return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
+    }
 
-        List<WorkPackage> workPackages = getWorkPackagesFromResponse(mainNode);
+    @Override
+    public PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String projectWorkPackagesUrl = String.format("%s/projects/%s/work_packages", API_URL_PART,
+            project);
+        JsonNode mainNode = getOpenProjectResponse(projectWorkPackagesUrl, String.valueOf(offset),
+            String.valueOf(pageSize), filters, "");
 
-        paginatedResult.setItems(workPackages);
-        paginatedResult.setPage(offset);
-        paginatedResult.setPageSize(pageSize);
-        paginatedResult.setTotalItems(totalNumberOfWorkItems);
-        return paginatedResult;
+        return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
     }
 
     @Override
@@ -450,6 +455,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 wp.setUpdatedAt(LocalDate.parse(dateOnly).toDate());
             }
         }
+    }
+
+    private PaginatedResult<WorkPackage> getWorkPackagePaginatedResult(JsonNode node, int offset, int pageSize)
+    {
+        PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
+
+        int totalNumberOfWorkItems = getTotalNumberOfWorkItems(node);
+
+        List<WorkPackage> workPackages = getWorkPackagesFromResponse(node);
+
+        paginatedResult.setItems(workPackages);
+        paginatedResult.setPage(offset);
+        paginatedResult.setPageSize(pageSize);
+        paginatedResult.setTotalItems(totalNumberOfWorkItems);
+        return paginatedResult;
     }
 
     private String buildEditUrl(String connectionUrl, String entity, Object id)

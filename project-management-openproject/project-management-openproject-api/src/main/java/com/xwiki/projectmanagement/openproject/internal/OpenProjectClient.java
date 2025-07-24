@@ -19,11 +19,14 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -32,11 +35,13 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
@@ -59,6 +64,8 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 @Singleton
 public class OpenProjectClient implements ProjectManagementClient
 {
+    private static final String QUERY_PROPS_QUERY_PARAMETER = "query_props=";
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -78,12 +85,9 @@ public class OpenProjectClient implements ProjectManagementClient
         List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
-        PaginatedResult<WorkItem> workItemsPaginatedResult = new PaginatedResult<>();
         try {
             int offset = (page / pageSize) + 1;
-
             String identifier = (String) executionContext.get("identifier");
-
             String connectionName = (String) executionContext.get("instance");
             openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
 
@@ -92,38 +96,81 @@ public class OpenProjectClient implements ProjectManagementClient
                     String.format("No configuration for instance [%s] was found.", connectionName));
             }
 
-            String filtersString;
             if (identifier != null) {
-                String parameterName = "query_props=";
-                String queryParam =
-                    identifier.substring(identifier.indexOf(parameterName) + parameterName.length());
-                queryParam = URLDecoder.decode(queryParam, StandardCharsets.UTF_8);
-                ObjectMapper mapper = new ObjectMapper();
-                JsonNode queriesNode = mapper.readTree(queryParam);
-                JsonNode filtersNode = queriesNode.path("f");
-                List<Map<String, Object>> filtersList =
-                    mapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
-                    {
-                    });
-                filtersString = OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
-            } else {
-                filtersString = OpenProjectFilterHandler.convertFilters(filters);
+                return handleIdentifier(identifier, offset, pageSize);
             }
+
+            String filtersString = OpenProjectFilterHandler.convertFilters(filters);
             PaginatedResult<WorkPackage> workPackagesPaginatedResult =
                 openProjectApiClient.getWorkPackages(offset,
                     pageSize, filtersString);
-            List<WorkItem> workItems = new ArrayList<>();
-            for (WorkPackage wp : workPackagesPaginatedResult.getItems()) {
-                workItems.add(OpenProjectConverters.convertWorkPackageToWorkItem(wp));
-            }
-            workItemsPaginatedResult.setItems(workItems);
-            workItemsPaginatedResult.setPage(workPackagesPaginatedResult.getPage());
-            workItemsPaginatedResult.setPageSize(workPackagesPaginatedResult.getPageSize());
-            workItemsPaginatedResult.setTotalItems(workPackagesPaginatedResult.getTotalItems());
-            return workItemsPaginatedResult;
+
+            return OpenProjectConverters.convertPaginatedResult(
+                workPackagesPaginatedResult,
+                OpenProjectConverters::convertWorkPackageToWorkItem
+            );
         } catch (Exception e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
+    }
+
+    private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize)
+        throws ProjectManagementException
+    {
+        URL url;
+        PaginatedResult<WorkPackage> workPackagesPaginatedResult;
+        String filtersString;
+
+        try {
+            url = new URL(identifier);
+        } catch (MalformedURLException e) {
+            throw new WorkItemRetrievalException("The identifier format is not correct", e);
+        }
+
+        String path = url.getPath();
+        Pattern pattern = Pattern.compile("/projects/([^/]+)/");
+        Matcher matcher = pattern.matcher(path);
+
+        String queryParameters = url.getQuery();
+        String filters =
+            queryParameters.substring(
+                queryParameters.indexOf(QUERY_PROPS_QUERY_PARAMETER) + QUERY_PROPS_QUERY_PARAMETER.length());
+        filters = URLDecoder.decode(filters, StandardCharsets.UTF_8);
+        JsonNode queriesNode;
+        ObjectMapper objectMapper;
+        try {
+            objectMapper = new ObjectMapper();
+            queriesNode = objectMapper.readTree(filters);
+        } catch (JsonProcessingException e) {
+            throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
+        }
+        JsonNode filtersNode = queriesNode.path("f");
+        List<Map<String, Object>> filtersList =
+            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
+            {
+            });
+        try {
+            filtersString = OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+        } catch (ProjectManagementException e) {
+            throw new WorkItemRetrievalException("An error occurred while trying to get the filters", e);
+        }
+
+        if (matcher.find()) {
+            String project = matcher.group(1);
+            workPackagesPaginatedResult = openProjectApiClient.getProjectWorkPackages(
+                project,
+                offset,
+                pageSize,
+                filtersString
+            );
+        } else {
+            workPackagesPaginatedResult = openProjectApiClient.getWorkPackages(offset, pageSize, filtersString);
+        }
+
+        return OpenProjectConverters.convertPaginatedResult(
+            workPackagesPaginatedResult,
+            OpenProjectConverters::convertWorkPackageToWorkItem
+        );
     }
 
     @Override
