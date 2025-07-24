@@ -46,7 +46,8 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.internal.filter.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -109,9 +110,10 @@ public class OpenProjectClient implements ProjectManagementClient
             } else {
                 filtersString = OpenProjectFilterHandler.convertFilters(filters);
             }
+            String sortByString = OpenProjectSortingHandler.convertSorting(sortEntries);
             PaginatedResult<WorkPackage> workPackagesPaginatedResult =
                 openProjectApiClient.getWorkPackages(offset,
-                    pageSize, filtersString);
+                    pageSize, filtersString, sortByString);
             List<WorkItem> workItems = new ArrayList<>();
             for (WorkPackage wp : workPackagesPaginatedResult.getItems()) {
                 workItems.add(OpenProjectConverters.convertWorkPackageToWorkItem(wp));
