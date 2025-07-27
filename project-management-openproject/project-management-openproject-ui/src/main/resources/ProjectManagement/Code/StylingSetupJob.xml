@@ -140,13 +140,13 @@
       </status>
     </class>
     <property>
-      <contextDatabase></contextDatabase>
+      <contextDatabase/>
     </property>
     <property>
       <contextLang>en</contextLang>
     </property>
     <property>
-      <contextUser></contextUser>
+      <contextUser/>
     </property>
     <property>
       <cron>0 0 0 * * ?</cron>

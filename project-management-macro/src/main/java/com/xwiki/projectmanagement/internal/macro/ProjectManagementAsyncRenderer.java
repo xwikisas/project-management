@@ -57,7 +57,14 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private List<String> id;
 
-    void initialize(Macro<ProjectManagementMacroParameters> displayer,
+    /**
+     * adasda.
+     * @param displayer sadas
+     * @param parameters sadasd
+     * @param content asdasd
+     * @param context asdasd
+     */
+    public void initialize(Macro<ProjectManagementMacroParameters> displayer,
         ProjectManagementMacroParameters parameters, String content, MacroTransformationContext context)
     {
         workItemsDisplayer = displayer;
@@ -79,15 +86,17 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         try {
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             MacroBlock currentMacro = transformationContext.getCurrentMacroBlock();
-            result = Collections.singletonList(
-                new MacroMarkerBlock(
-                    currentMacro.getId(),
-                    currentMacro.getParameters(),
-                    currentMacro.getContent(),
-                    result,
-                    currentMacro.isInline()
-                )
-            );
+            if (currentMacro != null) {
+                result = Collections.singletonList(
+                    new MacroMarkerBlock(
+                        currentMacro.getId(),
+                        currentMacro.getParameters(),
+                        currentMacro.getContent(),
+                        result,
+                        currentMacro.isInline()
+                    )
+                );
+            }
             return new CompositeBlock(result);
         } catch (MacroExecutionException e) {
             throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
