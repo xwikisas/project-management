@@ -20,14 +20,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.RenewOAuthConnection" locale="">
-  <web>ProjectManagement</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.RenewOAuthConnection" locale="">
+  <web>OpenProject.Code</web>
   <name>RenewOAuthConnection</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>ProjectManagement.WebHome</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>

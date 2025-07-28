@@ -1,0 +1,205 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="OpenProject.Code.ViewAction" locale="">
+  <web>OpenProject.Code</web>
+  <name>ViewAction</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>OpenProject.Code</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>ViewAction</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content/>
+  <object>
+    <name>OpenProject.Code.ViewAction</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>dcd0a4d4-04df-4669-bf21-693f2dfe8ed6</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>define('openproject-action-view', {
+  prefix: 'openproject.livedata.action.view.',
+  keys: [
+    'inprogress',
+    'done',
+    'error'
+  ]
+});
+require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
+  const modalStucture = `
+&lt;div id="openproject-item-view-modal" class="modal in" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false" style="display: block; padding-left: 0px;"&gt;
+  &lt;div class="modal-dialog" role="document"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;div class="modal-header"&gt;
+        &lt;button type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+          &lt;span aria-hidden="true"&gt;×&lt;/span&gt;
+        &lt;/button&gt;
+      &lt;/div&gt;
+      &lt;div class="modal-body"&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+`;
+  const itemIdRegex = /work_packages\/([^/]+)\//g;
+  document.on('click', '.action_view', function(e) {
+    let pressedButton = $(e.rangeParent);
+    let liveData = pressedButton.closest('.liveData');
+    if (!liveData) {
+      return;
+    }
+    let liveDataCfg = liveData.data('liveData');
+    if (!liveDataCfg) {
+      return;
+    }
+    let liveDataSource = liveDataCfg.data &amp;&amp; liveDataCfg.data.query &amp;&amp; liveDataCfg.data.query.source;
+    if (!liveDataSource || !liveDataSource.id || liveDataSource.id != 'projectmanagement') {
+      return;
+    }
+    let openProjInstance = liveDataSource.instance;
+    if (!openProjInstance) {
+      return;
+    }
+    e.preventDefault();
+    let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
+    let matches = itemIdRegex.exec(pressedButton.attr('href'));
+    let id = matches &amp;&amp; matches[1];
+    if (!id) {
+      return;
+    }
+    let restUrl = `/xwiki/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${openProjInstance}/workpackage/${id}?outputSyntax=plain`;
+    $.get(restUrl).done(function (response) {
+      let modal = $('#openproject-item-view-modal');
+      if (modal.length &lt;= 0) {
+        $('#body').append(modalStucture);
+        modal = $('#openproject-item-view-modal');
+      }
+      modal.modal({show: true});
+      modal.show();
+      modal.find('.modal-body').empty().append(response);
+      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('done'), "done"));
+    }).fail(function (error) {
+      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('error'), "error"));
+      console.error(error);
+    });
+  });
+});</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+</xwikidoc>

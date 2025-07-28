@@ -57,7 +57,17 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private List<String> id;
 
-    void initialize(Macro<ProjectManagementMacroParameters> displayer,
+    /**
+     * Initialize the async renderer with the required parameters for a project management displayer to function
+     * properly.
+     *
+     * @param displayer the displayer macro instance that will render the work items taking in consideration the
+     *     parameters and the content.
+     * @param parameters the parameters passed to the displayer macro.
+     * @param content the content passed to the displayer macro.
+     * @param context the macro transformation context that will be taken in consideration by the executed macro.
+     */
+    public void initialize(Macro<ProjectManagementMacroParameters> displayer,
         ProjectManagementMacroParameters parameters, String content, MacroTransformationContext context)
     {
         workItemsDisplayer = displayer;
@@ -79,15 +89,17 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         try {
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             MacroBlock currentMacro = transformationContext.getCurrentMacroBlock();
-            result = Collections.singletonList(
-                new MacroMarkerBlock(
-                    currentMacro.getId(),
-                    currentMacro.getParameters(),
-                    currentMacro.getContent(),
-                    result,
-                    currentMacro.isInline()
-                )
-            );
+            if (currentMacro != null) {
+                result = Collections.singletonList(
+                    new MacroMarkerBlock(
+                        currentMacro.getId(),
+                        currentMacro.getParameters(),
+                        currentMacro.getContent(),
+                        result,
+                        currentMacro.isInline()
+                    )
+                );
+            }
             return new CompositeBlock(result);
         } catch (MacroExecutionException e) {
             throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);

@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -68,6 +69,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private SkinExtension ssx;
 
     @Inject
+    @Named("jsx")
+    private SkinExtension jsx;
+
+    @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
@@ -108,6 +113,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     {
         ssrx.use("openproject/css/propertyStyles.css");
         ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
+        jsx.use("OpenProject.Code.ViewAction");
+
         String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
         if (xContext.getAction().equals(viewAction)) {
@@ -117,7 +124,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
             if (token == null || token.isEmpty()) {
                 String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
                 LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                    "ProjectManagement", "RenewOAuthConnection");
+                    Arrays.asList("OpenProject", "Code"), "RenewOAuthConnection");
                 String redirectUrl =
                     xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext) + "?connectionName="
                         + connectionName
