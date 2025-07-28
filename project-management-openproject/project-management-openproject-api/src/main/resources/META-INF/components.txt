@@ -7,5 +7,5 @@ com.xwiki.projectmanagement.openproject.internal.rest.suggest.Suggest
 com.xwiki.projectmanagement.openproject.internal.rest.AsyncMacroCallResource
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
 com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener
-com.xwiki.projectmanagement.openproject.internal.rest.connection.CreateConnection
-com.xwiki.projectmanagement.openproject.internal.service.CreateConnectionService
+com.xwiki.projectmanagement.openproject.internal.rest.connection.HandleConnections
+com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService

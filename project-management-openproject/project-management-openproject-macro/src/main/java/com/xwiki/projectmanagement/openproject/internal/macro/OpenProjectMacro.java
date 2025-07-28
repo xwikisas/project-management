@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -123,7 +124,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
             if (token == null || token.isEmpty()) {
                 String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
                 LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                    "ProjectManagement", "RenewOAuthConnection");
+                    Arrays.asList("OpenProject", "Code"), "RenewOAuthConnection");
                 String redirectUrl =
                     xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext) + "?connectionName="
                         + connectionName

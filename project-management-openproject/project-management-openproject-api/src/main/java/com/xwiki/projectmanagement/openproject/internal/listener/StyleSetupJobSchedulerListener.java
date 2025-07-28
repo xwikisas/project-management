@@ -62,13 +62,13 @@ import com.xpn.xwiki.plugin.scheduler.SchedulerPlugin;
 @Named("com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener")
 public class StyleSetupJobSchedulerListener extends AbstractEventListener
 {
-    private static final String SPACE_PROJECT_MANAGEMENT = "ProjectManagement";
+    private static final String OPEN_PROJECT = "OpenProject";
 
     private static final EntityReference CLASS_OPEN_PROJECT =
         BaseObjectReference.any("ProjectManagement.OpenProjectConnectionClass");
 
     private static final EntityReference DOC_SCHEDULER_JOB =
-        new LocalDocumentReference(Arrays.asList(SPACE_PROJECT_MANAGEMENT, "Code"), "StylingSetupJob");
+        new LocalDocumentReference(Arrays.asList(OPEN_PROJECT, "Code"), "StylingSetupJob");
 
     private static final String OP_API_ID = "com.xwiki.projectmanagement:project-management-openproject-api";
 
