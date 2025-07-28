@@ -144,7 +144,7 @@ public class Suggest extends XWikiResource
         int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter("subject", searchString);
-        return getSuggestions(openProjectApiClient.getWorkPackages(0, pageSize, filter).getItems());
+        return getSuggestions(openProjectApiClient.getWorkPackages(0, pageSize, filter, "").getItems());
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)
