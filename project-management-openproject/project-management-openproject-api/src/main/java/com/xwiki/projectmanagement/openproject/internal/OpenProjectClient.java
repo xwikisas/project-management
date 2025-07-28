@@ -117,55 +117,13 @@ public class OpenProjectClient implements ProjectManagementClient
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize)
         throws ProjectManagementException
     {
-        URL url;
-        PaginatedResult<WorkPackage> workPackagesPaginatedResult;
-        String filtersString;
+        URL url = parseUrl(identifier);
+        String project = extractProjectFromPath(url.getPath());
+        String filters = extractFiltersFromQuery(url.getQuery());
 
-        try {
-            url = new URL(identifier);
-        } catch (MalformedURLException e) {
-            throw new WorkItemRetrievalException("The identifier format is not correct", e);
-        }
-
-        String path = url.getPath();
-        Pattern pattern = Pattern.compile("/projects/([^/]+)/");
-        Matcher matcher = pattern.matcher(path);
-
-        String queryParameters = url.getQuery();
-        String filters =
-            queryParameters.substring(
-                queryParameters.indexOf(QUERY_PROPS_QUERY_PARAMETER) + QUERY_PROPS_QUERY_PARAMETER.length());
-        filters = URLDecoder.decode(filters, StandardCharsets.UTF_8);
-        JsonNode queriesNode;
-        ObjectMapper objectMapper;
-        try {
-            objectMapper = new ObjectMapper();
-            queriesNode = objectMapper.readTree(filters);
-        } catch (JsonProcessingException e) {
-            throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
-        }
-        JsonNode filtersNode = queriesNode.path("f");
-        List<Map<String, Object>> filtersList =
-            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
-            {
-            });
-        try {
-            filtersString = OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
-        } catch (ProjectManagementException e) {
-            throw new WorkItemRetrievalException("An error occurred while trying to get the filters", e);
-        }
-
-        if (matcher.find()) {
-            String project = matcher.group(1);
-            workPackagesPaginatedResult = openProjectApiClient.getProjectWorkPackages(
-                project,
-                offset,
-                pageSize,
-                filtersString
-            );
-        } else {
-            workPackagesPaginatedResult = openProjectApiClient.getWorkPackages(offset, pageSize, filtersString);
-        }
+        PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
+            ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters)
+            : openProjectApiClient.getWorkPackages(offset, pageSize, filters);
 
         return OpenProjectConverters.convertPaginatedResult(
             workPackagesPaginatedResult,
@@ -189,5 +147,49 @@ public class OpenProjectClient implements ProjectManagementClient
     public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
     {
         return false;
+    }
+
+    private URL parseUrl(String url) throws WorkItemRetrievalException
+    {
+        try {
+            return new URL(url);
+        } catch (MalformedURLException e) {
+            throw new WorkItemRetrievalException("The identifier format is not correct", e);
+        }
+    }
+
+    private String extractProjectFromPath(String path)
+    {
+        Matcher matcher = Pattern.compile("/projects/([^/]+)/").matcher(path);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String extractFiltersFromQuery(String queryParameters) throws WorkItemRetrievalException
+    {
+        if (queryParameters == null || queryParameters.isEmpty()) {
+            return "";
+        }
+        String filters =
+            queryParameters.substring(
+                queryParameters.indexOf(QUERY_PROPS_QUERY_PARAMETER) + QUERY_PROPS_QUERY_PARAMETER.length());
+        filters = URLDecoder.decode(filters, StandardCharsets.UTF_8);
+        JsonNode queriesNode;
+        ObjectMapper objectMapper;
+        try {
+            objectMapper = new ObjectMapper();
+            queriesNode = objectMapper.readTree(filters);
+        } catch (JsonProcessingException e) {
+            throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
+        }
+        JsonNode filtersNode = queriesNode.path("f");
+        List<Map<String, Object>> filtersList =
+            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
+            {
+            });
+        try {
+            return OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+        } catch (ProjectManagementException e) {
+            throw new WorkItemRetrievalException("An error occurred while trying to get the filters", e);
+        }
     }
 }
