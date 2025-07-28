@@ -113,7 +113,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     {
         ssrx.use("openproject/css/propertyStyles.css");
         ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
-        jsx.use("ProjectManagement.Code.ViewAction");
+        jsx.use("OpenProject.Code.ViewAction");
 
         String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();

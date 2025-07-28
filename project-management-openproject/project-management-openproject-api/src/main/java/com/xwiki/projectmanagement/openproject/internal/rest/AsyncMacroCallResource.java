@@ -25,7 +25,6 @@ import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -90,7 +89,7 @@ public class AsyncMacroCallResource extends XWikiResource
     @Produces({ MediaType.TEXT_PLAIN })
     public Response getAsyncCall(
         @PathParam("wikiName") String wiki,
-        @PathParam("displayer") @DefaultValue(".") String displayer,
+        @PathParam("displayer") String displayer,
         @PathParam("instance") String instance,
         @PathParam("identifier") String workPackageId
     )
@@ -131,6 +130,9 @@ public class AsyncMacroCallResource extends XWikiResource
             Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
                 XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
 
+        if (displayer == null || displayer.isEmpty()) {
+            throw new ComponentLookupException("The displayer hint is not present.");
+        }
         Macro<ProjectManagementMacroParameters> displayerMacro = componentManager.getInstance(Macro.class, displayer);
         ProjectManagementMacroParameters parameters = new ProjectManagementMacroParameters();
         // TODO: Would be nicer if we retrieved the translation prefix from the json configuration.
