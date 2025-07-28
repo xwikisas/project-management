@@ -120,12 +120,20 @@ public class OpenProjectClient implements ProjectManagementClient
         throws ProjectManagementException
     {
         URL url = parseUrl(identifier);
+        JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
         String project = extractProjectFromPath(url.getPath());
-        String filters = extractFiltersFromQuery(url.getQuery());
+
+        String filters = "";
+        String sortBy = "";
+
+        if (parametersNode != null) {
+            filters = extractFiltersFromQuery(parametersNode.path("f"));
+            sortBy = extractSortByFromQuery(parametersNode.path("t"));
+        }
 
         PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
-            ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters)
-            : openProjectApiClient.getWorkPackages(offset, pageSize, filters, "");
+            ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy)
+            : openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy);
 
         return OpenProjectConverters.convertPaginatedResult(
             workPackagesPaginatedResult,
@@ -166,10 +174,26 @@ public class OpenProjectClient implements ProjectManagementClient
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(String queryParameters) throws WorkItemRetrievalException
+    private String extractFiltersFromQuery(JsonNode filtersNode) throws ProjectManagementException
+    {
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Map<String, Object>> filtersList =
+            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
+            {
+            });
+        return OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+    }
+
+    private String extractSortByFromQuery(JsonNode sortByNode) throws ProjectManagementException
+    {
+        String sortByString = sortByNode.asText();
+        return OpenProjectSortingHandler.convertSortEntriesFromQuery(sortByString);
+    }
+
+    private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
     {
         if (queryParameters == null || queryParameters.isEmpty()) {
-            return "";
+            return null;
         }
 
         Pattern pattern = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
@@ -179,25 +203,14 @@ public class OpenProjectClient implements ProjectManagementClient
             throw new WorkItemRetrievalException("The query parameters format is not correct");
         }
 
-        String filters = matcher.group(1);
-        filters = URLDecoder.decode(filters, StandardCharsets.UTF_8);
-        JsonNode queriesNode;
+        String parameter = matcher.group(1);
+        parameter = URLDecoder.decode(parameter, StandardCharsets.UTF_8);
         ObjectMapper objectMapper;
         try {
             objectMapper = new ObjectMapper();
-            queriesNode = objectMapper.readTree(filters);
+            return objectMapper.readTree(parameter);
         } catch (JsonProcessingException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
-        }
-        JsonNode filtersNode = queriesNode.path("f");
-        List<Map<String, Object>> filtersList =
-            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
-            {
-            });
-        try {
-            return OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
-        } catch (ProjectManagementException e) {
-            throw new WorkItemRetrievalException("An error occurred while trying to get the filters", e);
         }
     }
 }
