@@ -169,9 +169,15 @@ public class OpenProjectClient implements ProjectManagementClient
         if (queryParameters == null || queryParameters.isEmpty()) {
             return "";
         }
-        String filters =
-            queryParameters.substring(
-                queryParameters.indexOf(QUERY_PROPS_QUERY_PARAMETER) + QUERY_PROPS_QUERY_PARAMETER.length());
+
+        Pattern pattern = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
+        Matcher matcher = pattern.matcher(queryParameters);
+
+        if (!matcher.find()) {
+            throw new WorkItemRetrievalException("The query parameters format is not correct");
+        }
+
+        String filters = matcher.group(1);
         filters = URLDecoder.decode(filters, StandardCharsets.UTF_8);
         JsonNode queriesNode;
         ObjectMapper objectMapper;
