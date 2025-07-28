@@ -27,11 +27,10 @@
     <artifactId>project-management-openproject</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-
   <artifactId>project-management-openproject-api</artifactId>
-
   <properties>
-    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
+    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
+    </checkstyle.suppressions.location>
   </properties>
   <dependencies>
     <dependency>
@@ -75,6 +74,12 @@
       <groupId>org.xwiki.rendering</groupId>
       <artifactId>xwiki-rendering-syntax-html5</artifactId>
       <version>${rendering.version}</version>
+    </dependency>
+    <!--  Needed in order to provide the async renderer result through a rest endpoint.  -->
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-macro</artifactId>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 </project>
