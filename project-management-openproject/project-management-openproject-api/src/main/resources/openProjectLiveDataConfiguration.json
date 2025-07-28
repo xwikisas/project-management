@@ -442,6 +442,22 @@
           ],
           "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses"
         }
+      },
+      {
+        "id": "_actions",
+        "displayer": {
+          "id": "actions",
+          "actions": [
+            "view"
+          ]
+        }
+      }
+    ],
+    "actions": [
+      {
+        "id": "view",
+        "urlProperty": "identifier.location",
+        "name": ""
       }
     ],
     "filters": [

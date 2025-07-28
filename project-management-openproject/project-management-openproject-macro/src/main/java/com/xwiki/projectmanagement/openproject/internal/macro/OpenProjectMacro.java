@@ -69,6 +69,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private SkinExtension ssx;
 
     @Inject
+    @Named("jsx")
+    private SkinExtension jsx;
+
+    @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
@@ -109,6 +113,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     {
         ssrx.use("openproject/css/propertyStyles.css");
         ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
+        jsx.use("OpenProject.Code.ViewAction");
+
         String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
         if (xContext.getAction().equals(viewAction)) {

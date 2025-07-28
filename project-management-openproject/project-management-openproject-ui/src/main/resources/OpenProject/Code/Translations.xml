@@ -72,7 +72,12 @@ openproject.livedatalabels.actions = Actions
 openproject.livedatalabels.clientId=Client ID
 openproject.livedatalabels.clientSecret=Client Secret
 openproject.livedatalabels.connectionName=Connection name
-openproject.livedatalabels.serverURL=Server URL</content>
+openproject.livedatalabels.serverURL=Server URL
+
+openproject.livedata.action.view.done=Work Package loaded successfully
+openproject.livedata.action.view.inprogress=Loading Work Package
+openproject.livedata.action.view.error=Failed to load Work Package
+</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

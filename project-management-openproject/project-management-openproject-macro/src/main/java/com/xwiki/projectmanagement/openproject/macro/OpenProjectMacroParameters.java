@@ -35,6 +35,14 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     private String instance;
 
     /**
+     * Default constructor. Sets some default values specific to the Open Project implementation.
+     */
+    public OpenProjectMacroParameters()
+    {
+        setProperties("identifier.value,type,summary.value,description,startDate,resolved,assignees,_actions");
+    }
+
+    /**
      * @return the instance from where work items should be retrieved.
      */
     public String getInstance()
