@@ -171,14 +171,16 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException
     {
         JsonNode elements =
-            getOpenProjectResponse(
+            getOpenProjectResponseEntities(
                 API_URL_USERS,
                 "",
                 String.valueOf(pageSize),
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
+
         List<User> users = new ArrayList<>();
+
         for (JsonNode element : elements) {
             User user = new User();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -190,6 +192,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 user.getId())));
             users.add(user);
         }
+
         return new PaginatedResult<>(users, 0, users.size(), users.size());
     }
 
@@ -197,14 +200,16 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Project> getProjects(int pageSize, String filters) throws ProjectManagementException
     {
         JsonNode elements =
-            getOpenProjectResponse(
+            getOpenProjectResponseEntities(
                 API_URL_PROJECTS,
                 "",
                 String.valueOf(pageSize),
                 filters,
                 API_URL_SELECT_ELEMENTS_PARAM
             );
+
         List<Project> projects = new ArrayList<>();
+
         for (JsonNode element : elements) {
             Project project = new Project();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -214,14 +219,17 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             project.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
             projects.add(project);
         }
+
         return new PaginatedResult<>(projects, 0, projects.size(), projects.size());
     }
 
     @Override
     public PaginatedResult<Type> getTypes() throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponse(API_URL_TYPES, "", "", "", "");
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_TYPES, "", "", "", "");
+
         List<Type> types = new ArrayList<>();
+
         for (JsonNode element : elements) {
             Type type = new Type();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -233,14 +241,17 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
             types.add(type);
         }
+
         return new PaginatedResult<>(types, 0, types.size(), types.size());
     }
 
     @Override
     public PaginatedResult<Status> getStatuses() throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponse(API_URL_STATUSES, "", "", "", "");
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_STATUSES, "", "", "", "");
+
         List<Status> statuses = new ArrayList<>();
+
         for (JsonNode element : elements) {
             Status status = new Status();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -252,6 +263,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
             statuses.add(status);
         }
+
         return new PaginatedResult<>(statuses, 0, statuses.size(), statuses.size());
     }
 
@@ -259,7 +271,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Priority> getPriorities() throws ProjectManagementException
     {
         JsonNode elements = getOpenProjectResponseEntities(API_URL_PRIORITIES, "", "", "", "");
+
         List<Priority> priorities = new ArrayList<>();
+
         for (JsonNode element : elements) {
             Priority priority = new Priority();
             int id = element.path(OP_RESPONSE_ID).asInt();
@@ -271,6 +285,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             priority.setColor(color);
             priorities.add(priority);
         }
+
         return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
     }
 
