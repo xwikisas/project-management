@@ -43,7 +43,7 @@ import org.xwiki.observation.event.Event;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.internal.event.XObjectAddedEvent;
+import com.xpn.xwiki.internal.event.XObjectUpdatedEvent;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.BaseObjectReference;
 import com.xpn.xwiki.plugin.scheduler.JobState;
@@ -65,7 +65,7 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
     private static final String OPEN_PROJECT = "OpenProject";
 
     private static final EntityReference CLASS_OPEN_PROJECT =
-        BaseObjectReference.any("ProjectManagement.OpenProjectConnectionClass");
+        BaseObjectReference.any("OpenProject.Code.OpenProjectConnectionClass");
 
     private static final EntityReference DOC_SCHEDULER_JOB =
         new LocalDocumentReference(Arrays.asList(OPEN_PROJECT, "Code"), "StylingSetupJob");
@@ -92,7 +92,7 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
     public StyleSetupJobSchedulerListener()
     {
         super(StyleSetupJobSchedulerListener.class.getName(),
-            Arrays.asList(new XObjectAddedEvent(CLASS_OPEN_PROJECT), new ExtensionInstalledEvent()));
+            Arrays.asList(new XObjectUpdatedEvent(CLASS_OPEN_PROJECT), new ExtensionInstalledEvent()));
     }
 
     @Override
