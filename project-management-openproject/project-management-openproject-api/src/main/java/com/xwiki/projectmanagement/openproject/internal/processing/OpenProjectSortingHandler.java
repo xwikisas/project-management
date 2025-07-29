@@ -20,7 +20,9 @@
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.xwiki.livedata.LiveDataQuery;
@@ -69,21 +71,45 @@ public final class OpenProjectSortingHandler
     }
 
     /**
-     * Converts a comma-separated string of sort field and direction pairs into a string
-     * representation compatible with OpenProject's query sorting format.
+     * Combines sorting criteria from two sources: a list of {@link LiveDataQuery.SortEntry} objects and a string
+     * representing OpenProject's query sorting format.
+     * <p>
+     * If the same key exists in both, the value from the SortEntry list takes priority. Returns a string formatted
+     * according to OpenProject's sorting format.
      *
-     * @param sortByEntries a string that represents the open project sorting entries, separated by comma
-     * @return a string representing the sort criteria in the format expected by the OpenProject API
-     * @throws ProjectManagementException if the sortEntries cannot be mapped to a valid OpenProject sort string
+     * @param sortEntries a list of {@link LiveDataQuery.SortEntry} objects
+     * @param sortByEntries a comma-separated string  representing sort criteria
+     * @return a string representing the merged sorting options in OpenProject format
+     * @throws ProjectManagementException if the sorting entries cannot be converted properly
      */
-    public static String convertSortEntriesFromQuery(String sortByEntries)
+    public static String concatenateSortEntries(List<LiveDataQuery.SortEntry> sortEntries, String sortByEntries)
         throws ProjectManagementException
     {
-        List<List<String>> sortEntries = Arrays.stream(sortByEntries.split(","))
-            .map(element -> List.of(element.split(":")))
-            .collect(Collectors.toList());
+        Map<String, String> sortMap = new LinkedHashMap<>();
 
-        return convertListOfSortEntriesToString(sortEntries);
+        sortEntries.forEach(
+            entry -> sortMap.put(
+                OpenProjectMapper.mapLivedataProperty(entry.getProperty()),
+                entry.isDescending() ? DESC : ASC
+            )
+        );
+
+        Arrays.stream(sortByEntries.split(",")).forEach(
+            (entry) -> {
+                String[] splitEntry = entry.split(":");
+                if (!sortMap.containsKey(splitEntry[0])) {
+                    sortMap.put(splitEntry[0], splitEntry[1]);
+                }
+            }
+        );
+
+        List<List<String>> listOfEntries = sortMap.entrySet().stream().map(
+            entry -> List.of(
+                entry.getKey(), entry.getValue()
+            )
+        ).collect(Collectors.toList());
+
+        return convertListOfSortEntriesToString(listOfEntries);
     }
 
     private static String convertListOfSortEntriesToString(List<List<String>> sortEntries)

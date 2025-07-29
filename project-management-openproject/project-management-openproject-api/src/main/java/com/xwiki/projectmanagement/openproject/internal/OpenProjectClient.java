@@ -98,7 +98,7 @@ public class OpenProjectClient implements ProjectManagementClient
             }
 
             if (identifier != null) {
-                return handleIdentifier(identifier, offset, pageSize);
+                return handleIdentifier(identifier, offset, pageSize, sortEntries);
             }
 
             String filtersString = OpenProjectFilterHandler.convertFilters(filters);
@@ -116,7 +116,8 @@ public class OpenProjectClient implements ProjectManagementClient
         }
     }
 
-    private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize)
+    private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
+        List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         URL url = parseUrl(identifier);
@@ -128,7 +129,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
         if (parametersNode != null) {
             filters = extractFiltersFromQuery(parametersNode.path("f"));
-            sortBy = extractSortByFromQuery(parametersNode.path("t"));
+            sortBy = extractSortByString(parametersNode.path("t"), sortEntries);
         }
 
         PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
@@ -184,10 +185,11 @@ public class OpenProjectClient implements ProjectManagementClient
         return OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
     }
 
-    private String extractSortByFromQuery(JsonNode sortByNode) throws ProjectManagementException
+    private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
+        throws ProjectManagementException
     {
         String sortByString = sortByNode.asText();
-        return OpenProjectSortingHandler.convertSortEntriesFromQuery(sortByString);
+        return OpenProjectSortingHandler.concatenateSortEntries(sortEntries, sortByString);
     }
 
     private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
