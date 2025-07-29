@@ -38,6 +38,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
     clean(type, inputElem, operator);
     let parent = inputElem.parent();
     inputElem.removeClass('hidden');
+    window.FilterBuilder.element.trigger('displayingFilter', [type, inputElem, operator, params]);
     switch (type) {
       case "number":
         inputElem.attr('type', 'number');

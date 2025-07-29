@@ -42,13 +42,29 @@ public interface OpenProjectApiClient
     /**
      * Retrieves a list of available work packages from the current OpenProject configuration.
      *
-     * @param offset the offset index from which to start retrieving work items.
-     * @param pageSize the maximum number of work items to return.
+     * @param offset the offset index from which to start retrieving work packages.
+     * @param pageSize the maximum number of work packages to return.
      * @param filters optional filters to apply (e.g. query parameters encoded as a string).
+     * @param sortBy optional sorting criteria to apply (e.g. field name and sort direction).
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
      */
-    PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters)
+    PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters, String sortBy)
+        throws ProjectManagementException;
+
+    /**
+     * Retrieves a list of available work packages from the current OpenProject configuration and specified project.
+     *
+     * @param project the project (project name or id) from which we want to retrieve the work packages
+     * @param offset the offset index from which to start retrieving work packages.
+     * @param pageSize the maximum number of work packages to return.
+     * @param filters optional filters to apply (e.g. query parameters encoded as a string).
+     * @param sortBy optional sorting criteria to apply (e.g. field name and sort direction).
+     * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
+     */
+    PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize, String filters,
+        String sortBy)
         throws ProjectManagementException;
 
     /**
