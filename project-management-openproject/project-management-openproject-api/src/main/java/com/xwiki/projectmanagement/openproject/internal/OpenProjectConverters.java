@@ -19,9 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -62,5 +65,31 @@ public final class OpenProjectConverters
         workItem.setPriority(workPackage.getPriority().getValue());
 
         return workItem;
+    }
+
+    /**
+     * Converts a {@link PaginatedResult} of one type into a {@link PaginatedResult} of another type
+     * using the provided mapping function.
+     *
+     * @param input the original {@link PaginatedResult} to convert
+     * @param mapper a {@link Function} that maps each input item to an output item
+     * @param <T> the type of input items
+     * @param <R> the type of result items
+     * @return a {@link PaginatedResult} containing the converted items with the same pagination metadata
+     */
+    public static <T, R> PaginatedResult<R> convertPaginatedResult(
+        PaginatedResult<T> input,
+        Function<T, R> mapper)
+    {
+        PaginatedResult<R> result = new PaginatedResult<>();
+        List<R> mappedItems = new ArrayList<>();
+        for (T item : input.getItems()) {
+            mappedItems.add(mapper.apply(item));
+        }
+        result.setItems(mappedItems);
+        result.setPage(input.getPage());
+        result.setPageSize(input.getPageSize());
+        result.setTotalItems(input.getTotalItems());
+        return result;
     }
 }
