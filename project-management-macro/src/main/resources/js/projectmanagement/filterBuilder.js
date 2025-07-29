@@ -185,7 +185,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         $(this).find(`option[value='${selectedVal}']`).remove();
         addFilter( { property: selectedVal });
       });
+      $(document).trigger('filterBuilderInitialized', [builder.constraintBuilder]);
+      if (window.FilterBuilder) {
+        window.FilterBuilder.element = builder.constraintBuilder;
+      }
   };
+  console.log('filte builder executing.')
   init();
   let builderExport = {
     getConstraints: getJson,
@@ -197,5 +202,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     init: init
   };
   window.FilterBuilder = builderExport;
+  console.log('filte builder executed.')
   return builderExport;
 });

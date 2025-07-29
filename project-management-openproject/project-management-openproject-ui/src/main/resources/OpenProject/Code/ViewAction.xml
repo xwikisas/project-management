@@ -168,13 +168,13 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
       return;
     }
     e.preventDefault();
-    let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
     let matches = itemIdRegex.exec(pressedButton.attr('href'));
     let id = matches &amp;&amp; matches[1];
     if (!id) {
       return;
     }
     let restUrl = `/xwiki/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${openProjInstance}/workpackage/${id}?outputSyntax=plain`;
+    let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
     $.get(restUrl).done(function (response) {
       let modal = $('#openproject-item-view-modal');
       if (modal.length &lt;= 0) {
