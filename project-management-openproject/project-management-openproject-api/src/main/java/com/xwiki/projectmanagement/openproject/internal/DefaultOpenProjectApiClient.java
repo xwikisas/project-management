@@ -158,7 +158,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         JsonNode mainNode =
             getOpenProjectResponse(API_URL_WORK_PACKAGES, String.valueOf(offset), String.valueOf(pageSize), filters,
                 sortBy, "");
-        PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
 
         return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
     }
@@ -173,7 +172,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         JsonNode mainNode = getOpenProjectResponse(projectWorkPackagesUrl, String.valueOf(offset),
             String.valueOf(pageSize), filters, sortBy, "");
         return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
-        }
+    }
 
     @Override
     public PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException
