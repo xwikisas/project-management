@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,7 @@ public final class OpenProjectSortingHandler
      *
      * @param sortEntries the list of LiveData sort entries to be converted
      * @return a string representing the sort criteria in the format expected by the OpenProject API
+     * @throws ProjectManagementException if the sortEntries cannot be mapped to a valid OpenProject sort string
      */
     public static String convertSorting(List<LiveDataQuery.SortEntry> sortEntries) throws ProjectManagementException
     {
@@ -63,9 +65,33 @@ public final class OpenProjectSortingHandler
             )
             .collect(Collectors.toList());
 
+        return convertListOfSortEntriesToString(convertedSortEntries);
+    }
+
+    /**
+     * Converts a comma-separated string of sort field and direction pairs into a string
+     * representation compatible with OpenProject's query sorting format.
+     *
+     * @param sortByEntries a string that represents the open project sorting entries, separated by comma
+     * @return a string representing the sort criteria in the format expected by the OpenProject API
+     * @throws ProjectManagementException if the sortEntries cannot be mapped to a valid OpenProject sort string
+     */
+    public static String convertSortEntriesFromQuery(String sortByEntries)
+        throws ProjectManagementException
+    {
+        List<List<String>> sortEntries = Arrays.stream(sortByEntries.split(","))
+            .map(element -> List.of(element.split(":")))
+            .collect(Collectors.toList());
+
+        return convertListOfSortEntriesToString(sortEntries);
+    }
+
+    private static String convertListOfSortEntriesToString(List<List<String>> sortEntries)
+        throws ProjectManagementException
+    {
         ObjectMapper mapper = new ObjectMapper();
         try {
-            return mapper.writeValueAsString(convertedSortEntries);
+            return mapper.writeValueAsString(sortEntries);
         } catch (JsonProcessingException e) {
             throw new ProjectManagementException(
                 "Failed to convert the project management sort entries into Open Project sortBy entry.", e);
