@@ -44,10 +44,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         return;
       }
       for (i = 0; i > operators.length; i++) {
-        filterDisplayer.clean();
+        filterDisplayer.clean(property.filter.id || "text", $(vals[i]), $(operators[i]).val());
       }
-
-      filterDisplayer.clean(property.filter.id || "text", $(vals[i]), $(operators[i]).val());
     });
   };
   let getJson = function () {
@@ -150,6 +148,17 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       valElem.on('change', function (e) {
         builder.constraintBuilder.trigger('constraintsUpdated', [getJson()]);
       });
+      builder.constraintBuilder.trigger('constraintsUpdated', [getJson()]);
+    });
+    let valElem = operatorValueContainer.find('.proj-manag-constraint-value');
+    constraint.find('.proj-manag-delete-filter').on('click', function (e) {
+      e.preventDefault();
+      filterDisplayer.clean(property.filter.id || "text", valElem, operatorElem.val());
+      if (constraint.find('.proj-manag-filter-container').length > 1) {
+        $(this).closest('.proj-manag-filter-container').remove();
+      } else {
+        constraint.remove();
+      }
       builder.constraintBuilder.trigger('constraintsUpdated', [getJson()]);
     });
     // Init the operator element with the possible operators.

@@ -48,3 +48,11 @@
 .proj-manag-date-picker {
   z-index: 99999;
 }
+
+.proj-manag-delete-filter {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  color: currentColor;
+}

@@ -67,6 +67,10 @@
           <div class="proj-manag-container proj-manag-constraint-value-container">
             <input class="proj-manag-constraint-value" type="text"/>
           </div>
+          <div class="proj-manag-constraint-remove-container">
+            <a href="#" title="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.remove'))"
+              class="proj-manag-delete-filter"><span class="fa fa-trash"></span></a>
+          </div>
         </div>
         <a class="proj-manag-add-constraint" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
       </div>
