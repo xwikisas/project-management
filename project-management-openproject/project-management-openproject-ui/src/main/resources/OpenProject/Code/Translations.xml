@@ -77,6 +77,11 @@ openproject.livedatalabels.serverURL=Server URL
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
+
+openproject.config.stylejob.title=Color and styling
+openproject.config.stylejob.trigger.title=Color sync
+openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project.
+openproject.config.stylejob.trigger.button=Sync colors
 </content>
   <object>
     <name>OpenProject.Code.Translations</name>

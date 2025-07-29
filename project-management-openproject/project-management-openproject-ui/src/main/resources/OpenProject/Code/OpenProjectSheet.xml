@@ -205,6 +205,25 @@
     }
   }
   {{/liveData}}
+
+  ## Styling job schedule.
+  {{html wiki="false"}}
+  #set ($schedulerDoc = $xwiki.getDocument($services.model.resolveDocument('Scheduler.WebHome')))
+  &lt;fieldset class="xform">
+    &lt;legend>$escapetool.xml($services.localization.render('openproject.config.stylejob.title'))&lt;/legend>
+    &lt;dl>
+      &lt;dt>
+        &lt;label>$escapetool.xml($services.localization.render('openproject.config.stylejob.trigger.title'))&lt;/label>
+        &lt;span class="xHint">$escapetool.xml($services.localization.render('openproject.config.stylejob.trigger.hint'))&lt;/span>
+      &lt;/dt>
+      &lt;dd>
+        &lt;a class="btn btn-default" href="$schedulerDoc.getURL('view', $escapetool.url({'do': 'trigger', 'which': 'OpenProject.Code.StylingSetupJob', 'form_token': $services.csrf.token}))">
+          $escapetool.xml($services.localization.render('openproject.config.stylejob.trigger.button'))
+        &lt;/a>
+      &lt;/dd>
+    &lt;/dl>
+  &lt;/fieldset>
+  {{/html}}
 #else
   {{info}}
     $escapetool.xml($services.localization.render('openproject.config.noRights'))
