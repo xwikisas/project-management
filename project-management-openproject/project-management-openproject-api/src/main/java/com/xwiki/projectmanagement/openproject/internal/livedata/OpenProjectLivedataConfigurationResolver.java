@@ -80,13 +80,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             }
             LiveDataConfiguration configuration = stringLiveDataConfigResolver.resolve(defaultConfigJSON);
 
-            if (input.getQuery() != null
-                && input.getQuery().getSource() != null
-                && input.getQuery().getSource().getParameters() != null
-                && input.getQuery().getSource().getParameters().get(SOURCE_PARAMS_INSTANCE) != null)
-            {
-                maybeUpdateSearchURL(configuration, input);
-            }
+            maybeUpdateSearchURL(configuration, input);
             return configuration;
         } catch (IOException | LiveDataException e) {
             logger.error("Could not read the livedata configuration of the Open Project client.", e);
@@ -99,7 +93,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         if (configuration.getMeta() == null || configuration.getMeta().getPropertyDescriptors() == null) {
             return;
         }
-        String instance = (String) input.getQuery().getSource().getParameters().get(SOURCE_PARAMS_INSTANCE);
+        String instance = getInstance(input);
         String wiki = getWiki();
         for (LiveDataPropertyDescriptor propertyDescriptor : configuration.getMeta().getPropertyDescriptors()) {
             if (propertyDescriptor.getFilter() == null || !"list".equals(propertyDescriptor.getFilter().getId())) {
@@ -109,9 +103,23 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             if (searchURL == null || searchURL.isEmpty()) {
                 continue;
             }
-            searchURL = searchURL.replace("{wikiName}", wiki).replace("{instance}", instance);
+            searchURL = searchURL.replace("{wikiName}", wiki);
+            if (instance != null && !instance.isEmpty()) {
+                searchURL = searchURL.replace("{instance}", instance);
+            }
             propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);
         }
+    }
+
+    private String getInstance(LiveDataConfiguration input)
+    {
+        if (input.getQuery() != null
+            && input.getQuery().getSource() != null
+            && input.getQuery().getSource().getParameters() != null)
+        {
+            return (String) input.getQuery().getSource().getParameters().get(SOURCE_PARAMS_INSTANCE);
+        }
+        return null;
     }
 
     private String getWiki()

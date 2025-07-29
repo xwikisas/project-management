@@ -27,13 +27,14 @@ setTimeout(function () {
   });
   require(['filterBuilder'], function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
-      builder.element.on('constraintsUpdated', function (e, constraints) {
+      let updateFilterInput = function (e, constraints) {
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
         }
         $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
-      });
+      };
+      builder.element.on('constraintsUpdated', updateFilterInput);
       let initBuilder = function () {
         let initialFilter = $('#proj-manag-filter').val();
         if (!initialFilter) {
@@ -57,6 +58,9 @@ setTimeout(function () {
         builder.clean();
         builder.init();
         initBuilder();
+      });
+      $(document).on('filterBuilderInitialized', function(e, builderElem) {
+        builderElem.on('constraintsUpdated', updateFilterInput);
       });
     });
   });
