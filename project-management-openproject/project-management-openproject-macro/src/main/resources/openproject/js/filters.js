@@ -19,19 +19,16 @@
  */
  require(['jquery'], function ($) {
    let init = function (event, builderElement) {
-     debugger;
-     console.log('open proj initializing.')
      let element = builderElement || (window.FilterBuilder && window.FilterBuilder.element);
      if (element) {
        element.on('displayingFilter', function (e, a, b, c, d) {
-         if (d.searchURL) {
-           d.searchURL = d.searchURL.replace('{instance}', 'test10');
+         let instance = $('.macro-editor-modal :input[name="instance"]').val();
+         if (d.searchURL && instance) {
+           d.searchURL = d.searchURL.replace('{instance}', instance);
          }
        });
      }
    };
-   console.log('open proj filters executing.');
    init();
    $(document).on('filterBuilderInitialized', init);
-   console.log('open proj filters executed');
  });

@@ -190,7 +190,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         window.FilterBuilder.element = builder.constraintBuilder;
       }
   };
-  console.log('filte builder executing.')
   init();
   let builderExport = {
     getConstraints: getJson,
@@ -202,6 +201,5 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     init: init
   };
   window.FilterBuilder = builderExport;
-  console.log('filte builder executed.')
   return builderExport;
 });
