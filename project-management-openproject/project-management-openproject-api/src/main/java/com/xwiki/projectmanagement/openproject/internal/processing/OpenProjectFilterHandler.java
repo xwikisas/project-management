@@ -90,7 +90,7 @@ public final class OpenProjectFilterHandler
 
         Map<String, Object> convertedFiltersFromString = handleFilterStringConstraints(filtersString);
 
-        mergeFiltersMaps(convertedFiltersFromString, mergedFilters);
+        mergeFiltersMaps(mergedFilters, convertedFiltersFromString);
 
         return convertMapOfFiltersToString(mergedFilters);
     }
@@ -219,7 +219,11 @@ public final class OpenProjectFilterHandler
                     if (firstFilter.containsKey(key)) {
                         List<String> firstFilterValues = (List<String>) firstFilter.get(key);
                         List<String> secondFilterValues = (List<String>) value;
-                        firstFilterValues.addAll(secondFilterValues);
+                        for (String filterValue : secondFilterValues) {
+                            if (!firstFilterValues.contains(filterValue)) {
+                                firstFilterValues.add(filterValue);
+                            }
+                        }
                     } else {
                         firstFilter.put(key, value);
                     }
