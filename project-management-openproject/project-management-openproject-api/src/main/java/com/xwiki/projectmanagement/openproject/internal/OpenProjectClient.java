@@ -24,7 +24,6 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +35,6 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
@@ -98,7 +96,7 @@ public class OpenProjectClient implements ProjectManagementClient
             }
 
             if (identifier != null) {
-                return handleIdentifier(identifier, offset, pageSize, sortEntries);
+                return handleIdentifier(identifier, offset, pageSize, filters, sortEntries);
             }
 
             String filtersString = OpenProjectFilterHandler.convertFilters(filters);
@@ -117,6 +115,7 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
+        List<LiveDataQuery.Filter> filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
@@ -128,7 +127,7 @@ public class OpenProjectClient implements ProjectManagementClient
         String sortBy = "";
 
         if (parametersNode != null) {
-            filters = extractFiltersFromQuery(parametersNode.path("f"));
+            filters = extractFiltersFromQuery(parametersNode.path("f"), filtersEntries);
             sortBy = extractSortByString(parametersNode.path("t"), sortEntries);
         }
 
@@ -175,21 +174,18 @@ public class OpenProjectClient implements ProjectManagementClient
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(JsonNode filtersNode) throws ProjectManagementException
+    private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
+        throws ProjectManagementException
     {
-        ObjectMapper objectMapper = new ObjectMapper();
-        List<Map<String, Object>> filtersList =
-            objectMapper.convertValue(filtersNode, new TypeReference<List<Map<String, Object>>>()
-            {
-            });
-        return OpenProjectFilterHandler.convertFiltersFromQuery(filtersList);
+        String filtersString = filtersNode.toString();
+        return OpenProjectFilterHandler.mergeFilters(filtersList, filtersString);
     }
 
     private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         String sortByString = sortByNode.asText();
-        return OpenProjectSortingHandler.concatenateSortEntries(sortEntries, sortByString);
+        return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
     }
 
     private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException

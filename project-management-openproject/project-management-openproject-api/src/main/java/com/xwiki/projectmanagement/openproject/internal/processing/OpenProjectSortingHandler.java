@@ -82,7 +82,7 @@ public final class OpenProjectSortingHandler
      * @return a string representing the merged sorting options in OpenProject format
      * @throws ProjectManagementException if the sorting entries cannot be converted properly
      */
-    public static String concatenateSortEntries(List<LiveDataQuery.SortEntry> sortEntries, String sortByEntries)
+    public static String mergeSortEntries(List<LiveDataQuery.SortEntry> sortEntries, String sortByEntries)
         throws ProjectManagementException
     {
         Map<String, String> sortMap = new LinkedHashMap<>();
