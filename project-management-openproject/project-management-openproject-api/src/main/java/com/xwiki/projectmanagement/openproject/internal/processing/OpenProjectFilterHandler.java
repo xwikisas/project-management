@@ -44,6 +44,10 @@ public final class OpenProjectFilterHandler
 
     private static final String VALUES = "values";
 
+    private static final String FAILURE_MESSAGE = "Failed to convert Livedata filters";
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private OpenProjectFilterHandler()
     {
     }
@@ -58,7 +62,12 @@ public final class OpenProjectFilterHandler
     public static String convertFilters(List<LiveDataQuery.Filter> filters) throws ProjectManagementException
     {
         List<Map<String, Object>> convertedFilters = getConvertedFilters(filters);
-        return convertListUsingMapper(convertedFilters);
+
+        try {
+            return MAPPER.writeValueAsString(convertedFilters);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(FAILURE_MESSAGE, e);
+        }
     }
 
     /**
@@ -98,10 +107,13 @@ public final class OpenProjectFilterHandler
     private static Map<String, Object> handleFilterStringConstraints(String filtersString)
         throws ProjectManagementException
     {
-        ObjectMapper objectMapper = new ObjectMapper();
+        if (filtersString == null || filtersString.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
         List<Map<String, Object>> filtersList;
         try {
-            filtersList = objectMapper.readValue(filtersString, new TypeReference<List<Map<String, Object>>>()
+            filtersList = MAPPER.readValue(filtersString, new TypeReference<List<Map<String, Object>>>()
             {
             });
         } catch (JsonProcessingException e) {
@@ -206,7 +218,12 @@ public final class OpenProjectFilterHandler
                 }
             );
         }
-        return convertListUsingMapper(convertedFilters);
+
+        try {
+            return MAPPER.writeValueAsString(convertedFilters);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(FAILURE_MESSAGE, e);
+        }
     }
 
     private static void mergeFiltersMaps(Map<String, Object> firstMap, Map<String, Object> secondMap)
@@ -231,16 +248,6 @@ public final class OpenProjectFilterHandler
             } else {
                 firstMap.put(entry.getKey(), entry.getValue());
             }
-        }
-    }
-
-    private static String convertListUsingMapper(List<Map<String, Object>> filters) throws ProjectManagementException
-    {
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            return mapper.writeValueAsString(filters);
-        } catch (JsonProcessingException e) {
-            throw new ProjectManagementException("Failed to convert Livedata filters", e);
         }
     }
 }

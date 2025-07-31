@@ -123,13 +123,16 @@ public class OpenProjectClient implements ProjectManagementClient
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
         String project = extractProjectFromPath(url.getPath());
 
-        String filters = "";
-        String sortBy = "";
+        String filtersValue = "";
+        String sortByValue = "";
 
         if (parametersNode != null) {
-            filters = extractFiltersFromQuery(parametersNode.path("f"), filtersEntries);
-            sortBy = extractSortByString(parametersNode.path("t"), sortEntries);
+            filtersValue = parametersNode.path("f").asText("");
+            sortByValue = parametersNode.path("t").asText("");
         }
+
+        String filters = extractFiltersFromQuery(filtersValue, filtersEntries);
+        String sortBy = extractSortByString(sortByValue, sortEntries);
 
         PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
             ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy)
@@ -174,17 +177,15 @@ public class OpenProjectClient implements ProjectManagementClient
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
+    private String extractFiltersFromQuery(String filtersString, List<LiveDataQuery.Filter> filtersList)
         throws ProjectManagementException
     {
-        String filtersString = filtersNode.toString();
         return OpenProjectFilterHandler.mergeFilters(filtersList, filtersString);
     }
 
-    private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
+    private String extractSortByString(String sortByString, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        String sortByString = sortByNode.asText();
         return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
     }
 

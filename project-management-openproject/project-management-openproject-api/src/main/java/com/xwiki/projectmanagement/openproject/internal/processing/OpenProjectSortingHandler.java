@@ -42,6 +42,10 @@ public final class OpenProjectSortingHandler
 
     private static final String DESC = "desc";
 
+    private static final String FAILURE_MESSAGE = "Failed to convert Livedata sorting";
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     private OpenProjectSortingHandler()
     {
 
@@ -67,7 +71,12 @@ public final class OpenProjectSortingHandler
             )
             .collect(Collectors.toList());
 
-        return convertListOfSortEntriesToString(convertedSortEntries);
+        try {
+            return MAPPER.writeValueAsString(convertedSortEntries);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(
+                FAILURE_MESSAGE, e);
+        }
     }
 
     /**
@@ -94,14 +103,16 @@ public final class OpenProjectSortingHandler
             )
         );
 
-        Arrays.stream(sortByEntries.split(",")).forEach(
-            (entry) -> {
-                String[] splitEntry = entry.split(":");
-                if (!sortMap.containsKey(splitEntry[0])) {
-                    sortMap.put(splitEntry[0], splitEntry[1]);
+        if (sortByEntries != null && !sortByEntries.isEmpty()) {
+            Arrays.stream(sortByEntries.split(",")).forEach(
+                (entry) -> {
+                    String[] splitEntry = entry.split(":");
+                    if (!sortMap.containsKey(splitEntry[0])) {
+                        sortMap.put(splitEntry[0], splitEntry[1]);
+                    }
                 }
-            }
-        );
+            );
+        }
 
         List<List<String>> listOfEntries = sortMap.entrySet().stream().map(
             entry -> List.of(
@@ -109,18 +120,12 @@ public final class OpenProjectSortingHandler
             )
         ).collect(Collectors.toList());
 
-        return convertListOfSortEntriesToString(listOfEntries);
-    }
-
-    private static String convertListOfSortEntriesToString(List<List<String>> sortEntries)
-        throws ProjectManagementException
-    {
-        ObjectMapper mapper = new ObjectMapper();
         try {
-            return mapper.writeValueAsString(sortEntries);
+            return MAPPER.writeValueAsString(listOfEntries);
         } catch (JsonProcessingException e) {
             throw new ProjectManagementException(
-                "Failed to convert the project management sort entries into Open Project sortBy entry.", e);
+                FAILURE_MESSAGE, e);
         }
     }
+
 }
