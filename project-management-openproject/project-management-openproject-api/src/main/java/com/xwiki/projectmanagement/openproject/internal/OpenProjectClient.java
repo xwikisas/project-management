@@ -31,6 +31,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 
@@ -43,6 +44,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalBadRequestException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -70,6 +72,9 @@ public class OpenProjectClient implements ProjectManagementClient
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
+
+    @Inject
+    private Logger logger;
 
     private OpenProjectApiClient openProjectApiClient;
 
@@ -109,7 +114,10 @@ public class OpenProjectClient implements ProjectManagementClient
                 workPackagesPaginatedResult,
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
-        } catch (Exception e) {
+        } catch (WorkItemRetrievalBadRequestException e) {
+            logger.error(e.getMessage());
+            return new PaginatedResult<>();
+        } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -134,14 +142,19 @@ public class OpenProjectClient implements ProjectManagementClient
         String filters = extractFiltersFromQuery(filtersValue, filtersEntries);
         String sortBy = extractSortByString(sortByValue, sortEntries);
 
-        PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
-            ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy)
-            : openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy);
+        try {
+            PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
+                ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy)
+                : openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy);
 
-        return OpenProjectConverters.convertPaginatedResult(
-            workPackagesPaginatedResult,
-            OpenProjectConverters::convertWorkPackageToWorkItem
-        );
+            return OpenProjectConverters.convertPaginatedResult(
+                workPackagesPaginatedResult,
+                OpenProjectConverters::convertWorkPackageToWorkItem
+            );
+        } catch (WorkItemRetrievalBadRequestException e) {
+            logger.error(e.getMessage());
+            return new PaginatedResult<>();
+        }
     }
 
     @Override

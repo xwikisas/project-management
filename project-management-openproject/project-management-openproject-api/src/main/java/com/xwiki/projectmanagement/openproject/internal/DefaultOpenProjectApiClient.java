@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
@@ -38,6 +39,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalBadRequestException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -320,11 +322,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             HttpRequest request =
                 createGetHttpRequest(uriBuilder.build());
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() >= 400) {
-                throw new ProjectManagementException(
-                    String.format("Failed to retrieve the open project entities from the url [%s] with message [%s].",
-                        uri, response.body()));
-            }
+
+            handleOpenProjectWorkPackagesRequestExceptions(response);
+
             String body = response.body();
             return objectMapper.readTree(body);
         } catch (URISyntaxException e) {
@@ -507,5 +507,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             .uri(uri)
             .GET()
             .build();
+    }
+
+    private void handleOpenProjectWorkPackagesRequestExceptions(HttpResponse<String> response)
+        throws ProjectManagementException
+    {
+        int statusCode = response.statusCode();
+
+        if (statusCode == HttpStatus.SC_BAD_REQUEST) {
+            throw new WorkItemRetrievalBadRequestException(
+                String.format("The request to the OpenProject API was invalid. [%s]", response.body())
+            );
+        } else {
+            if (statusCode >= 400) {
+                throw new ProjectManagementException(
+                    String.format("Failed to retrieve the open project entities. [%s].", response.body())
+                );
+            }
+        }
     }
 }
