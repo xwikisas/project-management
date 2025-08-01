@@ -167,6 +167,7 @@ public class HandleConnectionsService
     private void setDocMetaData(XWikiContext context, XWikiDocument doc)
     {
         UserReference currentUser = userReferenceResolver.resolve(context.getUserReference());
+        doc.setHidden(true);
         DocumentAuthors documentAuthors = doc.getAuthors();
         documentAuthors.setCreator(currentUser);
         documentAuthors.setEffectiveMetadataAuthor(currentUser);
