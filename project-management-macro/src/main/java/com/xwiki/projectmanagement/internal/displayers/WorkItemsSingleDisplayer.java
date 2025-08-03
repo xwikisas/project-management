@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.internal.displayers;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,7 +34,7 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.localization.LocalizationManager;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
@@ -85,7 +86,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     private static final String PREFIX_PROPERTY = "property.";
 
     @Inject
-    private LocalizationManager localizationManager;
+    private ContextualLocalizationManager localizationManager;
 
     /**
      * Default constructor.
@@ -119,8 +120,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
             String noWorkItemMessage = null;
             if (translationPrefix != null) {
                 noWorkItemMessage =
-                    localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"),
-                        localizationManager.getDefaultLocale());
+                    localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"));
             }
             if (noWorkItemMessage == null) {
                 noWorkItemMessage = "There are no work items matching this filter.";
@@ -266,13 +266,17 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
 
     private List<Block> getTranslationBlocks(String key, String translationPrefix)
     {
+        List<Block> returnList = null;
         String translationKey = translationPrefix + key;
-        String propertyLabel = localizationManager.getTranslationPlain(translationKey,
-            localizationManager.getDefaultLocale());
-        if (propertyLabel == null || propertyLabel.isEmpty()) {
-            propertyLabel = translationKey;
+
+        if (localizationManager.getTranslation(translationKey) == null) {
+            // Returned the key that was supposed to be used.
+            returnList = getPropertyDisplayerManager().displayProperty(String.class.getName(), translationKey,
+                Collections.emptyMap());
+        } else {
+            returnList = new ArrayList<>();
+            returnList.add(localizationManager.getTranslation(translationKey).render());
         }
-        return getPropertyDisplayerManager().displayProperty(String.class.getName(), propertyLabel,
-            Collections.emptyMap());
+        return returnList;
     }
 }
