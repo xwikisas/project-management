@@ -75,4 +75,10 @@ public interface OpenProjectConfiguration
      * @return a configured {@code OpenProjectApiClient} ready for use
      */
     OpenProjectApiClient getOpenProjectApiClient(String connectionName);
+
+    /**
+     * Clean the various caches used by the application, such as the entities retrieved from the configured Open Project
+     * instances.
+     */
+    void cleanCache();
 }

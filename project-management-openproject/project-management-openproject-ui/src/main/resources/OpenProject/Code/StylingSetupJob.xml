@@ -140,19 +140,19 @@
       </status>
     </class>
     <property>
-      <contextDatabase/>
+      <contextDatabase>xwiki</contextDatabase>
     </property>
     <property>
       <contextLang>en</contextLang>
     </property>
     <property>
-      <contextUser/>
+      <contextUser>XWiki.superadmin</contextUser>
     </property>
     <property>
       <cron>0 0 0 * * ?</cron>
     </property>
     <property>
-      <jobClass>com.xwiki.projectmanagement.openproject.internal.job.StylingSetupJob</jobClass>
+      <jobClass>com.xpn.xwiki.plugin.scheduler.GroovyJob</jobClass>
     </property>
     <property>
       <jobDescription>Sync the styles used for various work package properties (i.e. status, type) with the configured Open Project instances.</jobDescription>
@@ -161,7 +161,7 @@
       <jobName>Open Project Styling Updater</jobName>
     </property>
     <property>
-      <script/>
+      <script>services.openproject.generateStyling()</script>
     </property>
     <property>
       <status>Normal</status>

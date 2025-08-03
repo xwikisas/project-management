@@ -32,8 +32,6 @@ import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.extension.event.ExtensionInstalledEvent;
-import org.xwiki.extension.repository.internal.installed.DefaultInstalledExtension;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.LocalDocumentReference;
@@ -48,12 +46,12 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.BaseObjectReference;
 import com.xpn.xwiki.plugin.scheduler.JobState;
 import com.xpn.xwiki.plugin.scheduler.SchedulerPlugin;
+import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 
 /**
  * Event listener that watches changes on OpenProject configuration documents and schedules the
- * {@link com.xwiki.projectmanagement.openproject.internal.job.StylingSetupJob} with the context user equal to the one
- * that created the Open Project configuration. This assures us that the job will execute with a user that is active in
- * the wiki and has logged in with OpenProject
+ * {@link StylingSetupManager} with the context user equal to the one that created the Open Project configuration. This
+ * assures us that the job will execute with a user that is active in the wiki and has logged in with OpenProject
  *
  * @version $Id$
  */
@@ -92,45 +90,13 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
     public StyleSetupJobSchedulerListener()
     {
         super(StyleSetupJobSchedulerListener.class.getName(),
-            Arrays.asList(new XObjectUpdatedEvent(CLASS_OPEN_PROJECT), new ExtensionInstalledEvent()));
+            Arrays.asList(new XObjectUpdatedEvent(CLASS_OPEN_PROJECT)));
     }
 
     @Override
     public void onEvent(Event event, Object source, Object data)
     {
-        if (event instanceof ExtensionInstalledEvent) {
-            maybeRescheduleJob((DefaultInstalledExtension) source);
-        } else {
-            maybeChangeJobUserAndReschedule((XWikiDocument) source, (XWikiContext) data);
-        }
-    }
-
-    private void maybeRescheduleJob(DefaultInstalledExtension source)
-    {
-        String extensionId = source.getId().getId();
-        if (!extensionId.equals(OP_API_ID)) {
-            return;
-        }
-        XWikiContext context = contextProvider.get();
-        // Shouldn't happen.
-        if (context == null) {
-            return;
-        }
-        SchedulerPlugin scheduler = (SchedulerPlugin) context.getWiki().getPluginManager().getPlugin(PLUGIN_SCHEDULER);
-        try {
-            XWikiDocument jobDoc = context.getWiki().getDocument(DOC_SCHEDULER_JOB, context);
-            BaseObject job = jobDoc.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE);
-            JobState jobState = scheduler.getJobStatus(job, context);
-            if (jobState.getQuartzState().equals(Trigger.TriggerState.NORMAL)) {
-                scheduler.unscheduleJob(job, context);
-                scheduler.scheduleJob(job, context);
-            } else if (jobState.getQuartzState().equals(Trigger.TriggerState.NONE)) {
-                scheduler.scheduleJob(job, context);
-            }
-        } catch (XWikiException | SchedulerException e) {
-            logger.warn("Failed to reschedule the Open Project Style Setup job. Cause: [{}].",
-                ExceptionUtils.getRootCauseMessage(e));
-        }
+        maybeChangeJobUserAndReschedule((XWikiDocument) source, (XWikiContext) data);
     }
 
     private void maybeChangeJobUserAndReschedule(XWikiDocument source, XWikiContext data)

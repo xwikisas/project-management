@@ -171,4 +171,12 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
             this.cache.dispose();
         }
     }
+
+    @Override
+    public void cleanCache()
+    {
+        if (this.cache != null) {
+            this.cache.removeAll();
+        }
+    }
 }

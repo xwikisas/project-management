@@ -33,7 +33,7 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.csrf.CSRFToken;
-import org.xwiki.localization.LocalizationManager;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
@@ -48,6 +48,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -63,10 +64,6 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
-
-    @Inject
-    @Named("ssx")
-    private SkinExtension ssx;
 
     @Inject
     @Named("jsx")
@@ -85,7 +82,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private WorkItemPropertyDisplayerManager displayerManager;
 
     @Inject
-    private LocalizationManager l10n;
+    private ContextualLocalizationManager l10n;
+
+    @Inject
+    private StylingSetupManager stylingSetupManager;
 
     /**
      * Default constructor.
@@ -112,7 +112,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         MacroTransformationContext context) throws MacroExecutionException
     {
         ssrx.use("openproject/css/propertyStyles.css");
-        ssx.use("OpenProject.Code.StyleSheets." + parameters.getInstance());
+        stylingSetupManager.useInstanceStyle(parameters.getInstance());
         jsx.use("OpenProject.Code.ViewAction");
 
         String viewAction = "view";
@@ -133,11 +133,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                         + "&token="
                         + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
 
-                List<Block> linkContentBlocks = displayerManager.displayProperty(
-                    "",
-                    l10n.getTranslationPlain("openproject.oauth.notauthorized.link",
-                        xContext.getLocale()), Collections.emptyMap()
-                );
+                List<Block> linkContentBlocks =
+                    Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
 
                 LinkBlock link = new LinkBlock(
                     linkContentBlocks,
@@ -145,11 +142,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                     false
                 );
 
-                List<Block> message = displayerManager.displayProperty("", "openproject.oauth.notauthorized.hint",
-                    Collections.emptyMap());
-                message.add(link);
-                return Collections.singletonList(
-                    new GroupBlock(message, Collections.singletonMap("class", "box warningmessage")));
+                Block message = l10n.getTranslation("openproject.oauth.notauthorized.hint").render();
+                return Collections.singletonList(new GroupBlock(Arrays.asList(message, link),
+                    Collections.singletonMap("class", "box warningmessage")));
             }
         }
         return super.execute(parameters, content, context);

@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.internal.job;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,21 +18,30 @@ package com.xwiki.projectmanagement.openproject.internal.job;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+package com.xwiki.projectmanagement.openproject.internal.displayer;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
+import javax.inject.Singleton;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.quartz.JobExecutionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xwiki.component.util.DefaultParameterizedType;
+import org.xwiki.component.annotation.Component;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.LocalDocumentReference;
+import org.xwiki.skinx.SkinExtension;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
 
@@ -42,22 +49,23 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xpn.xwiki.plugin.scheduler.AbstractJob;
-import com.xpn.xwiki.web.Utils;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
 /**
- * Using the {@link OpenProjectApiClient} retrieve the colors for the OpenProject properties that support
- * customization and generate a style sheet for each configured OpenProject instance.
+ * Using the {@link OpenProjectApiClient} retrieve the colors for the OpenProject properties that support customization
+ * and generate a style sheet for each configured OpenProject instance.
  *
  * @version $Id$
  */
-public class StylingSetupJob extends AbstractJob
+@Component(roles = StylingSetupManager.class)
+@Singleton
+public class StylingSetupManager
 {
     private static final String STYLESHEET_EXTENSION_PROP_NAME = "name";
 
@@ -79,42 +87,71 @@ public class StylingSetupJob extends AbstractJob
 
     private static final String BRACKET_END = "\n}\n";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(StylingSetupJob.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(StylingSetupManager.class);
 
-    @Override
-    protected void executeJob(JobExecutionContext jobContext)
+    @Inject
+    private OpenProjectConfiguration opConfiguration;
+
+    @Inject
+    private DocumentReferenceResolver<EntityReference> documentReferenceResolver;
+
+    @Inject
+    @Named("document")
+    private UserReferenceResolver<DocumentReference> userRefResolver;
+
+    @Inject
+    private Provider<XWikiContext> contextProvider;
+
+    @Inject
+    private EntityReferenceSerializer<String> serializer;
+
+    @Inject
+    @Named("ssx")
+    private SkinExtension ssx;
+
+    /**
+     * Generate the styling for the configured OpenProject instances.
+     */
+    public void setupInstanceStyles()
     {
-        OpenProjectConfiguration opConfiguration = Utils.getComponent(OpenProjectConfiguration.class);
-        DocumentReferenceResolver<EntityReference> documentReferenceResolver =
-            Utils.getComponent(new DefaultParameterizedType(null, DocumentReferenceResolver.class,
-                EntityReference.class));
-        UserReferenceResolver<DocumentReference> userRefResolver =
-            Utils.getComponent(new DefaultParameterizedType(null, UserReferenceResolver.class, DocumentReference.class),
-                "document");
-        XWikiContext context = getXWikiContext();
+        XWikiContext context = contextProvider.get();
         List<String> instanceIds = null;
         instanceIds =
             opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
                 .collect(Collectors.toList());
 
         LOGGER.debug("Found [{}] configured OpenProject instances.", instanceIds);
-        computeStylesheet(instanceIds, context, opConfiguration, documentReferenceResolver, userRefResolver);
+        computeStylesheet(instanceIds, context);
     }
 
-    private void computeStylesheet(List<String> openProjCfgNames, XWikiContext context,
-        OpenProjectConfiguration opConfiguration, DocumentReferenceResolver<EntityReference> documentReferenceResolver,
-        UserReferenceResolver<DocumentReference> userRefResolver)
+    /**
+     * Inject the styling generated for a given Open Project instance.
+     *
+     * @param instance the name of a configured Open Project instance.
+     */
+    public void useInstanceStyle(String instance)
+    {
+        DocumentReference stylesDocRef = documentReferenceResolver.resolve(
+            new EntityReference(instance, EntityType.DOCUMENT, OPEN_PROJECT_SSX_EXTENSIONS.getParent()));
+        ssx.use(serializer.serialize(stylesDocRef));
+    }
+
+    private void computeStylesheet(List<String> openProjCfgNames, XWikiContext context)
     {
         for (String openProjCfgName : openProjCfgNames) {
             DocumentReference stylesDocRef = documentReferenceResolver.resolve(
                 new EntityReference(openProjCfgName, EntityType.DOCUMENT, OPEN_PROJECT_SSX_EXTENSIONS.getParent()));
             LOGGER.debug("Generating style for instance [{}] at document [{}].", openProjCfgName, stylesDocRef);
             try {
-                OpenProjectApiClient apiClient = opConfiguration.getOpenProjectApiClient(openProjCfgName);
-                if (apiClient == null) {
-                    LOGGER.debug("Didn't get a client for instance [{}].", openProjCfgName);
+                OpenProjectConnection connection = opConfiguration.getConnection(openProjCfgName);
+                String accessToken = opConfiguration.getAccessTokenForConfiguration(openProjCfgName);
+                if (connection == null || StringUtils.isEmpty(accessToken)) {
+                    LOGGER.warn("Skipping styling update for [{}] due to missing configuration or access token.",
+                        openProjCfgName);
                     continue;
                 }
+                OpenProjectApiClient apiClient =
+                    new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken);
 
                 StringBuilder stringBuilder = new StringBuilder();
 

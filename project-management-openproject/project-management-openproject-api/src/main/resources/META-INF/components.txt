@@ -1,4 +1,5 @@
 com.xwiki.projectmanagement.openproject.internal.displayer.OpenProjectDisplayerManager
+com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager
 com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
 com.xwiki.projectmanagement.openproject.internal.config.DefaultOpenProjectConfiguration
 com.xwiki.projectmanagement.openproject.internal.config.OpenProjectDocumentConfigurationSource
