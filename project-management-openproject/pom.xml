@@ -37,8 +37,7 @@
   </modules>
 
   <properties>
-    <contrib.oauth2.version>2.18.2</contrib.oauth2.version>
-    <com.nimbus-jose-jwt.version>10.3</com.nimbus-jose-jwt.version>
+    <contrib.oauth2.version>2.19.1</contrib.oauth2.version>
   </properties>
 
 </project>
