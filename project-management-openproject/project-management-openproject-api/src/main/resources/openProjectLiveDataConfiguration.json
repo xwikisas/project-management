@@ -10,6 +10,10 @@
       {
         "id": "identifier.value",
         "filterable": true,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "identifier.location"
+        },
         "filter": {
           "id": "list",
           "operators": [
@@ -47,6 +51,10 @@
       {
         "id": "summary.value",
         "filterable": true,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "summary.location"
+        },
         "filter": {
           "id": "text",
           "operators": [
@@ -85,7 +93,7 @@
       {
         "id": "startDate",
         "filterable": true,
-        "op": true,
+        "displayer": "date",
         "filter": {
           "id": "date",
           "operators": [
@@ -116,6 +124,7 @@
       {
         "id": "dueDate",
         "filterable": true,
+        "displayer": "date",
         "filter": {
           "id": "date",
           "operators": [
@@ -147,6 +156,7 @@
       {
         "id": "progress",
         "filterable": true,
+        "displayer": "number",
         "filter": {
           "id": "number",
           "operators": [
@@ -180,62 +190,7 @@
       {
         "id": "creationDate",
         "filterable": true,
-        "filter": {
-          "id": "date",
-          "operators": [
-            {
-              "id": "t",
-              "name": "Today"
-            },
-            {
-              "id": "w",
-              "name": "This week"
-            },
-            {
-              "id": "=d",
-              "name": "On"
-            },
-            {
-              "id": "between",
-              "name": "Between"
-            }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
-        }
-      },
-      {
-        "id": "resolution",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "resolved",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "labels",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "closeDate",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "milestones.value",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "closedBy.value",
-        "filterable": false,
-        "sortable": false
-      },
-      {
-        "id": "updateDate",
-        "filterable": true,
+        "displayer": "date",
         "filter": {
           "id": "date",
           "operators": [
@@ -262,6 +217,34 @@
       {
         "id": "updateDate",
         "filterable": true,
+        "displayer": "date",
+        "filter": {
+          "id": "date",
+          "operators": [
+            {
+              "id": "t",
+              "name": "Today"
+            },
+            {
+              "id": "w",
+              "name": "This week"
+            },
+            {
+              "id": "=d",
+              "name": "On"
+            },
+            {
+              "id": "between",
+              "name": "Between"
+            }
+          ],
+          "searchURL": "/someRestURLThatIsNotImplementedYet"
+        }
+      },
+      {
+        "id": "updateDate",
+        "filterable": true,
+        "displayer": "date",
         "filter": {
           "id": "date",
           "operators": [
@@ -288,6 +271,10 @@
       {
         "id": "creator.value",
         "filterable": true,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "creator.location"
+        },
         "filter": {
           "id": "list",
           "operators": [
@@ -306,6 +293,7 @@
       {
         "id": "assignees",
         "filterable": true,
+        "displayer": "html",
         "filter": {
           "id": "list",
           "operators": [
@@ -350,6 +338,10 @@
       {
         "id": "project.value",
         "filterable": true,
+        "displayer": {
+          "id": "link",
+          "propertyHref": "project.location"
+        },
         "filter": {
           "id": "list",
           "operators": [
