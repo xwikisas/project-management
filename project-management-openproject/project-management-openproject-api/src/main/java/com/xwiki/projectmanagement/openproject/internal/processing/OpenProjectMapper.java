@@ -39,13 +39,18 @@ public final class OpenProjectMapper
      */
     public static final Map<String, String> OPERATOR_MAPPING = new HashMap<>();
 
+    private static final String AUTHOR_STRING = "author";
+
     static {
         KEY_MAPPING.put("date", "start_date");
         KEY_MAPPING.put("identifier.value", "id");
         KEY_MAPPING.put("summary.value", "subject");
         KEY_MAPPING.put("assignees", "assigned_to");
-        KEY_MAPPING.put("creator.value", "author");
+        KEY_MAPPING.put("creator.value", AUTHOR_STRING);
         KEY_MAPPING.put("project.value", "project");
+        KEY_MAPPING.put("creationDate", "createdAt");
+        KEY_MAPPING.put("updateDate", "updatedAt");
+        KEY_MAPPING.put("reporter.value", AUTHOR_STRING);
         OPERATOR_MAPPING.put("contains", "=");
     }
 
