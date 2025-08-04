@@ -50,7 +50,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
@@ -161,7 +161,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
                     + "token for the current user is not set.", connectionName));
             return null;
         }
-        return new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken);
+        return new CachingOpenProjectApiClient(connection, accessToken, cache);
     }
 
     @Override
