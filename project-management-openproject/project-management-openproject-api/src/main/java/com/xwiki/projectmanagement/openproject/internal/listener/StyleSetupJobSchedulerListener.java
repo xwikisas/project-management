@@ -108,6 +108,12 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
             BaseObject job = jobDoc.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE);
             JobState jobState = scheduler.getJobStatus(job, data);
 
+            String currentUser = serializer.serialize(data.getUserReference());
+            // Skip if job user is already set to this one.
+            if (currentUser.equals(job.getStringValue(JOB_CONTEXT_USER))) {
+                return;
+            }
+
             boolean shouldSchedule = false;
             if (jobState.getQuartzState().equals(Trigger.TriggerState.NORMAL)) {
                 shouldSchedule = true;
@@ -116,11 +122,6 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
                 shouldSchedule = true;
             }
             if (shouldSchedule) {
-                String currentUser = serializer.serialize(data.getUserReference());
-                // Skip if job user is already set to this one.
-                if (currentUser.equals(job.getStringValue(JOB_CONTEXT_USER))) {
-                    return;
-                }
                 job.setStringValue(JOB_CONTEXT_USER, currentUser);
                 data.getWiki().saveDocument(jobDoc, String.format("Updated context user to [%s].",
                     data.getUserReference()), data);
