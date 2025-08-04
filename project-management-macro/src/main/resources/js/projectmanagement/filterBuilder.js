@@ -63,9 +63,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       for (i = 0; i < operators.length; i++) {
         let opName = $(operators[i]).val();
         let val = $(vals[i]).val();
-        if (val == '' && (!property.emptyOperators || !property.emptyOperators.filter(o => o.id == opName))) {
-          continue;
-        }
         filter.constraints.push( { operator: opName, value: val });
       }
       if (filter.constraints.length > 0) {

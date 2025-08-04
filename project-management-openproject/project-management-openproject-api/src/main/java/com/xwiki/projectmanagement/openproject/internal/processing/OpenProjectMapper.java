@@ -51,7 +51,10 @@ public final class OpenProjectMapper
         KEY_MAPPING.put("creationDate", "createdAt");
         KEY_MAPPING.put("updateDate", "updatedAt");
         KEY_MAPPING.put("reporter.value", AUTHOR_STRING);
+        KEY_MAPPING.put("progress", "percentageDone");
         OPERATOR_MAPPING.put("contains", "=");
+        OPERATOR_MAPPING.put("between", "<>d");
+        OPERATOR_MAPPING.put("empty", "!*");
     }
 
     private OpenProjectMapper()

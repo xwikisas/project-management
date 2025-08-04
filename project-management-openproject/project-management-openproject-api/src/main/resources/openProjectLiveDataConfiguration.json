@@ -89,30 +89,6 @@
           "id": "date",
           "operators": [
             {
-              "id": "<t+",
-              "name": "in less than"
-            },
-            {
-              "id": ">t+",
-              "name": "in more than"
-            },
-            {
-              "id": "<t-",
-              "name": "less than days ago"
-            },
-            {
-              "id": ">t-",
-              "name": "more than days ago"
-            },
-            {
-              "id": "t-",
-              "name": "Days ago"
-            },
-            {
-              "id": "t+",
-              "name": "Days later"
-            },
-            {
               "id": "t",
               "name": "Today"
             },
@@ -125,7 +101,7 @@
               "name": "On"
             },
             {
-              "id": "<>d",
+              "id": "between",
               "name": "Between"
             },
             {
@@ -143,30 +119,6 @@
           "id": "date",
           "operators": [
             {
-              "id": "<t+",
-              "name": "in less than"
-            },
-            {
-              "id": ">t+",
-              "name": "in more than"
-            },
-            {
-              "id": "<t-",
-              "name": "less than days ago"
-            },
-            {
-              "id": ">t-",
-              "name": "more than days ago"
-            },
-            {
-              "id": "t-",
-              "name": "Days ago"
-            },
-            {
-              "id": "t+",
-              "name": "Days later"
-            },
-            {
               "id": "t",
               "name": "Today"
             },
@@ -179,11 +131,11 @@
               "name": "On"
             },
             {
-              "id": "<>d",
+              "id": "between",
               "name": "Between"
             },
             {
-              "id": "!*",
+              "id": "empty",
               "name": "Empty"
             }
           ],
@@ -218,8 +170,8 @@
               "name": "not empty"
             },
             {
-              "id": "!*",
-              "name": "empty"
+              "id": "empty",
+              "name": "Empty"
             }
           ]
         }
@@ -230,18 +182,6 @@
         "filter": {
           "id": "date",
           "operators": [
-            {
-              "id": "<t-",
-              "name": "less than days ago"
-            },
-            {
-              "id": ">t-",
-              "name": "more than days ago"
-            },
-            {
-              "id": "t-",
-              "name": "Days ago"
-            },
             {
               "id": "t",
               "name": "Today"
@@ -255,7 +195,7 @@
               "name": "On"
             },
             {
-              "id": "<>d",
+              "id": "between",
               "name": "Between"
             }
           ],
@@ -299,18 +239,6 @@
           "id": "date",
           "operators": [
             {
-              "id": "<t-",
-              "name": "less than days ago"
-            },
-            {
-              "id": ">t-",
-              "name": "more than days ago"
-            },
-            {
-              "id": "t-",
-              "name": "Days ago"
-            },
-            {
               "id": "t",
               "name": "Today"
             },
@@ -323,7 +251,7 @@
               "name": "On"
             },
             {
-              "id": "<>d",
+              "id": "between",
               "name": "Between"
             }
           ],
@@ -337,18 +265,6 @@
           "id": "date",
           "operators": [
             {
-              "id": "<t-",
-              "name": "less than days ago"
-            },
-            {
-              "id": ">t-",
-              "name": "more than days ago"
-            },
-            {
-              "id": "t-",
-              "name": "Days ago"
-            },
-            {
               "id": "t",
               "name": "Today"
             },
@@ -361,7 +277,7 @@
               "name": "On"
             },
             {
-              "id": "<>d",
+              "id": "between",
               "name": "Between"
             }
           ],
@@ -405,7 +321,7 @@
               "name": "Not empty"
             },
             {
-              "id": "!*",
+              "id": "empty",
               "name": "Empty"
             }
           ],
@@ -573,7 +489,7 @@
             "name": "Not equal"
           }
         ],
-        "dateFormat": "yyyy/MM/dd HH:mm",
+        "dateFormat": "yyyy-MM-dd HH:mm",
         "defaultOperator": "between"
       },
       {
