@@ -144,8 +144,7 @@
       },
       {
         "id": "progress",
-        "filterable": false,
-        "sortable": false,
+        "filterable": true,
         "filter": {
           "id": "number",
           "operators": [
