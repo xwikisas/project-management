@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyMandatory;
 
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
@@ -54,6 +55,7 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     /**
      * @param instance see {@link #getInstance()}.
      */
+    @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
