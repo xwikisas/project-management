@@ -46,7 +46,10 @@ public final class OpenProjectMapper
         KEY_MAPPING.put("assignees", "assigned_to");
         KEY_MAPPING.put("creator.value", "author");
         KEY_MAPPING.put("project.value", "project");
+        KEY_MAPPING.put("progress", "percentageDone");
         OPERATOR_MAPPING.put("contains", "=");
+        OPERATOR_MAPPING.put("between", "<>d");
+        OPERATOR_MAPPING.put("empty", "!*");
     }
 
     private OpenProjectMapper()

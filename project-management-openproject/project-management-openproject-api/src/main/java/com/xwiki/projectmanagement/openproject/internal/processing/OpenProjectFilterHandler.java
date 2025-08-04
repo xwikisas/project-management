@@ -20,10 +20,12 @@
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.xwiki.livedata.LiveDataQuery;
@@ -47,6 +49,11 @@ public final class OpenProjectFilterHandler
     private static final String FAILURE_MESSAGE = "Failed to convert Livedata filters";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private static final Set<String> PROPERTIES_DATE = Set.of("startDate", "dueDate", "creationDate", "updateDate");
+
+    private static final Set<String> OPERATORS_EMPTY_VALS =
+        Set.of("empty", "t", "w", "*", "!*", String.valueOf('o'), "c");
 
     private OpenProjectFilterHandler()
     {
@@ -92,7 +99,8 @@ public final class OpenProjectFilterHandler
                 continue;
             }
 
-            Map<String, Object> filterConstraints = handleFilterConstraints(validConstraints);
+            Map<String, List<String>> filterConstraints =
+                handleFilterConstraints(filter.getProperty(), validConstraints);
             String filterName = OpenProjectMapper.mapLivedataProperty(filter.getProperty());
             mergedFilters.put(filterName, filterConstraints);
         }
@@ -144,7 +152,8 @@ public final class OpenProjectFilterHandler
                 continue;
             }
 
-            Map<String, Object> filterConstraints = handleFilterConstraints(validConstraints);
+            Map<String, List<String>> filterConstraints =
+                handleFilterConstraints(filter.getProperty(), validConstraints);
 
             filterConstraints.forEach(
                 (key, value) -> {
@@ -164,6 +173,20 @@ public final class OpenProjectFilterHandler
         return convertedFilters;
     }
 
+    private static List<String> convertToOpenProjectValue(String propertyName, String values)
+    {
+        if (!PROPERTIES_DATE.contains(propertyName)) {
+            return Collections.singletonList(values);
+        }
+        // We can either receive a date range or a simple date with the format specified in the livedata config json.
+        String[] parts = values.split("/");
+        if (parts.length > 1) {
+            return Arrays.asList(parts[0], parts[1]);
+        } else {
+            return Collections.singletonList(values);
+        }
+    }
+
     private static List<LiveDataQuery.Constraint> getValidConstraints(LiveDataQuery.Filter filter)
     {
         return filter
@@ -172,27 +195,29 @@ public final class OpenProjectFilterHandler
             .filter(
                 constraint -> {
                     String constraintValue = (String) constraint.getValue();
+                    // Some operators ignore values. If thats the case, we know its a valid constraint whether the
+                    // value is present or not.
+                    if (OPERATORS_EMPTY_VALS.contains(constraint.getOperator())) {
+                        return true;
+                    }
                     return constraintValue != null && !constraintValue.isEmpty();
                 }
             )
             .collect(Collectors.toList());
     }
 
-    private static Map<String, Object> handleFilterConstraints(
+    private static Map<String, List<String>> handleFilterConstraints(String propertyName,
         List<LiveDataQuery.Constraint> filterConstraints)
     {
-        Map<String, Object> result = new HashMap<>();
+        Map<String, List<String>> result = new HashMap<>();
         for (LiveDataQuery.Constraint constraint : filterConstraints) {
             String operatorValue = OpenProjectMapper.mapLivedataOperator(constraint.getOperator());
-
+            List<String> values = convertToOpenProjectValue(propertyName, (String) constraint.getValue());
             if (result.containsKey(operatorValue)) {
-                List<String> currentValues = (List<String>) result.get(operatorValue);
-                currentValues.add((String) constraint.getValue());
-                result.put(operatorValue, currentValues);
+                List<String> currentValues = result.get(operatorValue);
+                currentValues.addAll(values);
             } else {
-                List<String> values = new ArrayList<String>(
-                    Collections.singletonList((String) constraint.getValue()));
-                result.put(operatorValue, values);
+                result.put(operatorValue, new ArrayList<>(values));
             }
         }
         return result;
