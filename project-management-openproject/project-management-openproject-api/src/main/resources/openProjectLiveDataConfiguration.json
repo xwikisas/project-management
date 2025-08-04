@@ -66,7 +66,7 @@
         "id": "description",
         "displayer": "html",
         "filterable": true,
-        "sortable":  false,
+        "sortable": false,
         "filter": {
           "id": "text",
           "operators": [
@@ -202,6 +202,36 @@
         }
       },
       {
+        "id": "resolution",
+        "filterable": false,
+        "sortable": false
+      },
+      {
+        "id": "resolved",
+        "filterable": false,
+        "sortable": false
+      },
+      {
+        "id": "labels",
+        "filterable": false,
+        "sortable": false
+      },
+      {
+        "id": "closeDate",
+        "filterable": false,
+        "sortable": false
+      },
+      {
+        "id": "milestones.value",
+        "filterable": false,
+        "sortable": false
+      },
+      {
+        "id": "closedBy.value",
+        "filterable": false,
+        "sortable": false
+      },
+      {
         "id": "updateDate",
         "filterable": true,
         "filter": {
@@ -324,6 +354,10 @@
             {
               "id": "=",
               "name": "Equals"
+            },
+            {
+              "id": "!",
+              "name": "Not equals"
             }
           ],
           "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects"

@@ -108,7 +108,10 @@ public final class OpenProjectSortingHandler
                 (entry) -> {
                     String[] splitEntry = entry.split(":");
                     if (!sortMap.containsKey(splitEntry[0])) {
-                        sortMap.put(splitEntry[0], splitEntry[1]);
+                        sortMap.put(
+                            OpenProjectMapper.mapLivedataProperty(splitEntry[0]),
+                            splitEntry[1]
+                        );
                     }
                 }
             );
@@ -127,5 +130,4 @@ public final class OpenProjectSortingHandler
                 FAILURE_MESSAGE, e);
         }
     }
-
 }

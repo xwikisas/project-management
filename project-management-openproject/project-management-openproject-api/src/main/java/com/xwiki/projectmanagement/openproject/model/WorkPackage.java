@@ -92,6 +92,11 @@ public class WorkPackage extends BaseOpenProjectObject
     private static final String PROJECT = "project";
 
     /**
+     * The key identifying the percentage done for the work package.
+     */
+    private static final String PERCENTAGE_DONE = "percentageDone";
+
+    /**
      * The key identifying the status of the work package.
      */
     private static final String STATUS = "status";
@@ -327,7 +332,27 @@ public class WorkPackage extends BaseOpenProjectObject
     }
 
     /**
-     * Gets the project associated with the work package, including its reference.
+     * Gets the percentage done for the work package.
+     *
+     * @return the percentage done as an integer
+     */
+    public int getPercentageDone()
+    {
+        return (int) get(PERCENTAGE_DONE);
+    }
+
+    /**
+     * Sets the percentage done for the work package.
+     *
+     * @param percentageDone the percentage to set
+     */
+    public void setPercentageDone(int percentageDone)
+    {
+        put(PERCENTAGE_DONE, percentageDone);
+    }
+
+    /**
+     * Gets the progress associated with the work package, including its reference.
      *
      * @return the project as a {@link Linkable}
      */
