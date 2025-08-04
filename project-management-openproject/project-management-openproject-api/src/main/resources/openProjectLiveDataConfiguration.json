@@ -85,6 +85,7 @@
       {
         "id": "startDate",
         "filterable": true,
+        "op": true,
         "filter": {
           "id": "date",
           "operators": [
@@ -106,7 +107,7 @@
             },
             {
               "id": "!*",
-              "name": "Empty"
+              "name": "Not set"
             }
           ],
           "searchURL": "/someRestURLThatIsNotImplementedYet"
@@ -135,8 +136,9 @@
               "name": "Between"
             },
             {
-              "id": "empty",
-              "name": "Empty"
+              "id": "!*",
+              "name": "Not set"
+
             }
           ],
           "searchURL": "/someRestURLThatIsNotImplementedYet"
@@ -169,8 +171,8 @@
               "name": "not empty"
             },
             {
-              "id": "empty",
-              "name": "Empty"
+              "id": "!*",
+              "name": "Not set"
             }
           ]
         }
@@ -320,8 +322,8 @@
               "name": "Not empty"
             },
             {
-              "id": "empty",
-              "name": "Empty"
+              "id": "!*",
+              "name": "Not set"
             }
           ],
           "searchURL": "/xwiki/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users"
@@ -433,7 +435,7 @@
           },
           {
             "id": "!*",
-            "name": "Is empty"
+            "name": "Not set"
           }
         ],
         "defaultOperator": "~"

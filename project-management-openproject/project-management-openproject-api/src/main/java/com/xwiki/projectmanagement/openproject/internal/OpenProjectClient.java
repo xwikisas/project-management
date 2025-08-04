@@ -175,7 +175,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
     {
-        logger.warn("Failed to retrieve work packages: {}", e.getMessage(), e);
+        logger.warn("Failed to retrieve work packages: {}", e.getMessage());
         return new PaginatedResult<>();
     }
 

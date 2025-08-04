@@ -53,7 +53,7 @@ public final class OpenProjectFilterHandler
     private static final Set<String> PROPERTIES_DATE = Set.of("startDate", "dueDate", "creationDate", "updateDate");
 
     private static final Set<String> OPERATORS_EMPTY_VALS =
-        Set.of("empty", "t", "w", "*", "!*", String.valueOf('o'), "c");
+        Set.of("t", "w", "*", "!*", String.valueOf('o'), "c");
 
     private OpenProjectFilterHandler()
     {

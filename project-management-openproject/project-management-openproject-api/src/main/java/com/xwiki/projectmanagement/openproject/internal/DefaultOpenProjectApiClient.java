@@ -31,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
@@ -39,10 +38,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -517,16 +516,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         int statusCode = response.statusCode();
 
-        if (statusCode == HttpStatus.SC_BAD_REQUEST) {
+        if (statusCode >= 400 && statusCode <= 499) {
             throw new WorkPackageRetrievalBadRequestException(
                 String.format("The request to the OpenProject API was invalid. [%s]", response.body())
             );
-        } else {
-            if (statusCode >= 400) {
-                throw new ProjectManagementException(
-                    String.format("Failed to retrieve the open project entities. [%s].", response.body())
-                );
-            }
+        } else if (statusCode >= 500) {
+            throw new ProjectManagementException(
+                String.format("Failed to retrieve the open project entities. [%s].", response.body())
+            );
         }
     }
 }
