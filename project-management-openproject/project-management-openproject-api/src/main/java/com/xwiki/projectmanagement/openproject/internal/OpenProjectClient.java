@@ -44,7 +44,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalBadRequestException;
+import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -114,12 +114,29 @@ public class OpenProjectClient implements ProjectManagementClient
                 workPackagesPaginatedResult,
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
-        } catch (WorkItemRetrievalBadRequestException e) {
-            logger.error(e.getMessage());
-            return new PaginatedResult<>();
+        } catch (WorkPackageRetrievalBadRequestException e) {
+            return handleWorkPackageRetrievalException(e);
         } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
+    }
+
+    @Override
+    public WorkItem createWorkItem(WorkItem workItem) throws WorkItemCreationException
+    {
+        return null;
+    }
+
+    @Override
+    public WorkItem updateWorkItem(WorkItem workItem) throws WorkItemUpdatingException
+    {
+        return null;
+    }
+
+    @Override
+    public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
+    {
+        return false;
     }
 
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
@@ -151,28 +168,15 @@ public class OpenProjectClient implements ProjectManagementClient
                 workPackagesPaginatedResult,
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
-        } catch (WorkItemRetrievalBadRequestException e) {
-            logger.error(e.getMessage());
-            return new PaginatedResult<>();
+        } catch (WorkPackageRetrievalBadRequestException e) {
+            return handleWorkPackageRetrievalException(e);
         }
     }
 
-    @Override
-    public WorkItem createWorkItem(WorkItem workItem) throws WorkItemCreationException
+    private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
     {
-        return null;
-    }
-
-    @Override
-    public WorkItem updateWorkItem(WorkItem workItem) throws WorkItemUpdatingException
-    {
-        return null;
-    }
-
-    @Override
-    public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
-    {
-        return false;
+        logger.warn("Failed to retrieve work packages: {}", e.getMessage(), e);
+        return new PaginatedResult<>();
     }
 
     private URL parseUrl(String url) throws WorkItemRetrievalException

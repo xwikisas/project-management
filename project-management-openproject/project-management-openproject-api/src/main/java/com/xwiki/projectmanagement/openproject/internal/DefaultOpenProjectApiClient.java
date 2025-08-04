@@ -39,7 +39,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalBadRequestException;
+import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -515,7 +515,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         int statusCode = response.statusCode();
 
         if (statusCode == HttpStatus.SC_BAD_REQUEST) {
-            throw new WorkItemRetrievalBadRequestException(
+            throw new WorkPackageRetrievalBadRequestException(
                 String.format("The request to the OpenProject API was invalid. [%s]", response.body())
             );
         } else {

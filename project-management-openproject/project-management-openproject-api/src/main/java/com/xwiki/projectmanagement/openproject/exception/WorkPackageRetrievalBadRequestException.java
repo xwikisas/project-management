@@ -17,7 +17,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.exception;
+package com.xwiki.projectmanagement.openproject.exception;
+
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 /**
  * Exception thrown when the parameters used to retrieve WorkPackages from the OpenProject API
@@ -28,7 +30,7 @@ package com.xwiki.projectmanagement.exception;
  * @version $Id$
  * @since 1.0
  */
-public class WorkItemRetrievalBadRequestException extends ProjectManagementException
+public class WorkPackageRetrievalBadRequestException extends ProjectManagementException
 {
     /**
      * Class ID for serialization.
@@ -38,7 +40,7 @@ public class WorkItemRetrievalBadRequestException extends ProjectManagementExcep
     /**
      * @param message the detail message for this exception.
      */
-    public WorkItemRetrievalBadRequestException(String message)
+    public WorkPackageRetrievalBadRequestException(String message)
     {
         super(message);
     }
@@ -47,7 +49,7 @@ public class WorkItemRetrievalBadRequestException extends ProjectManagementExcep
      * @param message the detail message for this exception.
      * @param throwable the cause for this exception or null if none exists.
      */
-    public WorkItemRetrievalBadRequestException(String message, Throwable throwable)
+    public WorkPackageRetrievalBadRequestException(String message, Throwable throwable)
     {
         super(message, throwable);
     }
