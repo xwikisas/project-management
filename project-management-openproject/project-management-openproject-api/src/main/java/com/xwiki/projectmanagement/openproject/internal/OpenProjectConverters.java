@@ -51,6 +51,7 @@ public final class OpenProjectConverters
         WorkItem workItem = new WorkItem();
 
         workItem.setDescription(workPackage.getDescription());
+        workItem.setProgress(workPackage.getPercentageDone());
         workItem.setStartDate(workPackage.getStartDate());
         workItem.setDueDate(workPackage.getDueDate());
         workItem.setCreationDate(workPackage.getCreatedAt());
@@ -68,8 +69,8 @@ public final class OpenProjectConverters
     }
 
     /**
-     * Converts a {@link PaginatedResult} of one type into a {@link PaginatedResult} of another type
-     * using the provided mapping function.
+     * Converts a {@link PaginatedResult} of one type into a {@link PaginatedResult} of another type using the provided
+     * mapping function.
      *
      * @param input the original {@link PaginatedResult} to convert
      * @param mapper a {@link Function} that maps each input item to an output item

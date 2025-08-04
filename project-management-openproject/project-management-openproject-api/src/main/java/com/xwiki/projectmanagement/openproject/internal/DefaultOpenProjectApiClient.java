@@ -111,6 +111,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_RESPONSE_COLOR = "color";
 
+    private static final String OP_RESPONSE_PERCENTAGE_DONE = "percentageDone";
+
     private static final String API_URL_PART = "/api/v3";
 
     private static final String API_URL_WORK_PACKAGES = "/api/v3/work_packages";
@@ -368,6 +370,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         WorkPackage workPackage = new WorkPackage();
 
         workPackage.setDescription(element.path(OP_DESCRIPTION).path("html").asText());
+        workPackage.setPercentageDone(element.path(OP_RESPONSE_PERCENTAGE_DONE).asInt());
         int id = element.path(OP_RESPONSE_ID).asInt();
         workPackage.setId(id);
 
