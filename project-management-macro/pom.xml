@@ -30,6 +30,10 @@
 
   <artifactId>project-management-macro</artifactId>
 
+  <properties>
+    <xwiki.jacoco.instructionRatio>0.56</xwiki.jacoco.instructionRatio>
+  </properties>
+
   <dependencies>
     <!--  Needed to access the ProjectManagement manager, clients, and other things.  -->
     <dependency>
