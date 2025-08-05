@@ -68,6 +68,9 @@ openproject.config.update=Update
 openproject.config.fillInAllFields=Please fill in all fields!
 openproject.config.update.notUpdated=Connection {0} was not updated!
 openproject.config.update.updated=Connection {0} has been updated!
+openproject.config.isAuthorized.true=Authorized
+openproject.config.isAuthorized.false=Not yet authorized
+openproject.livedatalabels.isAuthorized=Authorized?
 openproject.livedatalabels.actions = Actions
 openproject.livedatalabels.clientId=Client ID
 openproject.livedatalabels.clientSecret=Client Secret
@@ -80,7 +83,7 @@ openproject.livedata.action.view.error=Failed to load Work Package
 
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
-openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project.
+openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project. You should be authorized to the Open Project instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
 </content>
   <object>

@@ -78,6 +78,17 @@ public class OpenProjectScriptService implements ScriptService
     }
 
     /**
+     * @param instanceName the name of the Open Project instance configuration.
+     * @return whether the user was authorized to the configured Open Project instance or not.
+     * @since 1.0-rc-3
+     */
+    public boolean isUserAuthorized(String instanceName)
+    {
+        String accessToken = openProjectConfiguration.getAccessTokenForConfiguration(instanceName);
+        return accessToken != null;
+    }
+
+    /**
      * Generate the styling for the configured instances. Since this method will need to communicate with the configured
      * instances and make http requests, it should be run in a separate thread.
      */

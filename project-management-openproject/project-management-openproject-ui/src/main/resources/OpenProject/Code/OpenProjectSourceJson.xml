@@ -94,30 +94,37 @@
     #set ($serverURLHtml = "&lt;a href='$serverURL' target='_blank'&gt;$!result.get('serverURL')&lt;/a&gt;")
     #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$clientId&lt;/span&gt;")
     #set ($clientSecretHtml = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
-    #set ($actionsHTML = "
-    &lt;button
-      class='edit-button btn-link'
+    #set ($isAuthorizedToOP = $services.openproject.isUserAuthorized($connectionName))
+    #set ($authLink = $xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $escapetool.url({
+        'connectionName': $connectionName,
+        'redirectUrl': $xwiki.getURL('XWiki.XWikiPreferences', 'admin', 'editor=globaladmin&amp;section=OpenProject'),
+        'token': $services.csrf.token})))
+    #set ($actionsHTML = "&lt;div class='displayer-actions'&gt;&lt;a
+      class='edit-button action'
+      href='#'
       data-connection-name=$connectionName
       data-server-url=$serverURL
       data-client-id=$clientId
       data-client-secret=$clientSecret
       data-edit-document-reference=$documentReference
-    &gt;
-      &lt;i class='fa fa-pencil text-muted'&gt;&lt;/i&gt;
-    &lt;/button&gt;
-    &lt;button
-      class='delete-button btn-link'
+    &gt;&lt;span class='fa fa-pencil text-muted'&gt;&lt;/span&gt;&lt;/a&gt;&lt;a
+      class='delete-button action'
+      href='#'
       data-connection-name=$connectionName
       data-delete-document-reference=$documentReference
-    &gt;
-      &lt;i class='fa fa-trash text-danger'&gt;&lt;/i&gt;
-    &lt;/button&gt;
-  ")
+    &gt;&lt;span class='fa fa-trash text-danger'&gt;&lt;/span&gt;&lt;/a&gt;")
+    #if (!$isAuthorizedToOP)
+      #set ($actionsHTML = "${actionsHTML}&lt;a
+      class='op-auth-button action'
+      href=$authLink
+    &gt;&lt;span class='fa fa-unlock'&gt;&lt;/span&gt;&lt;/a&gt;&lt;/div&gt;")
+    #end
     #set($discard = $json.rows.add({
       "connectionName" : $connectionNameHtml,
       "serverURL" : $serverURLHtml,
       "clientId" : $clientIdHtml,
       "clientSecret" : $clientSecretHtml,
+      "isAuthorized": $services.localization.render("openproject.config.isAuthorized.${isAuthorizedToOP}"),
       "actions" : $actionsHTML
         }))
   #end

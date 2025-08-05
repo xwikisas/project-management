@@ -161,7 +161,7 @@
 
   {{liveData
   id="openproject_connections"
-  properties="connectionName,serverURL,clientId,clientSecret,actions"
+  properties="connectionName,serverURL,clientId,clientSecret,isAuthorized,actions"
   source="liveTable"
   sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=OpenProject.Code.OpenProjectSourceJson"
   }}
@@ -198,6 +198,11 @@
         {
           "id": "clientSecret",
           "displayer": "html",
+          "sortable": false,
+          "filterable": false
+        },
+        {
+          "id": "isAuthorized",
           "sortable": false,
           "filterable": false
         }
