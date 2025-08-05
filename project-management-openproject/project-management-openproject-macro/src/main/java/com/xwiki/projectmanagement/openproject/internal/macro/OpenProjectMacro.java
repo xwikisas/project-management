@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -120,31 +121,36 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (xContext.getAction().equals(viewAction)) {
             String connectionName = parameters.getInstance();
 
-            String token = openProjectConfiguration.getAccessTokenForConfiguration(connectionName);
-            if (token == null || token.isEmpty()) {
-                String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
-                LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                    Arrays.asList("OpenProject", "Code"), "RenewOAuthConnection");
-                String redirectUrl =
-                    xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext) + "?connectionName="
-                        + connectionName
-                        + "&redirectUrl="
-                        + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
-                        + "&token="
-                        + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+            if (xContext.getUserReference() == null
+                || openProjectConfiguration.getAccessTokenForConfiguration(connectionName) == null)
+            {
+                List<Block> warning = new ArrayList<>();
+                warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
+                if (xContext.getUserReference() != null) {
+                    String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
+                    LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
+                        Arrays.asList("OpenProject", "Code"), "RenewOAuthConnection");
+                    String redirectUrl =
+                        xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
+                            + "?connectionName="
+                            + connectionName
+                            + "&redirectUrl="
+                            + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
+                            + "&token="
+                            + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
 
-                List<Block> linkContentBlocks =
-                    Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
+                    List<Block> linkContentBlocks =
+                        Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
 
-                LinkBlock link = new LinkBlock(
-                    linkContentBlocks,
-                    new ResourceReference(redirectUrl, ResourceType.URL),
-                    false
-                );
-
-                Block message = l10n.getTranslation("openproject.oauth.notauthorized.hint").render();
-                return Collections.singletonList(new GroupBlock(Arrays.asList(message, link),
-                    Collections.singletonMap("class", "box warningmessage")));
+                    LinkBlock link = new LinkBlock(
+                        linkContentBlocks,
+                        new ResourceReference(redirectUrl, ResourceType.URL),
+                        false
+                    );
+                    warning.add(link);
+                }
+                return Collections.singletonList(
+                    new GroupBlock(warning, Collections.singletonMap("class", "box warningmessage")));
             }
         }
         return super.execute(parameters, content, context);
