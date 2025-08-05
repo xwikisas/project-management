@@ -32,6 +32,7 @@ import org.xwiki.livedata.LiveDataQuery;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
@@ -82,11 +83,11 @@ public final class OpenProjectFilterHandler
      * string is compatible with the OpenProject API's expected filter format.
      *
      * @param filters the list of {@link LiveDataQuery.Filter} objects representing the base filters
-     * @param filtersString a string representing OpenProject URL encoded filters string
+     * @param filtersNode a JsonNode representing OpenProject URL encoded filters
      * @return a string is compatible with the OpenProject API's expected filter format.
      * @throws ProjectManagementException if an error occurs during parsing or serialization
      */
-    public static String mergeFilters(List<LiveDataQuery.Filter> filters, String filtersString)
+    public static String mergeFilters(List<LiveDataQuery.Filter> filters, JsonNode filtersNode)
         throws ProjectManagementException
     {
         Map<String, Object> mergedFilters = new HashMap<>();
@@ -105,28 +106,23 @@ public final class OpenProjectFilterHandler
             mergedFilters.put(filterName, filterConstraints);
         }
 
-        Map<String, Object> convertedFiltersFromString = handleFilterStringConstraints(filtersString);
+        Map<String, Object> convertedFiltersFromNode = handleFilterNode(filtersNode);
 
-        mergeFiltersMaps(mergedFilters, convertedFiltersFromString);
+        mergeFiltersMaps(mergedFilters, convertedFiltersFromNode);
 
         return convertMapOfFiltersToString(mergedFilters);
     }
 
-    private static Map<String, Object> handleFilterStringConstraints(String filtersString)
-        throws ProjectManagementException
+    private static Map<String, Object> handleFilterNode(JsonNode filterNode)
     {
-        if (filtersString == null || filtersString.isEmpty()) {
+        if (filterNode == null || filterNode.isEmpty()) {
             return Collections.emptyMap();
         }
 
         List<Map<String, Object>> filtersList;
-        try {
-            filtersList = MAPPER.readValue(filtersString, new TypeReference<List<Map<String, Object>>>()
-            {
-            });
-        } catch (JsonProcessingException e) {
-            throw new ProjectManagementException("Failed to convert the filter string");
-        }
+        filtersList = MAPPER.convertValue(filterNode, new TypeReference<List<Map<String, Object>>>()
+        {
+        });
 
         Map<String, Object> convertedFilters = new HashMap<>();
 
