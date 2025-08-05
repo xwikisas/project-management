@@ -78,6 +78,8 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private OpenProjectApiClient openProjectApiClient;
 
+    private ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
     {
@@ -116,7 +118,7 @@ public class OpenProjectClient implements ProjectManagementClient
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
-        } catch (ProjectManagementException e) {
+        } catch (ProjectManagementException | JsonProcessingException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -142,18 +144,18 @@ public class OpenProjectClient implements ProjectManagementClient
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
         List<LiveDataQuery.Filter> filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries)
-        throws ProjectManagementException
+        throws ProjectManagementException, JsonProcessingException
     {
         URL url = parseUrl(identifier);
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
         String project = extractProjectFromPath(url.getPath());
 
-        String filtersValue = "";
-        String sortByValue = "";
+        JsonNode filtersValue = null;
+        JsonNode sortByValue = null;
 
         if (parametersNode != null) {
-            filtersValue = parametersNode.path("f").asText("");
-            sortByValue = parametersNode.path("t").asText("");
+            filtersValue = parametersNode.path("f");
+            sortByValue = parametersNode.path("t");
         }
 
         String filters = extractFiltersFromQuery(filtersValue, filtersEntries);
@@ -194,16 +196,24 @@ public class OpenProjectClient implements ProjectManagementClient
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(String filtersString, List<LiveDataQuery.Filter> filtersList)
-        throws ProjectManagementException
+    private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
+        throws ProjectManagementException, JsonProcessingException
     {
-        return OpenProjectFilterHandler.mergeFilters(filtersList, filtersString);
+        if (filtersNode != null) {
+            String filtersString = objectMapper.writeValueAsString(filtersNode);
+            return OpenProjectFilterHandler.mergeFilters(filtersList, filtersString);
+        }
+        return "";
     }
 
-    private String extractSortByString(String sortByString, List<LiveDataQuery.SortEntry> sortEntries)
+    private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
+        if (sortByNode != null) {
+            String sortByString = sortByNode.asText();
+            return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
+        }
+        return "";
     }
 
     private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
@@ -221,9 +231,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
         String parameter = matcher.group(1);
         parameter = URLDecoder.decode(parameter, StandardCharsets.UTF_8);
-        ObjectMapper objectMapper;
         try {
-            objectMapper = new ObjectMapper();
             return objectMapper.readTree(parameter);
         } catch (JsonProcessingException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
