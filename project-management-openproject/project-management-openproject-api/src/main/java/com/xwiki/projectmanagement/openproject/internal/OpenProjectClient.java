@@ -78,7 +78,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private OpenProjectApiClient openProjectApiClient;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
@@ -197,11 +197,10 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
-        throws ProjectManagementException, JsonProcessingException
+        throws ProjectManagementException
     {
         if (filtersNode != null) {
-            String filtersString = objectMapper.writeValueAsString(filtersNode);
-            return OpenProjectFilterHandler.mergeFilters(filtersList, filtersString);
+            return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
         }
         return "";
     }
