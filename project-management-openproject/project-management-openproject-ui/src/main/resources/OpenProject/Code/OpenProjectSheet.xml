@@ -152,7 +152,7 @@
    id="create-connection-button"
    type="button" class="btn btn-primary"
   &gt;
-    &lt;i class="fa fa-plus"&gt;&lt;/i&gt;
+    $services.icon.renderHTML('trash')
       $services.localization.render('openproject.config.addNewConnection')
   &lt;/button&gt;
   #handleConnectionModal
@@ -222,7 +222,7 @@
         &lt;span class="xHint"&gt;$escapetool.xml($services.localization.render('openproject.config.stylejob.trigger.hint'))&lt;/span&gt;
       &lt;/dt&gt;
       &lt;dd&gt;
-        &lt;a class="btn btn-default" href="$schedulerDoc.getURL('view', $escapetool.url({'do': 'trigger', 'which': 'OpenProject.Code.StylingSetupJob', 'form_token': $services.csrf.token}))"&gt;
+        &lt;a id="open-project-sync-colors" class="btn btn-default" href="$schedulerDoc.getURL('view', $escapetool.url({'do': 'trigger', 'which': 'OpenProject.Code.StylingSetupJob', 'form_token': $services.csrf.token}))"&gt;
           $escapetool.xml($services.localization.render('openproject.config.stylejob.trigger.button'))
         &lt;/a&gt;
       &lt;/dd&gt;

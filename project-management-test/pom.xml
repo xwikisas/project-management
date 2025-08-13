@@ -23,10 +23,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
-    <version>1.0-rc-4-SNAPSHOT</version>
+    <groupId>com.xwiki.parent</groupId>
+    <artifactId>xwikisas-parent-platform</artifactId>
+    <version>15.10.15</version>
+<!--    <groupId>com.xwiki.projectmanagement</groupId>-->
+<!--    <artifactId>project-management</artifactId>-->
+<!--    <version>1.0-rc-9.1-SNAPSHOT</version>-->
   </parent>
+  <groupId>com.xwiki.projectmanagement</groupId>
+  <version>1.0-rc-12.1-SNAPSHOT</version>
   <artifactId>project-management-test</artifactId>
   <name>Project Management - Tests - Parent POM</name>
   <packaging>pom</packaging>

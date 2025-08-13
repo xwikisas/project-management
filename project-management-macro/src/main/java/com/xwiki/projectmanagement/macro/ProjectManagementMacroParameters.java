@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.stability.Unstable;
@@ -114,16 +115,17 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         this.workItemsDisplayer = workItemsDisplayer;
     }
 
-    // We hide some parameters in order to make the macro simpler to use.
+    // PropertyHidden for parameters that are handled by the application. PropertyAdvanced for parameters that can
+    // still be passed to the macro but are hidden in order to make the macro less crowded.
 
-    @PropertyHidden
+    @PropertyDisplayHidden
     @Override
     public void setPageSizes(String pageSizes)
     {
         super.setPageSizes(pageSizes);
     }
 
-    @PropertyHidden
+    @PropertyDisplayHidden
     @Override
     public Boolean getShowPageSizeDropdown()
     {
@@ -151,7 +153,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setSourceParameters(sourceParameters);
     }
 
-    @PropertyHidden
+    @PropertyDisplayHidden
     @Override
     public void setId(String id)
     {

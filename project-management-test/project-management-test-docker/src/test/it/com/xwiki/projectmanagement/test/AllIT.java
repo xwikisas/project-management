@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
  *
@@ -18,26 +16,24 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
+ */
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
-    <version>1.0-rc-12.1-SNAPSHOT</version>
-  </parent>
-  <packaging>pom</packaging>
-  <artifactId>project-management-openproject</artifactId>
+package com.xwiki.projectmanagement.test;
 
-  <modules>
-    <module>project-management-openproject-macro</module>
-    <module>project-management-openproject-ui</module>
-    <module>project-management-openproject-api</module>
-  </modules>
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
+import org.xwiki.test.docker.junit5.UITest;
 
-  <properties>
-    <contrib.oauth2.version>2.19.1</contrib.oauth2.version>
-  </properties>
+import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
 
-</project>
+@UITest
+public class AllIT
+{
+    @Nested
+    @Order(1)
+    @DisplayName("Overall Open Project UI test")
+    class NestedOpenProjectIT extends OpenProjectIT
+    {
+    }
+}

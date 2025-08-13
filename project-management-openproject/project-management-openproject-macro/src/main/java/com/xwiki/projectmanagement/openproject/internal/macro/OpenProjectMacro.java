@@ -46,7 +46,6 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xpn.xwiki.XWikiContext;
-import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
@@ -62,6 +61,8 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Named("openproject")
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
+    private static final String CLASS = "class";
+
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
@@ -78,9 +79,6 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     @Inject
     private CSRFToken csrfToken;
-
-    @Inject
-    private WorkItemPropertyDisplayerManager displayerManager;
 
     @Inject
     private ContextualLocalizationManager l10n;
@@ -150,9 +148,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                     warning.add(link);
                 }
                 return Collections.singletonList(
-                    new GroupBlock(warning, Collections.singletonMap("class", "box warningmessage")));
+                    new GroupBlock(warning, Collections.singletonMap(CLASS, "box warningmessage")));
             }
         }
-        return super.execute(parameters, content, context);
+        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
+            Collections.singletonMap(CLASS, "open-project-macro")));
     }
 }

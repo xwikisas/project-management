@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-
-<!--
+/*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
  *
@@ -18,26 +16,23 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
+ */
+package com.xwiki.projectmanagement.test.openproject;
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management</artifactId>
-    <version>1.0-rc-12.1-SNAPSHOT</version>
-  </parent>
-  <packaging>pom</packaging>
-  <artifactId>project-management-openproject</artifactId>
+import java.util.List;
+import java.util.stream.Collectors;
 
-  <modules>
-    <module>project-management-openproject-macro</module>
-    <module>project-management-openproject-ui</module>
-    <module>project-management-openproject-api</module>
-  </modules>
+import org.openqa.selenium.By;
+import org.xwiki.test.ui.po.ViewPage;
 
-  <properties>
-    <contrib.oauth2.version>2.19.1</contrib.oauth2.version>
-  </properties>
+public class ViewPageWithOpenProjectMacro extends ViewPage
+{
+    public List<OpenProjectMacroElement> getOpenProjectMacros()
+    {
+        return getDriver().findElements(By.className("open-project-macro"))
+            .stream()
+            .map(OpenProjectMacroElement::new)
+            .collect(Collectors.toList());
+    }
 
-</project>
+}

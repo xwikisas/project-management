@@ -149,7 +149,8 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
                 Collections.emptyMap());
 
         return new GroupBlock(
-            Arrays.asList(new GroupBlock(propertyNameBlock, PROP_NAME_PARAMS), new ParagraphBlock(descriptionBlocks)));
+            Arrays.asList(new GroupBlock(propertyNameBlock, PROP_NAME_PARAMS), new ParagraphBlock(descriptionBlocks)),
+            Collections.singletonMap(ATTRIBUTE_CLASS, "work-package-description"));
     }
 
     private Block getBodyBlocks(WorkItem workItem, String translationPrefix)
