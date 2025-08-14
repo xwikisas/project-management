@@ -118,7 +118,7 @@ public class OpenProjectClient implements ProjectManagementClient
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
-        } catch (ProjectManagementException | JsonProcessingException e) {
+        } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -144,7 +144,7 @@ public class OpenProjectClient implements ProjectManagementClient
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
         List<LiveDataQuery.Filter> filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries)
-        throws ProjectManagementException, JsonProcessingException
+        throws ProjectManagementException
     {
         URL url = parseUrl(identifier);
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());

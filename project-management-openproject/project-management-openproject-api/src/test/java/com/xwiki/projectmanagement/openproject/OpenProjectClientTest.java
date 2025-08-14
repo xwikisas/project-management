@@ -25,6 +25,10 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+
+import static org.mockito.Mockito.mockStatic;
+
+import org.mockito.MockedStatic;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -37,6 +41,8 @@ import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -64,6 +70,8 @@ public class OpenProjectClientTest
     @InjectMockComponents
     private OpenProjectClient openProjectClient;
 
+    private static final Integer NUMBER_OF_WORK_PACKAGES = 10;
+
     @BeforeEach
     public void setUp() throws ProjectManagementException
     {
@@ -78,62 +86,62 @@ public class OpenProjectClientTest
     @Test
     public void getWorkItemsWithoutIdentifierTest() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(null);
-
-        PaginatedResult<WorkItem> results = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
-
-        verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
-
-        verify(openProjectApiClient, times(0)).getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
-            anyString());
-
-        assertEquals(2, results.getItems().size());
+        getWorkItemsTest(null, 1, 0, NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
     public void getWorkItemsWithIdentifier() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("http://open-project-instance"
-            + "/work_packages");
-
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
-
-        verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
-
-        verify(openProjectApiClient, times(0)).getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
-            anyString());
-
-        assertEquals(2, result.getItems().size());
+        getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
     public void getWorkItemsWithIdentifierAndProjectTest() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("http://open-project-instance/projects/first-project"
-            + "/work_packages");
-
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
-
-        verify(openProjectApiClient, times(0)).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
-
-        verify(openProjectApiClient, times(1)).getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
-            anyString());
-
-        assertEquals(2, result.getItems().size());
+        getWorkItemsTest("http://open-project-instance/projects/first-project/work_packages", 0, 1,
+            NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
     public void getWorkPackagesInvalidFiltersOrSortingTest() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("http://open-project-instance"
-            + "/work_packages");
-
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
             WorkPackageRetrievalBadRequestException.class);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+        getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, 0);
+    }
 
-        assertEquals(0, result.getItems().size());
+    @Test
+    public void getWorkPackagesThrowsProjectManagementExceptionTest() throws ProjectManagementException
+    {
+        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
+            ProjectManagementException.class);
+
+        assertThrows(WorkItemRetrievalException.class,
+            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+    }
+
+    @Test
+    public void getWorkPackagesWithBadFiltersOrSortingJsonRepresentation()
+    {
+        try (
+            MockedStatic<OpenProjectFilterHandler> filterMock = mockStatic(OpenProjectFilterHandler.class);
+            MockedStatic<OpenProjectSortingHandler> sortingMock = mockStatic(OpenProjectSortingHandler.class)
+        )
+        {
+            filterMock.when(() -> OpenProjectFilterHandler.convertFilters(any()))
+                .thenThrow(new ProjectManagementException("Invalid filters")
+                {
+                });
+
+            sortingMock.when(() -> OpenProjectSortingHandler.convertSorting(any()))
+                .thenThrow(new ProjectManagementException("Invalid sorting")
+                {
+                });
+
+            assertThrows(WorkItemRetrievalException.class,
+                () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+        }
     }
 
     @Test
@@ -145,19 +153,33 @@ public class OpenProjectClientTest
             () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
     }
 
+    private void getWorkItemsTest(String identifier, int expectedWorkPackagesCalls,
+        int expectedProjectWorkPackagesCalls, int expectedElements) throws ProjectManagementException
+    {
+
+        when(executionContext.get("identifier")).thenReturn(identifier);
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+
+        verify(openProjectApiClient, times(expectedWorkPackagesCalls)).getWorkPackages(anyInt(), anyInt(), anyString(),
+            anyString());
+
+        verify(openProjectApiClient, times(expectedProjectWorkPackagesCalls)).getProjectWorkPackages(anyString(),
+            anyInt(), anyInt(), anyString(),
+            anyString());
+
+        assertEquals(expectedElements, result.getItems().size());
+    }
+
     private PaginatedResult<WorkPackage> generateWorkItems()
     {
         PaginatedResult<WorkPackage> result = new PaginatedResult<>();
         List<WorkPackage> workPackages = new ArrayList<>();
-        WorkPackage firstWorkPackage = new WorkPackage();
-        firstWorkPackage.setId(1);
-
-        WorkPackage secondWorkPackage = new WorkPackage();
-        secondWorkPackage.setId(1);
-
-        workPackages.add(firstWorkPackage);
-        workPackages.add(secondWorkPackage);
-
+        for (int i = 1; i <= NUMBER_OF_WORK_PACKAGES; i++) {
+            WorkPackage workPackage = new WorkPackage();
+            workPackage.setId(i);
+            workPackages.add(workPackage);
+        }
         result.setItems(workPackages);
         return result;
     }

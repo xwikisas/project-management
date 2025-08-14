@@ -134,7 +134,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_OFFSET = "offset";
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private final HttpClient client;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -148,10 +148,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
      * @param token the API authentication token used to access the OpenProject API
      * @param connectionUrl the base URL of the OpenProject instance
      */
-    public DefaultOpenProjectApiClient(String connectionUrl, String token)
+    public DefaultOpenProjectApiClient(String connectionUrl, String token, HttpClient client)
     {
         this.connectionUrl = connectionUrl;
         this.token = token;
+        this.client = client;
     }
 
     @Override
@@ -386,7 +387,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private void setWorkPackageLinksNodeProperties(WorkPackage workPackage, JsonNode element)
     {
-        String editCreateUrlString = "%s/%s/edit";
+        String editCreateUrlString = "%s%s/edit";
         JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
         int id = element.path(OP_RESPONSE_ID).asInt();
 
@@ -424,8 +425,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);
         String priorityName = priorityNode.path(OP_RESPONSE_TITLE).asText();
-        String priorityUrl = String.format("%s/%s/activity", connectionUrl,
-            priorityNode.path(HREF).asText().replaceFirst(API_URL_PART, ""));
+        String priorityUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
         workPackage.setPriority(new Linkable(priorityName, priorityUrl));
     }
 
@@ -433,8 +433,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         wp.setStartDate(getDateFromNode(OP_START_DATE, node));
         wp.setDueDate(getDateFromNode(OP_DUE_DATE, node));
-        wp.setDerivedStartDate(getIsoDateFromNode(OP_DERIVED_START_DATE, node));
-        wp.setDerivedDueDate(getIsoDateFromNode(OP_DERIVED_DUE_DATE, node));
+        wp.setDerivedStartDate(getDateFromNode(OP_DERIVED_START_DATE, node));
+        wp.setDerivedDueDate(getDateFromNode(OP_DERIVED_DUE_DATE, node));
     }
 
     private Date getDateFromNode(String prop, JsonNode node)

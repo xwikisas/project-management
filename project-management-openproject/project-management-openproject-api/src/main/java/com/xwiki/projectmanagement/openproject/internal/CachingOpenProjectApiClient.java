@@ -20,6 +20,8 @@
 
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.http.HttpClient;
+
 import org.xwiki.cache.Cache;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -57,7 +59,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public CachingOpenProjectApiClient(OpenProjectConnection instance, String accessToken,
         Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache)
     {
-        client = new DefaultOpenProjectApiClient(instance.getServerURL(), accessToken);
+        client = new DefaultOpenProjectApiClient(instance.getServerURL(), accessToken, HttpClient.newHttpClient());
         this.clientId = instance.getClientId();
         this.cache = cache;
     }
