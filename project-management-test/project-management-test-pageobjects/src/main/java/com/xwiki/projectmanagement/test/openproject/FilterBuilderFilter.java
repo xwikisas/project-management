@@ -25,8 +25,8 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.NotImplementedException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
-import org.xwiki.test.ui.po.Select;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
 public class FilterBuilderFilter extends BaseElement
@@ -52,7 +52,7 @@ public class FilterBuilderFilter extends BaseElement
     public WebElement getConstraint(int index)
     {
         return container
-            .findElement(By.xpath(String.format("(//div[@class='proj-manag-filter-container'])[%d]", index)));
+            .findElement(By.xpath(String.format("(div[@class='proj-manag-filter-container'])[%d]", index)));
     }
 
     public FilterBuilderFilter setOperator(int index, String operator)
@@ -65,15 +65,17 @@ public class FilterBuilderFilter extends BaseElement
 
     public WebElement getValueElement(int index)
     {
-        return getConstraint(index).findElement(By.className("proj-manag-constraint-operator"));
+        return getConstraint(index).findElement(By.cssSelector("input.proj-manag-constraint-value"));
     }
 
     public FilterBuilderFilter setSuggestValue(int index, String value)
     {
         WebElement valElem = getValueElement(index);
         SuggestInputElement suggest = new SuggestInputElement(valElem);
-        suggest.click();
-        suggest.selectByVisibleText(value);
+        // Clicking from the suggest variable throws as exception.
+        getDriver().findElementWithoutWaiting(valElem,
+            By.xpath("following-sibling::*[contains(@class, 'selectize-control')][1]")).click();
+        suggest.waitForSuggestions().selectByVisibleText(value);
         return this;
     }
 

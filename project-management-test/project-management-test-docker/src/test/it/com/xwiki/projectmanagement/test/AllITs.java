@@ -28,7 +28,7 @@ import org.xwiki.test.docker.junit5.UITest;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
 
 @UITest
-public class AllIT
+public class AllITs
 {
     @Nested
     @Order(1)

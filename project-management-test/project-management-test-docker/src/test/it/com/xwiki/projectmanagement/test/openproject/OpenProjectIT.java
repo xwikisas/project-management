@@ -19,6 +19,12 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.naming.OperationNotSupportedException;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -30,6 +36,7 @@ import org.xwiki.ckeditor.test.po.MacroDialogSelectModal;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.docker.junit5.servletengine.ServletEngine;
@@ -38,27 +45,18 @@ import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.ViewPage;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @UITest(
-    servletEngineNetworkAliases = "localhost",
     properties = {
-        "xwikiDbHbmCommonExtraMappings=notification-filter-preferences.hbm.xml"
-    },
-    extraJARs = {
-        // It's currently not possible to install a JAR contributing a Hibernate mapping file as an Extension. Thus
-        // we need to provide the JAR inside WEB-INF/lib. See https://jira.xwiki.org/browse/XWIKI-8271
-        "org.xwiki.platform:xwiki-platform-notifications-filters-default:15.10.15",
-
-        // The macro service uses the extension index script service to get the list of uninstalled macros (from
-        // extensions) which expects an implementation of the extension index. The extension index script service is a
-        // core extension so we need to make the extension index also core.
-        "org.xwiki.platform:xwiki-platform-extension-index:15.10.15",
-        // Solr search is used to get suggestions for the link quick action.
-        "org.xwiki.platform:xwiki-platform-search-solr-query:15.10.15"
-    },
-    resolveExtraJARs = true
-    ,servletEngine = ServletEngine.EXTERNAL
+        // Add the Scheduler plugin used by Mail Resender Scheduler Job
+        "xwikiCfgPlugins=com.xpn.xwiki.plugin.scheduler.SchedulerPlugin," +
+            "com.xpn.xwiki.plugin.skinx.JsResourceSkinExtensionPlugin,"
+            + "com.xpn.xwiki.plugin.skinx.CssResourceSkinExtensionPlugin"
+    }
+//    , vnc = false
+//    , servletEngine = ServletEngine.EXTERNAL
 )
 // TODO: Consider using AbstractCKEditorIT when upgrading parent to 15.10.
 public class OpenProjectIT
@@ -67,31 +65,49 @@ public class OpenProjectIT
 
     private final LocalDocumentReference page1 = new LocalDocumentReference("Main", "Test");
 
-    //        private OpenProjectInstance openProjectInstance = new OpenProjectInstance();
-    private OpenProjectInstance openProjectInstance =
-        new ExternalOpenProjectInstance("Admin", "adminadminadmin", "http://172.17.0.1:8081");
+    private final LocalDocumentReference page2 = new LocalDocumentReference("Main", "Test2");
+
+    private final OpenProjectInstance openProjectInstance = new OpenProjectInstance();
+//    private OpenProjectInstance openProjectInstance =
+//        new ExternalOpenProjectInstance("Admin", "adminadminadmin", "http://172.17.0.1:8081");
+
+    private final WikiReference wiki = new WikiReference("xwiki");
 
     @BeforeAll
-    void beforeAll(TestUtils setup, TestConfiguration testConfiguration) throws Exception
+    void setup(TestUtils setup, TestConfiguration testConfiguration) throws Exception
     {
         testConfiguration.setVerbose(true);
-//        openProjectInstance.startOpenProject(setup, testConfiguration);
+        openProjectInstance.startOpenProject(setup, testConfiguration);
+        openProjectInstance.setupInstance(setup.getDriver());
+
         setup.loginAsSuperAdmin();
+        setup.deletePage(new DocumentReference(page1, wiki));
+        setup.deletePage(new DocumentReference(page2, wiki));
+
+        // OpenProject/Code/OpenProjectConfigurations/
+        DocumentReference configsHome =
+            new DocumentReference(wiki.getName(), Arrays.asList("OpenProject", "Code", "OpenProjectConfigurations"),
+                "WebHome");
+        setup.createPage(configsHome, "");
+        setup.deletePage(configsHome);
+
         /* Things that need to be tested:
         // Configuration setup
-            add new configuration
-            add configuration with name of existing one
-            delete, edit, authorize actions work
-            color sync button works
+         x   add new configuration
+         x   add configuration with name of existing one
+         x   delete, x edit, x authorize actions work
+          -  modifying connection name/deleting should not work anymore
+            test that is works on subwiki
+           x color sync button works
         macro:
             warning message with auth link works
-            suggesters work
-            pasting link from openproject works
-            filter builder works
-            instance, properties, sorting pickers work
+           x suggesters work
+           x pasting link from openproject works
+           x filter builder works
+            x instance,x properties, sorting pickers work
             viewing as guest user does not work
-            test different displayers
-            test livedata filters
+            x test different displayers
+           x test livedata filters/sorting
         */
     }
 
@@ -99,26 +115,7 @@ public class OpenProjectIT
     @Order(0)
     void setupInstanceConnection(TestUtils setup, TestConfiguration testConfiguration) throws Exception
     {
-
-        // Go to admin page.
-
-        // Press add new connection
-
-        // Fill in the modal
-
-        // Click save
-
-        // Assert that the livedata was updated
-
-        // Assert that the user is not yet authorized
-        openProjectInstance.startOpenProject(setup, testConfiguration);
-        openProjectInstance.setupInstance(setup.getDriver());
-
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-
-        String instancePort =
-            openProjectInstance.getBaseUrl().substring(openProjectInstance.getBaseUrl().lastIndexOf(":") + 1);
-
         adminPage.addNewConnection(CONNECTION_ID, openProjectInstance.getBaseUrl(), openProjectInstance.getClientId(),
             openProjectInstance.getClientSecret());
         adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", CONNECTION_ID));
@@ -143,146 +140,280 @@ public class OpenProjectIT
         assertEquals(2, livedata.getCell("Actions", 1).findElements(By.className("action")).size());
     }
 
-//    @Test
-//    @Order(10)
-//    void tryToAddConnectionWithSameName(WikiReference wiki, TestUtils setup)
-//    {
-//        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-//        adminPage.addNewConnection(CONNECTION_ID, openProjectInstance.getBaseUrl(), openProjectInstance.getClientId(),
-//            openProjectInstance.getClientSecret());
-//        adminPage.waitForNotificationErrorMessage(
-//            String.format("Connection %s already exists. Use another connection name.", CONNECTION_ID));
-//    }
-//
-//    @Test
-//    @Order(20)
-//    void defaultOpenprojectMacro(WikiReference wiki, TestUtils setup) throws OperationNotSupportedException
-//    {
-//        setup.setCurrentWiki(wiki.getName());
-//        DocumentReference docRef = new DocumentReference(page1, wiki);
-//
-//        WYSIWYGEditPage wysiwygEditPage = openMacro(setup, docRef);
-//        OpenProjectMacroEditModal macroModal = selectInstanceFromModal(CONNECTION_ID, setup);
-//
-//        macroModal.clickSubmit();
-//
-//        wysiwygEditPage.clickSaveAndView();
-//        ViewPageWithOpenProjectMacro pageWithMacro = new ViewPageWithOpenProjectMacro();
-//
-//        List<OpenProjectMacroElement> opMacros = pageWithMacro.getOpenProjectMacros();
-//        assertEquals(1, opMacros.size());
-//
-//        LiveDataElement opMacro = opMacros.get(0).getLivedata();
-//        // Equivalent to assert since it will throw an exception if not found.
-//        opMacro.getTableLayout().getCell("Identifier", 1).findElement(By.tagName("a"));
-//        opMacro.getTableLayout().getCell("Subject", 1).findElement(By.tagName("a"));
-//        opMacro.getTableLayout().getCell("Assignee", 1).findElement(By.tagName("a"));
-//    }
-//
-//    @Test
-//    @Order(30)
-//    void checkLivedataSuggesters(WikiReference wiki, TestUtils setup) throws OperationNotSupportedException
-//    {
-//        setup.setCurrentWiki(wiki.getName());
-//        DocumentReference docRef = new DocumentReference(page1, wiki);
-//        WYSIWYGEditPage editPage = openMacro(setup, docRef);
-//        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
-//        modal.clickMore();
-//        modal.getSuggestInput("properties")
-//            .clear()
-//            .selectByVisibleText("Identifier")
-//            .selectByVisibleText("Type")
-//            .selectByVisibleText("Start Date")
-//            .selectByVisibleText("Assignee")
-//            .selectByVisibleText("Priority")
-//            .selectByVisibleText("Project")
-//            .selectByVisibleText("Status");
-//        modal.clickSubmit();
-//        editPage.clickSaveAndView();
-//
-//        ViewPageWithOpenProjectMacro viewPage = new ViewPageWithOpenProjectMacro();
-//        assertEquals(1, viewPage.getOpenProjectMacros().size());
-//        OpenProjectMacroElement macro = viewPage.getOpenProjectMacros().get(0);
-//        TableLayoutElement ld = macro.getLivedata().getTableLayout();
-//        SuggestInputElement idSuggest = new SuggestInputElement(ld.getFilter("Identifier"));
-//        SuggestInputElement typeSuggest = new SuggestInputElement(ld.getFilter("Type"));
-//        SuggestInputElement assigneeSuggest = new SuggestInputElement(ld.getFilter("Assignee"));
-//        SuggestInputElement prioritySuggest = new SuggestInputElement(ld.getFilter("Priority"));
-//        SuggestInputElement projectSuggest = new SuggestInputElement(ld.getFilter("Project"));
-//        SuggestInputElement statusSuggest = new SuggestInputElement(ld.getFilter("Status"));
-//
-//        useSuggestFilter(idSuggest, ld, "Identifier");
-//        useSuggestFilter(typeSuggest, ld, "Type");
-//        useSuggestFilter(assigneeSuggest, ld, "Assignee");
-//        useSuggestFilter(prioritySuggest, ld, "Priority");
-//        useSuggestFilter(projectSuggest, ld, "Project");
-//        useSuggestFilter(statusSuggest, ld, "Status");
-//
-//        // TODO: Test date pickers once the parent gets upgraded to 15.10 and use DateRangePicker PO.
-//        WebElement startDateFilter = ld.getFilter("Start Date");
-//    }
-//
-//    @Test
-//    @Order(40)
-//    void macroParameterFilterTest(WikiReference wiki, TestUtils setup) throws OperationNotSupportedException
-//    {
-//        setup.setCurrentWiki(wiki.getName());
-//        DocumentReference docRef = new DocumentReference(page1, wiki);
-//        WYSIWYGEditPage editPage = openMacro(setup, docRef);
-//        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
-//        // Create a filter.
-//        FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
-//        filterBuilderParameter.addFilter("assignee.value").setSuggestValue(1, "OpenProject Admin");
-//        filterBuilderParameter.addFilter("startDate").setOperator(1, "This week");
-//        filterBuilderParameter.addFilter("subject.value").setValue(1, "sp");
-//        filterBuilderParameter.addFilter("status")
-//            .addConstraint()
-//            .setSuggestValue(1, "In Progress")
-//            .setSuggestValue(2, "New");
-//        // Submit modal and view page.
-//        modal.clickSubmit();
-//        editPage.clickSaveAndView();
-//        // Expect the livedata to show 3 elements.
-//        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
-//        List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
-//        assertEquals(1, macros.size());
-//        macros.get(0).getLivedata().getTableLayout().waitUntilReady();
-//        String entries = macros.get(0).getElement().findElement(By.className("pagination-current-entries")).getText();
-//        assertEquals("Entries 1 - 3 out of 3", entries);
-//        // Open modal and expect the builder to contain the added filters.
-//        editPage = openMacro(setup, docRef);
-//        modal = new OpenProjectMacroEditModal();
-//        filterBuilderParameter = modal.getFilterBuilder();
-//        List<FilterBuilderFilter> filters = filterBuilderParameter.getFilters();
-//        assertEquals(4, filters.size());
-//        // Clear the filters and expect the macro to display all the entries.
-//        filterBuilderParameter.clearFilters();
-//        modal.clickSubmit();
-//        editPage.clickSaveAndView();
-//        page = new ViewPageWithOpenProjectMacro();
-//        macros = page.getOpenProjectMacros();
-//        assertEquals(1, macros.size());
-//        entries = macros.get(0).getElement().findElement(By.className("pagination-current-entries")).getText();
-//        assertEquals("Entries 1 - 5 out of 36", entries);
-//    }
+    @Test
+    @Order(10)
+    void tryToAddConnectionWithSameName(TestUtils setup)
+    {
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        adminPage.addNewConnection(CONNECTION_ID, "someurl", "someid", "somesecret");
+        adminPage.waitForNotificationErrorMessage(
+            String.format("Connection %s already exists. Use another connection name.", CONNECTION_ID));
+    }
 
-    //    private static void useSuggestFilter(SuggestInputElement suggest, TableLayoutElement ld, String filteredColumn)
-//    {
-//        suggest.click().waitForSuggestions().selectByIndex(1);
-//        String selectedVal = suggest.getSelectedSuggestions().get(0).getLabel();
-//        ld.waitUntilReady();
-//        assertEquals(selectedVal, ld.getCell(filteredColumn, 1).getText());
-//        suggest.clear();
-//    }
-//
+    @Test
+    @Order(20)
+    void defaultOpenprojectMacro(TestUtils setup) throws OperationNotSupportedException
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page1, wiki);
+
+        WYSIWYGEditPage wysiwygEditPage = openMacro(setup, docRef);
+        OpenProjectMacroEditModal macroModal = selectInstanceFromModal(CONNECTION_ID, setup);
+
+        macroModal.clickSubmit();
+
+        TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
+        // Equivalent to assert since it will throw an exception if not found.
+        ld.getCell("Identifier", 1).findElement(By.tagName("a"));
+        ld.getCell("Subject", 1).findElement(By.tagName("a"));
+        ld.getCell("Assignee", 1).findElement(By.tagName("a"));
+    }
+
+    @Test
+    @Order(30)
+    void testStyleSyncJob(TestUtils setup) throws OperationNotSupportedException, InterruptedException
+    {
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        ViewPage schedulerPage = adminPage.triggerColorSyncJob();
+        setup.getDriver()
+            .findElement(By.xpath(
+                "//div[contains(@class, 'infomessage') "
+                    + "and contains(text(), 'Job Open Project Styling Updater triggered')]"));
+        // Wait 1 sec for the job to execute. Might need a better way to check this.
+        Thread.currentThread().wait(1000);
+        DocumentReference docRef = new DocumentReference(page1, wiki);
+        setup.gotoPage(docRef);
+        ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
+        vp.waitUntilPageIsReady();
+        List<OpenProjectMacroElement> macros = vp.getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        // Get one rendered type property with value "type" and compare it with a known open project color.
+        String taskStatusColor =
+            setup.getDriver().findElement(By.className("openproject-property-type-Task-test")).getCssValue("color");
+        assertEquals("rgb(26, 103, 163)", taskStatusColor);
+    }
+
+    @Test
+    @Order(40)
+    void singleWorkPackageDisplayer(TestUtils setup)
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page1, wiki);
+
+        WYSIWYGEditPage wysiwygEditPage = openMacro(setup, docRef);
+        OpenProjectMacroEditModal macroModal = selectInstanceFromModal(CONNECTION_ID, setup);
+
+        macroModal.clickMore();
+        macroModal.selectDisplayer("Single item");
+        macroModal.clickSubmit();
+
+        wysiwygEditPage.clickSaveAndView().waitUntilPageIsReady();
+
+        ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
+        List<OpenProjectMacroElement> macros = vp.getOpenProjectMacros();
+        assertEquals(1, macros.size());
+
+        OpenProjectSingleDisplayer singleDisplayer = macros.get(0).getSingleWorkItem().waitUntilReady();
+
+        // Displayed work package should have a link in the header.
+        singleDisplayer.getHeader().findElement(By.tagName("a"));
+        assertEquals("Work package from project: Demo project", singleDisplayer.getProject().getText());
+        assertDoesNotThrow(() -> {
+            singleDisplayer.getProject().findElement(By.tagName("a"));
+        });
+
+        assertEquals("MILESTONE", singleDisplayer.getProperty("Type:").getText());
+        assertEquals("OpenProject Admin", singleDisplayer.getProperty("Author:").getText());
+
+        // 14/08/2025 12:00:00
+        SimpleDateFormat expectedDateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+        assertDoesNotThrow(() -> {
+            expectedDateFormat.parse(singleDisplayer.getProperty("Updated At:").getText());
+        });
+    }
+
+    @Test
+    @Order(50)
+    void checkLivedataSuggesters(TestUtils setup) throws OperationNotSupportedException
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page1, wiki);
+        WYSIWYGEditPage editPage = openMacro(setup, docRef);
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
+        modal.clickMore();
+        modal.getSuggestInput("properties")
+            .clear()
+            .selectByValue("identifier.value")
+            .selectByValue("type")
+            .selectByValue("assignees")
+            .selectByValue("priority")
+            .selectByValue("project.value")
+            .selectByValue("status")
+            .selectByValue("startDate");
+        modal.clickSubmit();
+
+        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
+
+        useSuggestFilter(ld, "Identifier", "1", false); // First work package
+        useSuggestFilter(ld, "Type", "1"); // Task
+        useSuggestFilter(ld, "Assignee", "4"); // Admin
+        useSuggestFilter(ld, "Priority", "8"); // Normal
+        useSuggestFilter(ld, "Project", "1"); // Demo proj
+        useSuggestFilter(ld, "Status", "1"); // New
+
+        // TODO: Test date pickers once the parent gets upgraded to 15.10 and use DateRangePicker PO.
+        WebElement startDateFilter = ld.getFilter("Start Date");
+    }
+
+    @Test
+    @Order(60)
+    void macroParameterFilterTest(TestUtils setup) throws OperationNotSupportedException
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page1, wiki);
+        WYSIWYGEditPage editPage = openMacro(setup, docRef);
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
+        // Create a filter.
+        modal.clickMore();
+        FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
+        filterBuilderParameter.addFilter("assignees").setSuggestValue(1, "OpenProject Admin");
+        filterBuilderParameter.addFilter("startDate").setOperator(1, "This week"); // This week
+        filterBuilderParameter.addFilter("summary.value").setValue(1, "sp");
+        filterBuilderParameter.addFilter("status")
+            .addConstraint()
+            .setSuggestValue(1, "In progress")
+            .setSuggestValue(2, "New");
+        // Submit modal and view page.
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        // Expect the livedata to show 3 elements.
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+        List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        macros.get(0).getLivedata().getTableLayout().waitUntilReady();
+        String entries = macros.get(0).getElement().findElement(By.className("pagination-current-entries")).getText();
+        assertEquals("Entries 1 - 3 out of 3", entries);
+        // Open modal and expect the builder to contain the added filters.
+        editPage = openMacro(setup, docRef);
+        modal = new OpenProjectMacroEditModal();
+        filterBuilderParameter = modal.getFilterBuilder();
+        List<FilterBuilderFilter> filters = filterBuilderParameter.getFilters();
+        assertEquals(4, filters.size());
+        // Clear the filters and expect the macro to display all the entries.
+        filterBuilderParameter.clearFilters();
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        page = new ViewPageWithOpenProjectMacro();
+        macros = page.getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        entries = macros.get(0).getElement().findElement(By.className("pagination-current-entries")).getText();
+        assertEquals("Entries 1 - 5 out of 36", entries);
+    }
+
+    @Test
+    @Order(70)
+    void useOpenProjUrl(TestUtils setup) throws OperationNotSupportedException
+    {
+        DocumentReference docRef = new DocumentReference(page2, wiki);
+        WYSIWYGEditPage editPage = openMacro(setup, docRef);
+        OpenProjectMacroEditModal macroModal = selectInstanceFromModal(CONNECTION_ID, setup);
+        // Create a filter.
+        macroModal.clickMore();
+        macroModal.setMacroParameter("identifier",
+            "http://localhost:8081/projects/demo-project/work_packages?"
+                + "query_props=%7B%22c%22%3A%5B%22id%22%2C%22subject%22%2C%22type%22%2C%22status%22%2C%22assignee"
+                + "%22%2C%22priority%22%5D%2C%22hi%22%3Afalse%2C%22g%22%3A%22%22%2C%22is%22%3Atrue%2C%22tv%22%3Afalse"
+                + "%2C%22hl%22%3A%22none%22%2C%22t%22%3A%22id%3Aasc%22%2C%22f%22%3A%5B%7B%22n%22%3A%22type%22%2C%22o"
+                + "%22%3A%22%3D%22%2C%22v%22%3A%5B%221%22%5D%7D%2C%7B%22n%22%3A%22status%22%2C%22o%22%3A%22%3D%22%2C%22"
+                + "v%22%3A%5B%227%22%5D%7D%5D%2C%22ts%22%3A%22PT0S%22%2C%22pp%22%3A20%2C%22pa%22%3A1%7D");
+        macroModal.clickSubmit();
+        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
+        assertEquals(2, ld.countRows());
+
+        editPage = openMacro(setup, docRef);
+        macroModal = new OpenProjectMacroEditModal();
+        macroModal.setMacroParameter("identifier",
+            "http://localhost:8081/work_packages?query_props=%7B%22c%22%3A%5B%22id%22%2C%22subject"
+                + "%22%2C%22type%22%2C%22status%22%2C%22assignee%22%2C%22priority%22%2C%22project%22%5D%2C%22"
+                + "hi%22%3Afalse%2C%22g%22%3A%22%22%2C%22is%22%3Atrue%2C%22tv%22%3Afalse%2C%22hl%22%3A%22"
+                + "none%22%2C%22t%22%3A%22id%3Adesc%22%2C%22f%22%3A%5B%7B%22n%22%3A%22type%22%2C%22o%22%3A%22%3D%22%"
+                + "2C%22v%22%3A%5B%221%22%5D%7D%2C%7B%22n%22%3A%22status%22%2C%22o%22%3A%22%3D%22%2C%22v%22%3A%5B%"
+                + "227%22%5D%7D%5D%2C%22ts%22%3A%22PT0S%22%2C%22pp%22%3A20%2C%22pa%22%3A1%7D");
+        macroModal.clickSubmit();
+        ld = saveAndGetFirstOPMacro(editPage);
+        assertEquals(3, ld.countRows());
+        assertEquals("20", ld.getCell("Identifier", 1).getText());
+    }
+
+    @Test
+    @Order(80)
+    void deleteAndUpdateConfiguredInstance()
+    {
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        adminPage.updateConnection(1, "test2", "asd", "asd", "asd");
+        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been updated!", "test2"));
+        TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
+        livedata.waitUntilReady();
+        assertEquals(1, livedata.countRows());
+        assertEquals("test2", livedata.getCell("Connection name", 1).getText());
+
+        adminPage.deleteConnection(1);
+        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", "test2"));
+        livedata.waitUntilReady();
+        assertEquals(0, livedata.countRows());
+    }
+
+    private static TableLayoutElement saveAndGetFirstOPMacro(WYSIWYGEditPage editPage)
+        throws OperationNotSupportedException
+    {
+
+        editPage.clickSaveAndView();
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+
+        List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        TableLayoutElement ld = macros.get(0).getLivedata().getTableLayout();
+        ld.waitUntilReady();
+        return ld;
+    }
+
+    private static void useSuggestFilter(TableLayoutElement ld,
+        String filteredColumn, String selectedValue)
+    {
+        useSuggestFilter(ld, filteredColumn, selectedValue, true);
+    }
+
+    private static void useSuggestFilter(TableLayoutElement ld,
+        String filteredColumn, String selectedValue,
+        boolean labelDisplayed)
+    {
+        SuggestInputElement suggest = new SuggestInputElement(ld.getFilter(filteredColumn));
+        suggest.click().waitForSuggestions().selectByValue(selectedValue);
+        String selectedVal = suggest.getSelectedSuggestions().get(0).getLabel().toLowerCase();
+        String selctedValVal = suggest.getSelectedSuggestions().get(0).getValue().toLowerCase();
+        ld.waitUntilReady();
+        if (labelDisplayed) {
+            assertEquals(selectedVal, ld.getCell(filteredColumn, 1).getText().toLowerCase());
+        } else {
+            assertEquals(selctedValVal, ld.getCell(filteredColumn, 1).getText().toLowerCase());
+        }
+        suggest.clear();
+        ld.waitUntilReady();
+    }
+
     private WYSIWYGEditPage openMacro(TestUtils setup, DocumentReference docRef)
     {
         ViewPage page = setup.gotoPage(docRef);
         WYSIWYGEditPage wysiwygEditPage = page.editWYSIWYG();
         CKEditor editor = new CKEditor("content").waitToLoad();
         MacroDialogSelectModal modal = openMacrosModal(setup);
-        modal.filterByText("Open Project", 1);
-        modal.clickSelect().waitUntilReady();
+        if (!setup.getDriver().hasElement(By.cssSelector(".macro-editor-modal .macro-name"))) {
+            modal.waitUntilReady();
+            modal.filterByText("Open Project", 1);
+//        modal.clickSelect().waitUntilReady();
+            setup.getDriver().findElement(By.cssSelector(".macro-selector-modal .modal-footer .btn-primary")).click();
+        }
+        setup.getDriver().waitUntilElementIsVisible(By.cssSelector(".macro-editor-modal .macro-name"));
         return wysiwygEditPage;
     }
 
@@ -313,6 +444,7 @@ public class OpenProjectIT
             .findElement(By.xpath("//span[@class='cke_menubutton_label' and contains(text(), 'Other Macros')]"))
             .click();
         setup.getDriver().switchTo().defaultContent();
-        return new MacroDialogSelectModal().waitUntilReady();
+        // Modal opened to a macro.
+        return new MacroDialogSelectModal();
     }
 }

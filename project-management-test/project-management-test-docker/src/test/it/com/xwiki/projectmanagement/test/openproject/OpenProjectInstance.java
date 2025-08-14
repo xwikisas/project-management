@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import org.apache.poi.openxml4j.exceptions.InvalidOperationException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
@@ -26,6 +29,7 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -58,6 +62,8 @@ public class OpenProjectInstance
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
         Network network = Network.newNetwork();
+        Path localConfigPath = Paths.get("src/test/resources/doorkeeper.rb").toAbsolutePath();
+
         GenericContainer<?> openProject = new GenericContainer<>(DockerImageName.parse("openproject/openproject:16"))
             .withEnv("OPENPROJECT_SECRET_KEY_BASE", "secret")
 //            .withEnv("OPENPROJECT_HOST__NAME", "localhost:8082") // No need to include port
@@ -66,6 +72,12 @@ public class OpenProjectInstance
             .withExposedPorts(80)
             .withNetwork(network)
             .withNetworkAliases("openproject")
+            // We need to disable the https/localhost requirement for the oauth redirect uri.
+            .withFileSystemBind(
+                localConfigPath.toAbsolutePath().toString(),
+                "/app/config/initializers/doorkeeper.rb",
+                BindMode.READ_ONLY
+            )
             .waitingFor(Wait.forHttp("/")  // Waits for HTTP 200 on "/"
                 .forPort(80)
                 .withStartupTimeout(java.time.Duration.ofMinutes(5)));
@@ -206,7 +218,7 @@ public class OpenProjectInstance
             By.xpath("//form[@id='new_application']"));
 
         nameInput.sendKeys("XWiki");
-        redirectUriInput.sendKeys("http://127.0.0.1:8080/xwiki/oidc/authenticator/callback");
+        redirectUriInput.sendKeys("http://host.testcontainers.internal:8080/xwiki/oidc/authenticator/callback");
         if (!apiV3Checkbox.isSelected()) {
             apiV3Checkbox.click();
         }

@@ -24,9 +24,10 @@ import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
-import org.xwiki.test.ui.po.Select;
 
 public class FilterBuilderParameter extends BaseElement
 {
@@ -40,7 +41,7 @@ public class FilterBuilderParameter extends BaseElement
         Select select = new Select(getDriver().findElement(By.id("proj-manag-add-constraint")));
 
         try {
-            select.selectByVisibleText(filterProperty);
+            select.selectByValue(filterProperty);
         } catch (NoSuchElementException ignored) {
             // If no such element, we let the code execute, maybe it finds an already added filter and returns it.
         }
@@ -64,6 +65,10 @@ public class FilterBuilderParameter extends BaseElement
 
     public void clearFilters()
     {
-        getDriver().findElements(By.className("proj-manag-delete-filter")).forEach(WebElement::click);
+        try {
+            getDriver().findElements(By.className("proj-manag-delete-filter")).forEach(WebElement::click);
+        } catch (StaleElementReferenceException ignored) {
+            // No problem if the elements were deleted faster than necessary. But it shouldn't happen.
+        }
     }
 }

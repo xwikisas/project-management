@@ -55,4 +55,9 @@ public class OpenProjectSingleDisplayer extends BaseElement
                 String.format("//*[contains(@class, 'work-item-property-name') and contains(., '%s')]", name)));
         return propertyElem.findElement(By.xpath("ancestor::tr")).findElement(By.className("work-item-property-value"));
     }
+
+    public OpenProjectSingleDisplayer waitUntilReady() {
+        getDriver().waitUntilElementIsVisible(parent, By.className("work-item-header"));
+        return this;
+    }
 }

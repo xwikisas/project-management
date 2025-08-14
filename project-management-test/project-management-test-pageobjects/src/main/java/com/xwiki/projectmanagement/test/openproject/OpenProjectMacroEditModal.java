@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.test.openproject;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
@@ -44,13 +45,14 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
         return getDriver().findElementWithoutWaitingWithoutScrolling(
             // We match *-editor-modal so the page object can be used both in Dashboard and CKEditor tests.
             By.cssSelector(
-                String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],input[name='%s']",
+                String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],select[name='%s']",
                     name, name)));
     }
 
     public void clickMore()
     {
         getDriver().findElement(By.cssSelector("li.more")).click();
+        getDriver().scrollTo(getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
     }
 
     public SuggestInputElement getSuggestInput(String name)
@@ -58,8 +60,23 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
         return new SuggestInputElement(getMacroParameterInput(name));
     }
 
-    public FilterBuilderParameter getFilterBuilder() {
-        return new FilterBuilderParameter();
+    public OpenProjectMacroEditModal selectDisplayer(String displayerName)
+    {
+        WebElement input = getDriver().findElement(By.xpath("//select[@name='workItemsDisplayer']"));
+        Select select = new Select(input);
+        input.click();
+        select.selectByVisibleText(displayerName);
+        return this;
     }
 
+    @Override
+    public void clickSubmit()
+    {
+        this.getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer .btn-primary")).click();
+    }
+
+    public FilterBuilderParameter getFilterBuilder()
+    {
+        return new FilterBuilderParameter();
+    }
 }

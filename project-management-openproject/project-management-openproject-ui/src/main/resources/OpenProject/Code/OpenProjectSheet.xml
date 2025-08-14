@@ -370,7 +370,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         XWiki.currentDocument.getDocumentReference()
       );
 
-      const configurationName = "Connection" + crypto.randomUUID();
+      const configurationName = "Connection" + (crypto &amp;&amp; crypto.randomUUID ?
+        crypto.randomUUID() : Date.now());
       const connectionRef = XWiki.Model.resolve(
         configurationName,
         XWiki.EntityType.DOCUMENT,

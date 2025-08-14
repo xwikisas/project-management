@@ -36,6 +36,7 @@ import org.xwiki.rendering.parser.ParseException;
 import org.xwiki.rendering.parser.Parser;
 
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
+import com.xwiki.projectmanagement.openproject.internal.displayer.IdGenerator;
 
 /**
  * Display the type property in a similar way to Open Project.
@@ -60,10 +61,10 @@ public class TypePropertyDisplayer implements WorkItemPropertyDisplayer
     public List<Block> display(Object property, Map<String, String> params)
     {
         try {
-            String lowerCaseProp = property.toString().toLowerCase();
+            String lowerCaseProp = IdGenerator.generate(property.toString());
             String instance = params.getOrDefault("instance", "");
             if (!instance.isEmpty()) {
-                lowerCaseProp = lowerCaseProp + '-' + instance;
+                lowerCaseProp = lowerCaseProp + '-' + IdGenerator.generate(instance);
             }
             List<Block> statusBlocks = plainTextParser.parse(new StringReader(property.toString())).getChildren();
             if (!statusBlocks.isEmpty() && statusBlocks.get(0) instanceof ParagraphBlock) {

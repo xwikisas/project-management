@@ -58,7 +58,7 @@ public class OpenProjectMacroElement extends BaseElement
 
     public LiveDataElement getLivedata() throws OperationNotSupportedException
     {
-        String id = self.getAttribute("id");
+        String id = self.findElement(By.className("liveData")).getAttribute("id");
         if (StringUtils.isEmpty(id)) {
             throw new OperationNotSupportedException(
                 "Can't retrieve the livedata element if no id was provided to the macro.");
