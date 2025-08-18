@@ -163,7 +163,7 @@ public class Suggest extends XWikiResource
         String searchString, int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter(NAME, searchString);
-        return getSuggestions(openProjectApiClient.getProjects(pageSize, filter).getItems());
+        return getSuggestions(openProjectApiClient.getProjects(1, pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getTypesSuggestions(OpenProjectApiClient openProjectApiClient)
@@ -176,7 +176,7 @@ public class Suggest extends XWikiResource
         String searchString, int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter(NAME, searchString);
-        return getSuggestions(openProjectApiClient.getUsers(pageSize, filter).getItems());
+        return getSuggestions(openProjectApiClient.getUsers(1, pageSize, filter).getItems());
     }
 
     private List<Map<String, String>> getSuggestions(

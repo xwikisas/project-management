@@ -25,6 +25,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
@@ -40,12 +41,19 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.Priority;
+import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.Type;
+import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import utils.TestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -67,7 +75,7 @@ public class DefaultOpenProjectApiClientTest
 
     private AutoCloseable closeable;
 
-    private static final Integer OFFSET = 0;
+    private static final Integer OFFSET = 1;
 
     private static final Integer PAGE_SIZE = 10;
 
@@ -104,67 +112,100 @@ public class DefaultOpenProjectApiClientTest
 
         PaginatedResult<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "");
 
-        assertEquals(3, workPackages.getItems().size());
+        assertEquals(3, workPackages.getTotalItems());
+        assertEquals(PAGE_SIZE, workPackages.getPageSize());
+        assertEquals(OFFSET, workPackages.getPage());
 
-        assertWorkPackage(
-            buildExpectedWorkPackage(
-                1,
-                "First subject",
-                "<p>First description</p>",
-                30,
-                "Task",
-                1,
-                "Normal",
-                1,
-                "First project",
-                1,
-                "In progress",
-                1,
-                "First User",
-                1
-            ),
-            workPackages.getItems().get(0)
+        assertGeneratedWorkPackages(workPackages.getItems());
+    }
+
+    @Test
+    public void getProjectWorkPackagesTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getWorkPackagesValidResponse());
+
+        PaginatedResult<WorkPackage> projectWorkPackages = openProjectApiClient.getProjectWorkPackages(
+            PROJECT_NAME,
+            OFFSET,
+            PAGE_SIZE, "",
+            ""
         );
 
-        assertWorkPackage(
-            buildExpectedWorkPackage(
-                2,
-                "Second subject",
-                "<p>Second description</p>",
-                60,
-                "Bug",
-                2,
-                "Normal",
-                2,
-                "Second project",
-                2,
-                "Ready",
-                2,
-                "First User",
-                1
-            ),
-            workPackages.getItems().get(1)
-        );
+        assertEquals(3, projectWorkPackages.getTotalItems());
+        assertEquals(PAGE_SIZE, projectWorkPackages.getPageSize());
+        assertEquals(OFFSET, projectWorkPackages.getPage());
 
-        assertWorkPackage(
-            buildExpectedWorkPackage(
-                3,
-                "Third subject",
-                "<p>Third description</p>",
-                40,
-                "Task",
-                1,
-                "Normal",
-                1,
-                "Second project",
-                2,
-                "Ready",
-                2,
-                "First User",
-                1
-            ),
-            workPackages.getItems().get(2)
-        );
+        assertGeneratedWorkPackages(projectWorkPackages.getItems());
+    }
+
+    @Test
+    public void getUsersTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getUsersValidResponse());
+
+        PaginatedResult<User> users = openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(2, users.getTotalItems());
+        assertEquals(PAGE_SIZE, users.getPageSize());
+        assertEquals(OFFSET, users.getPage());
+
+        assertGeneratedUsers(users.getItems());
+    }
+
+    @Test
+    void getProjectsTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getProjectsValidResponse());
+
+        PaginatedResult<Project> projects = openProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(3, projects.getTotalItems());
+        assertEquals(PAGE_SIZE, projects.getPageSize());
+        assertEquals(OFFSET, projects.getPage());
+
+        assertGeneratedProjects(projects.getItems());
+    }
+
+    @Test
+    void getTypesTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getTypesValidResponse());
+
+        PaginatedResult<Type> types = openProjectApiClient.getTypes();
+
+        assertEquals(2, types.getTotalItems());
+        assertEquals(2, types.getPageSize());
+        assertEquals(OFFSET, 1);
+
+        assertGeneratedTypes(types.getItems());
+    }
+
+    @Test
+    public void getStatusesTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getStatusesValidResponse());
+
+        PaginatedResult<Status> statuses = openProjectApiClient.getStatuses();
+
+        assertEquals(2, statuses.getTotalItems());
+        assertEquals(2, statuses.getPageSize());
+        assertEquals(OFFSET, 1);
+
+        assertGeneratedStatuses(statuses.getItems());
+    }
+
+    @Test
+    public void getPrioritiesTest() throws IOException, ProjectManagementException
+    {
+        when(this.response.body()).thenReturn(testUtils.getPrioritiesValidResponse());
+
+        PaginatedResult<Priority> priorities = openProjectApiClient.getPriorities();
+
+        assertEquals(2, priorities.getTotalItems());
+        assertEquals(2, priorities.getPageSize());
+        assertEquals(OFFSET, 1);
+
+        assertGeneratedPriorities(priorities.getItems());
     }
 
     @Test
@@ -209,6 +250,290 @@ public class DefaultOpenProjectApiClientTest
         assertTrue(generatedUri.contains("filters=" + FILTERS_STRING));
         assertTrue(generatedUri.contains("sortBy=" + SORT_BY_STRING));
         assertFalse(generatedUri.contains("selectedElements=" + SELECTED_ELEMENTS_STRING));
+    }
+
+    @Test
+    public void allApiMethodsThrowProjectManagementExceptionOnHttpFailure() throws IOException, InterruptedException
+    {
+        when(
+            this.client.send(
+                any(HttpRequest.class),
+                any(HttpResponse.BodyHandler.class)
+            )
+        )
+            .thenThrow(IOException.class);
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "")
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getProjectWorkPackages(PROJECT_NAME, OFFSET, PAGE_SIZE, "", "")
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING)
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING)
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getTypes()
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getStatuses()
+        );
+
+        assertThrows(ProjectManagementException.class, () ->
+            openProjectApiClient.getPriorities()
+        );
+    }
+
+    private void assertGeneratedUsers(List<User> users)
+    {
+        assertEquals(2, users.size());
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                1,
+                "First user",
+                String.format("%s/users/%s", OPEN_PROJECT_CONNECTION_URL, 1),
+                null
+            ),
+            users.get(0)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                2,
+                "Second user",
+                String.format("%s/users/%s", OPEN_PROJECT_CONNECTION_URL, 2),
+                null
+            ),
+            users.get(1)
+        );
+    }
+
+    private void assertGeneratedProjects(List<Project> projects)
+    {
+        assertEquals(3, projects.size());
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                1,
+                "First project",
+                String.format("%s/projects/%s", OPEN_PROJECT_CONNECTION_URL, 1),
+                null
+            ),
+            projects.get(0)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                2,
+                "Second project",
+                String.format("%s/projects/%s", OPEN_PROJECT_CONNECTION_URL, 2),
+                null
+            ),
+            projects.get(1)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                3,
+                "Third project",
+                String.format("%s/projects/%s", OPEN_PROJECT_CONNECTION_URL, 3),
+                null
+            ),
+            projects.get(2)
+        );
+    }
+
+    private void assertGeneratedTypes(List<Type> types)
+    {
+        assertEquals(2, types.size());
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                1,
+                "First type",
+                String.format("%s/types/%s/edit/settings", OPEN_PROJECT_CONNECTION_URL, 1),
+                Map.of(
+                    "color", "#1A67A3"
+                )
+            ),
+            types.get(0)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                2,
+                "Second type",
+                String.format("%s/types/%s/edit/settings", OPEN_PROJECT_CONNECTION_URL, 2),
+                Map.of(
+                    "color", "#35C53F"
+                )
+            ),
+            types.get(1)
+        );
+    }
+
+    private void assertGeneratedStatuses(List<Status> statuses)
+    {
+        assertEquals(2, statuses.size());
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                1,
+                "First status",
+                String.format("%s/statuses/%s/edit", OPEN_PROJECT_CONNECTION_URL, 1),
+                Map.of(
+                    "color", "#1098AD"
+                )
+            ),
+            statuses.get(0)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                2,
+                "Second status",
+                String.format("%s/statuses/%s/edit", OPEN_PROJECT_CONNECTION_URL, 2),
+                Map.of(
+                    "color", "#A5D8FF"
+                )
+            ),
+            statuses.get(1)
+        );
+    }
+
+    private void assertGeneratedPriorities(List<Priority> priorities)
+    {
+        assertEquals(2, priorities.size());
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                1,
+                "First priority",
+                String.format("%s/priorities/%s/edit", OPEN_PROJECT_CONNECTION_URL, 1),
+                Map.of(
+                    "color", "#C5F6FA"
+                )
+            ),
+            priorities.get(0)
+        );
+
+        assertOpenProjectBaseObject(
+            buildExpectedOpenProjectBaseObject(
+                2,
+                "Second priority",
+                String.format("%s/priorities/%s/edit", OPEN_PROJECT_CONNECTION_URL, 2),
+                Map.of(
+                    "color", "#74C0FC"
+                )
+            ),
+            priorities.get(1)
+        );
+    }
+
+    private void assertGeneratedWorkPackages(List<WorkPackage> workPackages)
+    {
+        assertEquals(3, workPackages.size());
+
+        assertWorkPackage(
+            buildExpectedWorkPackage(
+                1,
+                "First subject",
+                "<p>First description</p>",
+                30,
+                "Task",
+                1,
+                "Normal",
+                1,
+                "First project",
+                1,
+                "In progress",
+                1,
+                "First User",
+                1
+            ),
+            workPackages.get(0)
+        );
+
+        assertWorkPackage(
+            buildExpectedWorkPackage(
+                2,
+                "Second subject",
+                "<p>Second description</p>",
+                60,
+                "Bug",
+                2,
+                "Normal",
+                2,
+                "Second project",
+                2,
+                "Ready",
+                2,
+                "First User",
+                1
+            ),
+            workPackages.get(1)
+        );
+
+        assertWorkPackage(
+            buildExpectedWorkPackage(
+                3,
+                "Third subject",
+                "<p>Third description</p>",
+                40,
+                "Task",
+                1,
+                "Normal",
+                1,
+                "Second project",
+                2,
+                "Ready",
+                2,
+                "First User",
+                1
+            ),
+            workPackages.get(2)
+        );
+    }
+
+    private Map<String, Object> buildExpectedOpenProjectBaseObject(int id, String name, String url, Map<String,
+        Object> otherProperties)
+    {
+        Map<String, Object> expected = new HashMap<>();
+        expected.put("id", id);
+        expected.put("name", name);
+        expected.put(
+            "self",
+            new Linkable(
+                "", url
+            )
+        );
+
+        if (otherProperties != null) {
+            expected.putAll(otherProperties);
+        }
+
+        return expected;
+    }
+
+    private void assertOpenProjectBaseObject(Map<String, Object> expected, BaseOpenProjectObject actualObject)
+    {
+        assertEquals(expected.get("id"), actualObject.getId());
+        assertEquals(expected.get("name"), actualObject.getName());
+        assertEquals(expected.get("self"), actualObject.getSelf());
+
+        if (actualObject instanceof Type) {
+            Type typeObject = (Type) actualObject;
+            assertEquals(expected.get("color"), typeObject.getColor());
+        }
     }
 
     private Map<String, Object> buildExpectedWorkPackage(

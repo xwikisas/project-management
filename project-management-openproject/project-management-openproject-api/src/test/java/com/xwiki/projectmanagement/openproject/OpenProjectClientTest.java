@@ -26,9 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mockStatic;
 
 import org.mockito.MockedStatic;
+import org.slf4j.Logger;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -66,6 +68,9 @@ public class OpenProjectClientTest
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
 
+    @MockComponent
+    private Logger logger;
+
     @InjectMocks
     @InjectMockComponents
     private OpenProjectClient openProjectClient;
@@ -81,6 +86,7 @@ public class OpenProjectClientTest
             generateWorkItems());
         when(openProjectApiClient.getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
             anyString())).thenReturn(generateWorkItems());
+        doNothing().when(logger).warn(anyString());
     }
 
     @Test

@@ -23,19 +23,48 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
-
 import org.apache.commons.io.IOUtils;
 
 public class TestUtils
 {
     public String getWorkPackagesValidResponse() throws IOException
     {
-        InputStream stream =
-            this.getClass().getClassLoader().getResourceAsStream("openProjectWorkPackagesApiResponse.json");
+        return getJsonFromResource("openProjectWorkPackagesApiResponse.json");
+    }
+
+    public String getUsersValidResponse() throws IOException
+    {
+        return getJsonFromResource("openProjectUsersApiResponse.json");
+    }
+
+    public String getProjectsValidResponse() throws IOException
+    {
+        return getJsonFromResource("openProjectProjectsApiResponse.json");
+    }
+
+    public String getTypesValidResponse() throws IOException
+    {
+        return getJsonFromResource("openProjectTypesApiResponse.json");
+    }
+
+    public String getStatusesValidResponse() throws IOException{
+        return getJsonFromResource("openProjectStatusesApiResponse.json");
+    }
+
+    public String getPrioritiesValidResponse() throws IOException
+    {
+        return getJsonFromResource("openProjectPrioritiesApiResponse.json");
+    }
+
+    private String getJsonFromResource(String fileName) throws IOException
+    {
+        InputStream stream = this.getClass().getClassLoader().getResourceAsStream(fileName);
 
         if (stream == null) {
-            throw new RuntimeException("Could not find openProjectWorkPackagesApiResponse.json");
+            throw new RuntimeException(String.format("Could not find %s", fileName));
         }
+
         return IOUtils.toString(stream, Charset.defaultCharset());
     }
+
 }

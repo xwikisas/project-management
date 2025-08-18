@@ -1,0 +1,50 @@
+{
+  "_type": "Collection",
+  "total": 2,
+  "count": 2,
+  "_embedded": {
+    "elements": [
+      {
+        "_type": "Status",
+        "id": 1,
+        "name": "First status",
+        "isClosed": false,
+        "color": "#1098AD",
+        "isDefault": true,
+        "isReadonly": false,
+        "excludedFromTotals": false,
+        "defaultDoneRatio": 0,
+        "position": 1,
+        "_links": {
+          "self": {
+            "href": "/api/v3/statuses/1",
+            "title": "First status"
+          }
+        }
+      },
+      {
+        "_type": "Status",
+        "id": 2,
+        "name": "Second status",
+        "isClosed": false,
+        "color": "#A5D8FF",
+        "isDefault": false,
+        "isReadonly": false,
+        "excludedFromTotals": false,
+        "defaultDoneRatio": 10,
+        "position": 2,
+        "_links": {
+          "self": {
+            "href": "/api/v3/statuses/2",
+            "title": "Second status"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "/api/v3/statuses"
+    }
+  }
+}

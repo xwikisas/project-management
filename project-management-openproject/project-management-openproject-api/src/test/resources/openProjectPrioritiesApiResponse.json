@@ -1,0 +1,44 @@
+{
+  "_type": "Collection",
+  "total": 2,
+  "count": 2,
+  "_embedded": {
+    "elements": [
+      {
+        "_type": "Priority",
+        "id": 1,
+        "name": "First priority",
+        "position": 1,
+        "color": "#C5F6FA",
+        "isDefault": false,
+        "isActive": true,
+        "_links": {
+          "self": {
+            "href": "/api/v3/priorities/1",
+            "title": "First priority"
+          }
+        }
+      },
+      {
+        "_type": "Priority",
+        "id": 2,
+        "name": "Second priority",
+        "position": 2,
+        "color": "#74C0FC",
+        "isDefault": true,
+        "isActive": true,
+        "_links": {
+          "self": {
+            "href": "/api/v3/priorities/2",
+            "title": "Second priority"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "/api/v3/priorities"
+    }
+  }
+}
