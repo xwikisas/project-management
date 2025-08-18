@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
+import java.net.http.HttpClient;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -51,6 +52,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
@@ -161,7 +163,9 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
                     + "token for the current user is not set.", connectionName));
             return null;
         }
-        return new CachingOpenProjectApiClient(connection, accessToken, cache);
+        OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
+            accessToken, HttpClient.newHttpClient());
+        return new CachingOpenProjectApiClient(openProjectApiClient, connection, accessToken, cache);
     }
 
     @Override

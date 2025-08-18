@@ -1,0 +1,155 @@
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package com.xwiki.projectmanagement.openproject.service;
+
+import java.util.List;
+
+import javax.inject.Named;
+import javax.inject.Provider;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.xwiki.model.document.DocumentAuthors;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
+import org.xwiki.query.Query;
+import org.xwiki.query.QueryException;
+import org.xwiki.query.QueryManager;
+import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceResolver;
+
+import com.xpn.xwiki.XWiki;
+import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+
+@ComponentTest
+public class HandleConnectionsServiceTest
+{
+    @MockComponent
+    private Provider<XWikiContext> xContextProvider;
+
+    @MockComponent
+    private QueryManager queryManager;
+
+    @MockComponent
+    UserReferenceResolver<DocumentReference> userReferenceResolver;
+
+    @MockComponent
+    @Named("compactwiki")
+    private EntityReferenceSerializer<String> compactSerializer;
+
+    @MockComponent
+    private XWikiContext xContext;
+
+    @MockComponent
+    private XWiki xwiki;
+
+    @MockComponent
+    private Query query;
+
+    @Mock
+    private XWikiDocument doc;
+
+    @Mock
+    private DocumentAuthors documentAuthors;
+
+    @Mock
+    private DocumentReference userRef;
+
+    @Mock
+    private UserReference userReference;
+
+    BaseObject baseObject = new BaseObject();
+
+    OpenProjectConnection openProjectConnection;
+
+    @InjectMockComponents
+    private HandleConnectionsService handleConnectionsService;
+
+    private final DocumentReference documentReference = new DocumentReference("wiki", List.of("ProjectManagement",
+        "Code"),
+        "FirstConnection");
+
+    @BeforeEach
+    void setup() throws QueryException, XWikiException
+    {
+        String queryStatement = "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
+            + "where doc.fullName = obj.name "
+            + "and obj.className = :className "
+            + "and obj.id = configName.id.id "
+            + "and configName.id.name = :configFieldName "
+            + "and configName.value = :config "
+            + "and doc.fullName <> :serializedDocRef";
+
+        when(this.queryManager.createQuery(queryStatement, Query.HQL)).thenReturn(this.query);
+        when(this.query.bindValue(any(), any())).thenReturn(this.query);
+        when(this.query.setWiki(any())).thenReturn(this.query);
+
+        when(this.xContextProvider.get()).thenReturn(this.xContext);
+        when(this.xContext.getWikiId()).thenReturn("wiki");
+        when(this.xContext.getWiki()).thenReturn(xwiki);
+        when(this.xwiki.getDocument(documentReference, xContext)).thenReturn(doc);
+
+        when(xContext.getUserReference()).thenReturn(userRef);
+        when(userReferenceResolver.resolve(any())).thenReturn(userReference);
+        when(doc.getAuthors()).thenReturn(documentAuthors);
+
+        doNothing().when(xwiki).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+
+        openProjectConnection = new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret");
+    }
+
+    @Test
+    public void handleExistingConnectionsTest() throws QueryException
+    {
+        when(this.query.execute()).thenReturn(List.of(documentReference));
+        assertThrows(ProjectManagementException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection,
+                documentReference));
+    }
+
+    @Test
+    public void handleConnectionTest() throws QueryException, ProjectManagementException
+    {
+        when(this.query.execute()).thenReturn(List.of());
+
+        // mock correctly the getXObjects
+        when(this.doc.getXObject(any(DocumentReference.class), anyBoolean(), any(XWikiContext.class))).thenReturn(
+            this.baseObject);
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+    }
+}

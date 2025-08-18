@@ -153,7 +153,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getProjectsTest() throws IOException, ProjectManagementException
+    public void getProjectsTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(testUtils.getProjectsValidResponse());
 
@@ -167,7 +167,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getTypesTest() throws IOException, ProjectManagementException
+    public void getTypesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(testUtils.getTypesValidResponse());
 
