@@ -125,7 +125,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setPageSizes(pageSizes);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public Boolean getShowPageSizeDropdown()
     {
