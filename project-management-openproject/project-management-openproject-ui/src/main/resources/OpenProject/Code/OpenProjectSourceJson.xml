@@ -102,22 +102,25 @@
     #set ($actionsHTML = "&lt;div class='displayer-actions'&gt;&lt;a
       class='edit-button action'
       href='#'
+      name='edit-connection'
       data-connection-name=$connectionName
       data-server-url=$serverURL
       data-client-id=$clientId
       data-client-secret=$clientSecret
       data-edit-document-reference=$documentReference
-    &gt;&lt;span class='fa fa-pencil text-muted'&gt;&lt;/span&gt;&lt;/a&gt;&lt;a
+    >$services.icon.renderHTML('pencil')&lt;/span&gt;&lt;/a&gt;&lt;a
       class='delete-button action'
+      name='delete-connection'
       href='#'
       data-connection-name=$connectionName
       data-delete-document-reference=$documentReference
-    &gt;&lt;span class='fa fa-trash text-danger'&gt;&lt;/span&gt;&lt;/a&gt;")
+    >$services.icon.renderHTML('trash')&lt;/span&gt;&lt;/a&gt;")
     #if (!$isAuthorizedToOP)
       #set ($actionsHTML = "${actionsHTML}&lt;a
       class='op-auth-button action'
+      name='authorize-connection'
       href=$authLink
-    &gt;&lt;span class='fa fa-unlock'&gt;&lt;/span&gt;&lt;/a&gt;&lt;/div&gt;")
+    >$services.icon.renderHTML('unlock')&lt;/a&gt;&lt;/div&gt;")
     #end
     #set($discard = $json.rows.add({
       "connectionName" : $connectionNameHtml,

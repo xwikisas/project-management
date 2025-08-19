@@ -151,7 +151,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     constraint.find('.proj-manag-delete-filter').on('click', function (e) {
       e.preventDefault();
       filterDisplayer.clean(property.filter.id || "text", valElem, operatorElem.val());
-      if (constraint.find('.proj-manag-filter-container').length > 1) {
+      if ($(this).closest('.proj-manag-constraint').find('.proj-manag-filter-container').length > 1) {
         $(this).closest('.proj-manag-filter-container').remove();
       } else {
         constraint.remove();
