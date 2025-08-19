@@ -165,7 +165,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         }
         OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
             accessToken, HttpClient.newHttpClient());
-        return new CachingOpenProjectApiClient(openProjectApiClient, connection, accessToken, cache);
+        return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
     }
 
     @Override

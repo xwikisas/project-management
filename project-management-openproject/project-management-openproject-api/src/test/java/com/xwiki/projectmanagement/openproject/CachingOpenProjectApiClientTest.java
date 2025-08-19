@@ -79,8 +79,7 @@ public class CachingOpenProjectApiClientTest
     {
         closeable = MockitoAnnotations.openMocks(this);
 
-        when(instance.getClientId()).thenReturn(CLIENT_ID);
-        cachingOpenProjectApiClient = new CachingOpenProjectApiClient(openProjectApiClient, instance, "token", cache);
+        cachingOpenProjectApiClient = new CachingOpenProjectApiClient(openProjectApiClient, CLIENT_ID, cache);
     }
 
     @AfterEach
