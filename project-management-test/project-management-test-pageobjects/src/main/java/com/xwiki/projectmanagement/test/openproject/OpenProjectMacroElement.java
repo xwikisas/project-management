@@ -29,15 +29,28 @@ import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.test.ui.po.BaseElement;
 
+/**
+ * Models the open project macro present in a view page.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class OpenProjectMacroElement extends BaseElement
 {
     private final WebElement self;
 
+    /**
+     * @param element the wrapper of the open project macro.
+     */
     public OpenProjectMacroElement(WebElement element)
     {
         self = element;
     }
 
+    /**
+     * @return true if the warning message is displayed or not. The warning message is displayed when the user seeing
+     *     the macro is not authorized to the open project instance from which the work packages are retrieved.
+     */
     public boolean isUserAuthorized()
     {
         try {
@@ -48,6 +61,11 @@ public class OpenProjectMacroElement extends BaseElement
         }
     }
 
+    /**
+     * Click the link from the warning message, authorizing the user to the open project instance.
+     *
+     * @return the view page after it the user was authorized.
+     */
     public ViewPageWithOpenProjectMacro authorizeUser()
     {
         self.findElement(By.cssSelector(".warningmessage a")).click();
@@ -56,6 +74,11 @@ public class OpenProjectMacroElement extends BaseElement
         return vp;
     }
 
+    /**
+     * @return the livedata table displayer of the open project macro.
+     * @throws OperationNotSupportedException if the id parameter of the open project macro was not provided. The
+     *     livedata page object requires an id in order to be retrieved.
+     */
     public LiveDataElement getLivedata() throws OperationNotSupportedException
     {
         String id = self.findElement(By.className("liveData")).getAttribute("id");
@@ -66,6 +89,11 @@ public class OpenProjectMacroElement extends BaseElement
         return new LiveDataElement(id);
     }
 
+    /**
+     * @return the livedata cards displayer of the open project macro.
+     * @throws OperationNotSupportedException if the id parameter of the open project macro was not provided. The
+     *     livedata page object requires an id in order to be retrieved.
+     */
     public CardLayoutElement getCards() throws OperationNotSupportedException
     {
         String id = self.getAttribute("id");
@@ -76,11 +104,17 @@ public class OpenProjectMacroElement extends BaseElement
         return new CardLayoutElement(id);
     }
 
+    /**
+     * @return the single displayer of the open project macro.
+     */
     public OpenProjectSingleDisplayer getSingleWorkItem()
     {
         return new OpenProjectSingleDisplayer(self);
     }
 
+    /**
+     * @return the wrapper of the macro.
+     */
     public WebElement getElement()
     {
         return self;

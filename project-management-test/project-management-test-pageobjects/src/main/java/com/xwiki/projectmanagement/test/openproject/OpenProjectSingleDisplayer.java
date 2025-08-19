@@ -23,30 +23,52 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.BaseElement;
 
+/**
+ * The model of the single page displayer of the open project macro.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class OpenProjectSingleDisplayer extends BaseElement
 {
     private final WebElement parent;
 
+    /**
+     * @param parent the wrapper of the open project macro.
+     */
     public OpenProjectSingleDisplayer(WebElement parent)
     {
         this.parent = parent;
     }
 
+    /**
+     * @return the element that contains the project name and link.
+     */
     public WebElement getProject()
     {
         return parent.findElement(By.cssSelector(".work-item-page-displayer>div:nth-child(2)"));
     }
 
+    /**
+     * @return the element that contains the work item description.
+     */
     public WebElement getDescription()
     {
         return parent.findElement(By.cssSelector(".work-item-page-displayer>div:nth-child(4)"));
     }
 
+    /**
+     * @return the header container that contains information such as the work package id, name and link.
+     */
     public WebElement getHeader()
     {
         return parent.findElement(By.cssSelector(".work-item-page-displayer>div:nth-child(1)"));
     }
 
+    /**
+     * @param name the work package property pretty name.
+     * @return the element containing the said property value.
+     */
     public WebElement getProperty(String name)
     {
         WebElement propertiesElement = parent.findElement(By.cssSelector(".work-item-page-displayer>div:nth-child(3)"));
@@ -56,7 +78,11 @@ public class OpenProjectSingleDisplayer extends BaseElement
         return propertyElem.findElement(By.xpath("ancestor::tr")).findElement(By.className("work-item-property-value"));
     }
 
-    public OpenProjectSingleDisplayer waitUntilReady() {
+    /**
+     * @return waits for the single displayer to render completely, since it renders asynchronously.
+     */
+    public OpenProjectSingleDisplayer waitUntilReady()
+    {
         getDriver().waitUntilElementIsVisible(parent, By.className("work-item-header"));
         return this;
     }

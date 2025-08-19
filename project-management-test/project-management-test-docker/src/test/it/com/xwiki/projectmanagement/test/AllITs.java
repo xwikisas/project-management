@@ -27,6 +27,12 @@ import org.xwiki.test.docker.junit5.UITest;
 
 import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
 
+/**
+ * Groups all the integration tests for the project management implementations.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 @UITest
 public class AllITs
 {

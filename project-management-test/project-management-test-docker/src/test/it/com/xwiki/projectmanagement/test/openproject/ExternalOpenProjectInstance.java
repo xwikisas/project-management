@@ -23,14 +23,28 @@ import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.XWikiWebDriver;
 
+/**
+ * Similar to {@link OpenProjectInstance} but the open project instance is external (managed externally by the
+ * dev/environment).
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class ExternalOpenProjectInstance extends OpenProjectInstance
 {
-    public ExternalOpenProjectInstance(String userName, String password, String baseUrl) {
+    /**
+     * @param userName the admin username for the external OP instance.
+     * @param password the admin password for the instance. Note that if it "admin" and requires changing, the setup
+     *     method will change the password to the one defined in the {@link OpenProjectInstance}.
+     * @param baseUrl the url where the external instance is located.
+     */
+    public ExternalOpenProjectInstance(String userName, String password, String baseUrl)
+    {
         this.userName = userName;
         this.currentPassword = password;
         this.baseUrl = baseUrl;
-
     }
+
     @Override
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {

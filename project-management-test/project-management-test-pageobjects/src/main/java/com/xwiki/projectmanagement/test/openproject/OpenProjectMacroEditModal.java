@@ -25,8 +25,21 @@ import org.openqa.selenium.support.ui.Select;
 import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
+/**
+ * Models the edit modal of the Open Project macro.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class OpenProjectMacroEditModal extends MacroDialogEditModal
 {
+    /**
+     * Set the value of a macro parameter.
+     *
+     * @param name the technical name of the parameter.
+     * @param value the value that should be set.
+     * @return this object.
+     */
     public MacroDialogEditModal setMacroParameter(String name, CharSequence... value)
     {
         WebElement parameterInput = getMacroParameterInput(name);
@@ -35,11 +48,19 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
         return this;
     }
 
+    /**
+     * @param name the technical name of the parameter.
+     * @return the input value of the parameter.
+     */
     public String getMacroParameter(String name)
     {
         return getMacroParameterInput(name).getDomProperty("value");
     }
 
+    /**
+     * @param name the technical name of the parameter.
+     * @return the input element of the parameter.
+     */
     public WebElement getMacroParameterInput(String name)
     {
         return getDriver().findElementWithoutWaitingWithoutScrolling(
@@ -49,17 +70,30 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
                     name, name)));
     }
 
+    /**
+     * Click the "More" section of the modal that reveals all the other parameters.
+     */
     public void clickMore()
     {
         getDriver().findElement(By.cssSelector("li.more")).click();
         getDriver().scrollTo(getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
     }
 
+    /**
+     * @param name the technical name of a parameter that is displayed using a selectized input.
+     * @return the selectized input of the given parameter name.
+     */
     public SuggestInputElement getSuggestInput(String name)
     {
         return new SuggestInputElement(getMacroParameterInput(name));
     }
 
+    /**
+     * Select a displayer from the list of available project management displayers.
+     *
+     * @param displayerName the pretty name of the displayer.
+     * @return this object.
+     */
     public OpenProjectMacroEditModal selectDisplayer(String displayerName)
     {
         WebElement input = getDriver().findElement(By.xpath("//select[@name='workItemsDisplayer']"));
@@ -75,6 +109,9 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
         this.getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer .btn-primary")).click();
     }
 
+    /**
+     * @return the filter parameter which has a model of its own.
+     */
     public FilterBuilderParameter getFilterBuilder()
     {
         return new FilterBuilderParameter();

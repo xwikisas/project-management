@@ -39,6 +39,13 @@ import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.XWikiWebDriver;
 
+/**
+ * Defines the behaviour of a Open Project instance. It offers methods for starting an instance, setting it up (login,
+ * change password, setup an oauth client), retrieve location and OAuth client details.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class OpenProjectInstance
 {
     protected static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectInstance.class);
@@ -59,6 +66,14 @@ public class OpenProjectInstance
 
     protected String baseUrl;
 
+    /**
+     * Start an Open Project instance inside a docker container.
+     *
+     * @param testUtils the TestUtils that wrap the webdriver necessary for navigating the created instance.
+     * @param testConfiguration the test configuration containing information necessary for the docker container
+     *     manager.
+     * @throws Exception in any issue is raised during the starting up of the container.
+     */
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
         Network network = Network.newNetwork();
@@ -88,12 +103,6 @@ public class OpenProjectInstance
 
         XWikiWebDriver driver = testUtils.getDriver();
 
-        getBaseUrl();
-        LOGGER.info("!!Waiting for open project start.");
-        System.out.println("!!!Waiting for open project start.");
-
-//        Thread.sleep(120 * 1000);
-
         int iteration = 0;
         do {
             String location = getBaseUrl();
@@ -105,10 +114,15 @@ public class OpenProjectInstance
             if (driver.hasElement(By.cssSelector(".op-logo"))) {
                 break;
             }
-//            Thread.sleep(1 * 1000);
+            Thread.sleep(5 * 1000);
         } while (iteration++ < 5);
     }
 
+    /**
+     * Login, change password and setup an OAuth client.
+     *
+     * @param driver the webdriver used to navigate the instance.
+     */
     public void setupInstance(XWikiWebDriver driver)
     {
         maybeLogin(driver, true);
@@ -117,6 +131,12 @@ public class OpenProjectInstance
         createNewOAuthApp(driver);
     }
 
+    /**
+     * Try to login. Do nothing if login is not required.
+     *
+     * @param driver the webdriver used to navigate the instance.
+     * @param goToPage denotes whether the method should navigate to the login page or not.
+     */
     public void maybeLogin(XWikiWebDriver driver, boolean goToPage)
     {
         LOGGER.info("Trying to log in to Open Project.");
@@ -142,6 +162,11 @@ public class OpenProjectInstance
         waitPageLoad(driver);
     }
 
+    /**
+     * Click on the "authorize" button on the OAuth redirect page. Do nothing if on other page.
+     *
+     * @param driver the webdriver used to navigate the instance.
+     */
     public void maybeClickAuthorization(XWikiWebDriver driver)
     {
         try {
@@ -152,6 +177,9 @@ public class OpenProjectInstance
         }
     }
 
+    /**
+     * @return the client secret of the last created OAuth client.
+     */
     public String getClientSecret()
     {
         if (clientSecret == null) {
@@ -160,6 +188,9 @@ public class OpenProjectInstance
         return clientSecret;
     }
 
+    /**
+     * @return the client id of the last created OAuth client.
+     */
     public String getClientId()
     {
         if (clientId == null) {
@@ -168,6 +199,9 @@ public class OpenProjectInstance
         return clientId;
     }
 
+    /**
+     * @return the base url of the created Open Project instance.
+     */
     public String getBaseUrl()
     {
         if (baseUrl != null) {
@@ -239,6 +273,7 @@ public class OpenProjectInstance
 
     private static void waitPageLoad(XWikiWebDriver driver)
     {
-        driver.waitUntilCondition(ExpectedConditions.visibilityOf(driver.findElement(By.cssSelector(".op-logo"))));
+        driver.waitUntilCondition(
+            ExpectedConditions.visibilityOf(driver.findElement(By.cssSelector(".op-logo .op-logo--link"))));
     }
 }

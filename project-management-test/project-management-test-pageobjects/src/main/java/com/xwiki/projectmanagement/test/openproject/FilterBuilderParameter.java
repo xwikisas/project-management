@@ -29,13 +29,28 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
 
+/**
+ * Models the filter parameter of the Open Project macro.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class FilterBuilderParameter extends BaseElement
 {
+    /**
+     * @return the container of the parameter value.
+     */
     public WebElement getContainer()
     {
         return getDriver().findElement(By.className("proj-manag-constraint-builder"));
     }
 
+    /**
+     * Select from the "Add Filter" list a work package property that should be filtered.
+     *
+     * @param filterProperty the technical work package property name that should be filtered.
+     * @return the model of a filter.
+     */
     public FilterBuilderFilter addFilter(String filterProperty)
     {
         Select select = new Select(getDriver().findElement(By.id("proj-manag-add-constraint")));
@@ -54,6 +69,9 @@ public class FilterBuilderParameter extends BaseElement
         return new FilterBuilderFilter(createdFilter);
     }
 
+    /**
+     * @return retrieve all the created filters of the filter parameter.
+     */
     public List<FilterBuilderFilter> getFilters()
     {
         return getContainer()
@@ -63,6 +81,9 @@ public class FilterBuilderParameter extends BaseElement
             .collect(Collectors.toList());
     }
 
+    /**
+     * Clear all the filters inside the filter parameter.
+     */
     public void clearFilters()
     {
         try {

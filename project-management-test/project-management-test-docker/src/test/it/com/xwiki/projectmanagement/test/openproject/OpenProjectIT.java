@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.test.openproject;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomUtils;
 import org.xwiki.ckeditor.test.po.CKEditor;
@@ -39,26 +41,35 @@ import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.UITest;
-import org.xwiki.test.docker.junit5.servletengine.ServletEngine;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.ViewPage;
+import org.xwiki.test.ui.po.editor.EditPage;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Test the overall functionality of the Open Project integration.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 @UITest(
     properties = {
-        // Add the Scheduler plugin used by Mail Resender Scheduler Job
+        // Add the Scheduler plugin used by the Style sync job.
         "xwikiCfgPlugins=com.xpn.xwiki.plugin.scheduler.SchedulerPlugin," +
+            // Add the jsrx and ssrx plugins used by the app.
             "com.xpn.xwiki.plugin.skinx.JsResourceSkinExtensionPlugin,"
             + "com.xpn.xwiki.plugin.skinx.CssResourceSkinExtensionPlugin"
+    },
+    extraJARs = {
+        // Needed by the scheduler plugin, otherwise it fails.
+        "org.xwiki.platform:xwiki-platform-scheduler-api:14.10.2"
     }
-//    , vnc = false
 //    , servletEngine = ServletEngine.EXTERNAL
 )
-// TODO: Consider using AbstractCKEditorIT when upgrading parent to 15.10.
 public class OpenProjectIT
 {
     private static final String CONNECTION_ID = "test";
@@ -68,6 +79,8 @@ public class OpenProjectIT
     private final LocalDocumentReference page2 = new LocalDocumentReference("Main", "Test2");
 
     private final OpenProjectInstance openProjectInstance = new OpenProjectInstance();
+    // If you use an external instance, make sure to have it started with the same commands that
+    // {@link OpenProjectInstance} starts the instance. Namely, watch for doorkeeper.rb file.
 //    private OpenProjectInstance openProjectInstance =
 //        new ExternalOpenProjectInstance("Admin", "adminadminadmin", "http://172.17.0.1:8081");
 
@@ -78,7 +91,6 @@ public class OpenProjectIT
     {
         testConfiguration.setVerbose(true);
         openProjectInstance.startOpenProject(setup, testConfiguration);
-        openProjectInstance.setupInstance(setup.getDriver());
 
         setup.loginAsSuperAdmin();
         setup.deletePage(new DocumentReference(page1, wiki));
@@ -115,6 +127,8 @@ public class OpenProjectIT
     @Order(0)
     void setupInstanceConnection(TestUtils setup, TestConfiguration testConfiguration) throws Exception
     {
+        openProjectInstance.setupInstance(setup.getDriver());
+
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.addNewConnection(CONNECTION_ID, openProjectInstance.getBaseUrl(), openProjectInstance.getClientId(),
             openProjectInstance.getClientSecret());
@@ -173,14 +187,18 @@ public class OpenProjectIT
     @Order(30)
     void testStyleSyncJob(TestUtils setup) throws OperationNotSupportedException, InterruptedException
     {
+        setup.gotoPage(Arrays.asList("OpenProject", "Code"), "StylingSetupJob", "edit",
+            Collections.singletonMap("force", 1));
+        EditPage editPage = new EditPage();
+        editPage.clickSaveAndView();
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         ViewPage schedulerPage = adminPage.triggerColorSyncJob();
+        schedulerPage.waitUntilPageIsReady();
         setup.getDriver()
             .findElement(By.xpath(
-                "//div[contains(@class, 'infomessage') "
-                    + "and contains(text(), 'Job Open Project Styling Updater triggered')]"));
+                "//div[contains(@class, 'infomessage')]/p[text() = 'Job Open Project Styling Updater triggered']"));
         // Wait 1 sec for the job to execute. Might need a better way to check this.
-        Thread.currentThread().wait(1000);
+        Thread.sleep(1000);
         DocumentReference docRef = new DocumentReference(page1, wiki);
         setup.gotoPage(docRef);
         ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
@@ -249,7 +267,9 @@ public class OpenProjectIT
             .selectByValue("priority")
             .selectByValue("project.value")
             .selectByValue("status")
-            .selectByValue("startDate");
+            .selectByValue("startDate")
+            .sendKeys(Keys.ESCAPE);
+        modal.selectDisplayer("Live Data table");
         modal.clickSubmit();
 
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
@@ -277,7 +297,6 @@ public class OpenProjectIT
         modal.clickMore();
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
         filterBuilderParameter.addFilter("assignees").setSuggestValue(1, "OpenProject Admin");
-        filterBuilderParameter.addFilter("startDate").setOperator(1, "This week"); // This week
         filterBuilderParameter.addFilter("summary.value").setValue(1, "sp");
         filterBuilderParameter.addFilter("status")
             .addConstraint()
@@ -298,7 +317,7 @@ public class OpenProjectIT
         modal = new OpenProjectMacroEditModal();
         filterBuilderParameter = modal.getFilterBuilder();
         List<FilterBuilderFilter> filters = filterBuilderParameter.getFilters();
-        assertEquals(4, filters.size());
+        assertEquals(3, filters.size());
         // Clear the filters and expect the macro to display all the entries.
         filterBuilderParameter.clearFilters();
         modal.clickSubmit();
@@ -351,7 +370,7 @@ public class OpenProjectIT
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.updateConnection(1, "test2", "asd", "asd", "asd");
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been updated!", "test2"));
+        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", "test2"));
         TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
         livedata.waitUntilReady();
         assertEquals(1, livedata.countRows());

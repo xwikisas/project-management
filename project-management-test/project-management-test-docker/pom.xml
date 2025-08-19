@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-test</artifactId>
-    <version>1.0-rc-16.1-SNAPSHOT</version>
+    <version>1.0-rc-4-SNAPSHOT</version>
   </parent>
   <artifactId>project-management-test-docker</artifactId>
   <name>Project Management - Tests - Functional Docker Tests</name>
@@ -42,23 +42,6 @@
       <version>${project.version}</version>
       <type>xar</type>
     </dependency>
-<!--    Weird dependencies needed.-->
-<!--    <dependency>-->
-<!--      <groupId>org.xwiki.platform</groupId>-->
-<!--      <artifactId>xwiki-platform-bridge</artifactId>-->
-<!--      <version>${platform.version}</version>-->
-<!--    </dependency>-->
-<!--    <dependency>-->
-<!--      <groupId>org.xwiki.rendering</groupId>-->
-<!--      <artifactId>xwiki-rendering-transformation-macro</artifactId>-->
-<!--      <version>${rendering.version}</version>-->
-<!--    </dependency>-->
-<!--    <dependency>-->
-<!--      <groupId>org.xwiki.commons</groupId>-->
-<!--      <artifactId>xwiki-commons-velocity</artifactId>-->
-<!--      <version>${commons.version}</version>-->
-<!--    </dependency>-->
-    <!-- Required for tests involving subwikis. -->
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-wiki-ui-mainwiki</artifactId>

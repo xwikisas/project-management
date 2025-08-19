@@ -25,8 +25,17 @@ import java.util.stream.Collectors;
 import org.openqa.selenium.By;
 import org.xwiki.test.ui.po.ViewPage;
 
+/**
+ * Models a page containing one or more open project macros.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
 public class ViewPageWithOpenProjectMacro extends ViewPage
 {
+    /**
+     * @return a list of open project macros present in the page.
+     */
     public List<OpenProjectMacroElement> getOpenProjectMacros()
     {
         return getDriver().findElements(By.className("open-project-macro"))
@@ -34,5 +43,4 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
             .map(OpenProjectMacroElement::new)
             .collect(Collectors.toList());
     }
-
 }
