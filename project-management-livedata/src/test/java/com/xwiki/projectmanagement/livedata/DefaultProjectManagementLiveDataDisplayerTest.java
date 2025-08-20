@@ -96,7 +96,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplay_withPropertyDisplayer()
+    void testDisplayWithDefaultPropertyDisplayer()
     {
         WorkItem workItem = prepareWorkItem();
 
@@ -113,7 +113,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplayProperty_withDate()
+    void testDisplayPropertyWithDate()
     {
         Date now = new Date();
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("date", now);
@@ -144,16 +144,6 @@ class DefaultProjectManagementLiveDataDisplayerTest
         verify(defaultDisplayerManager).displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap());
     }
 
-    private static WorkItem prepareWorkItem()
-    {
-        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
-
-        WorkItem workItem = mock(WorkItem.class);
-        when(workItem.entrySet()).thenReturn(Collections.singleton(property));
-
-        return workItem;
-    }
-
     @Test
     void testGetPropertyDisplayerManagerWithValidClientId() throws Exception
     {
@@ -175,5 +165,15 @@ class DefaultProjectManagementLiveDataDisplayerTest
         displayer.display(Collections.singleton(workItem));
 
         verify(customManager).displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap());
+    }
+
+    private static WorkItem prepareWorkItem()
+    {
+        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
+
+        WorkItem workItem = mock(WorkItem.class);
+        when(workItem.entrySet()).thenReturn(Collections.singleton(property));
+
+        return workItem;
     }
 }

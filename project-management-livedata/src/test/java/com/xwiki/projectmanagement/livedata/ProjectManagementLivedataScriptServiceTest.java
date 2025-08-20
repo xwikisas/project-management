@@ -56,7 +56,7 @@ class ProjectManagementLivedataScriptServiceTest
     private LiveDataConfigurationResolver<LiveDataConfiguration> resolver;
 
     @Test
-    void testGetLivedataConfiguration_success() throws Exception
+    void testGetLivedataConfiguration() throws Exception
     {
         LiveDataConfiguration expectedConfig = new LiveDataConfiguration();
         when(resolver.resolve(any(LiveDataConfiguration.class)))
@@ -76,7 +76,7 @@ class ProjectManagementLivedataScriptServiceTest
     }
 
     @Test
-    void testGetLivedataConfiguration_resolverThrows() throws Exception
+    void testGetLivedataConfigurationThrowsError() throws Exception
     {
         when(resolver.resolve(any(LiveDataConfiguration.class)))
             .thenThrow(new LiveDataException("failure"));

@@ -118,7 +118,7 @@ public class AbstractProjectManagementMacroTest
 
         List<Block> result = abstractMacro.execute(params, "", macroTransformationContext);
 
-        // Gets exeuted in the async renderer.
+        // Gets executed in the async renderer.
         verify(displayerMacro).execute(params, "", macroTransformationContext);
         assertEquals(1, result.size());
         assertInstanceOf(MacroMarkerBlock.class, result.get(0));
