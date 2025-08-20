@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 import javax.inject.Named;
@@ -49,6 +50,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,23 +91,26 @@ public class DefaultOpenProjectConfigurationTest
 
     private List<OpenProjectConnection> connections;
 
-    private static final String CONNECTION_NAME = "firstConnection";
-
     private static final String ACCESS_TOKEN = "accessToken";
 
     private static final String REDIRECT_URL = "redirectURL";
 
+    private static final OpenProjectConnection opConnection = new OpenProjectConnection(
+        "firstConnection",
+        "firstConnectionURL",
+        "firstConnectionClientId",
+        "firstConnectionClientSecret"
+    );
+
+    private static final String GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE =
+        "No client for connection [%s] could be created because the configuration doesn't exist or the access "
+            + "token for the current user is not set.";
+
     @BeforeEach
     void setUp() throws CacheException, ComponentLookupException, OAuth2Exception
     {
-        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
         this.connections = List.of(
-            new OpenProjectConnection(
-                "firstConnection",
-                "firstConnectionURL",
-                "firstConnectionClientId",
-                "firstConnectionClientSecret"
-            ),
+            opConnection,
             new OpenProjectConnection(
                 "secondConnection",
                 "secondConnectionURL",
@@ -119,12 +124,12 @@ public class DefaultOpenProjectConfigurationTest
                 "thirdConnectionClientSecret"
             )
         );
+
+        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
         when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(this.connections);
         when(this.componentManager.getInstance(ScriptService.class, "oauth2client")).thenReturn(oauth2Client);
-        when(this.oauth2Client.getAccessToken(CONNECTION_NAME)).thenReturn(ACCESS_TOKEN);
-
+        when(this.oauth2Client.getAccessToken(opConnection.getConnectionName())).thenReturn(ACCESS_TOKEN);
         doNothing().when(this.logger).warn(anyString(), any(OAuth2Exception.class));
-
         doNothing().when(this.logger).warn(anyString());
     }
 
@@ -138,9 +143,9 @@ public class DefaultOpenProjectConfigurationTest
     @Test
     public void getConnectionTest()
     {
-        OpenProjectConnection result = configuration.getConnection(CONNECTION_NAME);
+        OpenProjectConnection result = configuration.getConnection(opConnection.getConnectionName());
 
-        assertEquals(this.connections.get(0), result);
+        assertEquals(opConnection, result);
     }
 
     @Test
@@ -156,7 +161,7 @@ public class DefaultOpenProjectConfigurationTest
     @Test
     public void getAccessTokenForConfigurationTest()
     {
-        String token = configuration.getAccessTokenForConfiguration(CONNECTION_NAME);
+        String token = configuration.getAccessTokenForConfiguration(opConnection.getConnectionName());
 
         assertEquals(ACCESS_TOKEN, token);
     }
@@ -168,12 +173,19 @@ public class DefaultOpenProjectConfigurationTest
         Exception exception = new OAuth2Exception("Failed to retrieve the access token");
         when(oauth2Client.getAccessToken(connectionName)).thenThrow(exception);
 
-        String token = configuration.getAccessTokenForConfiguration("invalidConnection");
+        String token = configuration.getAccessTokenForConfiguration(connectionName);
 
         assertNull(token);
 
-        verify(logger).warn(String.format("Failed to retrieve the access token for instance [%s]. Cause: [%s].",
-            connectionName, ExceptionUtils.getRootCauseMessage(exception)), exception);
+        verify(logger)
+            .warn(
+                String.format(
+                    "Failed to retrieve the access token for instance [%s]. Cause: [%s].",
+                    connectionName,
+                    ExceptionUtils.getRootCauseMessage(exception)
+                ),
+                exception
+            );
 
         verify(oauth2Client).getAccessToken(connectionName);
     }
@@ -181,36 +193,59 @@ public class DefaultOpenProjectConfigurationTest
     @Test
     public void createNewTokenTest() throws OAuth2Exception, AuthenticationException
     {
-        doNothing().when(oauth2Client).authorize(CONNECTION_NAME, REDIRECT_URL);
+        doNothing().when(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
 
-        configuration.createNewToken(CONNECTION_NAME, REDIRECT_URL);
+        configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL);
 
-        verify(oauth2Client).authorize(CONNECTION_NAME, REDIRECT_URL);
+        verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
     }
 
     @Test
     public void createNewTokenGeneratesErrorTest() throws OAuth2Exception
     {
         doThrow(OAuth2Exception.class).when(oauth2Client)
-            .authorize(CONNECTION_NAME, REDIRECT_URL);
+            .authorize(opConnection.getConnectionName(), REDIRECT_URL);
 
         AuthenticationException thrown = assertThrows(AuthenticationException.class,
-            () -> configuration.createNewToken(CONNECTION_NAME, REDIRECT_URL));
+            () -> configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL));
 
-        Assertions.assertTrue(thrown.getMessage()
-            .contains("Failed to establish the OAuth2 connection for instance [" + CONNECTION_NAME + "]"));
+        Assertions
+            .assertTrue(thrown.getMessage()
+                .contains(
+                    "Failed to establish the OAuth2 connection for instance [" + opConnection.getConnectionName() + "]"
+                )
+            );
 
-        verify(oauth2Client).authorize(CONNECTION_NAME, REDIRECT_URL);
+        verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
     }
 
     @Test
-    public void getOpenProjectApiClientTest()
+    public void getOpenProjectApiClientTest() throws NoSuchFieldException, IllegalAccessException
     {
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(CONNECTION_NAME);
+        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
 
         assertNotNull(client);
 
         Assertions.assertInstanceOf(CachingOpenProjectApiClient.class, client);
+
+        Field clientField = CachingOpenProjectApiClient.class.getDeclaredField("client");
+        Field clientIdField = CachingOpenProjectApiClient.class.getDeclaredField("clientId");
+        clientField.setAccessible(true);
+        clientIdField.setAccessible(true);
+        DefaultOpenProjectApiClient opApiClient = (DefaultOpenProjectApiClient) clientField.get(client);
+
+        Field tokenField = DefaultOpenProjectApiClient.class.getDeclaredField("token");
+        Field connectionUrlField = DefaultOpenProjectApiClient.class.getDeclaredField("connectionUrl");
+        tokenField.setAccessible(true);
+        connectionUrlField.setAccessible(true);
+
+        String clientId = (String) clientIdField.get(client);
+        String token = (String) tokenField.get(opApiClient);
+        String connectionUrl = (String) connectionUrlField.get(opApiClient);
+
+        assertEquals(ACCESS_TOKEN, token);
+        assertEquals(opConnection.getServerURL(), connectionUrl);
+        assertEquals(clientId, opConnection.getClientId());
     }
 
     @Test
@@ -218,13 +253,12 @@ public class DefaultOpenProjectConfigurationTest
     {
         when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(List.of());
 
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(CONNECTION_NAME);
+        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
 
         assertNull(client);
 
         verify(logger).warn(String.format(
-            "No client for connection [%s] could be created because the configuration doesn't exist or the access "
-                + "token for the current user is not set.", CONNECTION_NAME));
+            GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()));
     }
 
     @Test
@@ -232,12 +266,11 @@ public class DefaultOpenProjectConfigurationTest
     {
         when(oauth2Client.getAccessToken(anyString())).thenReturn(null);
 
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(CONNECTION_NAME);
+        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
 
         assertNull(client);
 
         verify(logger).warn(String.format(
-            "No client for connection [%s] could be created because the configuration doesn't exist or the access "
-                + "token for the current user is not set.", CONNECTION_NAME));
+            GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()));
     }
 }
