@@ -30,6 +30,9 @@
 
   <artifactId>project-management-livedata</artifactId>
 
+  <properties>
+    <xwiki.jacoco.instructionRatio>0.76</xwiki.jacoco.instructionRatio>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
@@ -46,6 +49,13 @@
       <groupId>org.xwiki.rendering</groupId>
       <artifactId>xwiki-rendering-xml</artifactId>
       <version>${rendering.version}</version>
+    </dependency>
+    <!--  Test deps.  -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 

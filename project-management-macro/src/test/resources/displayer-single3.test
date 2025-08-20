@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Single displayer test - display a work item with incomplete values.
 .#-----------------------------------------------------
-{{workItemsSingle sourceParams="client=test"}}
+{{workItemsSingle sourceParams="client=test" sort="identifier:asc"}}
 {
   "query": {
     "filters": [
@@ -24,7 +24,7 @@
 .expect|event/1.0
 .#-----------------------------------------------------
 beginDocument
-beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
+beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc] [{
   "query": {
     "filters": [
       {
@@ -130,7 +130,7 @@ onWord [description]
 endParagraph
 endGroup [[class]=[work-package-description]]
 endGroup [[class]=[work-item-page-displayer]]
-endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
+endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc] [{
   "query": {
     "filters": [
       {

@@ -1,5 +1,2 @@
-com.xwiki.projectmanagement.internal.macro.TestMacro
-com.xwiki.projectmanagement.internal.displayers.WorkItemsCardsDisplayer
-com.xwiki.projectmanagement.internal.displayers.WorkItemsListDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsSingleDisplayer
 com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer
