@@ -67,7 +67,7 @@ public class Suggest extends XWikiResource
 
     private static final String NAME = "name";
 
-    private static final String TYPE = "type";
+    private static final String TYPES = "types";
 
     private static final String USERS = "users";
 
@@ -123,7 +123,7 @@ public class Suggest extends XWikiResource
                 case PROJECTS:
                     response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize);
                     break;
-                case TYPE:
+                case TYPES:
                     response = getTypesSuggestions(openProjectApiClient);
                     break;
                 case USERS:
@@ -144,7 +144,7 @@ public class Suggest extends XWikiResource
         int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter("subject", searchString);
-        return getSuggestions(openProjectApiClient.getWorkPackages(0, pageSize, filter, "").getItems());
+        return getSuggestions(openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems());
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)

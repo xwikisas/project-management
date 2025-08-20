@@ -193,8 +193,6 @@ public class DefaultOpenProjectConfigurationTest
     @Test
     public void createNewTokenTest() throws OAuth2Exception, AuthenticationException
     {
-        doNothing().when(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
-
         configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL);
 
         verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
