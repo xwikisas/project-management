@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -58,8 +57,6 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagementLiveDataDisplayer
 {
-    private static final Set<String> KNOWN_HTML_PROPS = Set.of("assignees", "labels");
-
     @Inject
     protected WorkItemPropertyDisplayerManager defaultDisplayerManager;
 
@@ -95,8 +92,7 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
         WorkItemPropertyDisplayerManager displayerManager)
     {
-        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null)
-        {
+        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null) {
             setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager, Collections.emptyMap());
         } else if (itemProperty.getValue() instanceof Date) {
             displayDateProperty(itemProperty);

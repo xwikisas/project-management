@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.internal.displayers;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,48 +17,35 @@ package com.xwiki.projectmanagement.internal.displayers;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
-import java.util.List;
+package com.xwiki.projectmanagement.internal;
 
 import javax.inject.Named;
-import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
+
+import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
-import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.AbstractMacro;
-import org.xwiki.rendering.macro.MacroExecutionException;
-import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 /**
- * Display the work items in a cards manner.
+ * Implementation of the abstract project management macro for testing purposes.
  *
- * @param <T> the parameters that should be taken into consideration.
- * @version $Id$
+ * @version $Id
+ * @since 1.0-rc-4
  */
 @Component
-@Singleton
-@Named("workItemsCards")
-public class WorkItemsCardsDisplayer<T extends ProjectManagementMacroParameters> extends AbstractMacro<T>
+@Named("test")
+public class TestProjManagementMacro extends AbstractProjectManagementMacro<ProjectManagementMacroParameters>
 {
-    /**
-     * Default constructor.
-     */
-    public WorkItemsCardsDisplayer()
+    public TestProjManagementMacro()
     {
-        super("Work Items Cards Displayer");
+        super("test", "test", new DefaultContentDescriptor(), String.class);
     }
 
     @Override
-    public boolean supportsInlineMode()
+    public void processParameters(ProjectManagementMacroParameters parameters)
     {
-        return false;
-    }
-
-    @Override
-    public List<Block> execute(T parameters, String content, MacroTransformationContext context)
-        throws MacroExecutionException
-    {
-        return List.of();
+        addToSourceParams(parameters, "smth", "smth2");
+        addToSourceParams(parameters, "smth3", "smth4");
     }
 }
