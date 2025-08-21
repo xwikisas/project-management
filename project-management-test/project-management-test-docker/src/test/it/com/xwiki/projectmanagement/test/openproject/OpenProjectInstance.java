@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
-import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import org.xwiki.test.docker.internal.junit5.DockerTestUtils;
 import org.xwiki.test.docker.junit5.TestConfiguration;
@@ -92,10 +91,7 @@ public class OpenProjectInstance
                 localConfigPath.toAbsolutePath().toString(),
                 "/app/config/initializers/doorkeeper.rb",
                 BindMode.READ_ONLY
-            )
-            .waitingFor(Wait.forHttp("/")  // Waits for HTTP 200 on "/"
-                .forPort(80)
-                .withStartupTimeout(java.time.Duration.ofMinutes(5)));
+            );
 
         DockerTestUtils.startContainer(openProject, testConfiguration);
 
@@ -115,7 +111,7 @@ public class OpenProjectInstance
                 break;
             }
             Thread.sleep(5 * 1000);
-        } while (iteration++ < 5);
+        } while (iteration++ < 30);
     }
 
     /**
