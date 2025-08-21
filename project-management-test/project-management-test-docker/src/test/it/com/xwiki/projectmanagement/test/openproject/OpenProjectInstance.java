@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.Network;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import org.xwiki.test.docker.internal.junit5.DockerTestUtils;
 import org.xwiki.test.docker.junit5.TestConfiguration;
@@ -75,7 +75,6 @@ public class OpenProjectInstance
      */
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
-        Network network = Network.newNetwork();
         Path localConfigPath = Paths.get("src/test/resources/doorkeeper.rb").toAbsolutePath();
 
         GenericContainer<?> openProject = new GenericContainer<>(DockerImageName.parse("openproject/openproject:16"))
@@ -84,8 +83,9 @@ public class OpenProjectInstance
             .withEnv("OPENPROJECT_HTTPS", "false")
             .withEnv("OPENPROJECT_DEFAULT__LANGUAGE", "en")
             .withExposedPorts(80)
-            .withNetwork(network)
-            .withNetworkAliases("openproject")
+            .waitingFor(Wait.forHttp("/")  // Waits for HTTP 200 on "/"
+                .forPort(80)
+                .withStartupTimeout(java.time.Duration.ofMinutes(5)))
             // We need to disable the https/localhost requirement for the oauth redirect uri.
             .withFileSystemBind(
                 localConfigPath.toAbsolutePath().toString(),
@@ -105,7 +105,7 @@ public class OpenProjectInstance
             try {
                 driver.get(location);
             } catch (Exception e) {
-                LOGGER.error("Failed to get [{}].", location, e);
+                LOGGER.error("Failed to get [{}].", location);
             }
             if (driver.hasElement(By.cssSelector(".op-logo"))) {
                 break;
