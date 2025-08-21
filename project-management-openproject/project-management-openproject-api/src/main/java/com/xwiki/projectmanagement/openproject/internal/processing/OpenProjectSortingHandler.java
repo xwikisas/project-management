@@ -74,8 +74,7 @@ public final class OpenProjectSortingHandler
         try {
             return MAPPER.writeValueAsString(convertedSortEntries);
         } catch (JsonProcessingException e) {
-            throw new ProjectManagementException(
-                FAILURE_MESSAGE, e);
+            throw new ProjectManagementException(FAILURE_MESSAGE, e);
         }
     }
 

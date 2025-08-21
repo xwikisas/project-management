@@ -199,20 +199,19 @@ public class OpenProjectClient implements ProjectManagementClient
     private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
         throws ProjectManagementException
     {
-        if (filtersNode != null) {
-            return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
-        }
-        return "";
+        return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
     }
 
     private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
+        String sortByString = "";
+
         if (sortByNode != null) {
-            String sortByString = sortByNode.asText();
-            return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
+            sortByString = sortByNode.asText();
         }
-        return "";
+
+        return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
     }
 
     private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
