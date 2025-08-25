@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
 
 import org.apache.commons.io.IOUtils;
 
-public class TestUtils
+public class OpenProjectTestUtils
 {
     public String getWorkPackagesValidResponse() throws IOException
     {

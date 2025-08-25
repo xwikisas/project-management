@@ -28,8 +28,6 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.cache.CacheException;
@@ -37,6 +35,7 @@ import org.xwiki.cache.CacheManager;
 import org.xwiki.cache.config.CacheConfiguration;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.component.util.ReflectionUtils;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.contrib.oidc.OAuth2Exception;
@@ -59,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -67,6 +65,9 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 public class DefaultOpenProjectConfigurationTest
 {
+    @InjectMockComponents
+    private DefaultOpenProjectConfiguration configuration;
+
     @MockComponent
     @Named("openproject")
     private ConfigurationSource openProjectConfiguration;
@@ -77,17 +78,13 @@ public class DefaultOpenProjectConfigurationTest
     @MockComponent
     private CacheManager cacheManager;
 
-    @Mock
+    @MockComponent
     private Logger logger;
 
     @MockComponent
     private OAuth2ClientScriptService oauth2Client;
 
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
-
-    @InjectMockComponents
-    @InjectMocks
-    private DefaultOpenProjectConfiguration configuration;
 
     private List<OpenProjectConnection> connections;
 
@@ -106,6 +103,7 @@ public class DefaultOpenProjectConfigurationTest
         "No client for connection [%s] could be created because the configuration doesn't exist or the access "
             + "token for the current user is not set.";
 
+    @SuppressWarnings("unchecked")
     @BeforeEach
     void setUp() throws CacheException, ComponentLookupException, OAuth2Exception
     {
@@ -125,12 +123,12 @@ public class DefaultOpenProjectConfigurationTest
             )
         );
 
+        ReflectionUtils.setFieldValue(this.configuration, "logger", this.logger);
+
         when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
         when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(this.connections);
         when(this.componentManager.getInstance(ScriptService.class, "oauth2client")).thenReturn(oauth2Client);
         when(this.oauth2Client.getAccessToken(opConnection.getConnectionName())).thenReturn(ACCESS_TOKEN);
-        doNothing().when(this.logger).warn(anyString(), any(OAuth2Exception.class));
-        doNothing().when(this.logger).warn(anyString());
     }
 
     @Test

@@ -53,15 +53,16 @@ import com.xwiki.projectmanagement.openproject.internal.service.HandleConnection
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
 public class HandleConnectionsServiceTest
 {
+    @InjectMockComponents
+    private HandleConnectionsService handleConnectionsService;
+
     @MockComponent
     private Provider<XWikiContext> xContextProvider;
 
@@ -94,10 +95,7 @@ public class HandleConnectionsServiceTest
     @Mock
     private UserReference userReference;
 
-    OpenProjectConnection openProjectConnection;
-
-    @InjectMockComponents
-    private HandleConnectionsService handleConnectionsService;
+    private OpenProjectConnection openProjectConnection;
 
     private DocumentAuthors documentAuthors;
 
@@ -112,15 +110,7 @@ public class HandleConnectionsServiceTest
     @BeforeEach
     void setup() throws QueryException, XWikiException
     {
-        String queryStatement = "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
-            + "where doc.fullName = obj.name "
-            + "and obj.className = :className "
-            + "and obj.id = configName.id.id "
-            + "and configName.id.name = :configFieldName "
-            + "and configName.value = :config "
-            + "and doc.fullName <> :serializedDocRef";
-
-        when(this.queryManager.createQuery(queryStatement, Query.HQL)).thenReturn(this.query);
+        when(this.queryManager.createQuery(any(), eq(Query.HQL))).thenReturn(this.query);
         when(this.query.bindValue(any(), any())).thenReturn(this.query);
         when(this.query.setWiki(any())).thenReturn(this.query);
         when(this.compactSerializer.serialize(documentReference)).thenReturn("serializedDocRef");
@@ -135,8 +125,6 @@ public class HandleConnectionsServiceTest
 
         documentAuthors = new DefaultDocumentAuthors(doc);
         when(doc.getAuthors()).thenReturn(documentAuthors);
-
-        doNothing().when(xwiki).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
 
         openProjectConnection = new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret");
     }

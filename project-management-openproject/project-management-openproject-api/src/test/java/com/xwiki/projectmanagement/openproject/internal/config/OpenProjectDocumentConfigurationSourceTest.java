@@ -25,7 +25,6 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.xwiki.model.EntityType;
 import org.xwiki.model.reference.DocumentReference;
@@ -37,6 +36,7 @@ import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
@@ -56,17 +56,14 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 public class OpenProjectDocumentConfigurationSourceTest
 {
-    @MockComponent
+    @InjectMockComponents
+    private OpenProjectDocumentConfigurationSource openProjectDocumentConfigurationSource;
+
+    @Mock
     private XWikiContext xContext;
 
     @MockComponent
     private Provider<XWikiContext> xContextProvider;
-
-    @MockComponent
-    private XWiki xwiki;
-
-    @MockComponent
-    private Query query;
 
     @MockComponent
     private QueryManager queryManager;
@@ -78,13 +75,16 @@ public class OpenProjectDocumentConfigurationSourceTest
     protected WikiDescriptorManager wikiManager;
 
     @Mock
+    private XWiki xwiki;
+
+    @Mock
+    private Query query;
+
+    @Mock
     private XWikiDocument xwikiDocument1;
 
     @Mock
     private XWikiDocument xwikiDocument2;
-
-    @InjectMocks
-    private OpenProjectDocumentConfigurationSource openProjectDocumentConfigurationSource;
 
     private static final String WIKI_NAME = "wiki";
 
@@ -132,6 +132,7 @@ public class OpenProjectDocumentConfigurationSourceTest
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     public void getBasePropertyTest() throws XWikiException
     {
         List<OpenProjectConnection> connections =
