@@ -1,0 +1,14 @@
+{
+  "_embedded": {
+    "elements": [
+      {
+        "id": 1,
+        "name": "First user"
+      },
+      {
+        "id": 2,
+        "name": "Second user"
+      }
+    ]
+  }
+}

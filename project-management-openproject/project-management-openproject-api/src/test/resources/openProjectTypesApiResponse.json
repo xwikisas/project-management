@@ -1,0 +1,48 @@
+{
+  "_type": "Collection",
+  "total": 2,
+  "count": 2,
+  "_embedded": {
+    "elements": [
+      {
+        "_type": "Type",
+        "id": 1,
+        "name": "First type",
+        "color": "#1A67A3",
+        "position": 1,
+        "isDefault": true,
+        "isMilestone": false,
+        "createdAt": "2025-08-18T08:51:54.992Z",
+        "updatedAt": "2025-08-18T08:51:54.992Z",
+        "_links": {
+          "self": {
+            "href": "/api/v3/types/1",
+            "title": "First type"
+          }
+        }
+      },
+      {
+        "_type": "Type",
+        "id": 2,
+        "name": "Second type",
+        "color": "#35C53F",
+        "position": 2,
+        "isDefault": true,
+        "isMilestone": true,
+        "createdAt": "2025-08-18T08:51:54.998Z",
+        "updatedAt": "2025-08-18T08:51:54.998Z",
+        "_links": {
+          "self": {
+            "href": "/api/v3/types/2",
+            "title": "Second type"
+          }
+        }
+      }
+    ]
+  },
+  "_links": {
+    "self": {
+      "href": "/api/v3/types"
+    }
+  }
+}

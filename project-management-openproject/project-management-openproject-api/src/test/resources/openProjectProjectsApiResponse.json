@@ -1,0 +1,18 @@
+{
+  "_embedded": {
+    "elements": [
+      {
+        "id": 1,
+        "name": "First project"
+      },
+      {
+        "id": 2,
+        "name": "Second project"
+      },
+      {
+        "id": 3,
+        "name": "Third project"
+      }
+    ]
+  }
+}

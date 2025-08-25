@@ -20,6 +20,7 @@
 
 package com.xwiki.projectmanagement.openproject.internal.displayer;
 
+import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -151,7 +152,7 @@ public class StylingSetupManager
                     continue;
                 }
                 OpenProjectApiClient apiClient =
-                    new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken);
+                    new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken, HttpClient.newHttpClient());
 
                 StringBuilder stringBuilder = new StringBuilder();
 
