@@ -336,9 +336,9 @@ public class WorkPackage extends BaseOpenProjectObject
      *
      * @return the percentage done as an integer
      */
-    public int getPercentageDone()
+    public Integer getPercentageDone()
     {
-        return (int) get(PERCENTAGE_DONE);
+        return (Integer) get(PERCENTAGE_DONE);
     }
 
     /**
@@ -346,7 +346,7 @@ public class WorkPackage extends BaseOpenProjectObject
      *
      * @param percentageDone the percentage to set
      */
-    public void setPercentageDone(int percentageDone)
+    public void setPercentageDone(Integer percentageDone)
     {
         put(PERCENTAGE_DONE, percentageDone);
     }

@@ -71,23 +71,25 @@ public interface OpenProjectApiClient
      * Retrieves a list of available users based on the specified page size and filter criteria  from the current
      * OpenProject configuration.
      *
+     * @param offset the offset from which to start retrieving users.
      * @param pageSize the number of users to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
      * @return a list of {@link User}
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
      */
-    PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException;
 
     /**
      * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
      * current OpenProject configuration.
      *
+     * @param offset the offset from which to start retrieving projects.
      * @param pageSize the number of users to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request.
      * @return a list of {@link Project}.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      */
-    PaginatedResult<Project> getProjects(int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<Project> getProjects(int offset, int pageSize, String filters) throws ProjectManagementException;
 
     /**
      * Retrieves all available types from the current OpenProject configuration.
