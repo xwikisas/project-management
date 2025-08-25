@@ -42,8 +42,10 @@ public class OpenProjectFilterHandlerTest
     void convertFiltersTest() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
+
         LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter("property1", "operator1", "value1");
         LiveDataQuery.Filter filter2 = new LiveDataQuery.Filter("property2", "operator2", "value2");
+
         filters.add(filter1);
         filters.add(filter2);
 
@@ -53,29 +55,28 @@ public class OpenProjectFilterHandlerTest
             + "{\"property2\":{\"operator\":\"operator2\",\"values\":[\"value2\"]}"
             + "}"
             + "]";
-
         String convertedFilters = OpenProjectFilterHandler.convertFilters(filters);
 
-        JsonNode expectedNode = mapper.readTree(expected);
-        JsonNode actualNode = mapper.readTree(convertedFilters);
-
-        assertEquals(expectedNode, actualNode);
+        assertEqualsStringFilters(expected, convertedFilters);
     }
 
     @Test
-    void convertFiltersSameOperatorTest() throws ProjectManagementException, JsonProcessingException
+    void sameOperatorInFilterTest() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
+
         LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter();
-        filter1.setProperty("property1");
-        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "operator1");
-        LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "operator1");
-        LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("value3", "operator2");
+        LiveDataQuery.Filter filter2 = new LiveDataQuery.Filter();
+
+        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "contains");
+        LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "contains");
+        LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("value3", "between");
+
+        filter1.setProperty("identifier.value");
         filter1.getConstraints().add(firstConstraint);
         filter1.getConstraints().add(secondConstraint);
 
-        LiveDataQuery.Filter filter2 = new LiveDataQuery.Filter();
-        filter2.setProperty("property2");
+        filter2.setProperty("summary.value");
         filter2.getConstraints().add(thirdConstraint);
 
         filters.add(filter1);
@@ -83,28 +84,138 @@ public class OpenProjectFilterHandlerTest
 
         String expected = "["
             + "{"
-            + "\"property2\":{\"operator\":\"operator2\",\"values\":[\"value3\"]}"
+            + "\"subject\":{\"operator\":\"<>d\",\"values\":[\"value3\"]}"
             + "},"
             + "{"
-            + "\"property1\":{\"operator\":\"operator1\",\"values\":[\"value1\", \"value2\"]}}"
+            + "\"id\":{\"operator\":\"=\",\"values\":[\"value1\",\"value2\"]}}"
             + "]";
-
-
         String convertedFilters = OpenProjectFilterHandler.mergeFilters(filters, null);
 
-        JsonNode expectedNode = mapper.readTree(expected);
-        JsonNode actualNode = mapper.readTree(convertedFilters);
-
-        jsonArrayEqualsIgnoreOrder(expectedNode, actualNode);
+        assertEqualsStringFilters(expected, convertedFilters);
     }
 
-    private void jsonArrayEqualsIgnoreOrder(JsonNode array1, JsonNode array2) {
+    @Test
+    void sameFilterDifferentOperatorsInLivedataFiltersTest()
+        throws ProjectManagementException, JsonProcessingException
+    {
+        List<LiveDataQuery.Filter> filters = new ArrayList<>();
+
+        LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter();
+        LiveDataQuery.Filter filter2 = new LiveDataQuery.Filter();
+
+        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "operator1");
+        LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "operator2");
+
+        filter1.setProperty("property1");
+        filter1.getConstraints().add(firstConstraint);
+
+        filter2.setProperty("property1");
+        filter2.getConstraints().add(secondConstraint);
+
+        filters.add(filter1);
+        filters.add(filter2);
+
+        //we expect to have only the second filter converted
+        String expected = "["
+            + "{\"property1\":{\"operator\":\"operator2\",\"values\":[\"value2\"]}}"
+            + "]";
+        String convertedFilters = OpenProjectFilterHandler.mergeFilters(filters, null);
+
+        assertEqualsStringFilters(expected, convertedFilters);
+    }
+
+    @Test
+    void openProjectFiltersTest() throws JsonProcessingException, ProjectManagementException
+    {
+        String opFiltersString = "["
+            + "{\"n\":\"identifier.value\",\"o\":\"contains\",\"v\":[\"value1\"]},"
+            + "{\"n\":\"property2\",\"o\":\"operator2\",\"v\":[\"value2\"]}"
+            + "]";
+
+        JsonNode opFiltersJson = mapper.readTree(opFiltersString);
+
+        String expected = "["
+            + "{"
+            + "\"identifier.value\":{\"operator\":\"contains\",\"values\":[\"value1\"]}},"
+            + "{\"property2\":{\"operator\":\"operator2\",\"values\":[\"value2\"]}"
+            + "}"
+            + "]";
+        String convertedValues = OpenProjectFilterHandler.mergeFilters(new ArrayList<>(), opFiltersJson);
+
+        assertEqualsStringFilters(expected, convertedValues);
+    }
+
+    @Test
+    void liveDataAndOpenProjectFiltersTest() throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = new ArrayList<>();
+
+        LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter();
+
+        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "operator1");
+
+        filter1.setProperty("property1");
+        filter1.getConstraints().add(firstConstraint);
+
+        filters.add(filter1);
+
+        String opFiltersString = "["
+            + "{\"n\":\"property2\",\"o\":\"operator2\",\"v\":[\"value2\"]}"
+            + "]";
+
+        JsonNode opFiltersJson = mapper.readTree(opFiltersString);
+
+        String expected = "["
+            + "{"
+            + "\"property1\":{\"operator\":\"operator1\",\"values\":[\"value1\"]}},"
+            + "{\"property2\":{\"operator\":\"operator2\",\"values\":[\"value2\"]}"
+            + "}"
+            + "]";
+        String convertedValues = OpenProjectFilterHandler.mergeFilters(filters, opFiltersJson);
+
+        assertEqualsStringFilters(expected, convertedValues);
+    }
+
+    @Test
+    void liveDataAndOpenProjectSameFilterInBothSourcesTest()
+        throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = new ArrayList<>();
+
+        LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter();
+
+        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "operator1");
+
+        filter1.setProperty("property1");
+        filter1.getConstraints().add(firstConstraint);
+
+        filters.add(filter1);
+
+        String opFiltersString = "["
+            + "{\"n\":\"property1\",\"o\":\"operator1\",\"v\":[\"value2\"]}"
+            + "]";
+
+        JsonNode opFiltersJson = mapper.readTree(opFiltersString);
+
+        String expected = "["
+            + "{\"property1\":{\"operator\":\"operator1\",\"values\":[\"value1\",\"value2\"]}}"
+            + "]";
+        String convertedValues = OpenProjectFilterHandler.mergeFilters(filters, opFiltersJson);
+
+        assertEqualsStringFilters(expected, convertedValues);
+    }
+
+    private void assertEqualsStringFilters(String firstFilter, String secondFilter) throws JsonProcessingException
+    {
+        JsonNode firstFilterJson = mapper.readTree(firstFilter);
+        JsonNode secondFilterJson = mapper.readTree(secondFilter);
+
         Set<JsonNode> set1 = new HashSet<>();
-        array1.forEach(set1::add);
+        firstFilterJson.forEach(set1::add);
 
         Set<JsonNode> set2 = new HashSet<>();
-        array2.forEach(set2::add);
+        secondFilterJson.forEach(set2::add);
 
-        assertEquals(set1, set2, "Arrays contain different elements");
+        assertEquals(set1, set2);
     }
 }
