@@ -92,10 +92,10 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
         WorkItemPropertyDisplayerManager displayerManager)
     {
-        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null) {
+        if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null
+            || itemProperty.getValue() instanceof Date)
+        {
             setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager, Collections.emptyMap());
-        } else if (itemProperty.getValue() instanceof Date) {
-            displayDateProperty(itemProperty);
         }
     }
 
@@ -108,18 +108,6 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
         xdom.traverse(renderer);
         String html = renderer.getPrinter().toString();
         itemProperty.setValue(html);
-    }
-
-    /**
-     * Since the livedata "date" displayer expects a UNIX Time Stamp, we will provide it here. We can't use the
-     * {@link com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager} since it will generate some blocks
-     * that can't be used by the aforementioned displayer.
-     *
-     * @param itemProperty the map entry of a work item that represents a date property.
-     */
-    private void displayDateProperty(Map.Entry<String, Object> itemProperty)
-    {
-        itemProperty.setValue(((Date) itemProperty.getValue()).getTime());
     }
 
     protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()

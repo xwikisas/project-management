@@ -123,7 +123,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
 
         displayer.displayProperty(property, renderer, defaultDisplayerManager);
 
-        assertEquals(now.getTime(), property.getValue());
+        assertEquals("printer", property.getValue());
     }
 
     @Test

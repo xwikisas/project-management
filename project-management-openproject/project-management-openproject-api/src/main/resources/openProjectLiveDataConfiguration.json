@@ -97,7 +97,7 @@
         "id": "startDate",
         "filterable": true,
         "sortable": true,
-        "displayer": "date",
+        "displayer": "html",
         "filter": {
           "id": "date",
           "operators": [
@@ -129,7 +129,7 @@
         "id": "dueDate",
         "filterable": true,
         "sortable": true,
-        "displayer": "date",
+        "displayer": "html",
         "filter": {
           "id": "date",
           "operators": [
@@ -197,7 +197,7 @@
         "id": "creationDate",
         "filterable": true,
         "sortable": true,
-        "displayer": "date",
+        "displayer": "html",
         "filter": {
           "id": "date",
           "operators": [
@@ -225,7 +225,7 @@
         "id": "updateDate",
         "filterable": true,
         "sortable": true,
-        "displayer": "date",
+        "displayer": "html",
         "filter": {
           "id": "date",
           "operators": [
@@ -253,7 +253,7 @@
         "id": "updateDate",
         "filterable": true,
         "sortable": true,
-        "displayer": "date",
+        "displayer": "html",
         "filter": {
           "id": "date",
           "operators": [
