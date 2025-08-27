@@ -117,7 +117,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 configuration.setContextEntries(
                     Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
                         XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
-                asyncRenderer.initialize(displayerMacro, parameters, content, context);
+                asyncRenderer.initialize(displayerMacro, parameters, newContent, context);
                 Block result = executor.execute(asyncRenderer, configuration);
                 return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
             }
