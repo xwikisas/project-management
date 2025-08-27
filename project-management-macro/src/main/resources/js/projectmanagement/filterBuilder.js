@@ -82,6 +82,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       ]
   */
   let addFilter = function (filter) {
+    let property = builder.cfg.find(i => i.id == filter.property);
     // Clone template and add it to dom or find the already existing one.
     let constraint = builder.constraintBuilder
       .find('.proj-manag-constraints')
@@ -95,7 +96,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       constraint.removeAttr('id');
       constraint.removeClass('hidden');
       constraint.addClass('proj-manag-constraint');
-      constraint.find('.proj-manag-constraint-title').text(filter.property);
+      constraint.find('.proj-manag-constraint-title').text(property.name || property.id);
       operatorValueContainer = constraint.find('.proj-manag-filter-container');
       constraint.find('.proj-manag-constraint-name').val(filter.property);
     } else {
@@ -115,7 +116,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     if (filter.constraints && filter.constraints.length > 0) {
       operatorElem.val(filter.constraints[0].operator)
     }
-    let property = builder.cfg.find(i => i.id == filter.property);
     operatorElem.on('change', function (e, initFilter) {
       let operatorElem = $(e.target);
       let parent = operatorElem.closest('.proj-manag-filter-container');

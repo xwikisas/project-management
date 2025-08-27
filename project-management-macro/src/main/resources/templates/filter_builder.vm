@@ -48,7 +48,7 @@
         <select id="proj-manag-add-constraint" class="btn btn-default">
           <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
           #foreach ($prop in $filterableProperties)
-            <option value="$prop.id">$prop.id</option>
+            <option value="$prop.id">#if($prop.name)$prop.name#else$prop.id#end</option>
           #end
         </select>
       </div>
