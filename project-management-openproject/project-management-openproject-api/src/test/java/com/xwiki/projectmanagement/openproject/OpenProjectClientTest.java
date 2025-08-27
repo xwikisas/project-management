@@ -24,13 +24,12 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mockStatic;
 
 import org.mockito.MockedStatic;
 import org.slf4j.Logger;
+import org.xwiki.component.util.ReflectionUtils;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -59,6 +58,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @ComponentTest
 public class OpenProjectClientTest
 {
+    @InjectMockComponents
+    private OpenProjectClient openProjectClient;
+
     @MockComponent
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -71,22 +73,19 @@ public class OpenProjectClientTest
     @MockComponent
     private Logger logger;
 
-    @InjectMocks
-    @InjectMockComponents
-    private OpenProjectClient openProjectClient;
-
     private static final Integer NUMBER_OF_WORK_PACKAGES = 10;
 
     @BeforeEach
     public void setUp() throws ProjectManagementException
     {
+        ReflectionUtils.setFieldValue(this.openProjectClient, "logger", this.logger);
+
         when(executionContext.get("instance")).thenReturn("");
         when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(this.openProjectApiClient);
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenReturn(
             generateWorkItems());
         when(openProjectApiClient.getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
             anyString())).thenReturn(generateWorkItems());
-        doNothing().when(logger).warn(anyString());
     }
 
     @Test

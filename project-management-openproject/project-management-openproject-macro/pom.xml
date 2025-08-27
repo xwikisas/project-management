@@ -52,6 +52,11 @@
       <artifactId>project-management-openproject-api</artifactId>
       <version>${project.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-skin-skinx</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
   </dependencies>
 
 </project>

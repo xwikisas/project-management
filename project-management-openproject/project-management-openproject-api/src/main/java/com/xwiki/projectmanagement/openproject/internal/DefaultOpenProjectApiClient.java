@@ -448,21 +448,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return LocalDate.parse(node.path(prop).asText()).toDate();
     }
 
-    private Date getIsoDateFromNode(String prop, JsonNode node)
-    {
-        JsonNode date = node.path(prop);
-
-        if (date.isNull() || date.asText().isBlank()) {
-            return null;
-        }
-
-        try {
-            return DATE_FORMAT.parse(date.asText());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
     private void setCreatedAndUpdatedDates(WorkPackage wp, JsonNode node)
     {
         if (!node.path(OP_CREATED_AT).isNull()) {

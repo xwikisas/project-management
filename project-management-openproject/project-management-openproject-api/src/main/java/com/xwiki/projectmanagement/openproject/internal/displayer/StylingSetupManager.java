@@ -156,9 +156,10 @@ public class StylingSetupManager
 
                 StringBuilder stringBuilder = new StringBuilder();
 
-                composeStatusStyles(openProjCfgName, apiClient, stringBuilder);
+                String cssEscaped = IdGenerator.generate(openProjCfgName);
+                composeStatusStyles(cssEscaped, apiClient, stringBuilder);
 
-                composeTypeStyles(openProjCfgName, apiClient, stringBuilder);
+                composeTypeStyles(cssEscaped, apiClient, stringBuilder);
 
                 if (stringBuilder.toString().isEmpty()) {
                     LOGGER.debug("Generated style sheet is empty.");
@@ -183,7 +184,7 @@ public class StylingSetupManager
                 continue;
             }
             stringBuilder.append(".openproject-property-type-");
-            stringBuilder.append(type.getName().toLowerCase().replaceAll(REGEX_SPACES, ""));
+            stringBuilder.append(IdGenerator.generate(type.getName()));
             stringBuilder.append('-');
             stringBuilder.append(openProjCfgName);
             stringBuilder.append(BRACKET_START);
@@ -204,7 +205,7 @@ public class StylingSetupManager
                 continue;
             }
             stringBuilder.append(".openproject-property-status-");
-            stringBuilder.append(status.getName().toLowerCase().replaceAll(REGEX_SPACES, ""));
+            stringBuilder.append(IdGenerator.generate(status.getName()));
             stringBuilder.append('-');
             stringBuilder.append(openProjCfgName);
             stringBuilder.append("::before");

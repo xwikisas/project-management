@@ -28,12 +28,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 
@@ -49,31 +46,28 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
-import utils.TestUtils;
+import utils.OpenProjectTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
+@SuppressWarnings("unchecked")
 public class DefaultOpenProjectApiClientTest
 {
-    private final TestUtils testUtils = new TestUtils();
-
-    @Mock
-    private HttpClient client;
-
-    @Mock
-    private HttpResponse<String> response;
-
-    @InjectMocks
     private DefaultOpenProjectApiClient openProjectApiClient;
 
-    private AutoCloseable closeable;
+    private final OpenProjectTestUtils testUtils = new OpenProjectTestUtils();
+
+    private HttpClient client;
+
+    private HttpResponse<String> response;
 
     private static final Integer OFFSET = 1;
 
@@ -94,15 +88,11 @@ public class DefaultOpenProjectApiClientTest
     @BeforeEach
     void setUp() throws Exception
     {
-        closeable = MockitoAnnotations.openMocks(this);
+        MockitoAnnotations.openMocks(this);
+        client = mock(HttpClient.class);
+        response = mock(HttpResponse.class);
         openProjectApiClient = new DefaultOpenProjectApiClient(OPEN_PROJECT_CONNECTION_URL, OPEN_PROJECT_TOKEN, client);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(this.response);
-    }
-
-    @AfterEach
-    void tearDown() throws Exception
-    {
-        closeable.close();
     }
 
     @Test

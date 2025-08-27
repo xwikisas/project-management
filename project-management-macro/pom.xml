@@ -31,7 +31,7 @@
   <artifactId>project-management-macro</artifactId>
 
   <properties>
-    <xwiki.jacoco.instructionRatio>0.56</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.85</xwiki.jacoco.instructionRatio>
   </properties>
 
   <dependencies>

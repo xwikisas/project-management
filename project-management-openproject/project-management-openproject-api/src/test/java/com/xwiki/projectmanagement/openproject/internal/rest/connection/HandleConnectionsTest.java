@@ -24,13 +24,13 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xpn.xwiki.XWikiContext;
@@ -46,6 +46,9 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 public class HandleConnectionsTest
 {
+    @InjectMockComponents
+    private HandleConnections handleConnections;
+
     @MockComponent
     private HandleConnectionsService handleConnectionsService;
 
@@ -55,14 +58,11 @@ public class HandleConnectionsTest
     @MockComponent
     private XWikiContext xContext;
 
-    @MockComponent
+    @Mock
     private WikiReference wikiReference;
 
-    @MockComponent
+    @Mock
     private Provider<XWikiContext> xContextProvider;
-
-    @InjectMocks
-    private HandleConnections handleConnections;
 
     @Mock
     private DocumentReference userReference;
@@ -90,7 +90,7 @@ public class HandleConnectionsTest
     }
 
     @Test
-    public void handleConnectionSuccessTest() throws ProjectManagementException
+    public void handleConnectionSuccessTest()
     {
         Response createResponse = handleConnections.createConnection(
             WIKI_NAME,

@@ -1,1 +1,2 @@
 com.xwiki.projectmanagement.internal.TestClient
+com.xwiki.projectmanagement.internal.TestProjManagementMacro

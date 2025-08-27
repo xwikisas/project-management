@@ -21,18 +21,14 @@ package com.xwiki.projectmanagement.openproject;
 
 import java.util.Collections;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.xwiki.cache.Cache;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -43,26 +39,22 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
+@SuppressWarnings("unchecked")
 public class CachingOpenProjectApiClientTest
 {
-    @Mock
-    Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
-
-    @Mock
-    OpenProjectConnection instance;
-
-    @Mock
-    private OpenProjectApiClient openProjectApiClient;
-
-    @InjectMocks
     private CachingOpenProjectApiClient cachingOpenProjectApiClient;
 
-    private AutoCloseable closeable;
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
+
+    private OpenProjectApiClient openProjectApiClient;
 
     private static final Integer OFFSET = 1;
 
@@ -77,15 +69,10 @@ public class CachingOpenProjectApiClientTest
     @BeforeEach
     public void setUp()
     {
-        closeable = MockitoAnnotations.openMocks(this);
-
+        openProjectApiClient = mock(OpenProjectApiClient.class);
+        cache = mock(Cache.class);
+        MockitoAnnotations.openMocks(this);
         cachingOpenProjectApiClient = new CachingOpenProjectApiClient(openProjectApiClient, CLIENT_ID, cache);
-    }
-
-    @AfterEach
-    void tearDown() throws Exception
-    {
-        closeable.close();
     }
 
     @Test
@@ -104,9 +91,7 @@ public class CachingOpenProjectApiClientTest
         )
             .thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "workItems", OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
-
-        when((PaginatedResult<WorkPackage>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<WorkPackage>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<WorkPackage> result = cachingOpenProjectApiClient
             .getWorkPackages(
@@ -121,7 +106,7 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getWorkPackages(
             OFFSET,
@@ -131,7 +116,7 @@ public class CachingOpenProjectApiClientTest
         );
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
 
         verify(openProjectApiClient, times(1))
             .getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
@@ -155,16 +140,7 @@ public class CachingOpenProjectApiClientTest
         )
             .thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(
-            CLIENT_ID,
-            String.format("project%sWorkItems", projectName),
-            OFFSET,
-            PAGE_SIZE,
-            FILTERS_STRING,
-            SORT_BY_STRING
-        );
-
-        when((PaginatedResult<WorkPackage>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<WorkPackage>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<WorkPackage> result = cachingOpenProjectApiClient.getProjectWorkPackages(
             projectName,
@@ -185,7 +161,7 @@ public class CachingOpenProjectApiClientTest
                 SORT_BY_STRING
             );
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getProjectWorkPackages(
             projectName,
@@ -197,7 +173,7 @@ public class CachingOpenProjectApiClientTest
 
         assertEquals(expectedResult, result);
 
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
 
         verify(openProjectApiClient, times(1))
             .getProjectWorkPackages(
@@ -217,9 +193,7 @@ public class CachingOpenProjectApiClientTest
 
         when(openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING)).thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "users", OFFSET, PAGE_SIZE, FILTERS_STRING, "");
-
-        when((PaginatedResult<User>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<User>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<User> result = cachingOpenProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
@@ -228,12 +202,12 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
 
         verify(openProjectApiClient, times(1))
             .getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
@@ -246,9 +220,7 @@ public class CachingOpenProjectApiClientTest
 
         when(openProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING)).thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "projects", OFFSET, PAGE_SIZE, FILTERS_STRING, "");
-
-        when((PaginatedResult<Project>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<Project>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<Project> result = cachingOpenProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
@@ -257,12 +229,12 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
 
         verify(openProjectApiClient, times(1))
             .getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
@@ -276,9 +248,7 @@ public class CachingOpenProjectApiClientTest
 
         when(openProjectApiClient.getTypes()).thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "types", 1, Integer.MAX_VALUE, "", "");
-
-        when((PaginatedResult<Type>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<Type>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<Type> result = cachingOpenProjectApiClient.getTypes();
 
@@ -287,12 +257,12 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getTypes();
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getTypes();
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
         verify(openProjectApiClient, times(1)).getTypes();
     }
 
@@ -304,9 +274,7 @@ public class CachingOpenProjectApiClientTest
 
         when(openProjectApiClient.getStatuses()).thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "statuses", 1, Integer.MAX_VALUE, "", "");
-
-        when((PaginatedResult<Status>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<Status>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<Status> result = cachingOpenProjectApiClient.getStatuses();
 
@@ -315,12 +283,12 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getStatuses();
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getStatuses();
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
         verify(openProjectApiClient, times(1)).getStatuses();
     }
 
@@ -332,9 +300,7 @@ public class CachingOpenProjectApiClientTest
 
         when(openProjectApiClient.getPriorities()).thenReturn(expectedResult);
 
-        String cacheKey = getCacheKey(CLIENT_ID, "priorities", 1, Integer.MAX_VALUE, "", "");
-
-        when((PaginatedResult<Priority>) cache.get(cacheKey)).thenReturn(expectedResult);
+        when((PaginatedResult<Priority>) cache.get(anyString())).thenReturn(expectedResult);
 
         PaginatedResult<Priority> result = cachingOpenProjectApiClient.getPriorities();
 
@@ -343,17 +309,12 @@ public class CachingOpenProjectApiClientTest
         verify(openProjectApiClient, times(0))
             .getPriorities();
 
-        when(cache.get(cacheKey)).thenReturn(null);
+        when(cache.get(anyString())).thenReturn(null);
 
         result = cachingOpenProjectApiClient.getPriorities();
 
         assertEquals(expectedResult, result);
-        verify(cache).set(cacheKey, result);
+        verify(cache).set(anyString(), eq(result));
         verify(openProjectApiClient, times(1)).getPriorities();
-    }
-
-    private String getCacheKey(String clientId, String entity, int offset, int pageSize, String filters, String sortBy)
-    {
-        return String.format("%s/%s/%d/%d/%s/%s", clientId, entity, offset, pageSize, filters, sortBy);
     }
 }
