@@ -351,20 +351,20 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
     }
 
-    private int getTotalNumberOfWorkItems(JsonNode mainNode)
+    private int getTotalNumberOfWorkPackages(JsonNode mainNode)
     {
         return mainNode.path("total").asInt();
     }
 
     private List<WorkPackage> getWorkPackagesFromResponse(JsonNode mainNode)
     {
-        List<WorkPackage> workItems = new ArrayList<>();
+        List<WorkPackage> workPackages = new ArrayList<>();
 
         JsonNode elementsNode = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
         for (JsonNode element : elementsNode) {
-            workItems.add(createWorkPackageFromJson(element));
+            workPackages.add(createWorkPackageFromJson(element));
         }
-        return workItems;
+        return workPackages;
     }
 
     private WorkPackage createWorkPackageFromJson(JsonNode element)
@@ -471,14 +471,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         PaginatedResult<WorkPackage> paginatedResult = new PaginatedResult<>();
 
-        int totalNumberOfWorkItems = getTotalNumberOfWorkItems(node);
+        int totalNumberOfWorkPackages = getTotalNumberOfWorkPackages(node);
 
         List<WorkPackage> workPackages = getWorkPackagesFromResponse(node);
 
         paginatedResult.setItems(workPackages);
         paginatedResult.setPage(offset);
         paginatedResult.setPageSize(pageSize);
-        paginatedResult.setTotalItems(totalNumberOfWorkItems);
+        paginatedResult.setTotalItems(totalNumberOfWorkPackages);
         return paginatedResult;
     }
 

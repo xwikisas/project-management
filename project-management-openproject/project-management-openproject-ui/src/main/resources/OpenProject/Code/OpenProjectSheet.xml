@@ -152,7 +152,7 @@
    id="create-connection-button"
    type="button" class="btn btn-primary"
   &gt;
-    $services.icon.renderHTML('trash')
+    $services.icon.renderHTML('add')
       $services.localization.render('openproject.config.addNewConnection')
   &lt;/button&gt;
   #handleConnectionModal
