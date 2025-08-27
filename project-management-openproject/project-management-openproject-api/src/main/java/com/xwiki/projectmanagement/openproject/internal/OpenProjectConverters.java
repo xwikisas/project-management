@@ -56,14 +56,29 @@ public final class OpenProjectConverters
         workItem.setDueDate(workPackage.getDueDate());
         workItem.setCreationDate(workPackage.getCreatedAt());
         workItem.setUpdateDate(workPackage.getUpdatedAt());
-        workItem.setType(workPackage.getTypeOfWorkPackage().getValue());
-        workItem.setIdentifier(new Linkable(String.valueOf(workPackage.getId()), workPackage.getSelf().getLocation()));
-        workItem.setSummary(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
-        workItem.setStatus(workPackage.getStatus().getValue());
-        workItem.setCreator(workPackage.getAuthor());
-        workItem.setAssignees(List.of(workPackage.getAssignee()));
-        workItem.setProject(workPackage.getProject());
-        workItem.setPriority(workPackage.getPriority().getValue());
+        if (workPackage.getTypeOfWorkPackage() != null) {
+            workItem.setType(workPackage.getTypeOfWorkPackage().getValue());
+        }
+        if (workPackage.getSelf() != null) {
+            workItem.setIdentifier(
+                new Linkable(String.valueOf(workPackage.getId()), workPackage.getSelf().getLocation()));
+            workItem.setSummary(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
+        }
+        if (workPackage.getStatus() != null) {
+            workItem.setStatus(workPackage.getStatus().getValue());
+        }
+        if (workPackage.getAuthor() != null) {
+            workItem.setCreator(workPackage.getAuthor());
+        }
+        if (workPackage.getAssignee() != null) {
+            workItem.setAssignees(List.of(workPackage.getAssignee()));
+        }
+        if (workPackage.getProject() != null) {
+            workItem.setProject(workPackage.getProject());
+        }
+        if (workPackage.getPriority() != null) {
+            workItem.setPriority(workPackage.getPriority().getValue());
+        }
 
         return workItem;
     }

@@ -259,16 +259,16 @@ public class WorkItem extends HashMap<String, Object>
      * @return the progress, as a percentage, that has been done for this work item.
      */
     @JsonProperty(KEY_PROGRESS)
-    public int getProgress()
+    public Integer getProgress()
     {
-        return (int) get(KEY_PROGRESS);
+        return (Integer) get(KEY_PROGRESS);
     }
 
     /**
      * @param progress see {@link #getProgress()}.
      */
     @JsonProperty(KEY_PROGRESS)
-    public void setProgress(int progress)
+    public void setProgress(Integer progress)
     {
         put(KEY_PROGRESS, progress);
     }

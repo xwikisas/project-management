@@ -134,7 +134,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_OFFSET = "offset";
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private final HttpClient client;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -145,13 +145,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     /**
      * Constructs a new {@code OpenProjectApiClient} with the given authentication token and connection URL.
      *
-     * @param token the API authentication token used to access the OpenProject API
      * @param connectionUrl the base URL of the OpenProject instance
+     * @param token the API authentication token used to access the OpenProject API
+     * @param client the {@link HttpClient} instance used to perform HTTP requests to the OpenProject API
      */
-    public DefaultOpenProjectApiClient(String connectionUrl, String token)
+    public DefaultOpenProjectApiClient(String connectionUrl, String token, HttpClient client)
     {
         this.connectionUrl = connectionUrl;
         this.token = token;
+        this.client = client;
     }
 
     @Override
@@ -178,7 +180,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<User> getUsers(int pageSize, String filters) throws ProjectManagementException
+    public PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException
     {
         JsonNode elements =
             getOpenProjectResponseEntities(
@@ -204,11 +206,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             users.add(user);
         }
 
-        return new PaginatedResult<>(users, 0, users.size(), users.size());
+        return new PaginatedResult<>(users, offset, pageSize, users.size());
     }
 
     @Override
-    public PaginatedResult<Project> getProjects(int pageSize, String filters) throws ProjectManagementException
+    public PaginatedResult<Project> getProjects(int offset, int pageSize, String filters)
+        throws ProjectManagementException
     {
         JsonNode elements =
             getOpenProjectResponseEntities(
@@ -232,7 +235,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             projects.add(project);
         }
 
-        return new PaginatedResult<>(projects, 0, projects.size(), projects.size());
+        return new PaginatedResult<>(projects, offset, pageSize, projects.size());
     }
 
     @Override
@@ -254,7 +257,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             types.add(type);
         }
 
-        return new PaginatedResult<>(types, 0, types.size(), types.size());
+        return new PaginatedResult<>(types, 1, types.size(), types.size());
     }
 
     @Override
@@ -386,9 +389,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private void setWorkPackageLinksNodeProperties(WorkPackage workPackage, JsonNode element)
     {
-        String editCreateUrlString = "%s/%s/edit";
+        String editCreateUrlString = "%s%s/edit";
         JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
         int id = element.path(OP_RESPONSE_ID).asInt();
+
+        String activityUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
 
         String typeName = linksNode.path(OP_RESPONSE_TYPE).path(OP_RESPONSE_TITLE).asText();
         String typeUrl = String.format(editCreateUrlString, connectionUrl,
@@ -397,8 +402,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
         String issueName = selfNode.path(OP_RESPONSE_TITLE).asText();
-        String issueUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
-        workPackage.setSelf(new Linkable(issueName, issueUrl));
+        workPackage.setSelf(new Linkable(issueName, activityUrl));
 
         JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
         String statusName = statusNode.path(OP_RESPONSE_TITLE).asText();
@@ -424,17 +428,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);
         String priorityName = priorityNode.path(OP_RESPONSE_TITLE).asText();
-        String priorityUrl = String.format("%s/%s/activity", connectionUrl,
-            priorityNode.path(HREF).asText().replaceFirst(API_URL_PART, ""));
-        workPackage.setPriority(new Linkable(priorityName, priorityUrl));
+        workPackage.setPriority(new Linkable(priorityName, activityUrl));
     }
 
     private void setDates(WorkPackage wp, JsonNode node)
     {
         wp.setStartDate(getDateFromNode(OP_START_DATE, node));
         wp.setDueDate(getDateFromNode(OP_DUE_DATE, node));
-        wp.setDerivedStartDate(getIsoDateFromNode(OP_DERIVED_START_DATE, node));
-        wp.setDerivedDueDate(getIsoDateFromNode(OP_DERIVED_DUE_DATE, node));
+        wp.setDerivedStartDate(getDateFromNode(OP_DERIVED_START_DATE, node));
+        wp.setDerivedDueDate(getDateFromNode(OP_DERIVED_DUE_DATE, node));
     }
 
     private Date getDateFromNode(String prop, JsonNode node)
@@ -444,21 +446,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             return null;
         }
         return LocalDate.parse(node.path(prop).asText()).toDate();
-    }
-
-    private Date getIsoDateFromNode(String prop, JsonNode node)
-    {
-        JsonNode date = node.path(prop);
-
-        if (date.isNull() || date.asText().isBlank()) {
-            return null;
-        }
-
-        try {
-            return DATE_FORMAT.parse(date.asText());
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private void setCreatedAndUpdatedDates(WorkPackage wp, JsonNode node)

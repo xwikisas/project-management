@@ -1,0 +1,143 @@
+{
+  "_type": "WorkPackageCollection",
+  "total": 3,
+  "count": 3,
+  "pageSize": 10,
+  "offset": 1,
+  "_embedded": {
+    "elements": [
+      {
+        "derivedStartDate": "2025-08-14",
+        "derivedDueDate": "2025-08-18",
+        "id": 1,
+        "subject": "First subject",
+        "description": {
+          "format": "markdown",
+          "raw": "First description",
+          "html": "<p>First description</p>"
+        },
+        "startDate": "2025-08-13",
+        "dueDate": "2025-08-19",
+        "percentageDone": 30,
+        "_links": {
+          "type": {
+            "href": "/api/v3/types/1",
+            "title": "Task"
+          },
+          "priority": {
+            "href": "/api/v3/priorities/1",
+            "title": "Normal"
+          },
+          "project": {
+            "href": "/api/v3/projects/1",
+            "title": "First project"
+          },
+          "status": {
+            "href": "/api/v3/statuses/1",
+            "title": "In progress"
+          },
+          "author": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "assignee": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "self": {
+            "href": "/api/v3/work_packages/1",
+            "title": "First subject"
+          }
+        }
+      },
+      {
+        "derivedStartDate": "2025-08-14",
+        "derivedDueDate": "2025-08-18",
+        "id": 2,
+        "subject": "Second subject",
+        "description": {
+          "format": "markdown",
+          "raw": "Second description",
+          "html": "<p>Second description</p>"
+        },
+        "startDate": "2025-08-13",
+        "dueDate": "2025-08-19",
+        "percentageDone": 60,
+        "_links": {
+          "type": {
+            "href": "/api/v3/types/2",
+            "title": "Bug"
+          },
+          "priority": {
+            "href": "/api/v3/priorities/1",
+            "title": "Normal"
+          },
+          "project": {
+            "href": "/api/v3/projects/2",
+            "title": "Second project"
+          },
+          "status": {
+            "href": "/api/v3/statuses/2",
+            "title": "Ready"
+          },
+          "author": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "assignee": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "self": {
+            "href": "/api/v3/work_packages/2",
+            "title": "Second subject"
+          }
+        }
+      },
+      {
+        "derivedStartDate": "2025-08-14",
+        "derivedDueDate": "2025-08-18",
+        "id": 3,
+        "subject": "Third subject",
+        "description": {
+          "format": "markdown",
+          "raw": "Third description",
+          "html": "<p>Third description</p>"
+        },
+        "startDate": "2025-08-13",
+        "dueDate": "2025-08-19",
+        "percentageDone": 40,
+        "_links": {
+          "type": {
+            "href": "/api/v3/types/1",
+            "title": "Task"
+          },
+          "priority": {
+            "href": "/api/v3/priorities/1",
+            "title": "Normal"
+          },
+          "project": {
+            "href": "/api/v3/projects/2",
+            "title": "Second project"
+          },
+          "status": {
+            "href": "/api/v3/statuses/2",
+            "title": "Ready"
+          },
+          "author": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "assignee": {
+            "href": "/api/v3/users/1",
+            "title": "First User"
+          },
+          "self": {
+            "href": "/api/v3/work_packages/3",
+            "title": "Third subject"
+          }
+        }
+      }
+    ]
+  }
+}

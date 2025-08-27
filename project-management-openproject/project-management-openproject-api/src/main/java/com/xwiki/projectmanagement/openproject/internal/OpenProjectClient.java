@@ -118,7 +118,7 @@ public class OpenProjectClient implements ProjectManagementClient
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
-        } catch (ProjectManagementException | JsonProcessingException e) {
+        } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -144,7 +144,7 @@ public class OpenProjectClient implements ProjectManagementClient
     private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
         List<LiveDataQuery.Filter> filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries)
-        throws ProjectManagementException, JsonProcessingException
+        throws ProjectManagementException
     {
         URL url = parseUrl(identifier);
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
@@ -199,20 +199,19 @@ public class OpenProjectClient implements ProjectManagementClient
     private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
         throws ProjectManagementException
     {
-        if (filtersNode != null) {
-            return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
-        }
-        return "";
+        return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
     }
 
     private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
+        String sortByString = "";
+
         if (sortByNode != null) {
-            String sortByString = sortByNode.asText();
-            return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
+            sortByString = sortByNode.asText();
         }
-        return "";
+
+        return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
     }
 
     private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
