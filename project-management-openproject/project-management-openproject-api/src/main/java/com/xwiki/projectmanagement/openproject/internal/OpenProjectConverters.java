@@ -50,37 +50,74 @@ public final class OpenProjectConverters
     {
         WorkItem workItem = new WorkItem();
 
-        workItem.setDescription(workPackage.getDescription());
-        workItem.setProgress(workPackage.getPercentageDone());
-        workItem.setStartDate(workPackage.getStartDate());
-        workItem.setDueDate(workPackage.getDueDate());
-        workItem.setCreationDate(workPackage.getCreatedAt());
-        workItem.setUpdateDate(workPackage.getUpdatedAt());
-        if (workPackage.getTypeOfWorkPackage() != null) {
-            workItem.setType(workPackage.getTypeOfWorkPackage().getValue());
+        setBasicInfo(workItem, workPackage);
+        setDates(workItem, workPackage);
+        setLinks(workItem, workPackage);
+        setAssignments(workItem, workPackage);
+        setProjectAndPriority(workItem, workPackage);
+
+        return workItem;
+    }
+
+    private static void setBasicInfo(WorkItem workItem, WorkPackage workPackage)
+    {
+        if (workPackage.getDescription() != null) {
+            workItem.setDescription(workPackage.getDescription());
         }
+        if (workPackage.getPercentageDone() != null) {
+            workItem.setProgress(workPackage.getPercentageDone());
+        }
+        if (workPackage.getTypeOfWorkPackage() != null) {
+            workItem.setType(null);
+        }
+        if (workPackage.getStatus() != null) {
+            workItem.setStatus(workPackage.getStatus().getValue());
+        }
+    }
+
+    private static void setDates(WorkItem workItem, WorkPackage workPackage)
+    {
+        if (workPackage.getStartDate() != null) {
+            workItem.setStartDate(workPackage.getStartDate());
+        }
+        if (workPackage.getDueDate() != null) {
+            workItem.setDueDate(workPackage.getDueDate());
+        }
+        if (workPackage.getCreatedAt() != null) {
+            workItem.setCreationDate(workPackage.getCreatedAt());
+        }
+        if (workPackage.getUpdatedAt() != null) {
+            workItem.setUpdateDate(workPackage.getUpdatedAt());
+        }
+    }
+
+    private static void setLinks(WorkItem workItem, WorkPackage workPackage)
+    {
         if (workPackage.getSelf() != null) {
             workItem.setIdentifier(
                 new Linkable(String.valueOf(workPackage.getId()), workPackage.getSelf().getLocation()));
             workItem.setSummary(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
         }
-        if (workPackage.getStatus() != null) {
-            workItem.setStatus(workPackage.getStatus().getValue());
-        }
+    }
+
+    private static void setAssignments(WorkItem workItem, WorkPackage workPackage)
+    {
         if (workPackage.getAuthor() != null) {
             workItem.setCreator(workPackage.getAuthor());
         }
         if (workPackage.getAssignee() != null) {
             workItem.setAssignees(List.of(workPackage.getAssignee()));
         }
+    }
+
+    private static void setProjectAndPriority(WorkItem workItem, WorkPackage workPackage)
+    {
         if (workPackage.getProject() != null) {
             workItem.setProject(workPackage.getProject());
         }
         if (workPackage.getPriority() != null) {
             workItem.setPriority(workPackage.getPriority().getValue());
         }
-
-        return workItem;
     }
 
     /**
