@@ -10,6 +10,7 @@
       {
         "id": "identifier.value",
         "filterable": true,
+        "sortable": true,
         "displayer": {
           "id": "link",
           "propertyHref": "identifier.location"
@@ -33,6 +34,7 @@
         "id": "type",
         "displayer": "html",
         "filterable": true,
+        "sortable": true,
         "filter": {
           "id": "list",
           "operators": [
@@ -51,6 +53,7 @@
       {
         "id": "summary.value",
         "filterable": true,
+        "sortable": true,
         "displayer": {
           "id": "link",
           "propertyHref": "summary.location"
@@ -93,6 +96,7 @@
       {
         "id": "startDate",
         "filterable": true,
+        "sortable": true,
         "displayer": "date",
         "filter": {
           "id": "date",
@@ -124,6 +128,7 @@
       {
         "id": "dueDate",
         "filterable": true,
+        "sortable": true,
         "displayer": "date",
         "filter": {
           "id": "date",
@@ -156,6 +161,7 @@
       {
         "id": "progress",
         "filterable": true,
+        "sortable": true,
         "displayer": "number",
         "filter": {
           "id": "number",
@@ -190,6 +196,7 @@
       {
         "id": "creationDate",
         "filterable": true,
+        "sortable": true,
         "displayer": "date",
         "filter": {
           "id": "date",
@@ -217,6 +224,7 @@
       {
         "id": "updateDate",
         "filterable": true,
+        "sortable": true,
         "displayer": "date",
         "filter": {
           "id": "date",
@@ -244,6 +252,7 @@
       {
         "id": "updateDate",
         "filterable": true,
+        "sortable": true,
         "displayer": "date",
         "filter": {
           "id": "date",
@@ -271,6 +280,7 @@
       {
         "id": "creator.value",
         "filterable": true,
+        "sortable": true,
         "displayer": {
           "id": "link",
           "propertyHref": "creator.location"
@@ -293,6 +303,7 @@
       {
         "id": "assignees",
         "filterable": true,
+        "sortable": true,
         "displayer": "html",
         "filter": {
           "id": "list",
@@ -320,6 +331,7 @@
       {
         "id": "priority",
         "filterable": true,
+        "sortable": true,
         "filter": {
           "id": "list",
           "operators": [
@@ -338,6 +350,7 @@
       {
         "id": "project.value",
         "filterable": true,
+        "sortable": true,
         "displayer": {
           "id": "link",
           "propertyHref": "project.location"
@@ -360,6 +373,7 @@
       {
         "id": "status",
         "filterable": true,
+        "sortable": true,
         "displayer": "html",
         "filter": {
           "id": "list",
