@@ -56,6 +56,9 @@ public class StringPropertyDisplayer implements WorkItemPropertyDisplayer
     @Override
     public List<Block> display(Object property, Map<String, String> params)
     {
+        if (property == null) {
+            return Collections.emptyList();
+        }
         try {
             List<Block> blocks = plainTextParser.parse(new StringReader(property.toString())).getChildren();
             if (blocks == null) {

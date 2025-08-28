@@ -51,6 +51,9 @@ public class ListPropertyDisplayer implements WorkItemPropertyDisplayer
     @Override
     public List<Block> display(Object property, Map<String, String> params)
     {
+        if (property == null) {
+            return Collections.emptyList();
+        }
         List<?> listProperty = (List<?>) property;
 
         if (listProperty.isEmpty()) {

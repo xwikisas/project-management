@@ -61,10 +61,18 @@ public class FilterBuilderParameter extends BaseElement
             // If no such element, we let the code execute, maybe it finds an already added filter and returns it.
         }
 
-        WebElement createdFilter = getDriver().findElement(By.xpath(String.format(
-            "//*[@class='proj-manag-constraint-title' and contains(text(), '%s')]"
-                + "/ancestor::div[@class='proj-manag-constraint']",
-            filterProperty)));
+        List<WebElement> presentFilters =
+            getDriver().findElements(By.xpath("//*[contains(@class, 'proj-manag-constraint-name')]"));
+        WebElement createdFilter = null;
+        for (WebElement presentFilter : presentFilters) {
+            if (presentFilter.getAttribute("value").equals(filterProperty)) {
+                createdFilter = presentFilter.findElement(By.xpath("ancestor::div[@class='proj-manag-constraint']"));
+                break;
+            }
+        }
+        if (createdFilter == null) {
+            throw new NoSuchElementException("Could not find the added filter.");
+        }
 
         return new FilterBuilderFilter(createdFilter);
     }

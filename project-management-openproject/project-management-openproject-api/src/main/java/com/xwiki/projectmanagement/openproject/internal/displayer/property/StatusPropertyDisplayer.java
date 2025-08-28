@@ -60,6 +60,9 @@ public class StatusPropertyDisplayer implements WorkItemPropertyDisplayer
     @Override
     public List<Block> display(Object property, Map<String, String> params)
     {
+        if (property == null) {
+            return Collections.emptyList();
+        }
         try {
             String lowerCaseProp = IdGenerator.generate(property.toString());
             String instance = params.getOrDefault("instance", "");

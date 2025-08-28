@@ -68,7 +68,7 @@ public final class OpenProjectConverters
             workItem.setProgress(workPackage.getPercentageDone());
         }
         if (workPackage.getTypeOfWorkPackage() != null) {
-            workItem.setType(null);
+            workItem.setType(workPackage.getTypeOfWorkPackage().getValue());
         }
         if (workPackage.getStatus() != null) {
             workItem.setStatus(workPackage.getStatus().getValue());

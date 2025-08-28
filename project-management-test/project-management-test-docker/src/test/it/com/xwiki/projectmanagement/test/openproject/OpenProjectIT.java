@@ -82,7 +82,7 @@ public class OpenProjectIT
     // If you use an external instance, make sure to have it started with the same commands that
     // {@link OpenProjectInstance} starts the instance. Namely, watch for doorkeeper.rb file.
 //    private OpenProjectInstance openProjectInstance =
-//        new ExternalOpenProjectInstance("Admin", "adminadminadmin", "http://172.17.0.1:8081");
+//        new ExternalOpenProjectInstance("Admin", "adminadminadmin", "http://172.17.0.1:8082");
 
     private final WikiReference wiki = new WikiReference("xwiki");
 
@@ -101,7 +101,7 @@ public class OpenProjectIT
             new DocumentReference(wiki.getName(), Arrays.asList("OpenProject", "Code", "OpenProjectConfigurations"),
                 "WebHome");
         setup.createPage(configsHome, "");
-        setup.deletePage(configsHome);
+        setup.deletePage(configsHome, true);
 
         /* Things that need to be tested:
         // Configuration setup
