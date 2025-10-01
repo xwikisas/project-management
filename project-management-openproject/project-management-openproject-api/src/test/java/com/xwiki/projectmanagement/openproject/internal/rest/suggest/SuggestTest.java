@@ -109,7 +109,13 @@ public class SuggestTest
             EMPTY_STRING
         );
 
-        verifySuccessResponse(response, workPackagePaginatedResult.getItems());
+        assertInstanceOf(List.class, response.getEntity());
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+
+        assertEquals(1, responseEntity.size());
+        assertEquals(responseEntity.get(0).get("label"), String.valueOf(workPackage.getId()));
+        assertEquals(responseEntity.get(0).get("value"), String.valueOf(workPackage.getId()));
+        assertEquals(responseEntity.get(0).get("hint"), workPackage.getName());
     }
 
     @Test

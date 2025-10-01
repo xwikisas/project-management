@@ -77,6 +77,10 @@ public class Suggest extends XWikiResource
 
     private static final String URL = "url";
 
+    private static final String HINT = "hint";
+
+    private static final String ICON = "icon";
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -144,7 +148,17 @@ public class Suggest extends XWikiResource
         int pageSize) throws ProjectManagementException
     {
         String filter = buildFilter("subject", searchString);
-        return getSuggestions(openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems());
+        return openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems()
+            .stream()
+            .map(
+                obj -> createSuggestion(
+                    String.valueOf(obj.getId()),
+                    String.valueOf(obj.getId()),
+                    obj.getSelf().getLocation(),
+                    obj.getName()
+                )
+            )
+            .collect(Collectors.toList());
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)
@@ -208,6 +222,16 @@ public class Suggest extends XWikiResource
             VALUE, value,
             LABEL, label,
             URL, url
+        );
+    }
+
+    private Map<String, String> createSuggestion(String value, String label, String url, String hint)
+    {
+        return Map.of(
+            VALUE, value,
+            LABEL, label,
+            URL, url,
+            HINT, hint
         );
     }
 }
