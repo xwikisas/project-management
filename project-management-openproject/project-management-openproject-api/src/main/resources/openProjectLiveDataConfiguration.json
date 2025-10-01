@@ -415,8 +415,9 @@
     "actions": [
       {
         "id": "view",
+        "icon": "",
         "urlProperty": "identifier.location",
-        "name": ""
+        "name": "View"
       }
     ],
     "filters": [

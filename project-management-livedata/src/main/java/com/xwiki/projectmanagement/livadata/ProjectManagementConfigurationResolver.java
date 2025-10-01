@@ -36,6 +36,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.component.util.DefaultParameterizedType;
+import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
@@ -55,6 +56,10 @@ import org.xwiki.localization.ContextualLocalizationManager;
 public class ProjectManagementConfigurationResolver implements LiveDataConfigurationResolver<LiveDataConfiguration>
 {
     private static final String PREFIX_PROPERTY = "property.";
+
+    private static final CharSequence PREFIX_ACTION = "action.";
+
+    private static final String SUFFIX_HINT = ".hint";
 
     @Inject
     private ContextualLocalizationManager l10n;
@@ -160,7 +165,31 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         for (LiveDataPropertyDescriptor property : mergedConfig.getMeta().getPropertyDescriptors()) {
             translateProperty(translationPrefix, property);
         }
+
+        if (mergedConfig.getMeta().getActions() == null) {
+            return mergedConfig;
+        }
+        for (LiveDataActionDescriptor action : mergedConfig.getMeta().getActions()) {
+            translateAction(translationPrefix, action);
+        }
         return mergedConfig;
+    }
+
+    private void translateAction(String translationPrefix, LiveDataActionDescriptor action)
+    {
+        String translationPlain =
+            this.l10n.getTranslationPlain(String.join("", translationPrefix, PREFIX_ACTION, action.getId()));
+        if (translationPlain != null) {
+            action.setName(translationPlain);
+        }
+        if (action.getName() == null) {
+            action.setName(action.getId());
+        }
+        if (action.getDescription() == null) {
+            action.setDescription(
+                this.l10n.getTranslationPlain(
+                    String.join("", translationPrefix, PREFIX_ACTION, action.getId(), SUFFIX_HINT)));
+        }
     }
 
     private void translateProperty(String translationPrefix, LiveDataPropertyDescriptor property)
@@ -176,7 +205,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         if (property.getDescription() == null) {
             property.setDescription(
                 this.l10n.getTranslationPlain(
-                    String.join("", translationPrefix, PREFIX_PROPERTY, property.getId(), ".hint")));
+                    String.join("", translationPrefix, PREFIX_PROPERTY, property.getId(), SUFFIX_HINT)));
         }
     }
 }
