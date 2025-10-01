@@ -178,7 +178,7 @@ public class OpenProjectIT
 
         TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
         // Equivalent to assert since it will throw an exception if not found.
-        ld.getCell("Identifier", 1).findElement(By.tagName("a"));
+        ld.getCell("ID", 1).findElement(By.tagName("a"));
         ld.getCell("Subject", 1).findElement(By.tagName("a"));
         ld.getCell("Assignee", 1).findElement(By.tagName("a"));
     }
@@ -274,7 +274,7 @@ public class OpenProjectIT
 
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
 
-        useSuggestFilter(ld, "Identifier", "1", false); // First work package
+        useSuggestFilter(ld, "ID", "1", false); // First work package
         useSuggestFilter(ld, "Type", "1"); // Task
         useSuggestFilter(ld, "Assignee", "4"); // Admin
         useSuggestFilter(ld, "Priority", "8"); // Normal
@@ -361,7 +361,7 @@ public class OpenProjectIT
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(3, ld.countRows());
-        assertEquals("20", ld.getCell("Identifier", 1).getText());
+        assertEquals("20", ld.getCell("ID", 1).getText());
     }
 
     @Test
