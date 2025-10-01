@@ -27,11 +27,25 @@
   margin-bottom: 0.83em;
   margin-left: 0;
   margin-right: 0;
-  font-weight: bold;
   border-bottom: 1px solid #eeeeee;
 }
+
+.work-item-header-name {
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.work-item-header-id {
+  font-weight: 600;
+  font-size: 0.8em;
+}
+
 .work-item-page-displayer td {
   border: none;
+}
+
+.work-item-property-name {
+  font-weight: bold;
 }
 
 .work-item-property-value {

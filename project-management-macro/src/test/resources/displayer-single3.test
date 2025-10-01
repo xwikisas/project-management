@@ -41,6 +41,17 @@ beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=iden
 }]
 beginGroup [[class]=[work-item-page-displayer]]
 beginGroup [[class]=[work-item-header]]
+beginGroup [[class]=[work-item-header-name]]
+beginParagraph
+onWord [Do]
+onSpace
+onWord [this]
+onSpace
+onWord [thing]
+onSpecialSymbol [!]
+endParagraph
+endGroup [[class]=[work-item-header-name]]
+beginGroup [[class]=[work-item-header-id]]
 beginParagraph
 onWord [projectmanagement]
 onSpecialSymbol [.]
@@ -57,14 +68,7 @@ onSpecialSymbol [#]
 onWord [WorkItem2]
 endLink [Typed = [true] Type = [url]] [false]
 endParagraph
-beginParagraph
-onWord [Do]
-onSpace
-onWord [this]
-onSpace
-onWord [thing]
-onSpecialSymbol [!]
-endParagraph
+endGroup [[class]=[work-item-header-id]]
 endGroup [[class]=[work-item-header]]
 beginGroup [[class]=[row]]
 beginGroup [[class]=[col-md-12]]
@@ -149,4 +153,4 @@ endDocument
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<div class="work-item-page-displayer"><div class="work-item-header"><p>projectmanagement.displayer.single.header.workItem <span class="wikiexternallink"><a>#WorkItem2</a></span></p><p>Do this thing!</p></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.reporter:</td><td class="work-item-property-value"></td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">projectmanagement.property.description</div><p>This is some nice description</p></div></div>
+<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>Do this thing!</p></div><div class="work-item-header-id"><p>projectmanagement.displayer.single.header.workItem <span class="wikiexternallink"><a>#WorkItem2</a></span></p></div></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">projectmanagement.property.reporter:</td><td class="work-item-property-value"></td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">projectmanagement.property.description</div><p>This is some nice description</p></div></div>

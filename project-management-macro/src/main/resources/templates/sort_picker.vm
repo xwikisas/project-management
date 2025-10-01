@@ -33,11 +33,11 @@
   #set ($options = [])
   #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
     #set ($discard = $options.add({
-      'name': "${ascTranslation} - ${propertyDescriptor.name}",
+      'name': "${propertyDescriptor.name} - ${ascTranslation}",
       'value': "${propertyDescriptor.id}:asc"
     }))
     #set ($discard = $options.add({
-      'name': "${descTranslation} - ${propertyDescriptor.name}",
+      'name': "${propertyDescriptor.name} - ${descTranslation}",
       'value': "${propertyDescriptor.id}:desc"
     }))
   #end
