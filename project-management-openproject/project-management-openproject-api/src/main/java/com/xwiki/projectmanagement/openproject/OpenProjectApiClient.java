@@ -29,6 +29,7 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -114,4 +115,13 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the priorities.
      */
     PaginatedResult<Priority> getPriorities() throws ProjectManagementException;
+
+    /**
+     * Retrieve the user avatar.
+     *
+     * @param userId the id of the user for which we want to retrieve the avatar.
+     * @return the model containing the image stream and its content type.
+     * @since 1.0-rc-5
+     */
+    UserAvatar getUserAvatar(String userId) throws ProjectManagementException;
 }

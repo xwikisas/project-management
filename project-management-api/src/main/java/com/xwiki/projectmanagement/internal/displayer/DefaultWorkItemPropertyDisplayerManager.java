@@ -104,6 +104,7 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         WorkItemPropertyDisplayer propertyDisplayer = new ListPropertyDisplayer(this);
         displayers.put(WorkItem.KEY_ASSIGNEES, propertyDisplayer);
         displayers.put(WorkItem.KEY_LABELS, propertyDisplayer);
+        displayers.put("list", propertyDisplayer);
         String format = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss");
         displayers.put(Date.class.getName(), new DatePropertyDisplayer(plainParser, format));
     }

@@ -20,13 +20,13 @@ package com.xwiki.projectmanagement.openproject.internal.displayer;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -35,6 +35,7 @@ import org.xwiki.component.phase.InitializationException;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.parser.Parser;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
@@ -42,6 +43,7 @@ import com.xwiki.projectmanagement.internal.displayer.property.StringPropertyDis
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.displayer.property.StatusPropertyDisplayer;
 import com.xwiki.projectmanagement.openproject.internal.displayer.property.TypePropertyDisplayer;
+import com.xwiki.projectmanagement.openproject.internal.displayer.property.UserPropertyDisplayer;
 
 /**
  * Register custom displayers for the properties of Work Packages.
@@ -53,7 +55,15 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.property.TypeP
 @Named("openproject")
 public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerManager, Initializable
 {
-    private static final String KEY_INSTANCE = "instance";
+    /**
+     * The parameters key for the open project instance entry.
+     */
+    public static final String KEY_INSTANCE = "instance";
+
+    /**
+     * The parameters key for the current wiki entry.
+     */
+    public static final String KEY_WIKI = "wiki";
 
     @Inject
     private WorkItemPropertyDisplayerManager defaultDisplayerManager;
@@ -69,6 +79,9 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     @Named("html/5.0")
     private Parser htmlParser;
 
+    @Inject
+    private Provider<XWikiContext> contextProvider;
+
     private final Map<String, WorkItemPropertyDisplayer> registeredDisplayers = new HashMap<>();
 
     @Override
@@ -77,6 +90,10 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
         registeredDisplayers.put(WorkItem.KEY_TYPE, new TypePropertyDisplayer(plainTextParser));
         registeredDisplayers.put(WorkItem.KEY_STATUS, new StatusPropertyDisplayer(plainTextParser));
         registeredDisplayers.put(WorkItem.KEY_DESCRIPTION, new StringPropertyDisplayer(htmlParser));
+        UserPropertyDisplayer userPropertyDisplayer = new UserPropertyDisplayer(this);
+        registeredDisplayers.put(WorkItem.KEY_REPORTER, userPropertyDisplayer);
+        registeredDisplayers.put(WorkItem.KEY_ASSIGNEES, userPropertyDisplayer);
+        registeredDisplayers.put(WorkItem.KEY_CREATOR, userPropertyDisplayer);
     }
 
     @Override
@@ -84,9 +101,11 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     {
         if (registeredDisplayers.containsKey(propertyName)) {
             Map<String, String> newParams = parameters;
-            if (parameters.isEmpty()) {
-                newParams = Collections.singletonMap(KEY_INSTANCE,
-                    executionContext.getContext().getOrDefault(KEY_INSTANCE, "").toString());
+            if (!parameters.containsKey(KEY_INSTANCE) || !parameters.containsKey(KEY_WIKI)) {
+                newParams = new HashMap<>(newParams);
+                newParams.putIfAbsent(KEY_INSTANCE,
+                    (String) executionContext.getContext().getOrDefault(KEY_INSTANCE, ""));
+                newParams.putIfAbsent(KEY_WIKI, contextProvider.get().getWikiId());
             }
             return registeredDisplayers.get(propertyName).display(propertyValue, newParams);
         }
