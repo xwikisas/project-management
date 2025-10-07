@@ -104,7 +104,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         try {
             String displayerId = displayer.name();
             if (WorkItemsDisplayer.liveDataCards.equals(displayer)) {
-                parameters.setLayouts("cards");
+                parameters.setLayouts("cards,table");
                 displayerId = WorkItemsDisplayer.liveData.name();
             }
             Macro<ProjectManagementMacroParameters> displayerMacro =

@@ -89,7 +89,7 @@ public class LinkablePropertyDisplayer implements WorkItemPropertyDisplayer
         } else {
             return Collections.singletonList(
                 new LinkBlock(linkAnchorBlocks, new ResourceReference(url, ResourceType.URL),
-                    freeStanding));
+                    freeStanding, Collections.singletonMap("target", "_blank")));
         }
     }
 }

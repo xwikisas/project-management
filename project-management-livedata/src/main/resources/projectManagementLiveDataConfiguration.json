@@ -13,7 +13,7 @@
       {
         "id": "identifier.value",
         "type": "String",
-        "name": "Identifier",
+        "name": "ID",
         "displayer": {
           "id": "link",
           "propertyHref": "identifier.location"

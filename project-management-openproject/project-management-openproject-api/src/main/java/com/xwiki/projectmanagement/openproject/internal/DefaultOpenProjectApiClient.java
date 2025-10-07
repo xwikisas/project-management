@@ -20,16 +20,21 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
@@ -38,6 +43,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -47,6 +54,7 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -302,6 +310,50 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
     }
 
+    @Override
+    public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
+    {
+        String uriStr = connectionUrl + String.format("/api/v3/users/%s/avatar", userId);
+        URI uri;
+        try {
+            uri = new URI(uriStr);
+            HttpRequest request =
+                createAuthorizedGetHttpRequest(uri, MediaType.MEDIA_TYPE_WILDCARD);
+            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+
+            if (response.statusCode() != 200) {
+                if (response.statusCode() == 404) {
+                    throw new WorkItemNotFoundException(
+                        String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
+                }
+                try (InputStream in = response.body()) {
+                    throw new WorkItemRetrievalException(
+                        String.format("Failed to get the user avatar with code [%s] and "
+                                + "message [%s]", response.statusCode(),
+                            new String(in.readAllBytes(), StandardCharsets.UTF_8)));
+                }
+            }
+            String contentType = response.headers()
+                .firstValue("Content-Type")
+                .orElse("application/octet-stream");
+
+            StreamingOutput streamingOutput = output -> {
+                try (InputStream in = response.body()) {
+                    byte[] buffer = new byte[8192];
+                    int len;
+                    while ((len = in.read(buffer)) != -1) {
+                        output.write(buffer, 0, len);
+                    }
+                }
+            };
+
+            return new UserAvatar(streamingOutput, contentType);
+        } catch (URISyntaxException | IOException | InterruptedException e) {
+            throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
+                e);
+        }
+    }
+
     private JsonNode getOpenProjectResponse(String urlPart, String offset, String pageSize, String filtersString,
         String sortByString, String selectedElementsString) throws ProjectManagementException
     {
@@ -324,7 +376,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 uriBuilder.addParameter(PAGE_SIZE, pageSize);
             }
             HttpRequest request =
-                createGetHttpRequest(uriBuilder.build());
+                createAuthorizedGetHttpRequest(uriBuilder.build());
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
@@ -487,15 +539,20 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return String.format("%s/%s/%s/edit", connectionUrl, entity, id);
     }
 
-    private HttpRequest createGetHttpRequest(URI uri)
+    private HttpRequest createAuthorizedGetHttpRequest(URI uri, String accept)
     {
         return HttpRequest
             .newBuilder()
-            .header("Accept", "application/json")
+            .header("Accept", accept)
             .header("Authorization", "Bearer " + token)
             .uri(uri)
             .GET()
             .build();
+    }
+
+    private HttpRequest createAuthorizedGetHttpRequest(URI uri)
+    {
+        return createAuthorizedGetHttpRequest(uri, MediaType.APPLICATION_JSON);
     }
 
     private void handleOpenProjectWorkPackagesRequestExceptions(HttpResponse<String> response)

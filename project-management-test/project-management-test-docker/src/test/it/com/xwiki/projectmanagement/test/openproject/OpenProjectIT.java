@@ -49,6 +49,7 @@ import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Test the overall functionality of the Open Project integration.
@@ -178,7 +179,7 @@ public class OpenProjectIT
 
         TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
         // Equivalent to assert since it will throw an exception if not found.
-        ld.getCell("Identifier", 1).findElement(By.tagName("a"));
+        ld.getCell("ID", 1).findElement(By.tagName("a"));
         ld.getCell("Subject", 1).findElement(By.tagName("a"));
         ld.getCell("Assignee", 1).findElement(By.tagName("a"));
     }
@@ -223,6 +224,8 @@ public class OpenProjectIT
 
         macroModal.clickMore();
         macroModal.selectDisplayer("Single item");
+        // Assert that "sort", "offset", "limit", "properties" params are hidden.
+        assertFalse(macroModal.getMacroParameterInput("properties").isDisplayed());
         macroModal.clickSubmit();
 
         wysiwygEditPage.clickSaveAndView().waitUntilPageIsReady();
@@ -252,13 +255,20 @@ public class OpenProjectIT
 
     @Test
     @Order(50)
-    void checkLivedataSuggesters(TestUtils setup) throws OperationNotSupportedException
+    void checkLivedataSuggesters(TestUtils setup) throws OperationNotSupportedException, InterruptedException
     {
         setup.setCurrentWiki(wiki.getName());
         DocumentReference docRef = new DocumentReference(page1, wiki);
         WYSIWYGEditPage editPage = openMacro(setup, docRef);
         OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
         modal.clickMore();
+        // Assert that "sort", "offset", "limit", "properties" params are still hidden.
+        assertFalse(modal.getMacroParameterInput("properties").isDisplayed());
+        modal.selectDisplayer("Live Data table");
+        modal = new OpenProjectMacroEditModal();
+        // Assert that all props are visible.
+        setup.getDriver().scrollTo(setup.getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
+//        Thread.currentThread().wait(1000L);
         modal.getSuggestInput("properties")
             .clear()
             .selectByValue("identifier.value")
@@ -269,12 +279,11 @@ public class OpenProjectIT
             .selectByValue("status")
             .selectByValue("startDate")
             .sendKeys(Keys.ESCAPE);
-        modal.selectDisplayer("Live Data table");
         modal.clickSubmit();
 
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
 
-        useSuggestFilter(ld, "Identifier", "1", false); // First work package
+        useSuggestFilter(ld, "ID", "1", false); // First work package
         useSuggestFilter(ld, "Type", "1"); // Task
         useSuggestFilter(ld, "Assignee", "4"); // Admin
         useSuggestFilter(ld, "Priority", "8"); // Normal
@@ -326,7 +335,7 @@ public class OpenProjectIT
         macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
         entries = macros.get(0).getElement().findElement(By.className("pagination-current-entries")).getText();
-        assertEquals("Entries 1 - 5 out of 36", entries);
+        assertEquals("Entries 1 - 25 out of 36", entries);
     }
 
     @Test
@@ -361,7 +370,7 @@ public class OpenProjectIT
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(3, ld.countRows());
-        assertEquals("20", ld.getCell("Identifier", 1).getText());
+        assertEquals("20", ld.getCell("ID", 1).getText());
     }
 
     @Test

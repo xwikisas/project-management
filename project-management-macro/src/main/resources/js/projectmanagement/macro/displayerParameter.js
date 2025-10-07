@@ -17,37 +17,27 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-.property-container {
-  display: flex;
-}
-.work-item-header {
-  display: block;
-  font-size: 1.5em;
-  margin-top: 0.83em;
-  margin-bottom: 0.83em;
-  margin-left: 0;
-  margin-right: 0;
-  border-bottom: 1px solid #eeeeee;
-}
-
-.work-item-header-name {
-  font-weight: 700;
-  margin-bottom: 0;
-}
-
-.work-item-header-id {
-  font-weight: 600;
-  font-size: 0.8em;
-}
-
-.work-item-page-displayer td {
-  border: none;
-}
-
-.work-item-property-name {
-  font-weight: bold;
-}
-
-.work-item-property-value {
-  color: #555555;
-}
+require(['jquery'], function ($) {
+  const unneededParams = {
+    liveData: [],
+    liveDataCards: [],
+    workItemsSingle: ["sort", "offset", "limit", "properties"]
+  };
+  let hideShowParams = function () {
+    let displayerVal = $('.macro-editor select[name="workItemsDisplayer"]').val();
+    $('.macro-editor').find('.macro-parameter').each(function () {
+      let element = $(this);
+      let foundInput = element.find('.macro-parameter-field :input');
+      if (foundInput.length > 0 && (unneededParams[displayerVal] || []).indexOf(foundInput.attr('name')) > -1) {
+        element.hide();
+      } else {
+        element.show();
+      }
+    });
+  };
+  $(document).on('change', '.macro-editor select[name="workItemsDisplayer"]', hideShowParams);
+  $(document).on('show.bs.modal', '.modal', function () {
+    setTimeout(hideShowParams);
+  });
+  hideShowParams();
+});

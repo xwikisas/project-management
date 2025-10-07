@@ -31,6 +31,7 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -147,6 +148,13 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
+    {
+        // We can't really cache this.
+        return client.getUserAvatar(userId);
     }
 
     private String getCacheKey(String entity, int offset, int pageSize, String filters, String sortBy)

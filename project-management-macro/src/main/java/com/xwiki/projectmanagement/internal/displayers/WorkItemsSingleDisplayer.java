@@ -261,7 +261,12 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         // Remove id and summary so they won't be displayed again.
         workItem.remove(WorkItem.KEY_IDENTIFIER);
         workItem.remove(WorkItem.KEY_SUMMARY);
-        return new GroupBlock(Arrays.asList(new ParagraphBlock(headerId), new ParagraphBlock(headerName)),
+        GroupBlock headerIdGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(headerId)),
+            Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header-id"));
+        GroupBlock headerNameGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(headerName)),
+            Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header-name"));
+
+        return new GroupBlock(Arrays.asList(headerNameGroup, headerIdGroup),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header"));
     }
 

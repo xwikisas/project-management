@@ -20,14 +20,18 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -35,6 +39,8 @@ import org.mockito.MockitoAnnotations;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
@@ -44,12 +50,14 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import utils.OpenProjectTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -196,6 +204,41 @@ public class DefaultOpenProjectApiClientTest
         assertEquals(OFFSET, 1);
 
         assertGeneratedPriorities(priorities.getItems());
+    }
+
+    @Test
+    public void getAvatarTest() throws ProjectManagementException
+    {
+        when(response.statusCode()).thenReturn(200);
+        HttpHeaders headers = HttpHeaders.of(Collections.emptyMap(), (a, b) -> true);
+        when(response.headers()).thenReturn(headers);
+        UserAvatar userAvatar = openProjectApiClient.getUserAvatar("test");
+
+        assertEquals("application/octet-stream", userAvatar.getContentType());
+        assertNotNull(userAvatar.getStreamingOutput());
+    }
+
+    @Test
+    public void getAvatarAndGet404() throws ProjectManagementException
+    {
+        when(response.statusCode()).thenReturn(404);
+        assertThrows(WorkItemNotFoundException.class, () -> {
+            openProjectApiClient.getUserAvatar("test");
+        });
+    }
+
+    @Test
+    public void getAvatarAndGetOtherResponseCode() throws ProjectManagementException, IOException, InterruptedException
+    {
+        HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(inputStreamResponse);
+        when(inputStreamResponse.statusCode()).thenReturn(400);
+        InputStream in = new StringInputStream("error");
+
+        when(inputStreamResponse.body()).thenReturn(in);
+        assertThrows(WorkItemRetrievalException.class, () -> {
+            openProjectApiClient.getUserAvatar("test");
+        });
     }
 
     @Test

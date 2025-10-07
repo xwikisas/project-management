@@ -151,6 +151,7 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
   const itemIdRegex = /work_packages\/([^/]+)\//g;
   document.on('click', '.action_view', function(e) {
     let pressedButton = $(e.rangeParent);
+    pressedButton = pressedButton.closest('.action_view');
     let liveData = pressedButton.closest('.liveData');
     if (!liveData) {
       return;
@@ -168,6 +169,7 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
       return;
     }
     e.preventDefault();
+    itemIdRegex.lastIndex = 0
     let matches = itemIdRegex.exec(pressedButton.attr('href'));
     let id = matches &amp;&amp; matches[1];
     if (!id) {
