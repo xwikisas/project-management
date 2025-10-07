@@ -32,11 +32,14 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.bridge.SkinAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -83,8 +86,15 @@ public class OpenProjectAvatarResource extends XWikiResource
         try {
             UserAvatar userAvatar = openProjectApiClient.getUserAvatar(userId);
             return Response.ok(userAvatar.getStreamingOutput(), userAvatar.getContentType()).build();
+        } catch (WorkItemNotFoundException ignored) {
+            // If the user doesn't have an avatar set the API returns 404 when trying to retrieve it.
+        } catch (WorkItemRetrievalException e) {
+            getLogger().warn("Failed to retrive the avatar for user [{}] with the following open project error: [{}].",
+                userId, ExceptionUtils.getRootCauseMessage(e));
         } catch (ProjectManagementException e) {
-            return Response.seeOther(new URI(skinAccessBridge.getSkinFile("icons/xwiki/noavatar.png"))).build();
+            getLogger().error("Failed to retrive the avatar for user [{}] due to network or server issues.", userId, e);
         }
+        return Response.seeOther(new URI(skinAccessBridge.getSkinFile("icons/xwiki/noavatar.png"))).build();
+
     }
 }

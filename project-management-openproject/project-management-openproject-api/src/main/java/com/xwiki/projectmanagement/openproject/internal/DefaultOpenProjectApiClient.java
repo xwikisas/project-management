@@ -43,6 +43,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -320,8 +322,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() != 200) {
+                if (response.statusCode() == 404) {
+                    throw new WorkItemNotFoundException(
+                        String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
+                }
                 try (InputStream in = response.body()) {
-                    throw new WorkPackageRetrievalBadRequestException(
+                    throw new WorkItemRetrievalException(
                         String.format("Failed to get the user avatar with code [%s] and "
                                 + "message [%s]", response.statusCode(),
                             new String(in.readAllBytes(), StandardCharsets.UTF_8)));

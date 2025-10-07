@@ -22,11 +22,13 @@ package com.xwiki.projectmanagement.livedata;
 
 import java.lang.reflect.ParameterizedType;
 import java.util.Collections;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
@@ -89,6 +91,8 @@ public class ProjectManagementConfigurationResolverTest
         LiveDataPropertyDescriptor propertyDescriptor = new LiveDataPropertyDescriptor();
         propertyDescriptor.setId("propId");
         defaultConfig.getMeta().setPropertyDescriptors(Collections.singletonList(propertyDescriptor));
+        LiveDataActionDescriptor actionDescriptor = new LiveDataActionDescriptor("someaction");
+        defaultConfig.getMeta().setActions(List.of(actionDescriptor));
         when(stringLiveDataConfigResolver.resolve(contains("projectmanagement."))).thenReturn(defaultConfig);
 
         LiveDataConfiguration input = new LiveDataConfiguration();
@@ -108,6 +112,9 @@ public class ProjectManagementConfigurationResolverTest
         // Verify that the entries get translated.
         verify(l10n).getTranslationPlain("projectmanagement.property.propId");
         verify(l10n).getTranslationPlain("projectmanagement.property.propId.hint");
+
+        verify(l10n).getTranslationPlain("projectmanagement.action.someaction");
+        verify(l10n).getTranslationPlain("projectmanagement.action.someaction.hint");
 
         verify(componentManager).getInstance(any(ParameterizedType.class), eq("test"));
         verify(dynamicCfgResolver).resolve(input);
