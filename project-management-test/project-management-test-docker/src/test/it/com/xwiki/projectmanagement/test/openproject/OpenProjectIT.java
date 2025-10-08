@@ -271,11 +271,11 @@ public class OpenProjectIT
 //        Thread.currentThread().wait(1000L);
         modal.getSuggestInput("properties")
             .clear()
-            .selectByValue("identifier.value")
+            .selectByValue("identifier")
             .selectByValue("type")
             .selectByValue("assignees")
             .selectByValue("priority")
-            .selectByValue("project.value")
+            .selectByValue("project")
             .selectByValue("status")
             .selectByValue("startDate")
             .sendKeys(Keys.ESCAPE);
@@ -306,7 +306,7 @@ public class OpenProjectIT
         modal.clickMore();
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
         filterBuilderParameter.addFilter("assignees").setSuggestValue(1, "OpenProject Admin");
-        filterBuilderParameter.addFilter("summary.value").setValue(1, "sp");
+        filterBuilderParameter.addFilter("summary").setValue(1, "sp");
         filterBuilderParameter.addFilter("status")
             .addConstraint()
             .setSuggestValue(1, "In progress")

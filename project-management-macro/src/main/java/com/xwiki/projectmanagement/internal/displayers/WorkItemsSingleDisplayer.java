@@ -160,8 +160,10 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         TableBuilder tableTimeProps = new TableBuilder();
         String propertyPrefix = translationPrefix + PREFIX_PROPERTY;
 
-        Map<String, String> displayerParams =
-            Collections.singletonMap(KEY_INSTANCE, macroContext.getContext().getOrDefault(KEY_INSTANCE, "").toString());
+        Map<String, Object> displayerParams = Map.of(
+            KEY_INSTANCE, macroContext.getContext().getOrDefault(KEY_INSTANCE, "").toString(),
+            "workItem", workItem
+        );
         for (Map.Entry<String, Object> property : workItem.entrySet()) {
             if (property.getValue() == null) {
                 continue;

@@ -72,11 +72,11 @@ public class OpenProjectFilterHandlerTest
         LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "contains");
         LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("value3", "between");
 
-        filter1.setProperty("identifier.value");
+        filter1.setProperty("identifier");
         filter1.getConstraints().add(firstConstraint);
         filter1.getConstraints().add(secondConstraint);
 
-        filter2.setProperty("summary.value");
+        filter2.setProperty("summary");
         filter2.getConstraints().add(thirdConstraint);
 
         filters.add(filter1);
@@ -128,7 +128,7 @@ public class OpenProjectFilterHandlerTest
     void openProjectFiltersTest() throws JsonProcessingException, ProjectManagementException
     {
         String opFiltersString = "["
-            + "{\"n\":\"identifier.value\",\"o\":\"contains\",\"v\":[\"value1\"]},"
+            + "{\"n\":\"identifier\",\"o\":\"contains\",\"v\":[\"value1\"]},"
             + "{\"n\":\"property2\",\"o\":\"operator2\",\"v\":[\"value2\"]}"
             + "]";
 
@@ -136,7 +136,7 @@ public class OpenProjectFilterHandlerTest
 
         String expected = "["
             + "{"
-            + "\"identifier.value\":{\"operator\":\"contains\",\"values\":[\"value1\"]}},"
+            + "\"identifier\":{\"operator\":\"contains\",\"values\":[\"value1\"]}},"
             + "{\"property2\":{\"operator\":\"operator2\",\"values\":[\"value2\"]}"
             + "}"
             + "]";

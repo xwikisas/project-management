@@ -7,16 +7,15 @@
   },
   "meta": {
     "entryDescriptor": {
-      "idProperty": "identifier.value"
+      "idProperty": "identifier"
     },
     "propertyDescriptors": [
       {
-        "id": "identifier.value",
+        "id": "identifier",
         "type": "String",
         "name": "ID",
         "displayer": {
-          "id": "link",
-          "propertyHref": "identifier.location"
+          "id": "html"
         }
       }
     ],

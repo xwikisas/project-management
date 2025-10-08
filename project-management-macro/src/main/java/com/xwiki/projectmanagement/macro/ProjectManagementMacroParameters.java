@@ -50,7 +50,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     public ProjectManagementMacroParameters()
     {
         // Set default values.
-        setProperties("identifier.value,type,summary.value,description,startDate,resolved,assignees");
+        setProperties("identifier,type,summary,description,startDate,resolved,assignees");
         setLimit(25);
     }
 

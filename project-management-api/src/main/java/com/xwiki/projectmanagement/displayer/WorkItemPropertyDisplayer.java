@@ -41,5 +41,5 @@ public interface WorkItemPropertyDisplayer
      * @param params any additional params that the displayer might need (i.e. translation prefix).
      * @return a list of blocks that define how the property should be displayed.
      */
-    List<Block> display(Object property, Map<String, String> params);
+    List<Block> display(Object property, Map<String, Object> params);
 }

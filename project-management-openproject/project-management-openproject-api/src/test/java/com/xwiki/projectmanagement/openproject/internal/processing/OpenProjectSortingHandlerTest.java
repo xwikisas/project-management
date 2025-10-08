@@ -74,8 +74,8 @@ public class OpenProjectSortingHandlerTest
     void convertUsingOPProperties() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
-        LiveDataQuery.SortEntry sortEntry1 = new LiveDataQuery.SortEntry("identifier.value", false);
-        LiveDataQuery.SortEntry sortEntry2 = new LiveDataQuery.SortEntry("summary.value", true);
+        LiveDataQuery.SortEntry sortEntry1 = new LiveDataQuery.SortEntry("identifier", false);
+        LiveDataQuery.SortEntry sortEntry2 = new LiveDataQuery.SortEntry("summary", true);
         sortEntries.add(sortEntry1);
         sortEntries.add(sortEntry2);
 

@@ -43,14 +43,13 @@ public final class OpenProjectMapper
 
     static {
         KEY_MAPPING.put("date", "start_date");
-        KEY_MAPPING.put("identifier.value", "id");
-        KEY_MAPPING.put("summary.value", "subject");
+        KEY_MAPPING.put("identifier", "id");
+        KEY_MAPPING.put("summary", "subject");
         KEY_MAPPING.put("assignees", "assigned_to");
-        KEY_MAPPING.put("creator.value", AUTHOR_STRING);
-        KEY_MAPPING.put("project.value", "project");
+        KEY_MAPPING.put("creator", AUTHOR_STRING);
         KEY_MAPPING.put("creationDate", "createdAt");
         KEY_MAPPING.put("updateDate", "updatedAt");
-        KEY_MAPPING.put("reporter.value", AUTHOR_STRING);
+        KEY_MAPPING.put("reporter", AUTHOR_STRING);
         KEY_MAPPING.put("progress", "percentageDone");
         OPERATOR_MAPPING.put("contains", "=");
         OPERATOR_MAPPING.put("between", "<>d");

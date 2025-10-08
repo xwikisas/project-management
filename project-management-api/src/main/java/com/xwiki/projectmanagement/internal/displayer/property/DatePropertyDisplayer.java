@@ -75,7 +75,7 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
     }
 
     @Override
-    public List<Block> display(Object property, Map<String, String> params)
+    public List<Block> display(Object property, Map<String, Object> params)
     {
         if (property == null) {
             return Collections.emptyList();
@@ -83,8 +83,8 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         Date dateVal = (Date) property;
         SimpleDateFormat formatter = dateFormatter;
 
-        String paramsFormat = params.get("format");
-        if (paramsFormat != null) {
+        String paramsFormat = params.getOrDefault("format", "").toString();
+        if (paramsFormat != null && !paramsFormat.isEmpty()) {
             try {
                 formatter = new SimpleDateFormat(paramsFormat);
             } catch (IllegalArgumentException e) {

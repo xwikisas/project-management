@@ -82,25 +82,26 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
         for (WorkItem item : workItems) {
             for (Map.Entry<String, Object> itemProperty : item.entrySet()) {
                 WorkItemPropertyDisplayerManager displayerManager = getPropertyDisplayerManager();
-                displayProperty(itemProperty, renderer, displayerManager);
+                displayProperty(itemProperty, item, renderer, displayerManager);
                 printer.clear();
             }
         }
     }
 
     @Override
-    public void displayProperty(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
+    public void displayProperty(Map.Entry<String, Object> itemProperty, WorkItem workItem, PrintRenderer renderer,
         WorkItemPropertyDisplayerManager displayerManager)
     {
         if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null
             || itemProperty.getValue() instanceof Date)
         {
-            setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager, Collections.emptyMap());
+            setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager,
+                Collections.singletonMap("workItem", workItem));
         }
     }
 
     protected void setValueFromBlocksDisplayer(Map.Entry<String, Object> itemProperty, PrintRenderer renderer,
-        WorkItemPropertyDisplayerManager propertyDisplayerManager, Map<String, String> displayerParams)
+        WorkItemPropertyDisplayerManager propertyDisplayerManager, Map<String, Object> displayerParams)
     {
         List<Block> representation =
             propertyDisplayerManager.displayProperty(itemProperty.getKey(), itemProperty.getValue(), displayerParams);

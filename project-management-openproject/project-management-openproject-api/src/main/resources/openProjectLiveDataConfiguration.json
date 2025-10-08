@@ -8,12 +8,11 @@
   "meta": {
     "propertyDescriptors": [
       {
-        "id": "identifier.value",
+        "id": "identifier",
         "filterable": true,
         "sortable": true,
         "displayer": {
-          "id": "link",
-          "propertyHref": "identifier.location"
+          "id": "html"
         },
         "filter": {
           "id": "list",
@@ -51,12 +50,11 @@
         }
       },
       {
-        "id": "summary.value",
+        "id": "summary",
         "filterable": true,
         "sortable": true,
         "displayer": {
-          "id": "link",
-          "propertyHref": "summary.location"
+          "id": "html"
         },
         "filter": {
           "id": "text",
@@ -69,8 +67,7 @@
               "id": "!~",
               "name": "Does not contain"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -89,8 +86,7 @@
               "id": "!~",
               "name": "Does not contain"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -121,8 +117,7 @@
               "id": "!*",
               "name": "Not set"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -154,8 +149,7 @@
               "name": "Not set"
 
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -217,8 +211,7 @@
               "id": "between",
               "name": "Between"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -245,8 +238,7 @@
               "id": "between",
               "name": "Between"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
@@ -273,17 +265,15 @@
               "id": "between",
               "name": "Between"
             }
-          ],
-          "searchURL": "/someRestURLThatIsNotImplementedYet"
+          ]
         }
       },
       {
-        "id": "creator.value",
+        "id": "creator",
         "filterable": true,
         "sortable": true,
         "displayer": {
-          "id": "link",
-          "propertyHref": "creator.location"
+          "id": "html"
         },
         "filter": {
           "id": "list",
@@ -348,12 +338,11 @@
         }
       },
       {
-        "id": "project.value",
+        "id": "project",
         "filterable": true,
         "sortable": true,
         "displayer": {
-          "id": "link",
-          "propertyHref": "project.location"
+          "id": "html"
         },
         "filter": {
           "id": "list",
@@ -416,7 +405,7 @@
       {
         "id": "view",
         "icon": "",
-        "urlProperty": "identifier.location",
+        "urlProperty": "identifier",
         "name": "View"
       }
     ],
