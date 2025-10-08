@@ -26,6 +26,7 @@
  *   configuration defined by that client.
  *#
 #macro (propertyPicker $params $clientHint)
+  #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js'))
   #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
   #set ($options = [])
@@ -36,10 +37,12 @@
     }))
   #end
   #set ($parameters = {
+    'id': 'proj-manag-property-picker',
+    'data-remove-title': $escapetool.xml($services.localization.render('projectmanagement.macro.properties.removebutton.title')),
     'multiple': 'multiple',
     'options': $options,
     'prefix': ' '
   })
   #set ($discard = $parameters.putAll($params))
-  #staticSelectPicker($parameters)
+  #suggestInput($parameters, 'staticPickerDisplayOptions')
 #end
