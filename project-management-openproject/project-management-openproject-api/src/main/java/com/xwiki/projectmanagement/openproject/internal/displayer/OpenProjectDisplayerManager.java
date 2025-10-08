@@ -97,14 +97,14 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     }
 
     @Override
-    public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, String> parameters)
+    public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, Object> parameters)
     {
         if (registeredDisplayers.containsKey(propertyName)) {
-            Map<String, String> newParams = parameters;
+            Map<String, Object> newParams = parameters;
             if (!parameters.containsKey(KEY_INSTANCE) || !parameters.containsKey(KEY_WIKI)) {
                 newParams = new HashMap<>(newParams);
                 newParams.putIfAbsent(KEY_INSTANCE,
-                    (String) executionContext.getContext().getOrDefault(KEY_INSTANCE, ""));
+                    executionContext.getContext().getOrDefault(KEY_INSTANCE, ""));
                 newParams.putIfAbsent(KEY_WIKI, contextProvider.get().getWikiId());
             }
             return registeredDisplayers.get(propertyName).display(propertyValue, newParams);

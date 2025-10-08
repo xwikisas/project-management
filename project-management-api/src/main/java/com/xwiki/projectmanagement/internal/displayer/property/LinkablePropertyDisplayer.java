@@ -61,7 +61,7 @@ public class LinkablePropertyDisplayer implements WorkItemPropertyDisplayer
     }
 
     @Override
-    public List<Block> display(Object property, Map<String, String> params)
+    public List<Block> display(Object property, Map<String, Object> params)
     {
         if (!(property instanceof Map)) {
             return Collections.emptyList();

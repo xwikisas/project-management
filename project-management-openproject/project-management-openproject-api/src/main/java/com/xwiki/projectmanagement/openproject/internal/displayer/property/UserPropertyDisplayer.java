@@ -67,7 +67,7 @@ public class UserPropertyDisplayer implements WorkItemPropertyDisplayer
      * @return the structure of blocks in the form of an avatar and a link.
      */
     @Override
-    public List<Block> display(Object property, Map<String, String> params)
+    public List<Block> display(Object property, Map<String, Object> params)
     {
         List<Block> blocks;
         if (property instanceof Collection<?>) {

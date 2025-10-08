@@ -7,16 +7,16 @@
   },
   "meta": {
     "entryDescriptor": {
-      "idProperty": "identifier.value"
+      "idProperty": "identifier"
     },
     "propertyDescriptors": [
       {
-        "id": "identifier.value",
+        "id": "identifier",
         "type": "String",
         "name": "ID",
         "displayer": {
-          "id": "link",
-          "propertyHref": "identifier.location"
+          "id": "html",
+          "propertyHref": "identifier"
         }
       },
       {
@@ -26,12 +26,12 @@
         "displayer": "text"
       },
       {
-        "id": "summary.value",
+        "id": "summary",
         "type": "String",
         "name": "Summary",
         "displayer": {
-          "id": "link",
-          "propertyHref": "summary.location"
+          "id": "html",
+          "propertyHref": "summary"
         }
       },
       {
@@ -67,12 +67,12 @@
         "name": "Update Date"
       },
       {
-        "id": "creator.value",
+        "id": "creator",
         "type": "String",
         "name": "Creator",
         "displayer": {
-          "id": "link",
-          "propertyHref": "creator.location"
+          "id": "html",
+          "propertyHref": "creator"
         }
       },
       {
@@ -88,12 +88,12 @@
         "displayer": "text"
       },
       {
-        "id": "project.value",
+        "id": "project",
         "type": "String",
         "name": "Project",
         "displayer": {
-          "id": "link",
-          "propertyHref": "project.location"
+          "id": "html",
+          "propertyHref": "project"
         }
       },
       {
@@ -103,12 +103,12 @@
         "displayer": "text"
       },
       {
-        "id": "reporter.value",
+        "id": "reporter",
         "type": "String",
         "name": "Reporter",
         "displayer": {
-          "id": "link",
-          "propertyHref": "reporter.location"
+          "id": "html",
+          "propertyHref": "reporter"
         }
       },
       {
@@ -134,21 +134,21 @@
         "name": "Close Date"
       },
       {
-        "id": "milestones.value",
+        "id": "milestones",
         "type": "String",
         "name": "Milestones",
         "displayer": {
-          "id": "link",
-          "propertyHref": "milestones.location"
+          "id": "html",
+          "propertyHref": "milestones"
         }
       },
       {
-        "id": "closedBy.value",
+        "id": "closedBy",
         "type": "String",
         "name": "Closed By",
         "displayer": {
-          "id": "link",
-          "propertyHref": "closedBy.location"
+          "id": "html",
+          "propertyHref": "closedBy"
         }
       }
     ],

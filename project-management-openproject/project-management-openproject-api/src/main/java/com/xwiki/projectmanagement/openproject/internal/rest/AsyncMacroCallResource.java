@@ -140,7 +140,7 @@ public class AsyncMacroCallResource extends XWikiResource
             "openproject", "openproject."));
         LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
         liveDataConfiguration.setQuery(new LiveDataQuery());
-        liveDataConfiguration.getQuery().setFilters(Arrays.asList(new LiveDataQuery.Filter("identifier.value",
+        liveDataConfiguration.getQuery().setFilters(Arrays.asList(new LiveDataQuery.Filter("identifier",
             "=", workPackageId)));
         String content = jsonMapper.writeValueAsString(liveDataConfiguration);
 

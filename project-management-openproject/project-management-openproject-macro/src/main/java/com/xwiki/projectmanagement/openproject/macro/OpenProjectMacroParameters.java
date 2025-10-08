@@ -41,7 +41,7 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
      */
     public OpenProjectMacroParameters()
     {
-        setProperties("identifier.value,type,summary.value,description,startDate,assignees,_actions");
+        setProperties("identifier,type,summary,description,startDate,assignees,_actions");
     }
 
     /**

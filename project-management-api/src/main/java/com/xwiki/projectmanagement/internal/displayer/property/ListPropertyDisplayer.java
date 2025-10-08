@@ -49,7 +49,7 @@ public class ListPropertyDisplayer implements WorkItemPropertyDisplayer
     }
 
     @Override
-    public List<Block> display(Object property, Map<String, String> params)
+    public List<Block> display(Object property, Map<String, Object> params)
     {
         if (property == null) {
             return Collections.emptyList();

@@ -69,7 +69,7 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
     private final Map<String, WorkItemPropertyDisplayer> displayers = new HashMap<>();
 
     @Override
-    public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, String> parameters)
+    public List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, Object> parameters)
     {
         WorkItemPropertyDisplayer propertyDisplayer = getDisplayerForProperty(propertyName);
 
@@ -99,7 +99,12 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
     @Override
     public void initialize() throws InitializationException
     {
-        displayers.put(Linkable.class.getName(), new LinkablePropertyDisplayer(plainParser));
+        WorkItemPropertyDisplayer linkableDisplayer = new LinkablePropertyDisplayer(plainParser);
+        displayers.put(Linkable.class.getName(), linkableDisplayer);
+        displayers.put(WorkItem.KEY_IDENTIFIER, linkableDisplayer);
+        displayers.put(WorkItem.KEY_SUMMARY, linkableDisplayer);
+        displayers.put(WorkItem.KEY_PROJECT, linkableDisplayer);
+        displayers.put(WorkItem.KEY_CREATOR, linkableDisplayer);
         displayers.put(String.class.getName(), new StringPropertyDisplayer(plainParser));
         WorkItemPropertyDisplayer propertyDisplayer = new ListPropertyDisplayer(this);
         displayers.put(WorkItem.KEY_ASSIGNEES, propertyDisplayer);

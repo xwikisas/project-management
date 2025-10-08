@@ -43,7 +43,7 @@ public interface WorkItemPropertyDisplayerManager
      *     implementation.
      * @return a list of blocks that represent how the property should be displayed.
      */
-    List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, String> parameters);
+    List<Block> displayProperty(String propertyName, Object propertyValue, Map<String, Object> parameters);
 
     /**
      * Provides a way to check if the manager has any displayer registered for a given property.

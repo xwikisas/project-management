@@ -121,7 +121,8 @@ class DefaultProjectManagementLiveDataDisplayerTest
         // DisplayerManager does not know the property.
         when(defaultDisplayerManager.getDisplayerForProperty("date")).thenReturn(null);
 
-        displayer.displayProperty(property, renderer, defaultDisplayerManager);
+        WorkItem wi = new WorkItem();
+        displayer.displayProperty(property, wi, renderer, defaultDisplayerManager);
 
         assertEquals("printer", property.getValue());
     }

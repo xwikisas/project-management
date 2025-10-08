@@ -58,14 +58,14 @@ public class TypePropertyDisplayer implements WorkItemPropertyDisplayer
     }
 
     @Override
-    public List<Block> display(Object property, Map<String, String> params)
+    public List<Block> display(Object property, Map<String, Object> params)
     {
         if (property == null) {
             return Collections.emptyList();
         }
         try {
             String lowerCaseProp = IdGenerator.generate(property.toString());
-            String instance = params.getOrDefault("instance", "");
+            String instance = params.getOrDefault("instance", "").toString();
             if (!instance.isEmpty()) {
                 lowerCaseProp = lowerCaseProp + '-' + IdGenerator.generate(instance);
             }
