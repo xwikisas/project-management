@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.0</version>
+    <version>1.0.1-SNAPSHOT</version>
   </parent>
   <name>Project Management - API</name>
   <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.</description>
