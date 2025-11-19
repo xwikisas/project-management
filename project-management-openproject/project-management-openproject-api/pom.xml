@@ -28,6 +28,8 @@
     <version>1.0-rc-6-SNAPSHOT</version>
   </parent>
   <artifactId>project-management-openproject-api</artifactId>
+  <name>Project Management - Open Project - API</name>
+  <description>Implements the required Project Management classes, provides the Open Project client and the configuration blueprint and implementation.</description>
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>

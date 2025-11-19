@@ -30,6 +30,8 @@
   </parent>
 
   <artifactId>project-management-openproject-macro</artifactId>
+  <name>Project Management - Open Project - Macro</name>
+  <description>Contains the implementation of the Open Project Macro.</description>
   <dependencies>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>

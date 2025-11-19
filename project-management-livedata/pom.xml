@@ -30,6 +30,8 @@
 
   <artifactId>project-management-livedata</artifactId>
 
+  <name>Project Management - Livedata</name>
+  <description>Provides the Livedata data source through which all the Project Management implementations will display work items.</description>
   <properties>
     <xwiki.jacoco.instructionRatio>0.76</xwiki.jacoco.instructionRatio>
   </properties>

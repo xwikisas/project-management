@@ -32,7 +32,11 @@
 
   <packaging>xar</packaging>
 
-  <name>Project Management Open Project UI</name>
+  <name>Project Management - Open Project - UI</name>
+  <description>Connect to your OpenProject instance and display WorkPackages in XWiki as lists, cards or single items.</description>
+  <properties>
+    <xwiki.extension.name>Open Project Integration (Pro)</xwiki.extension.name>
+  </properties>
   <dependencies>
     <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>

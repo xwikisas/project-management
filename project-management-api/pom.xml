@@ -27,7 +27,8 @@
     <artifactId>project-management</artifactId>
     <version>1.0-rc-6-SNAPSHOT</version>
   </parent>
-
+  <name>Project Management - API</name>
+  <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.</description>
   <properties>
     <xwiki.jacoco.instructionRatio>0.72</xwiki.jacoco.instructionRatio>
   </properties>

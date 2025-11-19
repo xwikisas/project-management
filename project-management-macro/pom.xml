@@ -29,7 +29,8 @@
   </parent>
 
   <artifactId>project-management-macro</artifactId>
-
+  <name>Project Management - Macro</name>
+  <description>Provides the basic tools for implementing a Project Management macro such as the Work Items displayers, macro parameters displayers, abstract macro definitions.</description>
   <properties>
     <xwiki.jacoco.instructionRatio>0.85</xwiki.jacoco.instructionRatio>
   </properties>

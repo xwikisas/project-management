@@ -28,6 +28,8 @@
     <version>1.0-rc-6-SNAPSHOT</version>
   </parent>
   <packaging>pom</packaging>
+  <name>Project Management - Open Project - POM</name>
+  <description>The parent of the Open Project implementation. It wraps all the defined modules.</description>
   <artifactId>project-management-openproject</artifactId>
 
   <modules>
