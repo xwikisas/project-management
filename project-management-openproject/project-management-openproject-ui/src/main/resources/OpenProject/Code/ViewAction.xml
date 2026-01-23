@@ -149,8 +149,8 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
 &lt;/div&gt;
 `;
   const itemIdRegex = /work_packages\/([^/]+)\//g;
-  document.on('click', '.action_view', function(e) {
-    let pressedButton = $(e.rangeParent);
+  $(document).on('click', '.action_view', function(e) {
+    let pressedButton = $(e.currentTarget);
     pressedButton = pressedButton.closest('.action_view');
     let liveData = pressedButton.closest('.liveData');
     if (!liveData) {
