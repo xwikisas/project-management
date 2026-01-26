@@ -25,6 +25,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
 
 import org.mockito.MockedStatic;
@@ -34,6 +36,8 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
@@ -95,9 +99,26 @@ public class OpenProjectClientTest
     }
 
     @Test
-    public void getWorkItemsWithIdentifier() throws ProjectManagementException
+    public void getWorkItemsWithIdentifierAsUrl() throws ProjectManagementException
     {
         getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, NUMBER_OF_WORK_PACKAGES);
+    }
+
+    @Test
+    public void getWorkItemsWithIdentifierAsIds() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn("1,2,3,4,5,6,7,8,9,10");
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+
+        verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(),
+            argThat(actual -> jsonEquals(
+                actual,
+                "[{\"id\":{\"operator\":\"=\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}}]")),
+            anyString()
+        );
+
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
     }
 
     @Test
@@ -187,5 +208,17 @@ public class OpenProjectClientTest
         }
         result.setItems(workPackages);
         return result;
+    }
+
+    private boolean jsonEquals(String actualJson, String expectedJson)
+    {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode actual = mapper.readTree(actualJson);
+            JsonNode expected = mapper.readTree(expectedJson);
+            return actual.equals(expected);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }
