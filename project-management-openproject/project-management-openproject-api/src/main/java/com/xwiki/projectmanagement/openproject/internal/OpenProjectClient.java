@@ -72,6 +72,14 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final String IDS = "ids";
 
+    private static final Pattern URL_PATTERN = Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
+
+    private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
+
+    private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -193,17 +201,11 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private String detectIdentifierType(String identifier) throws ProjectManagementException
     {
-        Pattern urlPattern =
-            Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
-
-        Pattern idsPattern =
-            Pattern.compile("^\\d+(,\\d+)*$");
-
-        if (urlPattern.matcher(identifier).matches()) {
+        if (URL_PATTERN.matcher(identifier).matches()) {
             return URL;
         }
 
-        if (idsPattern.matcher(identifier).matches()) {
+        if (IDS_PATTERN.matcher(identifier).matches()) {
             return IDS;
         }
 
@@ -229,7 +231,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private String extractProjectFromPath(String path)
     {
-        Matcher matcher = Pattern.compile("/projects/([^/]+)/").matcher(path);
+        Matcher matcher = PROJECTS_PATTERN.matcher(path);
         return matcher.find() ? matcher.group(1) : null;
     }
 
@@ -272,8 +274,7 @@ public class OpenProjectClient implements ProjectManagementClient
             return null;
         }
 
-        Pattern pattern = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
-        Matcher matcher = pattern.matcher(queryParameters);
+        Matcher matcher = QUERY_PROPS_PATTERN.matcher(queryParameters);
 
         if (!matcher.find()) {
             throw new WorkItemRetrievalException("The query parameters format is not correct");
