@@ -24,6 +24,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -67,6 +68,18 @@ public class OpenProjectClient implements ProjectManagementClient
 {
     private static final String QUERY_PROPS_QUERY_PARAMETER = "query_props=";
 
+    private static final String URL = "URL";
+
+    private static final String IDS = "ids";
+
+    private static final Pattern URL_PATTERN = Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
+
+    private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
+
+    private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -102,7 +115,7 @@ public class OpenProjectClient implements ProjectManagementClient
                     String.format("No configuration for instance [%s] was found.", connectionName));
             }
 
-            if (identifier != null) {
+            if (identifier != null && !identifier.isEmpty()) {
                 return handleIdentifier(identifier, offset, pageSize, filters, sortEntries);
             }
 
@@ -146,33 +159,59 @@ public class OpenProjectClient implements ProjectManagementClient
         List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        URL url = parseUrl(identifier);
-        JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
-        String project = extractProjectFromPath(url.getPath());
+        String filters = "";
+        String sortBy = "";
+        String project = null;
+        String identifierType = detectIdentifierType(identifier);
 
-        JsonNode filtersValue = null;
-        JsonNode sortByValue = null;
+        switch (identifierType) {
+            case URL:
+                URL url = parseUrl(identifier);
+                JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
+                project = extractProjectFromPath(url.getPath());
 
-        if (parametersNode != null) {
-            filtersValue = parametersNode.path("f");
-            sortByValue = parametersNode.path("t");
+                if (parametersNode != null) {
+                    filters = extractFiltersFromQuery(filtersEntries, parametersNode.path("f"));
+                    sortBy = extractSortByString(sortEntries, parametersNode.path("t"));
+                }
+                break;
+            case IDS:
+                filters = extractFiltersFromIdentifier(filtersEntries, identifier);
+                sortBy = "";
+                break;
+            default:
         }
 
-        String filters = extractFiltersFromQuery(filtersValue, filtersEntries);
-        String sortBy = extractSortByString(sortByValue, sortEntries);
-
         try {
-            PaginatedResult<WorkPackage> workPackagesPaginatedResult = (project != null)
-                ? openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy)
-                : openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy);
+            if (project != null) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy),
+                    OpenProjectConverters::convertWorkPackageToWorkItem
+                );
+            }
 
             return OpenProjectConverters.convertPaginatedResult(
-                workPackagesPaginatedResult,
+                openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy),
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
         }
+    }
+
+    private String detectIdentifierType(String identifier) throws ProjectManagementException
+    {
+        if (URL_PATTERN.matcher(identifier).matches()) {
+            return URL;
+        }
+
+        if (IDS_PATTERN.matcher(identifier).matches()) {
+            return IDS;
+        }
+
+        throw new WorkPackageRetrievalBadRequestException(
+            "The provided identifier value is not in a supported format."
+        );
     }
 
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
@@ -192,17 +231,32 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private String extractProjectFromPath(String path)
     {
-        Matcher matcher = Pattern.compile("/projects/([^/]+)/").matcher(path);
+        Matcher matcher = PROJECTS_PATTERN.matcher(path);
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(JsonNode filtersNode, List<LiveDataQuery.Filter> filtersList)
+    private String extractFiltersFromQuery(List<LiveDataQuery.Filter> filtersList, JsonNode filtersNode)
         throws ProjectManagementException
     {
         return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
     }
 
-    private String extractSortByString(JsonNode sortByNode, List<LiveDataQuery.SortEntry> sortEntries)
+    private String extractFiltersFromIdentifier(List<LiveDataQuery.Filter> filtersList, String isListAsString)
+        throws ProjectManagementException
+    {
+        List<String> idsList = List.of(isListAsString.split(","));
+        Map<String, Object> idFiltersAsJson = Map.of(
+            "n", "id",
+            "o", "=",
+            "v", idsList
+        );
+
+        JsonNode idsFilterNode = objectMapper.valueToTree(List.of(idFiltersAsJson));
+
+        return OpenProjectFilterHandler.mergeFilters(filtersList, idsFilterNode);
+    }
+
+    private String extractSortByString(List<LiveDataQuery.SortEntry> sortEntries, JsonNode sortByNode)
         throws ProjectManagementException
     {
         String sortByString = "";
@@ -220,8 +274,7 @@ public class OpenProjectClient implements ProjectManagementClient
             return null;
         }
 
-        Pattern pattern = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
-        Matcher matcher = pattern.matcher(queryParameters);
+        Matcher matcher = QUERY_PROPS_PATTERN.matcher(queryParameters);
 
         if (!matcher.find()) {
             throw new WorkItemRetrievalException("The query parameters format is not correct");
