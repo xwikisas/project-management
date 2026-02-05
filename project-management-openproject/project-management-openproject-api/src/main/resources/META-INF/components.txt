@@ -10,4 +10,5 @@ com.xwiki.projectmanagement.openproject.internal.rest.OpenProjectAvatarResource
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
 com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener
 com.xwiki.projectmanagement.openproject.internal.rest.connection.HandleConnections
+com.xwiki.projectmanagement.openproject.internal.rest.workItems.HandleWorkItems
 com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService

@@ -27,4 +27,10 @@
 <suppressions>
   <suppress checks="FanOutComplexity" files="DefaultOpenProjectApiClient.java"/>
   <suppress checks="FanOutComplexity" files="AsyncMacroCallResource.java"/>
+  <suppress checks="MultipleStringLiterals" files="HandleWorkItems.java"/>
+  <suppress checks="ExecutableStatementCount" files="HandleWorkItems.java"/>
+  <suppress checks="FanOutComplexity" files="HandleWorkItems.java"/>
+  <suppress checks="NPathComplexity" files="HandleWorkItems.java"/>
+  <suppress checks="CyclomaticComplexity" files="HandleWorkItems.java"/>
+  <suppress checks="JavaNCSS" files="HandleWorkItems.java"/>
 </suppressions>

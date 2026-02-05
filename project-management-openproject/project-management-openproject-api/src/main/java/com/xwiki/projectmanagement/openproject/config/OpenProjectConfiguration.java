@@ -77,6 +77,15 @@ public interface OpenProjectConfiguration
     OpenProjectApiClient getOpenProjectApiClient(String connectionName);
 
     /**
+     * Provides an instance of {@link OpenProjectApiClient} for interacting with the OpenProject API without caching
+     * capabilities.
+     *
+     * @param connectionName the name of the connection from which to obtain data
+     * @return a configured {@code OpenProjectApiClient} ready for use
+     */
+    OpenProjectApiClient getDefaultOpenProjectApiClient(String connectionName);
+
+    /**
      * Clean the various caches used by the application, such as the entities retrieved from the configured Open Project
      * instances.
      */

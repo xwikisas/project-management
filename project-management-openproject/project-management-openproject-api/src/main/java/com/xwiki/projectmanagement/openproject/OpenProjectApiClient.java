@@ -81,6 +81,20 @@ public interface OpenProjectApiClient
     PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException;
 
     /**
+     * Retrieves a list of available users for creating a work package based on the specified page size and filter
+     * criteria from the current OpenProject configuration.
+     *
+     * @param url the URL of the work package for which we want to retrieve the available users.
+     * @param offset the offset from which to start retrieving users.
+     * @param pageSize the number of users to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request
+     * @return a list of {@link User}
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
+     */
+    PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
+        throws ProjectManagementException;
+
+    /**
      * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
      * current OpenProject configuration.
      *
@@ -91,6 +105,20 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      */
     PaginatedResult<Project> getProjects(int offset, int pageSize, String filters) throws ProjectManagementException;
+
+    /**
+     * Retrieves a paginated list of creating work package available projects based on the specified page size and
+     * filter criteria from the current OpenProject configuration.
+     *
+     * @param url the URL of the work package for which we want to retrieve the available projects.
+     * @param offset the offset from which to start retrieving projects.
+     * @param pageSize the number of users to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @return a list of {@link Project}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
+     */
+    PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
+        throws ProjectManagementException;
 
     /**
      * Retrieves all available types from the current OpenProject configuration.

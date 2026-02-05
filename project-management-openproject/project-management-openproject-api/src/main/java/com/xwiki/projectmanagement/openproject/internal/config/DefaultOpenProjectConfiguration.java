@@ -67,6 +67,10 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
 {
     private static final String OAUTH_COMPONENT_NAME = "oauth2client";
 
+    private static final String CLIENT_CONFIGURATION_NOT_EXISTING = "No client for connection [%s] could be created "
+        + "because the configuration doesn't exist or the access "
+        + "token for the current user is not set.";
+
     @Inject
     @Named("openproject")
     private ConfigurationSource openProjectConfiguration;
@@ -159,13 +163,33 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         String accessToken = getAccessTokenForConfiguration(connectionName);
         if (connection == null || StringUtils.isEmpty(accessToken)) {
             logger.warn(String.format(
-                "No client for connection [%s] could be created because the configuration doesn't exist or the access "
-                    + "token for the current user is not set.", connectionName));
+                CLIENT_CONFIGURATION_NOT_EXISTING, connectionName));
             return null;
         }
         OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
             accessToken, HttpClient.newHttpClient());
         return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
+    }
+
+    /**
+     * Provides an instance of {@link OpenProjectApiClient} for interacting with the OpenProject API.
+     *
+     * @param connectionName the name of the connection from which to obtain data
+     * @return a configured {@code OpenProjectApiClient} ready for use
+     */
+    public OpenProjectApiClient getDefaultOpenProjectApiClient(String connectionName)
+    {
+        OpenProjectConnection connection = getConnection(connectionName);
+        String accessToken = getAccessTokenForConfiguration(connectionName);
+        if (connection == null || StringUtils.isEmpty(accessToken)) {
+            logger.warn(String.format(
+                CLIENT_CONFIGURATION_NOT_EXISTING, connectionName));
+            return null;
+        }
+        return new DefaultOpenProjectApiClient(
+            connection.getServerURL(),
+            accessToken, HttpClient.newHttpClient()
+        );
     }
 
     @Override
