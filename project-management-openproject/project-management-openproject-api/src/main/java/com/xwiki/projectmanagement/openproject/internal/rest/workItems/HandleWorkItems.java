@@ -271,12 +271,11 @@ public class HandleWorkItems extends XWikiResource
             }
         }
 
-        Map<String, Object> fieldMappings = Map.of(
-            START_DATE, workPackage.getStartDate(),
-            DUE_DATE, workPackage.getDueDate()
-        );
+        Map<String, String> fieldMappings = new HashMap<>();
+        fieldMappings.put(START_DATE, workPackage.getStartDate());
+        fieldMappings.put(DUE_DATE, workPackage.getDueDate());
 
-        for (Map.Entry<String, Object> entry : fieldMappings.entrySet()) {
+        for (Map.Entry<String, String> entry : fieldMappings.entrySet()) {
             if (entry.getValue() != null) {
                 formRequest.put(entry.getKey(), entry.getValue());
             }
