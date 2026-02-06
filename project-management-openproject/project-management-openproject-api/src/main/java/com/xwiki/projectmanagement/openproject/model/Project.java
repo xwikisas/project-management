@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.model.Linkable;
+
 /**
  * Describes the project object of a work package.
  *
@@ -27,4 +30,34 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Project extends BaseOpenProjectObject
 {
+    /**
+     * Create a Project object from a JsonNode.
+     *
+     * @param projectJson the JsonNode containing the project information.
+     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
+     *     reference of the project will point to the OpenProject instance, otherwise it will point to the API
+     *     reference.
+     */
+    public Project(JsonNode projectJson, String connectionUrl)
+    {
+        int id = projectJson.path("id").asInt();
+        String name = projectJson.path("name").asText();
+
+        this.setId(id);
+        this.setName(name);
+
+        if (connectionUrl == null || connectionUrl.isEmpty()) {
+            String selfHref = projectJson.path("_links").path("self").path("href").asText();
+            this.setSelf(new Linkable("", selfHref));
+        } else {
+            this.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
+        }
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Project()
+    {
+    }
 }

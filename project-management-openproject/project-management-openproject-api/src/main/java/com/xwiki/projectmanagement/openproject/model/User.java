@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.model.Linkable;
+
 /**
  * Describes the user object of a work package.
  *
@@ -27,4 +30,33 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class User extends BaseOpenProjectObject
 {
+    /**
+     * Create a User object from a JsonNode.
+     *
+     * @param userJson the JsonNode containing the user information.
+     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
+     *     reference of the user will point to the OpenProject instance, otherwise it will point to the API reference.
+     */
+    public User(JsonNode userJson, String connectionUrl)
+    {
+        int id = userJson.path("id").asInt();
+        String name = userJson.path("name").asText();
+
+        this.setId(id);
+        this.setName(name);
+
+        if (connectionUrl == null || connectionUrl.isEmpty()) {
+            String selfHrefStr = userJson.path("_links").path("self").path("href").asText();
+            this.setSelf(new Linkable("", selfHrefStr));
+        } else {
+            this.setSelf(new Linkable("", String.format("%s/users/%s", connectionUrl, id)));
+        }
+    }
+
+    /**
+     * Default constructor.
+     */
+    public User()
+    {
+    }
 }

@@ -43,12 +43,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -56,7 +53,6 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
-import com.xwiki.projectmanagement.rest.WorkItemsResource;
 
 /**
  * The resource that exposes CRUD operations over the work items of the different project management implementations.
@@ -68,7 +64,7 @@ import com.xwiki.projectmanagement.rest.WorkItemsResource;
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.workItems.HandleWorkItems")
 @Singleton
 @Path("/wikis/{wikiName}/openproject/instance/{instance}/workPackages")
-public class HandleWorkItems extends XWikiResource implements WorkItemsResource
+public class HandleWorkItems extends XWikiResource
 {
     private static final String HREF = "href";
 
@@ -78,44 +74,52 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
 
     private static final String PROJECT = "project";
 
+    private static final String PROJECT_LABEL = "Project";
+
     private static final String SUBJECT = "subject";
 
-    private static final String OP_RESPONSE_ID = "id";
+    private static final String SUBJECT_LABEL = "Subject";
+
+    private static final String TYPE = "type";
+
+    private static final String TYPE_LABEL = "Type";
+
+    private static final String PRIORITY = "priority";
+
+    private static final String PRIORITY_LABEL = "Priority";
+
+    private static final String ASSIGNEE = "assignee";
+
+    private static final String ASSIGNEE_LABEL = "Assignee";
+
+    private static final String DESCRIPTION = "description";
+
+    private static final String DESCRIPTION_LABEL = "Description";
+
+    private static final String STATUS = "status";
+
+    private static final String STATUS_LABEL = "Status";
+
+    private static final String START_DATE = "startDate";
+
+    private static final String START_DATE_LABEL = "Start Date";
+
+    private static final String DUE_DATE = "dueDate";
+
+    private static final String DUE_DATE_LABEL = "Due Date";
+
+    private static final String ALLOWED_VALUES = "allowedValues";
+
+    private static final String SELECT = "select";
+
+    private static final String DATE = "date";
+
+    private static final String TEXT = "text";
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    @Override
-    public Response getWorkItem(String wiki, String projectManagementHint, String workItemId)
-    {
-        return null;
-    }
-
-    @Override
-    public Response getWorkItems(String wiki, String projectManagementHint, int page, int pageSize)
-    {
-        return null;
-    }
-
-    @Override
-    public Response createWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
-    {
-        return null;
-    }
-
-    @Override
-    public Response updateWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
-    {
-        return null;
-    }
-
-    @Override
-    public Response deleteWorkItem(String wiki, String projectManagementHint, String workItemId)
-    {
-        return null;
-    }
 
     /**
      * The resource that exposes CRUD operations over the work items of the different project management
@@ -134,44 +138,10 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
     @Produces({ MediaType.APPLICATION_JSON })
     @Path("/form")
     public Response getFormForCreatingWorkPackage(@PathParam("wikiName") String wiki,
-        @PathParam("instance") String instance, CreateWorkPackage workPackage)
+        @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
-        Map<String, Object> formRequest = new HashMap<>();
-        Map<String, Object> links = new HashMap<>();
-
-        if (workPackage.getProject() != null) {
-            links.put(PROJECT, Map.of(HREF, workPackage.getProject()));
-        }
-        if (workPackage.getAssignee() != null) {
-            links.put("assignee", Map.of(HREF, workPackage.getAssignee()));
-        }
-        if (workPackage.getType() != null) {
-            links.put("type", Map.of(HREF, workPackage.getType()));
-        }
-        if (workPackage.getStatus() != null) {
-            links.put("status", Map.of(HREF, workPackage.getStatus()));
-        }
-        if (workPackage.getPriority() != null) {
-            links.put("priority", Map.of(HREF, workPackage.getPriority()));
-        }
-
-        if (workPackage.getStartDate() != null) {
-            formRequest.put("startDate", workPackage.getStartDate());
-        }
-
-        if (workPackage.getDueDate() != null) {
-            formRequest.put("dueDate", workPackage.getDueDate());
-        }
-
-        if (workPackage.getDescription() != null) {
-            formRequest.put("description", Map.of("raw", workPackage.getDescription()));
-        }
-
-        formRequest.put(LINKS, links);
-        formRequest.put(SUBJECT, workPackage.getSubject());
-
-        DefaultOpenProjectApiClient apiClient =
-            (DefaultOpenProjectApiClient) openProjectConfiguration.getDefaultOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        Map<String, Object> formRequest = createRequestForOpenProjectFormRequest(workPackage);
 
         JsonNode response;
         try {
@@ -180,7 +150,7 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
             String responseType = response.path("_type").asText();
 
             if (!responseType.equals("Form")) {
-                throw new RuntimeException("Unexpected response type: " + responseType);
+                throw new ProjectManagementException("Unexpected response type: " + responseType);
             }
 
             JsonNode validationErrors = response.path(EMBEDDED).path("validationErrors");
@@ -197,7 +167,7 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
             apiClient.createWorkPackage(commitLink, objectMapper.writeValueAsString(payload));
             return Response.ok(response).build();
         } catch (JsonProcessingException | ProjectManagementException e) {
-            throw new RuntimeException(e);
+            throw new ProjectManagementException("The Work Package creation failed", e);
         }
     }
 
@@ -207,56 +177,44 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
         Map<String, Object> optionsResponse = new HashMap<>();
 
         List<Type> types = new ArrayList<>();
-
-        for (JsonNode typeNode : schemaNode.path("type").path(EMBEDDED).path("allowedValues")) {
-            Type type = new Type();
-            int id = typeNode.path("id").asInt();
-            String name = typeNode.path("name").asText();
-            String color = typeNode.path("color").asText();
-            String href = typeNode.path(LINKS).path("self").path(HREF).asText();
-            type.setName(name);
-            type.setId(id);
-            type.setColor(color);
-            type.setSelf(new Linkable("", href));
-            types.add(type);
+        for (JsonNode typeNode : schemaNode.path(TYPE).path(EMBEDDED).path(ALLOWED_VALUES)) {
+            types.add(new Type(typeNode, null));
         }
 
         List<Status> statuses = new ArrayList<>();
-        for (JsonNode statusNode : schemaNode.path("status").path(EMBEDDED).path("allowedValues")) {
-            Status status = new Status();
-            int id = statusNode.path(OP_RESPONSE_ID).asInt();
-            String labelName = statusNode.path("name").asText();
-            String color = statusNode.path("color").asText();
-            String href = statusNode.path(LINKS).path("self").path(HREF).asText();
-            status.setId(id);
-            status.setName(labelName);
-            status.setColor(color);
-            status.setSelf(new Linkable("", href));
-            statuses.add(status);
+        for (JsonNode statusNode : schemaNode.path(STATUS).path(EMBEDDED).path(ALLOWED_VALUES)) {
+            statuses.add(new Status(statusNode, null));
         }
 
         List<Priority> priorities = new ArrayList<>();
-        for (JsonNode priorityNode : schemaNode.path("priority").path(EMBEDDED).path("allowedValues")) {
-            Priority priority = new Priority();
-            int id = priorityNode.path("id").asInt();
-            String name = priorityNode.path("name").asText();
-            String color = priorityNode.path("color").asText();
-            String href = priorityNode.path(LINKS).path("self").path(HREF).asText();
-            priority.setId(id);
-            priority.setName(name);
-            priority.setSelf(new Linkable("", href));
-            priority.setColor(color);
-            priorities.add(priority);
+        for (JsonNode priorityNode : schemaNode.path(PRIORITY).path(EMBEDDED).path(ALLOWED_VALUES)) {
+            priorities.add(new Priority(priorityNode, null));
         }
 
-        String assigneeUrl = schemaNode.path("assignee").path(LINKS).path("allowedValues").path(
-            "href").asText();
+        populateRemoteOptions(schemaNode, apiClient, optionsResponse);
 
-        String projectUrl = schemaNode.path("project").path(LINKS).path("allowedValues").path(
-            "href").asText();
+        optionsResponse.put(TYPE, createInputOptions(false, SELECT, TYPE_LABEL, types));
+        optionsResponse.put(STATUS, createInputOptions(false, SELECT, STATUS_LABEL, statuses));
+        optionsResponse.put(PRIORITY, createInputOptions(false, SELECT, PRIORITY_LABEL, priorities));
+        optionsResponse.put(DESCRIPTION, createInputOptions(false, TEXT, DESCRIPTION_LABEL, null));
+        optionsResponse.put(SUBJECT, createInputOptions(true, TEXT, SUBJECT_LABEL, null));
+        optionsResponse.put(START_DATE, createInputOptions(false, DATE, START_DATE_LABEL, null));
+        optionsResponse.put(DUE_DATE, createInputOptions(false, DATE, DUE_DATE_LABEL, null));
 
+        return optionsResponse;
+    }
+
+    private void populateRemoteOptions(JsonNode schemaNode, OpenProjectApiClient apiClient,
+        Map<String, Object> optionsResponse)
+    {
+        String assigneeUrl = schemaNode.path(ASSIGNEE).path(LINKS).path(ALLOWED_VALUES).path(
+            HREF).asText();
+
+        String projectUrl = schemaNode.path(PROJECT).path(LINKS).path(ALLOWED_VALUES).path(
+            HREF).asText();
         try {
             List<User> assignees;
+
             if (assigneeUrl != null && !assigneeUrl.isEmpty()) {
                 PaginatedResult<User> usersPaginatedResult = apiClient.getAvailableUsers(assigneeUrl, 0, 0,
                     "");
@@ -265,36 +223,22 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
                 assignees = new ArrayList<>();
             }
 
-            optionsResponse.put("assignee", createInputOptions(false, "select", "Assignee", assignees));
+            optionsResponse.put(ASSIGNEE, createInputOptions(false, SELECT, ASSIGNEE_LABEL, assignees));
 
             List<Project> projects;
+
             if (projectUrl != null && !projectUrl.isEmpty()) {
-                PaginatedResult<com.xwiki.projectmanagement.openproject.model.Project> projectsPaginatedResult =
+                PaginatedResult<Project> projectsPaginatedResult =
                     apiClient.getAvailableProjects(projectUrl, 0, 0, "");
                 projects = projectsPaginatedResult.getItems();
             } else {
                 projects = new ArrayList<>();
             }
-            optionsResponse.put("project", createInputOptions(true, "select", "Project", projects));
+
+            optionsResponse.put(PROJECT, createInputOptions(true, SELECT, PROJECT_LABEL, projects));
         } catch (ProjectManagementException e) {
             throw new RuntimeException(e);
         }
-
-        optionsResponse.put("type", createInputOptions(false, "select", "Type", types));
-
-        optionsResponse.put("status", createInputOptions(false, "select", "Status", statuses));
-
-        optionsResponse.put("priority", createInputOptions(false, "select", "Priority", priorities));
-
-        optionsResponse.put("description", createInputOptions(false, "textarea", "Description", null));
-
-        optionsResponse.put("subject", createInputOptions(true, "text", "Subject", null));
-
-        optionsResponse.put("startDate", createInputOptions(false, "date", "Start Date", null));
-
-        optionsResponse.put("dueDate", createInputOptions(false, "date", "Due Date", null));
-
-        return optionsResponse;
     }
 
     private Map<String, Object> createInputOptions(boolean required, String type, String label,
@@ -302,9 +246,49 @@ public class HandleWorkItems extends XWikiResource implements WorkItemsResource
     {
         Map<String, Object> fieldOptions = new HashMap<>();
         fieldOptions.put("required", required);
-        fieldOptions.put("type", type);
+        fieldOptions.put(TYPE, type);
         fieldOptions.put("label", label);
-        fieldOptions.put("allowedValues", allowedValues);
+        fieldOptions.put(ALLOWED_VALUES, allowedValues);
         return fieldOptions;
+    }
+
+    private Map<String, Object> createRequestForOpenProjectFormRequest(CreateWorkPackage workPackage)
+    {
+        Map<String, Object> formRequest = new HashMap<>();
+        Map<String, Object> links = new HashMap<>();
+
+        Map<String, String> linkMappings = new HashMap<>();
+
+        linkMappings.put(PROJECT, workPackage.getProject());
+        linkMappings.put(ASSIGNEE, workPackage.getAssignee());
+        linkMappings.put(TYPE, workPackage.getType());
+        linkMappings.put(STATUS, workPackage.getStatus());
+        linkMappings.put(PRIORITY, workPackage.getPriority());
+
+        for (Map.Entry<String, String> entry : linkMappings.entrySet()) {
+            if (entry.getValue() != null) {
+                links.put(entry.getKey(), Map.of(HREF, entry.getValue()));
+            }
+        }
+
+        Map<String, Object> fieldMappings = Map.of(
+            START_DATE, workPackage.getStartDate(),
+            DUE_DATE, workPackage.getDueDate()
+        );
+
+        for (Map.Entry<String, Object> entry : fieldMappings.entrySet()) {
+            if (entry.getValue() != null) {
+                formRequest.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        if (workPackage.getDescription() != null) {
+            formRequest.put(DESCRIPTION, Map.of("raw", workPackage.getDescription()));
+        }
+
+        formRequest.put(LINKS, links);
+        formRequest.put(SUBJECT, workPackage.getSubject());
+
+        return formRequest;
     }
 }

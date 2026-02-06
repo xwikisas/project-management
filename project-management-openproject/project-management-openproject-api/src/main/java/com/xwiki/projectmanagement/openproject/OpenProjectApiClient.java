@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject;
 
 import org.xwiki.component.annotation.Role;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -152,4 +153,22 @@ public interface OpenProjectApiClient
      * @since 1.0-rc-5
      */
     UserAvatar getUserAvatar(String userId) throws ProjectManagementException;
+
+    /**
+     * Retrieves work packages form response.
+     *
+     * @param jsonBody the json body.
+     * @return the json node.
+     */
+    JsonNode getWorkPackagesFormResponse(String jsonBody);
+
+    /**
+     * Creates a work package in OpenProject.
+     *
+     * @param url the URL to create the work package.
+     * @param jsonBody the JSON body representing the work package to be created.
+     * @return the created work package.
+     * @throws ProjectManagementException if there was an issue during the creation process.
+     */
+    JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException;
 }

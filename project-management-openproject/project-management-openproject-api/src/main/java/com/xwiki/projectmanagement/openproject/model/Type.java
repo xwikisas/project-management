@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.model.Linkable;
+
 /**
  * Describes the type object of a work package.
  *
@@ -27,4 +30,35 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Type extends ColoredOpenProjectObject
 {
+    /**
+     * Create a Type object from a JsonNode.
+     *
+     * @param typeNode the JsonNode containing the type information.
+     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
+     *     reference of the type will point to the OpenProject instance, otherwise it will point to the API reference.
+     */
+    public Type(JsonNode typeNode, String connectionUrl)
+    {
+        int id = typeNode.path("id").asInt();
+        String name = typeNode.path("name").asText();
+        String color = typeNode.path("color").asText();
+
+        this.setName(name);
+        this.setId(id);
+        this.setColor(color);
+
+        if (connectionUrl == null || connectionUrl.isEmpty()) {
+            String selfHrefStr = typeNode.path("_links").path("self").path("href").asText();
+            this.setSelf(new Linkable("", selfHrefStr));
+        } else {
+            this.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, id)));
+        }
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Type()
+    {
+    }
 }

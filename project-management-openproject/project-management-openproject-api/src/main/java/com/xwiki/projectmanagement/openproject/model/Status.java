@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.model.Linkable;
+
 /**
  * Describes the type object of a work package.
  *
@@ -27,4 +30,36 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Status extends ColoredOpenProjectObject
 {
+    /**
+     * Create a Status object from a JsonNode.
+     *
+     * @param statusNode the JsonNode containing the status information.
+     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
+     *     reference of the status will point to the OpenProject instance, otherwise it will point to the API
+     *     reference.
+     */
+    public Status(JsonNode statusNode, String connectionUrl)
+    {
+        int id = statusNode.path("id").asInt();
+        String name = statusNode.path("name").asText();
+        String color = statusNode.path("color").asText();
+
+        this.setId(id);
+        this.setName(name);
+        this.setColor(color);
+
+        if (connectionUrl == null || connectionUrl.isEmpty()) {
+            String selfHrefStr = statusNode.path("_links").path("self").path("href").asText();
+            this.setSelf(new Linkable("", selfHrefStr));
+        } else {
+            this.setSelf(new Linkable("", String.format("%s/statuses/%s/edit", connectionUrl, id)));
+        }
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Status()
+    {
+    }
 }

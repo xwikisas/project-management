@@ -20,9 +20,9 @@
 
 package com.xwiki.projectmanagement.openproject.internal;
 
-
 import org.xwiki.cache.Cache;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -172,6 +172,12 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public JsonNode getWorkPackagesFormResponse(String jsonBody)
+    {
+        return client.getWorkPackagesFormResponse(jsonBody);
+    }
+
+    @Override
     public PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
         throws ProjectManagementException
     {
@@ -184,6 +190,11 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         return result;
     }
 
+    @Override
+    public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        return client.createWorkPackage(url, jsonBody);
+    }
 
     private String getCacheKey(String entity, int offset, int pageSize, String filters, String sortBy)
     {

@@ -216,14 +216,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<User> users = new ArrayList<>();
 
         for (JsonNode element : usersJson) {
-            User user = new User();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            user.setId(id);
-            user.setName(name);
-            user.setSelf(new Linkable("", String.format("%s/users/%s", connectionUrl,
-                user.getId())));
-            users.add(user);
+            users.add(new User(element, connectionUrl));
         }
 
         return new PaginatedResult<>(users, offset, pageSize, users.size());
@@ -245,14 +238,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<User> users = new ArrayList<>();
 
         for (JsonNode element : usersJson) {
-            User user = new User();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String selfHref = element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_SELF).path(HREF).asText();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            user.setId(id);
-            user.setName(name);
-            user.setSelf(new Linkable("", selfHref));
-            users.add(user);
+            users.add(new User(element, null));
         }
 
         return new PaginatedResult<>(users, offset, pageSize, users.size());
@@ -275,13 +261,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Project> projects = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Project project = new Project();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            project.setId(id);
-            project.setName(name);
-            project.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
-            projects.add(project);
+            projects.add(new Project(element, connectionUrl));
         }
 
         return new PaginatedResult<>(projects, offset, pageSize, projects.size());
@@ -304,14 +284,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Project> projects = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Project project = new Project();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            String selfHref = element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_SELF).path(HREF).asText();
-            project.setId(id);
-            project.setName(name);
-            project.setSelf(new Linkable("", selfHref));
-            projects.add(project);
+            projects.add(new Project(element, null));
         }
 
         return new PaginatedResult<>(projects, offset, pageSize, projects.size());
@@ -325,15 +298,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Type> types = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Type type = new Type();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            String color = element.path(OP_RESPONSE_COLOR).asText();
-            type.setName(name);
-            type.setId(id);
-            type.setColor(color);
-            type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
-            types.add(type);
+            types.add(new Type(element, connectionUrl));
         }
 
         return new PaginatedResult<>(types, 1, types.size(), types.size());
@@ -346,26 +311,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Status> statuses = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Status status = new Status();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String labelName = element.path(OP_RESPONSE_NAME).asText();
-            String color = element.path(OP_RESPONSE_COLOR).asText();
-            status.setId(id);
-            status.setName(labelName);
-            status.setColor(color);
-            status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
-            statuses.add(status);
+            statuses.add(new Status(element, connectionUrl));
         }
 
         return new PaginatedResult<>(statuses, 0, statuses.size(), statuses.size());
     }
 
-    /**
-     * Retrieves work packages form response.
-     *
-     * @param jsonBody the json body.
-     * @return the json node.
-     */
+    @Override
     public JsonNode getWorkPackagesFormResponse(String jsonBody)
     {
         try {
@@ -386,15 +338,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Priority> priorities = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Priority priority = new Priority();
-            int id = element.path(OP_RESPONSE_ID).asInt();
-            String name = element.path(OP_RESPONSE_NAME).asText();
-            String color = element.path(OP_RESPONSE_COLOR).asText();
-            priority.setId(id);
-            priority.setName(name);
-            priority.setSelf(new Linkable("", buildEditUrl(connectionUrl, "priorities", id)));
-            priority.setColor(color);
-            priorities.add(priority);
+            priorities.add(new Priority(element, connectionUrl));
         }
 
         return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
@@ -444,14 +388,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
     }
 
-    /**
-     * Creates a work package in OpenProject.
-     *
-     * @param url the URL to create the work package.
-     * @param jsonBody the JSON body representing the work package to be created.
-     * @return the created work package.
-     * @throws ProjectManagementException if there was an issue during the creation process.
-     */
+    @Override
     public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
         String uriStr = connectionUrl + url;
@@ -651,11 +588,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         paginatedResult.setPageSize(pageSize);
         paginatedResult.setTotalItems(totalNumberOfWorkPackages);
         return paginatedResult;
-    }
-
-    private String buildEditUrl(String connectionUrl, String entity, Object id)
-    {
-        return String.format("%s/%s/%s/edit", connectionUrl, entity, id);
     }
 
     private HttpRequest createAuthorizedRequest(
