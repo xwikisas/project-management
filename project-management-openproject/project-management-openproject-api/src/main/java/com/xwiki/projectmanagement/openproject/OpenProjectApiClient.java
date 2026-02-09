@@ -158,9 +158,11 @@ public interface OpenProjectApiClient
      * Retrieves work packages form response.
      *
      * @param jsonBody the json body.
+     *
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages form
      * @return the json node.
      */
-    JsonNode getWorkPackagesFormResponse(String jsonBody);
+    JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException;
 
     /**
      * Creates a work package in OpenProject.

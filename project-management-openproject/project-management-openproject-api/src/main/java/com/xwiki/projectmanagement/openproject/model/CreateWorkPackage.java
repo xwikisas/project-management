@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
@@ -29,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @since 1.0
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateWorkPackage
 {
     private String project;

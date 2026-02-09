@@ -122,15 +122,44 @@ public class HandleWorkItems extends XWikiResource
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * The resource that exposes CRUD operations over the work items of the different project management
-     * implementations.
+     * This endpoint exposes the available projects for creating a work package.
+     *
+     * @param wiki the wiki that contains the configured client.
+     * @param instance the open project client where to search for work item suggestions.
+     * @return a list of projects that can be used for creating a work package.
+     */
+    @POST
+    @Consumes({ MediaType.APPLICATION_JSON })
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Path("/availableProjects")
+    public Response getAvailableProjects(@PathParam("wikiName") String wiki,
+        @PathParam("instance") String instance) throws ProjectManagementException
+    {
+        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        JsonNode response;
+        try {
+            response = apiClient.getWorkPackagesFormResponse("{}");
+
+            validateResponseType(response);
+
+            JsonNode schemaNode = getSchemaNode(response);
+            List<Project> projects = getRemoteProjects(apiClient, schemaNode);
+            return Response.ok(projects).build();
+        } catch (ProjectManagementException e) {
+            throw new ProjectManagementException("Failed to retrieve available projects for creating a work package",
+                e);
+        }
+    }
+
+    /**
+     * The resource that exposes the available options for creating a work package and creates the work package if the
+     * provided options are valid.
      *
      * @param workPackage the work package that needs to be created.
-     * @param wiki the wiki from where the project management implementation can retrieve. Depending on the
-     *     implementation, different wikis can have different configurations or the wiki might be irrelevant to the
-     *     query.
-     * @param instance the hint of the project management implementation.
-     * @return response,
+     * @param wiki the wiki that contains the configured client.
+     * @param instance the open project client where to search for work item suggestions.
+     * @return the form response containing the validation errors if the creation failed or the created work package if
+     *     the creation succeeded.
      * @since 1.0
      */
     @POST
@@ -147,17 +176,13 @@ public class HandleWorkItems extends XWikiResource
         try {
             response = apiClient.getWorkPackagesFormResponse(objectMapper.writeValueAsString(formRequest));
 
-            String responseType = response.path("_type").asText();
-
-            if (!responseType.equals("Form")) {
-                throw new ProjectManagementException("Unexpected response type: " + responseType);
-            }
+            validateResponseType(response);
 
             JsonNode validationErrors = response.path(EMBEDDED).path("validationErrors");
 
             if (!validationErrors.isEmpty()) {
-                JsonNode schemaNode = response.path(EMBEDDED).path("schema");
-                return Response.status(Response.Status.BAD_REQUEST)
+                JsonNode schemaNode = getSchemaNode(response);
+                return Response.status(Response.Status.OK)
                     .entity(convertFormResponseToOptionsResponse(schemaNode, apiClient)).build();
             }
 
@@ -169,6 +194,20 @@ public class HandleWorkItems extends XWikiResource
         } catch (JsonProcessingException | ProjectManagementException e) {
             throw new ProjectManagementException("The Work Package creation failed", e);
         }
+    }
+
+    private void validateResponseType(JsonNode response) throws ProjectManagementException
+    {
+        String responseType = response.path("_type").asText();
+
+        if (!responseType.equals("Form")) {
+            throw new ProjectManagementException("Unexpected response type: " + responseType);
+        }
+    }
+
+    private JsonNode getSchemaNode(JsonNode response)
+    {
+        return response.path(EMBEDDED).path("schema");
     }
 
     private Map<String, Object> convertFormResponseToOptionsResponse(JsonNode schemaNode,
@@ -210,8 +249,6 @@ public class HandleWorkItems extends XWikiResource
         String assigneeUrl = schemaNode.path(ASSIGNEE).path(LINKS).path(ALLOWED_VALUES).path(
             HREF).asText();
 
-        String projectUrl = schemaNode.path(PROJECT).path(LINKS).path(ALLOWED_VALUES).path(
-            HREF).asText();
         try {
             List<User> assignees;
 
@@ -225,15 +262,7 @@ public class HandleWorkItems extends XWikiResource
 
             optionsResponse.put(ASSIGNEE, createInputOptions(false, SELECT, ASSIGNEE_LABEL, assignees));
 
-            List<Project> projects;
-
-            if (projectUrl != null && !projectUrl.isEmpty()) {
-                PaginatedResult<Project> projectsPaginatedResult =
-                    apiClient.getAvailableProjects(projectUrl, 0, 0, "");
-                projects = projectsPaginatedResult.getItems();
-            } else {
-                projects = new ArrayList<>();
-            }
+            List<Project> projects = getRemoteProjects(apiClient, schemaNode);
 
             optionsResponse.put(PROJECT, createInputOptions(true, SELECT, PROJECT_LABEL, projects));
         } catch (ProjectManagementException e) {
@@ -289,5 +318,20 @@ public class HandleWorkItems extends XWikiResource
         formRequest.put(SUBJECT, workPackage.getSubject());
 
         return formRequest;
+    }
+
+    private List<Project> getRemoteProjects(OpenProjectApiClient apiClient, JsonNode schemaNode)
+        throws ProjectManagementException
+    {
+        String projectsUrl = schemaNode.path(PROJECT).path(LINKS).path(ALLOWED_VALUES).path(
+            HREF).asText();
+
+        if (projectsUrl != null && !projectsUrl.isEmpty()) {
+            PaginatedResult<Project> projectsPaginatedResult =
+                apiClient.getAvailableProjects(projectsUrl, 0, 0, "");
+            return projectsPaginatedResult.getItems();
+        } else {
+            return new ArrayList<>();
+        }
     }
 }
