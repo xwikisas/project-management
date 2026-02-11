@@ -171,27 +171,6 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
     }
 
-    /**
-     * Provides an instance of {@link OpenProjectApiClient} for interacting with the OpenProject API.
-     *
-     * @param connectionName the name of the connection from which to obtain data
-     * @return a configured {@code OpenProjectApiClient} ready for use
-     */
-    public OpenProjectApiClient getDefaultOpenProjectApiClient(String connectionName)
-    {
-        OpenProjectConnection connection = getConnection(connectionName);
-        String accessToken = getAccessTokenForConfiguration(connectionName);
-        if (connection == null || StringUtils.isEmpty(accessToken)) {
-            logger.warn(String.format(
-                CLIENT_CONFIGURATION_NOT_EXISTING, connectionName));
-            return null;
-        }
-        return new DefaultOpenProjectApiClient(
-            connection.getServerURL(),
-            accessToken, HttpClient.newHttpClient()
-        );
-    }
-
     @Override
     public void dispose() throws ComponentLifecycleException
     {

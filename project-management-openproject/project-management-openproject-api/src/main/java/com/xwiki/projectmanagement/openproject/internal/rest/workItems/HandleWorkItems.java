@@ -138,6 +138,11 @@ public class HandleWorkItems extends XWikiResource
         @PathParam("instance") String instance) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+
+        if (apiClient == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
         JsonNode response;
         try {
             response = apiClient.getWorkPackagesFormResponse("{}");
