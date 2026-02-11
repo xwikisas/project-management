@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.workItems;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -128,7 +130,7 @@ public class HandleWorkItems extends XWikiResource
      * @param instance the open project client where to search for work item suggestions.
      * @return a list of projects that can be used for creating a work package.
      */
-    @POST
+    @GET
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Path("/availableProjects")
@@ -213,7 +215,7 @@ public class HandleWorkItems extends XWikiResource
     private Map<String, Object> convertFormResponseToOptionsResponse(JsonNode schemaNode,
         OpenProjectApiClient apiClient)
     {
-        Map<String, Object> optionsResponse = new HashMap<>();
+        Map<String, Object> optionsResponse = new LinkedHashMap<>();
 
         List<Type> types = new ArrayList<>();
         for (JsonNode typeNode : schemaNode.path(TYPE).path(EMBEDDED).path(ALLOWED_VALUES)) {
@@ -230,20 +232,19 @@ public class HandleWorkItems extends XWikiResource
             priorities.add(new Priority(priorityNode, null));
         }
 
-        populateRemoteOptions(schemaNode, apiClient, optionsResponse);
-
-        optionsResponse.put(TYPE, createInputOptions(false, SELECT, TYPE_LABEL, types));
-        optionsResponse.put(STATUS, createInputOptions(false, SELECT, STATUS_LABEL, statuses));
-        optionsResponse.put(PRIORITY, createInputOptions(false, SELECT, PRIORITY_LABEL, priorities));
-        optionsResponse.put(DESCRIPTION, createInputOptions(false, TEXT, DESCRIPTION_LABEL, null));
         optionsResponse.put(SUBJECT, createInputOptions(true, TEXT, SUBJECT_LABEL, null));
+        optionsResponse.put(DESCRIPTION, createInputOptions(false, TEXT, DESCRIPTION_LABEL, null));
+        optionsResponse.put(TYPE, createInputOptions(false, SELECT, TYPE_LABEL, types));
+        optionsResponse.put(PRIORITY, createInputOptions(false, SELECT, PRIORITY_LABEL, priorities));
+        optionsResponse.put(STATUS, createInputOptions(false, SELECT, STATUS_LABEL, statuses));
+        setAssigneeOptions(schemaNode, apiClient, optionsResponse);
         optionsResponse.put(START_DATE, createInputOptions(false, DATE, START_DATE_LABEL, null));
         optionsResponse.put(DUE_DATE, createInputOptions(false, DATE, DUE_DATE_LABEL, null));
 
         return optionsResponse;
     }
 
-    private void populateRemoteOptions(JsonNode schemaNode, OpenProjectApiClient apiClient,
+    private void setAssigneeOptions(JsonNode schemaNode, OpenProjectApiClient apiClient,
         Map<String, Object> optionsResponse)
     {
         String assigneeUrl = schemaNode.path(ASSIGNEE).path(LINKS).path(ALLOWED_VALUES).path(
@@ -261,10 +262,6 @@ public class HandleWorkItems extends XWikiResource
             }
 
             optionsResponse.put(ASSIGNEE, createInputOptions(false, SELECT, ASSIGNEE_LABEL, assignees));
-
-            List<Project> projects = getRemoteProjects(apiClient, schemaNode);
-
-            optionsResponse.put(PROJECT, createInputOptions(true, SELECT, PROJECT_LABEL, projects));
         } catch (ProjectManagementException e) {
             throw new RuntimeException(e);
         }
