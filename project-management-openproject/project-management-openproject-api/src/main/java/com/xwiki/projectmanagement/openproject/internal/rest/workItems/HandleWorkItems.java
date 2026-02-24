@@ -140,7 +140,7 @@ public class HandleWorkItems extends XWikiResource
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
         if (apiClient == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.status(422).build();
         }
 
         JsonNode response;
