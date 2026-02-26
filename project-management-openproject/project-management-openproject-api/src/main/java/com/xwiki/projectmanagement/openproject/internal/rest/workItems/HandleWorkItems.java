@@ -129,6 +129,7 @@ public class HandleWorkItems extends XWikiResource
      * @param wiki the wiki that contains the configured client.
      * @param instance the open project client where to search for work item suggestions.
      * @return a list of projects that can be used for creating a work package.
+     * @since 1.1
      */
     @GET
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -172,7 +173,7 @@ public class HandleWorkItems extends XWikiResource
      * @param instance the open project client where to search for work item suggestions.
      * @return the form response containing the validation errors if the creation failed or the created work package if
      *     the creation succeeded.
-     * @since 1.0
+     * @since 1.1
      */
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
