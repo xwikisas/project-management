@@ -20,13 +20,12 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.xwiki.projectmanagement.model.Linkable;
 
 /**
  * Describes the priority object of a work package.
  *
  * @version $Id$
- * @since 1.0
+ * @since 1.1
  */
 public class Priority extends ColoredOpenProjectObject
 {
@@ -40,20 +39,9 @@ public class Priority extends ColoredOpenProjectObject
      */
     public Priority(JsonNode priorityNode, String connectionUrl)
     {
-        int id = priorityNode.path("id").asInt();
-        String name = priorityNode.path("name").asText();
-        String color = priorityNode.path("color").asText();
+        super(priorityNode);
 
-        this.setId(id);
-        this.setName(name);
-        this.setColor(color);
-
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
-            String selfHrefStr = priorityNode.path("_links").path("self").path("href").asText();
-            this.setSelf(new Linkable("", selfHrefStr));
-        } else {
-            this.setSelf(new Linkable("", String.format("%s/priorities/%s/edit", connectionUrl, id)));
-        }
+        initializeSelfLink(priorityNode, connectionUrl, String.format("priorities/%s/edit", getId()));
     }
 
     /**

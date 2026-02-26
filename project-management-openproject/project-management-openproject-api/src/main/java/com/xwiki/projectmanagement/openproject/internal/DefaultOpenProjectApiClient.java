@@ -57,6 +57,11 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
+import static javax.ws.rs.HttpMethod.GET;
+import static javax.ws.rs.HttpMethod.POST;
+import static javax.ws.rs.HttpMethod.PUT;
+import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
+
 /**
  * Default Open project get items client helper.
  *
@@ -141,14 +146,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String API_URL_PROJECTS = "/api/v3/projects";
 
     private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
-
-    private static final String POST = "POST";
-
-    private static final String PUT = "PUT";
-
-    private static final String GET = "GET";
-
-    private static final String CONTENT_TYPE = "Content-Type";
 
     private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
 

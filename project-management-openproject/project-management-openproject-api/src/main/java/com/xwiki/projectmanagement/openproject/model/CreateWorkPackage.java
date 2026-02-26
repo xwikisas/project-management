@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.model;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -20,6 +18,8 @@ package com.xwiki.projectmanagement.openproject.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+package com.xwiki.projectmanagement.openproject.model;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -27,7 +27,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Describes the payload for creating a work package in OpenProject.
  *
  * @version $Id$
- * @since 1.0
+ * @since 1.1
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -62,12 +62,13 @@ public class CreateWorkPackage
     /**
      * Constructor.
      *
-     * @param project the project
-     * @param subject the subject
-     * @param assignee the assignee
-     * @param type the type
-     * @param status the status
-     * @param priority the priority
+     * @param project project the project identifier, e.g. the API path of the project, such as
+     *     "/api/v3/projects/1"
+     * @param subject the subject of the work package
+     * @param assignee the assignee of the work package
+     * @param type the type of the work package
+     * @param status the status of the work package
+     * @param priority the priority of the work package
      */
     public CreateWorkPackage(String project, String subject, String assignee, String type, String status,
         String priority)
@@ -81,7 +82,7 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the project.
+     * Getter for the project identifier.
      *
      * @return the project
      */
@@ -93,7 +94,7 @@ public class CreateWorkPackage
     /**
      * Setter for the project.
      *
-     * @param project the project to set
+     * @param project see {@link #getProject()}.
      */
     public void setProject(String project)
     {
@@ -101,9 +102,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the subject.
+     * Getter for the subject of the work package.
      *
-     * @return the subject
+     * @return the subject of the work package
      */
     public String getSubject()
     {
@@ -113,7 +114,7 @@ public class CreateWorkPackage
     /**
      * Setter for the subject.
      *
-     * @param subject the subject to set
+     * @param subject see {@link #getSubject()}.
      */
     public void setSubject(String subject)
     {
@@ -121,9 +122,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the assignee.
+     * Getter for the assignee of the work package.
      *
-     * @return the assignee
+     * @return the assignee of the work package
      */
     public String getAssignee()
     {
@@ -131,9 +132,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the assignee.
+     * Setter for the assignee of the work package.
      *
-     * @param assignee the assignee to set
+     * @param assignee see {@link #getAssignee()}.
      */
     public void setAssignee(String assignee)
     {
@@ -141,9 +142,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the type.
+     * Getter for the type of the work package.
      *
-     * @return the type
+     * @return the type of the work package
      */
     public String getType()
     {
@@ -151,9 +152,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the type.
+     * Setter for the type of the work package.
      *
-     * @param type the type to set
+     * @param type see {@link #getType()}.
      */
     public void setType(String type)
     {
@@ -161,8 +162,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the status.
-     * @return the status
+     * Getter for the status of the work package.
+     *
+     * @return the status of the work package
      */
     public String getStatus()
     {
@@ -170,9 +172,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the status.
+     * Setter for the status of the work package.
      *
-     * @param status the status to set
+     * @param status see {@link #getStatus()}.
      */
     public void setStatus(String status)
     {
@@ -180,9 +182,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the priority.
+     * Getter for the priority of the work package.
      *
-     * @return the priority
+     * @return the priority of the work package
      */
     public String getPriority()
     {
@@ -192,7 +194,7 @@ public class CreateWorkPackage
     /**
      * Setter for the priority.
      *
-     * @param priority the priority to set
+     * @param priority see {@link #getPriority()}.
      */
     public void setPriority(String priority)
     {
@@ -200,9 +202,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the description.
+     * Getter for the description of the work package.
      *
-     * @return the description
+     * @return the description of the work package
      */
     public String getDescription()
     {
@@ -210,9 +212,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the description.
+     * Setter for the description of the work package.
      *
-     * @param description the description to set
+     * @param description see {@link #getDescription()}.
      */
     public void setDescription(String description)
     {
@@ -220,9 +222,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the start date.
+     * Getter for the start date of the work package.
      *
-     * @return the start date
+     * @return the start date of the work package
      */
     public String getStartDate()
     {
@@ -230,9 +232,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the start date.
+     * Setter for the start date of the work package.
      *
-     * @param startDate the start date to set
+     * @param startDate see {@link #getStartDate()}.
      */
     public void setStartDate(String startDate)
     {
@@ -240,9 +242,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Getter for the due date.
+     * Getter for the due date of the work package.
      *
-     * @return the due date
+     * @return the due date of the work package
      */
     public String getDueDate()
     {
@@ -250,9 +252,9 @@ public class CreateWorkPackage
     }
 
     /**
-     * Setter for the due date.
+     * Setter for the due date of the work package.
      *
-     * @param dueDate the due date to set
+     * @param dueDate see {@link #getDueDate()}.
      */
     public void setDueDate(String dueDate)
     {

@@ -57,10 +57,10 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 
 /**
- * The resource that exposes CRUD operations over the work items of the different project management implementations.
+ * Resource that exposes REST endpoints useful for creating Work Items in OpenProject.
  *
  * @version $Id$
- * @since 1.0
+ * @since 1.1
  */
 @Component
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.workItems.HandleWorkItems")
@@ -140,7 +140,12 @@ public class HandleWorkItems extends XWikiResource
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
         if (apiClient == null) {
-            return Response.status(422).build();
+            return Response
+                .status(Response.Status.CONFLICT)
+                .entity(
+                    "You must authenticate to the OpenProject instance from XWiki before"
+                        + " being able to retrieve the available projects for creating a work package.")
+                .build();
         }
 
         JsonNode response;

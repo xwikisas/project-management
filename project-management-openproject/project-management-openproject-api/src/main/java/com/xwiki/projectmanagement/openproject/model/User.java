@@ -20,7 +20,6 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.xwiki.projectmanagement.model.Linkable;
 
 /**
  * Describes the user object of a work package.
@@ -39,18 +38,9 @@ public class User extends BaseOpenProjectObject
      */
     public User(JsonNode userJson, String connectionUrl)
     {
-        int id = userJson.path("id").asInt();
-        String name = userJson.path("name").asText();
+        super(userJson);
 
-        this.setId(id);
-        this.setName(name);
-
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
-            String selfHrefStr = userJson.path("_links").path("self").path("href").asText();
-            this.setSelf(new Linkable("", selfHrefStr));
-        } else {
-            this.setSelf(new Linkable("", String.format("%s/users/%s", connectionUrl, id)));
-        }
+        initializeSelfLink(userJson, connectionUrl, String.format("users/%s", getId()));
     }
 
     /**

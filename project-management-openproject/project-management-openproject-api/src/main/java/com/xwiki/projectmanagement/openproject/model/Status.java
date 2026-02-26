@@ -20,7 +20,6 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.xwiki.projectmanagement.model.Linkable;
 
 /**
  * Describes the type object of a work package.
@@ -40,20 +39,9 @@ public class Status extends ColoredOpenProjectObject
      */
     public Status(JsonNode statusNode, String connectionUrl)
     {
-        int id = statusNode.path("id").asInt();
-        String name = statusNode.path("name").asText();
-        String color = statusNode.path("color").asText();
+        super(statusNode);
 
-        this.setId(id);
-        this.setName(name);
-        this.setColor(color);
-
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
-            String selfHrefStr = statusNode.path("_links").path("self").path("href").asText();
-            this.setSelf(new Linkable("", selfHrefStr));
-        } else {
-            this.setSelf(new Linkable("", String.format("%s/statuses/%s/edit", connectionUrl, id)));
-        }
+        initializeSelfLink(statusNode, connectionUrl, String.format("statuses/%s/edit", getId()));
     }
 
     /**

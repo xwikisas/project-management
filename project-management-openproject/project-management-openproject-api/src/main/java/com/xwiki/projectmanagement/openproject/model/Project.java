@@ -20,7 +20,6 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.xwiki.projectmanagement.model.Linkable;
 
 /**
  * Describes the project object of a work package.
@@ -40,18 +39,9 @@ public class Project extends BaseOpenProjectObject
      */
     public Project(JsonNode projectJson, String connectionUrl)
     {
-        int id = projectJson.path("id").asInt();
-        String name = projectJson.path("name").asText();
+        super(projectJson);
 
-        this.setId(id);
-        this.setName(name);
-
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
-            String selfHref = projectJson.path("_links").path("self").path("href").asText();
-            this.setSelf(new Linkable("", selfHref));
-        } else {
-            this.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
-        }
+        initializeSelfLink(projectJson, connectionUrl, String.format("projects/%s", getId()));
     }
 
     /**
