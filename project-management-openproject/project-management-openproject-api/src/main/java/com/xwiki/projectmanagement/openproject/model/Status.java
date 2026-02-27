@@ -33,15 +33,10 @@ public class Status extends ColoredOpenProjectObject
      * Create a Status object from a JsonNode.
      *
      * @param statusNode the JsonNode containing the status information.
-     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
-     *     reference of the status will point to the OpenProject instance, otherwise it will point to the API
-     *     reference.
      */
-    public Status(JsonNode statusNode, String connectionUrl)
+    public Status(JsonNode statusNode)
     {
         super(statusNode);
-
-        initializeSelfLink(statusNode, connectionUrl, String.format("statuses/%s/edit", getId()));
     }
 
     /**

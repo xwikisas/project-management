@@ -118,6 +118,10 @@ public class HandleWorkItems extends XWikiResource
 
     private static final String TEXT = "text";
 
+    private static final String REQUIRED = "required";
+
+    private static final String NAME = "name";
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -178,8 +182,8 @@ public class HandleWorkItems extends XWikiResource
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
-    @Path("/form")
-    public Response getFormForCreatingWorkPackage(@PathParam("wikiName") String wiki,
+    @Path("/create")
+    public Response createWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
@@ -230,29 +234,94 @@ public class HandleWorkItems extends XWikiResource
 
         List<Type> types = new ArrayList<>();
         for (JsonNode typeNode : schemaNode.path(TYPE).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            types.add(new Type(typeNode, null));
+            types.add(new Type(typeNode));
         }
 
         List<Status> statuses = new ArrayList<>();
         for (JsonNode statusNode : schemaNode.path(STATUS).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            statuses.add(new Status(statusNode, null));
+            statuses.add(new Status(statusNode));
         }
 
         List<Priority> priorities = new ArrayList<>();
         for (JsonNode priorityNode : schemaNode.path(PRIORITY).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            priorities.add(new Priority(priorityNode, null));
+            priorities.add(new Priority(priorityNode));
         }
 
-        optionsResponse.put(SUBJECT, createInputOptions(true, TEXT, SUBJECT_LABEL, null));
-        optionsResponse.put(DESCRIPTION, createInputOptions(false, TEXT, DESCRIPTION_LABEL, null));
-        optionsResponse.put(TYPE, createInputOptions(false, SELECT, TYPE_LABEL, types));
-        optionsResponse.put(PRIORITY, createInputOptions(false, SELECT, PRIORITY_LABEL, priorities));
-        optionsResponse.put(STATUS, createInputOptions(false, SELECT, STATUS_LABEL, statuses));
+        optionsResponse.put(SUBJECT,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, SUBJECT),
+                TEXT,
+                getLabelOptionForField(schemaNode, SUBJECT),
+                null
+            )
+        );
+        optionsResponse.put(
+            DESCRIPTION,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, DESCRIPTION),
+                TEXT,
+                getLabelOptionForField(schemaNode, DESCRIPTION),
+                null
+            )
+        );
+        optionsResponse.put(
+            TYPE,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, TYPE),
+                SELECT,
+                getLabelOptionForField(schemaNode, TYPE),
+                types
+            )
+        );
+        optionsResponse.put(
+            PRIORITY,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, PRIORITY),
+                SELECT,
+                getLabelOptionForField(schemaNode, PRIORITY),
+                priorities
+            )
+        );
+        optionsResponse.put(
+            STATUS,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, STATUS),
+                SELECT,
+                getLabelOptionForField(schemaNode, STATUS),
+                statuses
+            )
+        );
         setAssigneeOptions(schemaNode, apiClient, optionsResponse);
-        optionsResponse.put(START_DATE, createInputOptions(false, DATE, START_DATE_LABEL, null));
-        optionsResponse.put(DUE_DATE, createInputOptions(false, DATE, DUE_DATE_LABEL, null));
+        optionsResponse.put(
+            START_DATE,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, START_DATE),
+                DATE,
+                getLabelOptionForField(schemaNode, START_DATE),
+                null
+            )
+        );
+        optionsResponse.put(
+            DUE_DATE,
+            createInputOptions(
+                getRequiredOptionForField(schemaNode, DUE_DATE),
+                DATE,
+                getLabelOptionForField(schemaNode, DUE_DATE),
+                null
+            )
+        );
 
         return optionsResponse;
+    }
+
+    private boolean getRequiredOptionForField(JsonNode schemaNode, String fieldName)
+    {
+        return schemaNode.path(fieldName).path(REQUIRED).booleanValue();
+    }
+
+    private String getLabelOptionForField(JsonNode schemaNode, String fieldName)
+    {
+        return schemaNode.path(fieldName).path(NAME).asText();
     }
 
     private void setAssigneeOptions(JsonNode schemaNode, OpenProjectApiClient apiClient,
@@ -272,7 +341,15 @@ public class HandleWorkItems extends XWikiResource
                 assignees = new ArrayList<>();
             }
 
-            optionsResponse.put(ASSIGNEE, createInputOptions(false, SELECT, ASSIGNEE_LABEL, assignees));
+            optionsResponse.put(
+                ASSIGNEE,
+                createInputOptions(
+                    getRequiredOptionForField(schemaNode, ASSIGNEE),
+                    SELECT,
+                    getLabelOptionForField(schemaNode, ASSIGNEE),
+                    assignees
+                )
+            );
         } catch (ProjectManagementException e) {
             throw new RuntimeException(e);
         }
@@ -282,7 +359,7 @@ public class HandleWorkItems extends XWikiResource
         List<? extends BaseOpenProjectObject> allowedValues)
     {
         Map<String, Object> fieldOptions = new HashMap<>();
-        fieldOptions.put("required", required);
+        fieldOptions.put(REQUIRED, required);
         fieldOptions.put(TYPE, type);
         fieldOptions.put("label", label);
         fieldOptions.put(ALLOWED_VALUES, allowedValues);

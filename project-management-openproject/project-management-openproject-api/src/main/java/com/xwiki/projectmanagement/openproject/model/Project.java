@@ -33,15 +33,10 @@ public class Project extends BaseOpenProjectObject
      * Create a Project object from a JsonNode.
      *
      * @param projectJson the JsonNode containing the project information.
-     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
-     *     reference of the project will point to the OpenProject instance, otherwise it will point to the API
-     *     reference.
      */
-    public Project(JsonNode projectJson, String connectionUrl)
+    public Project(JsonNode projectJson)
     {
         super(projectJson);
-
-        initializeSelfLink(projectJson, connectionUrl, String.format("projects/%s", getId()));
     }
 
     /**

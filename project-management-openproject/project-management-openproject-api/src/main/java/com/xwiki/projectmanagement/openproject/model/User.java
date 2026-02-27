@@ -33,14 +33,10 @@ public class User extends BaseOpenProjectObject
      * Create a User object from a JsonNode.
      *
      * @param userJson the JsonNode containing the user information.
-     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
-     *     reference of the user will point to the OpenProject instance, otherwise it will point to the API reference.
      */
-    public User(JsonNode userJson, String connectionUrl)
+    public User(JsonNode userJson)
     {
         super(userJson);
-
-        initializeSelfLink(userJson, connectionUrl, String.format("users/%s", getId()));
     }
 
     /**

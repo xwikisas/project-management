@@ -65,6 +65,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     {
         this.setId(jsonNode.path(KEY_ID).asInt());
         this.setName(jsonNode.path(KEY_NAME).asText());
+        this.setSelf(new Linkable("", jsonNode.path("_links").path(SELF).path("href").asText()));
     }
 
     /**
@@ -136,13 +137,15 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
         this.put(key, value);
     }
 
-    protected void initializeSelfLink(JsonNode node, String connectionUrl, String resourcePath)
+    /**
+     * Initializes the self link of the object from a connection URL and a resource path.
+     *
+     * @param connectionUrl the connection URL to the Open Project instance.
+     * @param resourcePath the resource path of the resource.
+     * @since 1.1
+     */
+    public void initializeSelfWithPath(String connectionUrl, String resourcePath)
     {
-        if (connectionUrl == null || connectionUrl.isEmpty()) {
-            String selfHref = node.path("_links").path(SELF).path("href").asText();
-            this.setSelf(new Linkable("", selfHref));
-        } else {
-            this.setSelf(new Linkable("", String.format("%s/%s", connectionUrl, resourcePath)));
-        }
+        this.setSelf(new Linkable("", String.format("%s%s", connectionUrl, resourcePath)));
     }
 }

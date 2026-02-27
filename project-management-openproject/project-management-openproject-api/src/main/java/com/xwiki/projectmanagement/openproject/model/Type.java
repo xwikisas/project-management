@@ -33,14 +33,10 @@ public class Type extends ColoredOpenProjectObject
      * Create a Type object from a JsonNode.
      *
      * @param typeNode the JsonNode containing the type information.
-     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
-     *     reference of the type will point to the OpenProject instance, otherwise it will point to the API reference.
      */
-    public Type(JsonNode typeNode, String connectionUrl)
+    public Type(JsonNode typeNode)
     {
         super(typeNode);
-
-        initializeSelfLink(typeNode, connectionUrl, String.format("types/%s/edit/settings", getId()));
     }
 
     /**

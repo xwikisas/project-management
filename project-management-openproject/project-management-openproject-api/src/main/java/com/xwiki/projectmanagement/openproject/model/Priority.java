@@ -33,15 +33,10 @@ public class Priority extends ColoredOpenProjectObject
      * Create a Priority object from a JsonNode.
      *
      * @param priorityNode the JsonNode containing the priority information.
-     * @param connectionUrl the connection URL of the OpenProject instance. If this parameter is set up, the
-     *     reference of the priority will point to the OpenProject instance, otherwise it will point to the API
-     *     reference.
      */
-    public Priority(JsonNode priorityNode, String connectionUrl)
+    public Priority(JsonNode priorityNode)
     {
         super(priorityNode);
-
-        initializeSelfLink(priorityNode, connectionUrl, String.format("priorities/%s/edit", getId()));
     }
 
     /**
