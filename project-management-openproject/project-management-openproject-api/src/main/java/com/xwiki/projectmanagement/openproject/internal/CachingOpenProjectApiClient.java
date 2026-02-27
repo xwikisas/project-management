@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal;
 
 import org.xwiki.cache.Cache;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -115,6 +116,19 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey(String.format("availableProjects/%s", url), offset, pageSize, filters, "");
+        PaginatedResult<Project> result = (PaginatedResult<Project>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getAvailableProjects(url, offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
     public PaginatedResult<Type> getTypes() throws ProjectManagementException
     {
         String cacheKey = getCacheKey("types", 1, Integer.MAX_VALUE, "", "");
@@ -155,6 +169,31 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     {
         // We can't really cache this.
         return client.getUserAvatar(userId);
+    }
+
+    @Override
+    public JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException
+    {
+        return client.getWorkPackagesFormResponse(jsonBody);
+    }
+
+    @Override
+    public PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey(String.format("availableUsers/%s", url), offset, pageSize, filters, "");
+        PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getAvailableUsers(url, offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        return client.createWorkPackage(url, jsonBody);
     }
 
     private String getCacheKey(String entity, int offset, int pageSize, String filters, String sortBy)

@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Describes the project object of a work package.
  *
@@ -27,4 +29,20 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Project extends BaseOpenProjectObject
 {
+    /**
+     * Create a Project object from a JsonNode.
+     *
+     * @param projectJson the JsonNode containing the project information.
+     */
+    public Project(JsonNode projectJson)
+    {
+        super(projectJson);
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Project()
+    {
+    }
 }

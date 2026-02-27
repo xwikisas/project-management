@@ -1,0 +1,25 @@
+{
+  "_type": "Form",
+  "_embedded": {
+    "payload": {
+      "subject": "",
+      "description": {
+        "raw": "this is the description for this wp"
+      },
+      "startDate": "2025-02-05",
+      "dueDate": "2025-02-10",
+      "estimatedTime": null,
+      "duration": "P4D",
+      "ignoreNonWorkingDays": false,
+      "percentageDone": null,
+      "storyPoints": null
+    },
+    "validationErrors": {}
+  },
+  "_links": {
+    "commit": {
+      "href": "/api/v3/work_packages",
+      "method": "post"
+    }
+  }
+}
