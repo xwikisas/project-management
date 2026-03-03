@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal;
+package com.xwiki.projectmanagement.internal.chart;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,27 +20,48 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.List;
+
 /**
- * An enum listing the different ways a list of work items can be displayed.
+ * Represents the ChartJS dataset.
  *
  * @version $Id$
  */
-public enum WorkItemsDisplayer
+public class ChartJSDataset
 {
+    private String label;
+
+    private List<Long> data;
+
     /**
-     * Display the work items using a livedata.
+     * @return the label of the dataset.
      */
-    liveData,
+    public String getLabel()
+    {
+        return label;
+    }
+
     /**
-     * Display the work items using a livedata in the card layout.
+     * @param label see {@link #getLabel()}.
      */
-    liveDataCards,
+    public void setLabel(String label)
+    {
+        this.label = label;
+    }
+
     /**
-     * Display a single work item in a page structure.
+     * @return the data of the dataset.
      */
-    workItemsSingle,
+    public List<Long> getData()
+    {
+        return data;
+    }
+
     /**
-     * Display the work items in a chart style.
+     * @param data see {@link #getData()}.
      */
-    workItemsChart;
+    public void setData(List<Long> data)
+    {
+        this.data = data;
+    }
 }
