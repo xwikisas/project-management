@@ -1,0 +1,127 @@
+package com.xwiki.projectmanagement.openproject.internal.rest;
+
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+
+import org.xwiki.component.annotation.Component;
+import org.xwiki.component.phase.Initializable;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.DocumentReferenceResolver;
+import org.xwiki.model.reference.EntityReference;
+import org.xwiki.model.reference.SpaceReference;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.rest.XWikiRestException;
+import org.xwiki.rest.internal.resources.pages.PageResourceImpl;
+import org.xwiki.rest.model.jaxb.Page;
+
+import com.xwiki.projectmanagement.openproject.rest.DocumentIdResource;
+import com.xwiki.urlshortener.URLShortenerManager;
+
+@Component
+@Singleton
+@Named("com.xwiki.projectmanagement.openproject.internal.rest.DefaultDocumentIdResource")
+public class DefaultDocumentIdResource extends PageResourceImpl implements DocumentIdResource, Initializable
+{
+    @Inject
+    private DocumentReferenceResolver<String> resolver;
+
+    @Inject
+    private URLShortenerManager urlShortenerManager;
+
+    @Override
+    public Response getDocument(String wiki, String id, Boolean withPrettyNames,
+        Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
+    {
+        try {
+
+            DocumentReference documentReference = urlShortenerManager.getDocumentReference(wiki, id);
+
+            if (documentReference == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            StringBuilder stringBuilder = new StringBuilder();
+            for (EntityReference entityReference : documentReference.getReversedReferenceChain()) {
+                if (entityReference instanceof SpaceReference) {
+                    if (stringBuilder.length() > 0) {
+                        stringBuilder.append("/spaces/");
+                    }
+                    stringBuilder.append(entityReference.getName());
+                }
+            }
+            Page page = getPage(documentReference.getWikiReference().getName(), stringBuilder.toString(),
+                documentReference.getName(), withPrettyNames, withObjects, withXClass, withAttachments);
+
+            page.setId(id);
+
+            return Response.ok(page).build();
+        } catch (Exception e) {
+            throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public Response createDocument(String wiki, String documentReference, Boolean minorRevision, Page page)
+        throws XWikiRestException
+    {
+        if (documentReference == null || documentReference.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing `docRef` query parameter pointing to the document that needs creation/updating.")
+                .build();
+        }
+        DocumentReference docRef = resolver.resolve(documentReference, new WikiReference(wiki));
+        StringBuilder stringBuilder = new StringBuilder();
+        for (EntityReference entityReference : docRef.getReversedReferenceChain()) {
+            if (entityReference instanceof SpaceReference) {
+                if (stringBuilder.length() > 0) {
+                    stringBuilder.append("/spaces/");
+                }
+                stringBuilder.append(entityReference.getName());
+            }
+        }
+        Response createResponse = putPage(wiki, stringBuilder.toString(), docRef.getName(), minorRevision, page);
+        if (createResponse.getStatus() >= 400) {
+            return createResponse;
+        }
+
+        String idResponse = null;
+
+        try {
+            idResponse = urlShortenerManager.createShortenedURL(docRef);
+        } catch (Exception e) {
+            throw new WebApplicationException(e);
+        }
+
+        if (idResponse == null || idResponse.isEmpty()) {
+            throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+        }
+
+        Page createdPage = (Page) createResponse.getEntity();
+        createdPage.setId(idResponse);
+
+        return Response.status(createResponse.getStatus()).entity(createdPage).build();
+    }
+}

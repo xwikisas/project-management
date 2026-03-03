@@ -11,3 +11,4 @@ com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataCon
 com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener
 com.xwiki.projectmanagement.openproject.internal.rest.connection.HandleConnections
 com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService
+com.xwiki.projectmanagement.openproject.internal.rest.DefaultDocumentIdResource
