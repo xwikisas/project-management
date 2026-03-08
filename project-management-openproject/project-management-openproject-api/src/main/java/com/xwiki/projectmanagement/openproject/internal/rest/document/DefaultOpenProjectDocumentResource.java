@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject.internal.rest;
+package com.xwiki.projectmanagement.openproject.internal.rest.document;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -26,6 +26,7 @@ import javax.inject.Singleton;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.model.reference.DocumentReference;
@@ -37,13 +38,22 @@ import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.resources.pages.PageResourceImpl;
 import org.xwiki.rest.model.jaxb.Page;
 
-import com.xwiki.projectmanagement.openproject.rest.DocumentIdResource;
+import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
 import com.xwiki.urlshortener.URLShortenerManager;
 
+/**
+ * Default implementation of the {@link OpenProjectDocumentResource}. It uses the URLShortener Application to attach
+ * unique ids to the documents. It extends the default implementation of the
+ * {@link org.xwiki.rest.resources.pages.PageResource} to perform the document operations.
+ *
+ * @version $Id$
+ * @since 1.1.0-rc-1
+ */
 @Component
 @Singleton
-@Named("com.xwiki.projectmanagement.openproject.internal.rest.DefaultDocumentIdResource")
-public class DefaultDocumentIdResource extends PageResourceImpl implements DocumentIdResource, Initializable
+@Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectDocumentResource")
+public class DefaultOpenProjectDocumentResource extends PageResourceImpl
+    implements OpenProjectDocumentResource, Initializable
 {
     @Inject
     private DocumentReferenceResolver<String> resolver;
@@ -56,7 +66,9 @@ public class DefaultDocumentIdResource extends PageResourceImpl implements Docum
         Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
     {
         try {
-
+            if (id == null || id.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("Missing page id.").build();
+            }
             DocumentReference documentReference = urlShortenerManager.getDocumentReference(wiki, id);
 
             if (documentReference == null) {
@@ -84,7 +96,7 @@ public class DefaultDocumentIdResource extends PageResourceImpl implements Docum
     }
 
     @Override
-    public Response createDocument(String wiki, String documentReference, Boolean minorRevision, Page page)
+    public Response updateDocument(String wiki, String documentReference, Boolean minorRevision, Page page)
         throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
@@ -112,11 +124,9 @@ public class DefaultDocumentIdResource extends PageResourceImpl implements Docum
         try {
             idResponse = urlShortenerManager.createShortenedURL(docRef);
         } catch (Exception e) {
-            throw new WebApplicationException(e);
-        }
-
-        if (idResponse == null || idResponse.isEmpty()) {
-            throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+            getLogger().error("Failed to initialize the shortened url for document [{}].", documentReference, e);
+            return Response.serverError().entity(String.format("Could not attach a unique id to the page. Cause [%s].",
+                ExceptionUtils.getRootCauseMessage(e))).build();
         }
 
         Page createdPage = (Page) createResponse.getEntity();

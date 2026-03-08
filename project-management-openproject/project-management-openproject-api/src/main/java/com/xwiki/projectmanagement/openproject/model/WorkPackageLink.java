@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject.store;
+package com.xwiki.projectmanagement.openproject.model;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,62 +20,26 @@ package com.xwiki.projectmanagement.openproject.store;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.Arrays;
-
-import org.xwiki.model.reference.LocalDocumentReference;
-
-import com.xpn.xwiki.objects.BaseObject;
-
 /**
- * The base object wrapper that enables the manipulation if Work Package links.
+ * The model of a link to a work package.
  *
  * @version $Id$
  * @since 1.1.0-rc-1
  */
 public class WorkPackageLink
 {
-    /**
-     * The String reference of the class defining the object which contains an OIDC configuration.
-     */
-    public static final String CLASS_FULLNAME = "OpenProject.Code.WorkPackageLink";
+    private String instance;
 
-    /**
-     * The local reference of the configuration class.
-     */
-    public static final LocalDocumentReference CLASS_REFERENCE = new LocalDocumentReference(Arrays.asList(
-        "OpenProject", "Code"), "WorkPackageLink");
+    private String workPackage;
 
-    /**
-     * The name of the project property within the XClass.
-     */
-    public static final String FIELD_PROJECT = "project";
-
-    /**
-     * The name of the work package property within the XClass.
-     */
-    public static final String FIELD_WORK_PACKAGE = "workPackage";
-
-    /**
-     * The name of the instance property within the XClass.
-     */
-    public static final String FIELD_INSTANCE = "instance";
-
-    private final BaseObject xobject;
-
-    /**
-     * @param xobject the xobject that stores the work package link information.
-     */
-    public WorkPackageLink(BaseObject xobject)
-    {
-        this.xobject = xobject;
-    }
+    private String project;
 
     /**
      * @return the id of the OpenProject project that is linked to a xwiki page.
      */
     public String getProject()
     {
-        return this.xobject.getStringValue(FIELD_PROJECT);
+        return project;
     }
 
     /**
@@ -83,7 +47,7 @@ public class WorkPackageLink
      */
     public void setProject(String project)
     {
-        this.xobject.setStringValue(FIELD_PROJECT, project);
+        this.project = project;
     }
 
     /**
@@ -91,7 +55,7 @@ public class WorkPackageLink
      */
     public String getWorkPackage()
     {
-        return this.xobject.getStringValue(FIELD_PROJECT);
+        return workPackage;
     }
 
     /**
@@ -99,7 +63,7 @@ public class WorkPackageLink
      */
     public void setWorkPackage(String workPackage)
     {
-        this.xobject.setStringValue(FIELD_PROJECT, workPackage);
+        this.workPackage = workPackage;
     }
 
     /**
@@ -107,7 +71,7 @@ public class WorkPackageLink
      */
     public String getInstance()
     {
-        return this.xobject.getStringValue(FIELD_WORK_PACKAGE);
+        return instance;
     }
 
     /**
@@ -115,6 +79,6 @@ public class WorkPackageLink
      */
     public void setInstance(String instance)
     {
-        this.xobject.setStringValue(FIELD_INSTANCE, instance);
+        this.instance = instance;
     }
 }

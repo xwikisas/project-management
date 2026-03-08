@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject.rest;
+package com.xwiki.projectmanagement.openproject.rest.document;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -31,15 +31,23 @@ import javax.ws.rs.core.Response;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.model.jaxb.Page;
 
-@Path("/wikis/{wikiName}/openproject/document")
-public interface DocumentIdResource
+/**
+ * Resource for creating and retrieving document based on unique identifiers.
+ *
+ * @version $Id$
+ * @since 1.1.0-rc-1
+ */
+@Path("/wikis/{wikiName}/openproject/documents")
+public interface OpenProjectDocumentResource
 {
     /**
-     * Retrieve the reference of a document given it's unique identifier.
+     * Retrieve the reference of a document given its unique identifier.
      *
      * @param wiki the wiki where the document resides.
      * @param id the unique identifier associated to a xwiki document.
-     * @return the reference of the xwiki document that can be used for the rest api.
+     * @return 200 and the reference of the xwiki document that can be used for the rest api. 404 if the id was not
+     *     found.
+     * @throws XWikiRestException if something went wrong during the retrieval of the page.
      */
     @GET
     @Path("/{id}")
@@ -51,8 +59,17 @@ public interface DocumentIdResource
         @QueryParam("class") @DefaultValue("false") Boolean withClass,
         @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments) throws XWikiRestException;
 
+    /**
+     * @param wiki the wiki where the document resides or will be created.
+     * @param documentReference the reference of the document that will be updated/created.
+     * @param minorRevision whether the update will create a minor version or a major version.
+     * @param page the model of the page that will be used to update/create the document.
+     * @return 201: If the page was created. 202: If the page was updated. 304: If the page was not modified. 401: If
+     *     the user is not authorized.
+     * @throws XWikiRestException if something went wrong during the update/creation of the page.
+     */
     @PUT
-    Response createDocument(
+    Response updateDocument(
         @PathParam("wikiName") String wiki,
         @QueryParam("docRef") String documentReference,
         @QueryParam("minorRevision") Boolean minorRevision,
