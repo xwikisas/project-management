@@ -45,6 +45,11 @@ public interface OpenProjectDocumentResource
      *
      * @param wiki the wiki where the document resides.
      * @param id the unique identifier associated to a xwiki document.
+     * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
+     *     users.
+     * @param withObjects whether the objects attached to the page should also be returned.
+     * @param withClass not sure, actually.
+     * @param withAttachments whether the attachments of the page should also be listed.
      * @return 200 and the reference of the xwiki document that can be used for the rest api. 404 if the id was not
      *     found.
      * @throws XWikiRestException if something went wrong during the retrieval of the page.
@@ -60,6 +65,9 @@ public interface OpenProjectDocumentResource
         @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments) throws XWikiRestException;
 
     /**
+     * Updates or creates a xwiki document based on an unique identifier. Can also be used to attach an unique
+     * identifier to existing pages.
+     *
      * @param wiki the wiki where the document resides or will be created.
      * @param documentReference the reference of the document that will be updated/created.
      * @param minorRevision whether the update will create a minor version or a major version.

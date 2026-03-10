@@ -34,6 +34,8 @@ public class WorkPackageLink
 
     private String project;
 
+    private Boolean primary;
+
     /**
      * @return the id of the OpenProject project that is linked to a xwiki page.
      */
@@ -80,5 +82,21 @@ public class WorkPackageLink
     public void setInstance(String instance)
     {
         this.instance = instance;
+    }
+
+    /**
+     * @return whether this link is marked as the primary, most important link of the page.
+     */
+    public Boolean isPrimary()
+    {
+        return this.primary;
+    }
+
+    /**
+     * @param primary see {@link #isPrimary()}.
+     */
+    public void setPrimary(Boolean primary)
+    {
+        this.primary = primary;
     }
 }

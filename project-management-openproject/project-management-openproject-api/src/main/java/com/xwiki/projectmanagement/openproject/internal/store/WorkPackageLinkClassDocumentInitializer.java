@@ -43,9 +43,15 @@ import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
 @Singleton
 public class WorkPackageLinkClassDocumentInitializer extends AbstractMandatoryClassInitializer
 {
+    /**
+     * The reference identifying the created XClass.
+     */
     public static final LocalDocumentReference CLASS_REFERENCE = new LocalDocumentReference(Arrays.asList(
         "OpenProject", "Code"), "WorkPackageLink");
 
+    /**
+     * Default constructor.
+     */
     public WorkPackageLinkClassDocumentInitializer()
     {
         super(CLASS_REFERENCE, "Open Project Page Link Class");
@@ -57,5 +63,6 @@ public class WorkPackageLinkClassDocumentInitializer extends AbstractMandatoryCl
         xclass.addTextField(WorkPackageLink.FIELD_PROJECT, "OpenProject Project ID", 20);
         xclass.addTextField(WorkPackageLink.FIELD_WORK_PACKAGE, "OpenProject Work Package ID", 20);
         xclass.addTextField(WorkPackageLink.FIELD_INSTANCE, "Open Project Instance Name", 40);
+        xclass.addBooleanField(WorkPackageLink.FIELD_PRIMARY, "Is Primary Link?");
     }
 }

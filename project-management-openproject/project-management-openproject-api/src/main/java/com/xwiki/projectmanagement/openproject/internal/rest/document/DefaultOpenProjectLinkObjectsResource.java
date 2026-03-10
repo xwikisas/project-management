@@ -97,27 +97,9 @@ public class DefaultOpenProjectLinkObjectsResource extends ObjectsResourceImpl i
                 }
             }
 
-            {
-                maybeAddInstance(link, inferInstance);
-            }
-            Object object = new Object();
-            object
-                .withClassName(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.CLASS_FULLNAME);
-            List<Property> properties = new ArrayList<>();
-            if (!StringUtils.isEmpty(link.getProject())) {
-                createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_PROJECT,
-                    link.getProject(), properties);
-            }
-            if (!StringUtils.isEmpty(link.getInstance())) {
-                createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_INSTANCE,
-                    link.getInstance(), properties);
-            }
-            if (!StringUtils.isEmpty(link.getWorkPackage())) {
-                createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_WORK_PACKAGE,
-                    link.getWorkPackage(),
-                    properties);
-            }
-            object.withProperties(properties);
+            maybeAddInstance(link, inferInstance);
+
+            Object object = linkToObject(link);
 
             return addObject(wikiName, stringBuilder.toString(), documentReference.getName(), minorRevision, object);
         } catch (WebApplicationException e) {
@@ -127,11 +109,39 @@ public class DefaultOpenProjectLinkObjectsResource extends ObjectsResourceImpl i
         }
     }
 
-    private static void createProperty(String fieldProject, String link, List<Property> properties)
+    private static Object linkToObject(WorkPackageLink link)
+    {
+        Object object = new Object();
+        object
+            .withClassName(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.CLASS_FULLNAME);
+        List<Property> properties = new ArrayList<>();
+        if (!StringUtils.isEmpty(link.getProject())) {
+            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_PROJECT,
+                link.getProject(), properties);
+        }
+        if (!StringUtils.isEmpty(link.getInstance())) {
+            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_INSTANCE,
+                link.getInstance(), properties);
+        }
+        if (!StringUtils.isEmpty(link.getWorkPackage())) {
+            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_WORK_PACKAGE,
+                link.getWorkPackage(),
+                properties);
+        }
+        if (link.isPrimary() != null) {
+            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_PRIMARY,
+                link.isPrimary(),
+                properties);
+        }
+        object.withProperties(properties);
+        return object;
+    }
+
+    private static void createProperty(String fieldProject, java.lang.Object link, List<Property> properties)
     {
         Property projectProperty = new Property();
         projectProperty.setName(fieldProject);
-        projectProperty.setValue(link);
+        projectProperty.setValue(link.toString());
         properties.add(projectProperty);
     }
 

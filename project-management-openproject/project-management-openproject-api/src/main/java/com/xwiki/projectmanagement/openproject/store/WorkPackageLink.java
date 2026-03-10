@@ -60,6 +60,11 @@ public class WorkPackageLink
      */
     public static final String FIELD_INSTANCE = "instance";
 
+    /**
+     * The name of the instance property within the XClass.
+     */
+    public static final String FIELD_PRIMARY = "primary";
+
     private final BaseObject xobject;
 
     /**
@@ -116,5 +121,21 @@ public class WorkPackageLink
     public void setInstance(String instance)
     {
         this.xobject.setStringValue(FIELD_INSTANCE, instance);
+    }
+
+    /**
+     * @return denotes whether this link is the one with the most significance within the page or not.
+     */
+    public boolean isPrimary()
+    {
+        return this.xobject.getIntValue(FIELD_PRIMARY, 0) > 0;
+    }
+
+    /**
+     * @param primary see {@link #isPrimary()}}.
+     */
+    public void setPrimary(boolean primary)
+    {
+        this.xobject.setIntValue(FIELD_INSTANCE, primary ? 1 : 0);
     }
 }

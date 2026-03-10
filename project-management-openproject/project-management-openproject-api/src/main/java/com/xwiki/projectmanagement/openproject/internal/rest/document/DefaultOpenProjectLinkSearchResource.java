@@ -31,6 +31,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.contrib.oidc.OIDCConsent;
 import org.xwiki.contrib.oidc.provider.internal.store.OIDCStore;
 import org.xwiki.contrib.oidc.provider.internal.store.XWikiBearerAccessToken;
+import org.xwiki.query.Query;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.resources.wikis.WikiSearchQueryResourceImpl;
 import org.xwiki.rest.model.jaxb.SearchResults;
@@ -44,7 +45,7 @@ import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
  * Default implementation of the {@link OpenProjectLinkSearchResource}. It extends the default implementation of the
  * {@link org.xwiki.rest.resources.wikis.WikiSearchQueryResource} and simply prepares the parameters for its methods.
  *
- * @version $Id
+ * @version $Id$
  * @since 1.1.0-rc-1
  */
 @Component
@@ -68,7 +69,7 @@ public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourc
             id = Integer.parseInt(projectId);
         } catch (NumberFormatException e) {
             throw new WebApplicationException(
-                Response.status(Response.Status.BAD_REQUEST).entity("WorkPackage id should be an integer.").build());
+                Response.status(Response.Status.BAD_REQUEST).entity("Project id should be an integer.").build());
         }
         StringBuilder statement = new StringBuilder();
         statement.append(
@@ -76,7 +77,7 @@ public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourc
 
         maybeAddInstanceFilter(statement, filterInstance);
 
-        return super.search(wikiName, statement.toString(), "xwql", number, start, true, orderField, order,
+        return super.search(wikiName, statement.toString(), Query.XWQL, number, start, true, orderField, order,
             withPrettyNames, WorkPackageLink.CLASS_FULLNAME);
     }
 
@@ -98,7 +99,7 @@ public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourc
 
         maybeAddInstanceFilter(statement, filterInstance);
 
-        return super.search(wikiName, statement.toString(), "xwql", number, start, true, orderField, order,
+        return super.search(wikiName, statement.toString(), Query.XWQL, number, start, true, orderField, order,
             withPrettyNames, WorkPackageLink.CLASS_FULLNAME);
     }
 

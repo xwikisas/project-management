@@ -75,17 +75,9 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            StringBuilder stringBuilder = new StringBuilder();
-            for (EntityReference entityReference : documentReference.getReversedReferenceChain()) {
-                if (entityReference instanceof SpaceReference) {
-                    if (stringBuilder.length() > 0) {
-                        stringBuilder.append("/spaces/");
-                    }
-                    stringBuilder.append(entityReference.getName());
-                }
-            }
-            Page page = getPage(documentReference.getWikiReference().getName(), stringBuilder.toString(),
-                documentReference.getName(), withPrettyNames, withObjects, withXClass, withAttachments);
+            String spaces = getRestSpaces(documentReference);
+            Page page = getPage(documentReference.getWikiReference().getName(), spaces, documentReference.getName(),
+                withPrettyNames, withObjects, withXClass, withAttachments);
 
             page.setId(id);
 
@@ -105,16 +97,8 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
                 .build();
         }
         DocumentReference docRef = resolver.resolve(documentReference, new WikiReference(wiki));
-        StringBuilder stringBuilder = new StringBuilder();
-        for (EntityReference entityReference : docRef.getReversedReferenceChain()) {
-            if (entityReference instanceof SpaceReference) {
-                if (stringBuilder.length() > 0) {
-                    stringBuilder.append("/spaces/");
-                }
-                stringBuilder.append(entityReference.getName());
-            }
-        }
-        Response createResponse = putPage(wiki, stringBuilder.toString(), docRef.getName(), minorRevision, page);
+        String spaces = getRestSpaces(docRef);
+        Response createResponse = putPage(wiki, spaces, docRef.getName(), minorRevision, page);
         if (createResponse.getStatus() >= 400) {
             return createResponse;
         }
@@ -133,5 +117,19 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
         createdPage.setId(idResponse);
 
         return Response.status(createResponse.getStatus()).entity(createdPage).build();
+    }
+
+    private static String getRestSpaces(DocumentReference docRef)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (EntityReference entityReference : docRef.getReversedReferenceChain()) {
+            if (entityReference instanceof SpaceReference) {
+                if (stringBuilder.length() > 0) {
+                    stringBuilder.append("/spaces/");
+                }
+                stringBuilder.append(entityReference.getName());
+            }
+        }
+        return stringBuilder.toString();
     }
 }

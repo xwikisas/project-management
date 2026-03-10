@@ -136,10 +136,12 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
                 .map(page ->
                 {
                     try {
-                        String id = urlShortenerManager.createShortenedURL(page);
                         Page restPage = factory.toRestPage(uriInfo.getBaseUri(), uriInfo.getAbsolutePath(),
                             new Document(xWiki.getDocument(page, context), context), false, false, false, false, false);
-                        restPage.setId(id);
+                        if (withId) {
+                            String id = urlShortenerManager.createShortenedURL(page);
+                            restPage.setId(id);
+                        }
                         return restPage;
                     } catch (XWikiException | URLShortenerException e) {
                         throw new RuntimeException(e);
