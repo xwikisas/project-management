@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-openproject</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.0-alpha-3-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-openproject-ui</artifactId>
@@ -33,7 +33,8 @@
   <packaging>xar</packaging>
 
   <name>Project Management - Open Project - UI</name>
-  <description>Connect to your OpenProject instance and display WorkPackages in XWiki as lists, cards or single items.</description>
+  <description>Connect to your OpenProject instance and display WorkPackages in XWiki as lists, cards or single items.
+  </description>
   <properties>
     <xwiki.extension.name>Open Project Integration (Pro)</xwiki.extension.name>
   </properties>
@@ -117,6 +118,15 @@
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-icon-script</artifactId>
       <version>${platform.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <!-- We only need the UI of the urlshortener so the xwiki class definition will be brought with it. We normally
+          need it in the api module, but api modules can't depend on ui modules. -->
+    <dependency>
+      <groupId>com.xwiki.urlshortener</groupId>
+      <artifactId>application-urlshortener-ui</artifactId>
+      <version>${urlshortener.version}</version>
+      <type>xar</type>
       <scope>runtime</scope>
     </dependency>
   </dependencies>
