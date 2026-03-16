@@ -76,41 +76,27 @@ public class HandleWorkItems extends XWikiResource
 
     private static final String PROJECT = "project";
 
-    private static final String PROJECT_LABEL = "Project";
-
     private static final String SUBJECT = "subject";
-
-    private static final String SUBJECT_LABEL = "Subject";
 
     private static final String TYPE = "type";
 
-    private static final String TYPE_LABEL = "Type";
-
     private static final String PRIORITY = "priority";
-
-    private static final String PRIORITY_LABEL = "Priority";
 
     private static final String ASSIGNEE = "assignee";
 
-    private static final String ASSIGNEE_LABEL = "Assignee";
-
     private static final String DESCRIPTION = "description";
-
-    private static final String DESCRIPTION_LABEL = "Description";
 
     private static final String STATUS = "status";
 
-    private static final String STATUS_LABEL = "Status";
-
     private static final String START_DATE = "startDate";
-
-    private static final String START_DATE_LABEL = "Start Date";
 
     private static final String DUE_DATE = "dueDate";
 
-    private static final String DUE_DATE_LABEL = "Due Date";
-
     private static final String ALLOWED_VALUES = "allowedValues";
+
+    private static final String IS_DEFAULT = "isDefault";
+
+    private static final String DEFAULT_VALUE = "defaultValue";
 
     private static final String SELECT = "select";
 
@@ -206,8 +192,9 @@ public class HandleWorkItems extends XWikiResource
             String commitLink = response.path(LINKS).path("commit").path(HREF).asText();
             JsonNode payload = response.path(EMBEDDED).path("payload");
 
-            apiClient.createWorkPackage(commitLink, objectMapper.writeValueAsString(payload));
-            return Response.ok(response).build();
+            JsonNode createWorkPackageResponse = apiClient.createWorkPackage(commitLink,
+                objectMapper.writeValueAsString(payload));
+            return Response.ok(createWorkPackageResponse).build();
         } catch (JsonProcessingException | ProjectManagementException e) {
             throw new ProjectManagementException("The Work Package creation failed", e);
         }
@@ -233,18 +220,33 @@ public class HandleWorkItems extends XWikiResource
         Map<String, Object> optionsResponse = new LinkedHashMap<>();
 
         List<Type> types = new ArrayList<>();
+        Type defaultType = null;
         for (JsonNode typeNode : schemaNode.path(TYPE).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            types.add(new Type(typeNode));
+            Type type = new Type(typeNode);
+            types.add(type);
+            if (defaultType == null && typeNode.path(IS_DEFAULT).booleanValue()) {
+                defaultType = type;
+            }
         }
 
         List<Status> statuses = new ArrayList<>();
+        Status defaultStatus = null;
         for (JsonNode statusNode : schemaNode.path(STATUS).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            statuses.add(new Status(statusNode));
+            Status status = new Status(statusNode);
+            statuses.add(status);
+            if (defaultStatus == null && statusNode.path(IS_DEFAULT).booleanValue()) {
+                defaultStatus = status;
+            }
         }
 
         List<Priority> priorities = new ArrayList<>();
+        Priority defaultPriority = null;
         for (JsonNode priorityNode : schemaNode.path(PRIORITY).path(EMBEDDED).path(ALLOWED_VALUES)) {
-            priorities.add(new Priority(priorityNode));
+            Priority priority = new Priority(priorityNode);
+            priorities.add(priority);
+            if (defaultPriority == null && priorityNode.path(IS_DEFAULT).booleanValue()) {
+                defaultPriority = priority;
+            }
         }
 
         optionsResponse.put(SUBJECT,
@@ -252,6 +254,7 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, SUBJECT),
                 TEXT,
                 getLabelOptionForField(schemaNode, SUBJECT),
+                null,
                 null
             )
         );
@@ -261,6 +264,7 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, DESCRIPTION),
                 TEXT,
                 getLabelOptionForField(schemaNode, DESCRIPTION),
+                null,
                 null
             )
         );
@@ -270,7 +274,8 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, TYPE),
                 SELECT,
                 getLabelOptionForField(schemaNode, TYPE),
-                types
+                types,
+                defaultType
             )
         );
         optionsResponse.put(
@@ -279,7 +284,8 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, PRIORITY),
                 SELECT,
                 getLabelOptionForField(schemaNode, PRIORITY),
-                priorities
+                priorities,
+                defaultPriority
             )
         );
         optionsResponse.put(
@@ -288,7 +294,8 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, STATUS),
                 SELECT,
                 getLabelOptionForField(schemaNode, STATUS),
-                statuses
+                statuses,
+                defaultStatus
             )
         );
         setAssigneeOptions(schemaNode, apiClient, optionsResponse);
@@ -298,6 +305,7 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, START_DATE),
                 DATE,
                 getLabelOptionForField(schemaNode, START_DATE),
+                null,
                 null
             )
         );
@@ -307,6 +315,7 @@ public class HandleWorkItems extends XWikiResource
                 getRequiredOptionForField(schemaNode, DUE_DATE),
                 DATE,
                 getLabelOptionForField(schemaNode, DUE_DATE),
+                null,
                 null
             )
         );
@@ -347,7 +356,8 @@ public class HandleWorkItems extends XWikiResource
                     getRequiredOptionForField(schemaNode, ASSIGNEE),
                     SELECT,
                     getLabelOptionForField(schemaNode, ASSIGNEE),
-                    assignees
+                    assignees,
+                    null
                 )
             );
         } catch (ProjectManagementException e) {
@@ -356,13 +366,14 @@ public class HandleWorkItems extends XWikiResource
     }
 
     private Map<String, Object> createInputOptions(boolean required, String type, String label,
-        List<? extends BaseOpenProjectObject> allowedValues)
+        List<? extends BaseOpenProjectObject> allowedValues, BaseOpenProjectObject defaultValue)
     {
         Map<String, Object> fieldOptions = new HashMap<>();
         fieldOptions.put(REQUIRED, required);
         fieldOptions.put(TYPE, type);
         fieldOptions.put("label", label);
         fieldOptions.put(ALLOWED_VALUES, allowedValues);
+        fieldOptions.put(DEFAULT_VALUE, defaultValue);
         return fieldOptions;
     }
 

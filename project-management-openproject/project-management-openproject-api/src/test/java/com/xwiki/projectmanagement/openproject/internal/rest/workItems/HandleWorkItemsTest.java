@@ -81,6 +81,7 @@ public class HandleWorkItemsTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(this.openProjectApiClient);
     }
+    // TODO: add test for default values
 
     @Test
     public void getAvailableProjectsReturnsConflictWhenTokenIsNullTest() throws ProjectManagementException
