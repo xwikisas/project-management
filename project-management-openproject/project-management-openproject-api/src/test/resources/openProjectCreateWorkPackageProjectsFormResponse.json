@@ -1,0 +1,14 @@
+{
+  "_type": "Form",
+  "_embedded": {
+    "schema": {
+      "project": {
+        "_links": {
+          "allowedValues": {
+            "href": "/api/v3/work_packages/available_projects"
+          }
+        }
+      }
+    }
+  }
+}

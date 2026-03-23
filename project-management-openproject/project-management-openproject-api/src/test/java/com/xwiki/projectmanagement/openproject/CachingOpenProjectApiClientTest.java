@@ -27,6 +27,9 @@ import org.mockito.MockitoAnnotations;
 import org.xwiki.cache.Cache;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
@@ -39,6 +42,7 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -65,6 +69,10 @@ public class CachingOpenProjectApiClientTest
     private static final String SORT_BY_STRING = "generatedSortByString";
 
     private static final String CLIENT_ID = "clientId";
+
+    private static final String URL = "url";
+
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     public void setUp()
@@ -214,6 +222,35 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
+    public void availableUsersCachingTest() throws ProjectManagementException
+    {
+        PaginatedResult<User> expectedResult = new PaginatedResult<>(Collections.emptyList(),
+            OFFSET, PAGE_SIZE, 0);
+
+        when(openProjectApiClient.getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING)).thenReturn(expectedResult);
+
+        when((PaginatedResult<User>) cache.get(anyString())).thenReturn(expectedResult);
+
+        PaginatedResult<User> result = cachingOpenProjectApiClient.getAvailableUsers(URL, OFFSET, PAGE_SIZE,
+            FILTERS_STRING);
+
+        assertEquals(expectedResult, result);
+
+        verify(openProjectApiClient, times(0))
+            .getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        when(cache.get(anyString())).thenReturn(null);
+
+        result = cachingOpenProjectApiClient.getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(expectedResult, result);
+        verify(cache).set(anyString(), eq(result));
+
+        verify(openProjectApiClient, times(1))
+            .getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+    }
+
+    @Test
     public void projectsCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Project> expectedResult = new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
@@ -238,6 +275,55 @@ public class CachingOpenProjectApiClientTest
 
         verify(openProjectApiClient, times(1))
             .getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
+    }
+
+    @Test
+    public void availableProjectsCachingTest() throws ProjectManagementException
+    {
+        PaginatedResult<Project> expectedResult = new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
+
+        when(openProjectApiClient.getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING)).thenReturn(
+            expectedResult);
+
+        when((PaginatedResult<Project>) cache.get(anyString())).thenReturn(expectedResult);
+
+        PaginatedResult<Project> result = cachingOpenProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(expectedResult, result);
+
+        verify(openProjectApiClient, times(0))
+            .getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        when(cache.get(anyString())).thenReturn(null);
+
+        result = cachingOpenProjectApiClient.getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(expectedResult, result);
+        verify(cache).set(anyString(), eq(result));
+
+        verify(openProjectApiClient, times(1))
+            .getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
+    }
+
+    @Test
+    public void createWorkPackageCachingTest() throws ProjectManagementException, JsonProcessingException
+    {
+        String jsonBody = "{}";
+        JsonNode expectedNode = mapper.readTree("{}");
+
+        when(openProjectApiClient.createWorkPackage(URL, jsonBody))
+            .thenReturn(expectedNode);
+
+        JsonNode result = cachingOpenProjectApiClient
+            .createWorkPackage(URL, jsonBody);
+
+        assertEquals(expectedNode, result);
+
+        verify(openProjectApiClient, times(1))
+            .createWorkPackage(URL, jsonBody);
+
+        verify(cache, times(0)).get(anyString());
+        verify(cache, times(0)).set(anyString(), any());
     }
 
     @Test
