@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>1.1.0-alpha-3-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-macro</artifactId>
@@ -46,6 +46,11 @@
       <groupId>org.xwiki.commons</groupId>
       <artifactId>xwiki-commons-properties</artifactId>
       <version>${commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.rendering</groupId>
+      <artifactId>xwiki-rendering-api</artifactId>
+      <version>${rendering.version}</version>
     </dependency>
     <!--  Livedata is a major dependency for this app since we display the work packages mainly in livedata.  -->
     <dependency>
