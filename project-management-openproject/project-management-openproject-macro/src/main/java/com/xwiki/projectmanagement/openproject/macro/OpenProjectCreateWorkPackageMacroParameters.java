@@ -1,0 +1,78 @@
+package com.xwiki.projectmanagement.openproject.macro;
+
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+import org.xwiki.properties.annotation.PropertyDisplayType;
+
+import com.xwiki.projectmanagement.openproject.OpenProjectCreateWorkPackage;
+
+/**
+ * Open Project Create Work Package macro parameters.
+ *
+ * @version $Id$
+ */
+public class OpenProjectCreateWorkPackageMacroParameters
+{
+    private String opRequest;
+
+    private boolean isCreated;
+
+    /**
+     * Default constructor.
+     */
+    public OpenProjectCreateWorkPackageMacroParameters()
+    {
+        this.isCreated = false;
+    }
+
+    /**
+     * @return the request for creating the work package.
+     */
+    public String getOPRequest()
+    {
+        return this.opRequest;
+    }
+
+    /**
+     * @param request see {@link #getOPRequest()}.
+     */
+    @PropertyDisplayType(OpenProjectCreateWorkPackage.class)
+    public void setOPRequest(String request)
+    {
+        this.opRequest = request;
+    }
+
+    /**
+     * @return whether the work package was created or not.
+     */
+    public boolean getIsCreated()
+    {
+        return this.isCreated;
+    }
+
+    /**
+     * @param isCreated see {@link #getIsCreated()}.
+     */
+    public void setIsCreated(boolean isCreated)
+    {
+        this.isCreated = isCreated;
+    }
+}

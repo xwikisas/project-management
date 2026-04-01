@@ -274,17 +274,17 @@
     }
 
     function resetCreateMultipleWorkPackagesForm() {
-	    $("#work-packages-container").empty();
-	    $("#multiple-work-packages-container").addClass("hidden");
-	    $("#select-all-work-packages").prop("checked", true);
-	    $('#connection-select-multiple-work-packages').val("");
-        $("#project-select-multiple-work-packages").val("").empty();
-        $("#project-select-multiple-work-packages").prop("disabled", false);
-        $("#mappings-container").empty();
-        $("#work-packages-table-mapping-container").addClass("hidden");
-        $("#project-select-multiple-work-packages-container").addClass("hidden");
-        $("#create-multiple-work-packages-form-button").addClass("hidden");
-        $("#incorrect-token-multiple-work-packages").addClass("hidden");
+      $("#work-packages-container").empty();
+      $("#multiple-work-packages-container").addClass("hidden");
+      $("#select-all-work-packages").prop("checked", true);
+      $('#connection-select-multiple-work-packages').val("");
+      $("#project-select-multiple-work-packages").val("").empty();
+      $("#project-select-multiple-work-packages").prop("disabled", false);
+      $("#mappings-container").empty();
+      $("#work-packages-table-mapping-container").addClass("hidden");
+      $("#project-select-multiple-work-packages-container").addClass("hidden");
+      $("#create-multiple-work-packages-form-button").addClass("hidden");
+      $("#incorrect-token-multiple-work-packages").addClass("hidden");
     }
 
     function generateCards(projectApiResponse, elements) {
@@ -582,20 +582,6 @@
       return $("#connection-select-multiple-work-packages").val();
     }
 
-    $("#openModal").on("click", function() {
-      selectedText = "";
-      renderSingleMode();
-      $("#create-work-packages-modal").modal("show");
-
-      const $connectionSelect = $("#connection-select-single-work-package");
-
-      if ($connectionSelect.find("option").length === 1) {
-        $connectionSelect.prop("selectedIndex", 0);
-        $connectionSelect.prop("disabled", true);
-        $connectionSelect.trigger("change");
-      }
-	});
-
     $('#create-wp').on('click', function(e) {
       e.preventDefault();
       const selection = window.getSelection();
@@ -649,15 +635,15 @@
         if (hasHeader &amp;&amp; rowIndex === 0) {
             return;
           }
-        
+
           const rowObject = {};
           const cells = $(rowEl).find("td");
-        
+
           cells.each((cellIndex, cellEl) =&gt; {
             const key = headers[cellIndex];
             rowObject[key] = $(cellEl).text().trim();
           });
-        
+
           if (Object.keys(rowObject).length &gt; 0) {
             rowsData.push(rowObject);
           }
@@ -733,30 +719,15 @@
       try {
         const response = await createWorkPackagesRequest(connection, requestBody);
 
-        if (selectedText != "" &amp;&amp; selectedText.length &gt; 0) {
-		  const template = $("#work-package-card-template");
-          const container = $("#single-dynamic-fields-container");
-          container.empty();
-          const card = generateCard(template, response, selectedText, 0);
-          card.find("#wp-subject-0").val(selectedText);
-          card.find("#wp-selected-0").remove();
-          card.find("label[for='wp-selected-0']").remove();
-          container.append(card);
-          container.removeClass("hidden");
-        }
-        else {
-          const container = $("#single-dynamic-fields-container");
-          container.empty();
-
-          Object.entries(response).forEach(([key, value]) =&gt; {
-            const id = `wp-${key}-0`;
-            const inputClass = `wp-${key}`;
-            const input = createInput(id, key, inputClass, value);
-            container.append(input);
-	      });
-
-          container.removeClass("hidden");
-        }
+        const template = $("#work-package-card-template");
+        const container = $("#single-dynamic-fields-container");
+        container.empty();
+        const card = generateCard(template, response, selectedText, 0);
+        card.find("#wp-subject-0").val(selectedText);
+        card.find("#wp-selected-0").remove();
+        card.find("label[for='wp-selected-0']").remove();
+        container.append(card);
+        container.removeClass("hidden");
 
         $("#create-single-work-package-form-button").removeClass("hidden");
       } catch (err) {
@@ -767,8 +738,8 @@
     $("#create-single-work-package-form").on("submit", async function (e) {
       e.preventDefault();
 
-      const $singleContainer = $("#single-dynamic-fields-container");
-      const firstInvalidSingle = findAndOpenFirstInvalid($singleContainer);
+      const singleContainer = $("#single-dynamic-fields-container");
+      const firstInvalidSingle = findAndOpenFirstInvalid(singleContainer);
 
       if (firstInvalidSingle) {
         notify('Please fill the required fields highlighted.', 'error');
@@ -1103,7 +1074,6 @@
   &lt;/div&gt;
 &lt;/div&gt;
 
-&lt;button id="openModal"&gt;Open Modal&lt;/button&gt;
 &lt;div class="modal" id="create-work-packages-modal" tabindex="-1" role="dialog"
      aria-labelledby="create-work-packages-modal-label" data-backdrop="static" data-keyboard="false"&gt;
   &lt;div class="modal-dialog" role="document"&gt;
