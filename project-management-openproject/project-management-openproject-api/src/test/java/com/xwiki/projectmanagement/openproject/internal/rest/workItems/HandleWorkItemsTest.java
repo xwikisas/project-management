@@ -23,11 +23,14 @@ package com.xwiki.projectmanagement.openproject.internal.rest.workItems;
 import java.io.IOException;
 import java.util.List;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -35,6 +38,8 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xpn.xwiki.XWikiContext;
+import com.xwiki.licensing.Licensor;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -63,6 +68,15 @@ public class HandleWorkItemsTest
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
 
+    @MockComponent
+    private Licensor licensor;
+
+    @MockComponent
+    private XWikiContext xContext;
+
+    @Mock
+    private Provider<XWikiContext> xContextProvider;
+
     @InjectMockComponents
     private HandleWorkItems handleWorkItems;
 
@@ -80,8 +94,11 @@ public class HandleWorkItemsTest
     public void setUp()
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(this.openProjectApiClient);
+        when(this.xContextProvider.get()).thenReturn(this.xContext);
+        when(this.xContext.getWikiId()).thenReturn(WIKI);
+        when(this.licensor.hasLicensure(any(DocumentReference.class))).thenReturn(true);
     }
-    // TODO: add test for default values
+    // TODO: add test for default values of the json request when creating a work package
 
     @Test
     public void getAvailableProjectsReturnsConflictWhenTokenIsNullTest() throws ProjectManagementException
@@ -126,6 +143,16 @@ public class HandleWorkItemsTest
             ProjectManagementException.class,
             () -> this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE)
         );
+    }
+
+    @Test
+    public void createWorkPackageReturnsForbiddenWhenLicenseIsMissing() throws ProjectManagementException
+    {
+        when(this.licensor.hasLicensure(any(DocumentReference.class))).thenReturn(false);
+
+        Response response = this.handleWorkItems.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage());
+
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
     }
 
     @Test
@@ -174,7 +201,7 @@ public class HandleWorkItemsTest
 
         when(this.openProjectApiClient.getWorkPackagesFormResponse(anyString())).thenReturn(
             validationSuccessResponseNode);
-        when(this.openProjectApiClient.createWorkPackage(anyString(), anyString())).thenReturn(any(JsonNode.class));
+        when(this.openProjectApiClient.createWorkPackage(anyString(), anyString())).thenReturn(this.mapper.createObjectNode());
 
         Response response = this.handleWorkItems.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage());
 

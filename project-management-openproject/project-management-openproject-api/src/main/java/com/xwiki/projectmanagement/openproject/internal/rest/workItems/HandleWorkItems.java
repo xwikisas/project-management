@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.workItems;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,11 +40,14 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rest.XWikiResource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xpn.xwiki.XWikiContext;
+import com.xwiki.licensing.Licensor;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -108,8 +112,13 @@ public class HandleWorkItems extends XWikiResource
 
     private static final String NAME = "name";
 
+    private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private Licensor licensor;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -172,6 +181,19 @@ public class HandleWorkItems extends XWikiResource
     public Response createWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
+        XWikiContext xContext = getXWikiContext();
+
+        if (!licensor.hasLicensure(
+            new DocumentReference(xContext.getWikiId(), OPEN_PROJECT_CODE_SPACE, "OpenProjectConnectionClass")))
+        {
+            return Response
+                .status(Response.Status.FORBIDDEN)
+                .entity(
+                    "You must have a valid license for the OpenProject integration "
+                        + "in order to create work packages.")
+                .build();
+        }
+
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
         Map<String, Object> formRequest = createRequestForOpenProjectFormRequest(workPackage);
 
