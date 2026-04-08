@@ -264,15 +264,19 @@
     </property>
     <property>
       <codeToExecute>{{velocity}}
-#set ($title = $services.localization.render('openproject.config.connectionsTitle'))
-#set ($description = $services.localization.render('openproject.config.connectionsDescription'))
-==$services.rendering.escape($title, 'xwiki/2.1')==
-$services.rendering.escape($description, 'xwiki/2.1')
+#if (!$services.licensing.licensor.hasLicensureForEntity(
+    $services.model.createDocumentReference('', ['OpenProject', 'Code'], 'OpenProjectConnectionClass')))
+  {{missingLicenseMessage extensionName="openproject.extension.name"/}}
+#else
+  #set ($title = $services.localization.render('openproject.config.connectionsTitle'))
+  #set ($description = $services.localization.render('openproject.config.connectionsDescription'))
+  ==$services.rendering.escape($title, 'xwiki/2.1')==
+  $services.rendering.escape($description, 'xwiki/2.1')
 
-{{html wiki="false"}}
-$xwiki.includeTopic("OpenProject.Code.OpenProjectSheet")
-{{/html}}
-
+  {{html wiki="false"}}
+  $xwiki.includeTopic("OpenProject.Code.OpenProjectSheet")
+  {{/html}}
+#end
 {{/velocity}}</codeToExecute>
     </property>
     <property>
