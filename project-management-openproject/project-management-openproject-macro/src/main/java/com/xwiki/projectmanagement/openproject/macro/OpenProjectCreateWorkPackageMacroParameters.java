@@ -33,16 +33,6 @@ public class OpenProjectCreateWorkPackageMacroParameters
 {
     private String opRequest;
 
-    private boolean isCreated;
-
-    /**
-     * Default constructor.
-     */
-    public OpenProjectCreateWorkPackageMacroParameters()
-    {
-        this.isCreated = false;
-    }
-
     /**
      * @return the request for creating the work package.
      */
@@ -58,21 +48,5 @@ public class OpenProjectCreateWorkPackageMacroParameters
     public void setOPRequest(String request)
     {
         this.opRequest = request;
-    }
-
-    /**
-     * @return whether the work package was created or not.
-     */
-    public boolean getIsCreated()
-    {
-        return this.isCreated;
-    }
-
-    /**
-     * @param isCreated see {@link #getIsCreated()}.
-     */
-    public void setIsCreated(boolean isCreated)
-    {
-        this.isCreated = isCreated;
     }
 }

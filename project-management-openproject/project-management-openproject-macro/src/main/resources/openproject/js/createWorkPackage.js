@@ -21,8 +21,12 @@ require(["jquery"], function ($) {
   $(document).ready(function () {
     const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
 
-		function resetDependentFields() {
+    function resetDependentFields() {
+      var $conn = $("#op-connection");
+      $conn.prop("disabled", false);
+
       $("#op-project").empty().prop("disabled", false);
+      $("#op-project-container").addClass("hidden");
       $("#dynamic-fields-container").empty().addClass("hidden");
       $("#incorrect-token-create-work-package").addClass("hidden");
 
@@ -31,32 +35,34 @@ require(["jquery"], function ($) {
         .val("");
     }
 
-		$(document).on("shown.bs.modal", ".modal", function () {
+    function initializeConnectionIfOnlyOneAvailable() {
+      var $conn = $("#op-connection");
+
+      var $macroParam = $(".macro-parameter[data-id='OPRequest']");
+      var $fieldContainer = $macroParam.find(".macro-parameter-field");
+      if ($fieldContainer.length && $fieldContainer.find("input[name='opRequest']").length === 0) {
+        $fieldContainer.append(
+          $("<input>", { type: "hidden", name: "opRequest", value: "" })
+        );
+      }
+
+      if ($conn.find("option").length === 1) {
+        $conn.prop("selectedIndex", 0).prop("disabled", true);
+        loadProjects(
+          "#op-connection",
+          "#op-project",
+          "#op-project-container",
+          "#incorrect-token-create-work-package"
+        );
+      }
+    }
+
+    $(document).on("shown.bs.modal", ".modal", function () {
       if ($(this).find('[data-macroid="openproject-create-work-package/xwiki/2.1"]').length) {
         resetDependentFields();
         initializeConnectionIfOnlyOneAvailable();
       }
     });
-
-    function initializeConnectionIfOnlyOneAvailable() {
-      const connectionSelect = $("#op-connection");
-
-      if (connectionSelect.find("option").length === 1) {
-        connectionSelect.prop("selectedIndex", 0);
-        connectionSelect.prop("disabled", true);
-        connectionSelect.trigger("change");
-      }
-
-			const macroParameter = $(".macro-parameter[data-id='OPRequest']");
-			const fieldContainer = macroParameter.find(".macro-parameter-field");
-			fieldContainer.append(
-        $("<input>", {
-          type: "hidden",
-          name: "opRequest",
-          value: ""
-        })
-      );
-    }
 
     async function createWorkPackagesRequest(connection, requestBody) {
       const url = `${baseUrl}${connection}/workPackages/create`;
@@ -69,7 +75,7 @@ require(["jquery"], function ($) {
     }
 
     async function loadProjects(connectionSelectId, projectSelectId, projectContainerId, incorrectTokenId) {
-      console.log("Load projects");
+
       const connection = $(connectionSelectId).val();
       const url = `${baseUrl}${connection}/workPackages/availableProjects`;
       try {
@@ -108,6 +114,7 @@ require(["jquery"], function ($) {
           url.searchParams.set("connectionName", connection);
           link.attr("href", url.toString());
           $(incorrectTokenId).removeClass("hidden");
+          $(projectContainerId).addClass("hidden");
           return;
         }
         $(connectionSelectId).val("");
@@ -212,9 +219,6 @@ require(["jquery"], function ($) {
       $fieldContainer.find("input[name='opRequest']").val(JSON.stringify(payload));
     }
 
-    $(document).on("input change", "#dynamic-fields-container input, #dynamic-fields-container select, #dynamic-fields-container textarea", updateHiddenOpRequest);
-    $("#op-project, #op-connection").on("change", updateHiddenOpRequest);
-
     async function onProjectChange() {
       const connection = $("#op-connection").val();
       const requestBody = { project: $("#op-project").val() };
@@ -232,16 +236,17 @@ require(["jquery"], function ($) {
         });
 
         container.removeClass("hidden");
-        updateHiddenOpRequest(); // update hidden imediat după creare
+        updateHiddenOpRequest();
       } catch (err) {
         notify("An error occurred while trying to create the inputs!", "error");
       }
     }
 
-    $("#op-project").off("change").on("change", onProjectChange);
+    $(document).on("change", "#op-project", function () {
+      onProjectChange();
+    });
 
-    $("#op-connection").on("change", function () {
-      console.log("Connection changed, loading projects...");
+    $(document).on("change", "#op-connection", function () {
       loadProjects(
         "#op-connection",
         "#op-project",
@@ -249,6 +254,11 @@ require(["jquery"], function ($) {
         "#incorrect-token-create-work-package"
       );
     });
+
+    $(document).on("input change",
+      "#dynamic-fields-container input, #dynamic-fields-container select, #dynamic-fields-container textarea, #op-project, #op-connection",
+      updateHiddenOpRequest
+    );
 
     initializeConnectionIfOnlyOneAvailable();
     updateHiddenOpRequest();

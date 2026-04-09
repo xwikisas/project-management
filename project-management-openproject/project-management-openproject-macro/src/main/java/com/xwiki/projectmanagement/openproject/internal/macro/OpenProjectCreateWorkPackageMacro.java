@@ -29,18 +29,22 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.XDOM;
+import org.xwiki.rendering.block.match.ClassBlockMatcher;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
-import org.xwiki.rendering.macro.MacroPreparationException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.doc.XWikiDocument;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
@@ -80,7 +84,20 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
 
     private static final String HREF = "href";
 
+    private static final String VIEW_ACTION = "view";
+
+    private static final String CONNECTION = "connection";
+
+    private static final String INSTANCE = "instance";
+
+    private static final String IDENTIFIER = "identifier";
+
+    private static final String WORK_ITEMS_DISPLAYER = "workItemsDisplayer";
+
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Inject
+    private Logger logger;
 
     @Inject
     private Provider<XWikiContext> xContextProvider;
@@ -107,36 +124,67 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
     public List<Block> execute(OpenProjectCreateWorkPackageMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        String viewAction = "view";
         XWikiContext xContext = this.xContextProvider.get();
-        try {
-            if (parameters.getOPRequest() == null) {
-                throw new MacroExecutionException("OPRequest parameter is required.");
-            }
-            JsonNode opRequestParameters = objectMapper.readTree(parameters.getOPRequest());
-            if (xContext.getAction().equals(viewAction) && !parameters.getIsCreated()) {
-                String instance = opRequestParameters.get("connection").asText();
-                Map<String, String> macroParameters = new HashMap<>();
-                macroParameters.put("instance", instance);
-                JsonNode node = createWorkPackage(instance, opRequestParameters);
-                macroParameters.put("identifier", node.path("id").asText());
-                parameters.setIsCreated(true);
-                Block block = new MacroBlock("openproject", macroParameters, true);
-                return List.of(block);
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        } catch (ProjectManagementException e) {
-            throw new RuntimeException(e);
+
+        if (!xContext.getAction().equals(VIEW_ACTION)) {
+            return List.of();
         }
 
-        return List.of();
+        return createAndReplaceWithDisplayMacro(parameters, context);
     }
 
-    @Override
-    public void prepare(MacroBlock macroBlock) throws MacroPreparationException
+    private List<Block> createAndReplaceWithDisplayMacro(OpenProjectCreateWorkPackageMacroParameters parameters,
+        MacroTransformationContext context) throws MacroExecutionException
     {
-        super.prepare(macroBlock);
+        if (parameters.getOPRequest() == null) {
+            throw new MacroExecutionException("OPRequest parameter is required.");
+        }
+
+        try {
+            JsonNode opRequestParameters = objectMapper.readTree(parameters.getOPRequest());
+            String instance = opRequestParameters.get(CONNECTION).asText();
+
+            JsonNode node = createWorkPackage(instance, opRequestParameters);
+            String workPackageId = node.path("id").asText();
+
+            Map<String, String> displayParams = new HashMap<>();
+            displayParams.put(INSTANCE, instance);
+            displayParams.put(IDENTIFIER, workPackageId);
+            displayParams.put(WORK_ITEMS_DISPLAYER, "workItemsSingle");
+            MacroBlock displayMacro = new MacroBlock("openproject", displayParams, true);
+
+            replaceInDocumentAndSave(context, displayMacro);
+
+            return List.of(displayMacro);
+        } catch (JsonProcessingException | ProjectManagementException e) {
+            throw new MacroExecutionException("Failed to create the work package.", e);
+        }
+    }
+
+    private void replaceInDocumentAndSave(MacroTransformationContext context, MacroBlock replacement)
+    {
+        XWikiContext xContext = this.xContextProvider.get();
+        try {
+            XWikiDocument document = xContext.getDoc();
+            XDOM xdom = document.getXDOM();
+
+            MacroBlock currentMacroBlock = context.getCurrentMacroBlock();
+            for (Block block : xdom.getBlocks(new ClassBlockMatcher(MacroBlock.class), Block.Axes.DESCENDANT)) {
+                MacroBlock macro = (MacroBlock) block;
+                if (macro.getId().equals(currentMacroBlock.getId())
+                    && macro.getParameters().equals(currentMacroBlock.getParameters()))
+                {
+                    macro.getParent().replaceChild(replacement, macro);
+                    break;
+                }
+            }
+
+            document.setContent(xdom);
+            xContext.getWiki().saveDocument(document, "Replaced create macro with openproject display macro", xContext);
+        } catch (XWikiException e) {
+            logger.warn("Failed to save document after creating the work package. "
+                + "The work package was created in OpenProject but the macro replacement may not be persisted.", e);
+        }
     }
 
     private JsonNode createWorkPackage(String instance, JsonNode opRequestParameters)
