@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal.displayers;
+package com.xwiki.projectmanagement.internal.chart;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -27,10 +27,8 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
-import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
@@ -44,53 +42,53 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Displays the filtered work items in a chart.
+ * Abstract chartjs displayer.
  *
  * @version $Id$
+ * @since 1.1.0
  */
-@Component
-@Singleton
-@Named("workItemsChart")
-public class ChartWorkItemsDisplayer extends AbstractWorkItemsDisplayer
+public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 {
-    private final ObjectMapper mapper = new ObjectMapper();
+    /**
+     * The type of the chart.
+     */
+    public static final String TYPE = "pie";
 
-    @Inject
-    private MacroContentParser contentParser;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Inject
     @Named("xwiki/2.1")
     private BlockRenderer renderer;
 
-    /**
-     * Default constructor.
-     */
-    public ChartWorkItemsDisplayer()
-    {
-        super("Chart work items displayer.", "Display the filtered work items in various chart types.");
-    }
+    @Inject
+    private MacroContentParser contentParser;
 
     @Override
-    public boolean supportsInlineMode()
+    public List<Block> execute(List<PaginatedResult<WorkItem>> workItems, List<String> properties,
+        MacroTransformationContext context, Object typeDisplayerParams) throws MacroExecutionException
     {
-        return false;
-    }
 
-    @Override
-    protected List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
-        ProjectManagementMacroParameters parameters, MacroTransformationContext context)
-    {
+        ChartJSData chartJSData = new ChartJSData();
+
+        for (String prop : properties) {
+
+        }
+
+
         Map<String, Integer> dataSet = new HashMap<>();
-        for (WorkItem item : workItemList.getItems()) {
+        for (WorkItem item : workItems.getItems()) {
             if (StringUtils.isEmpty(item.getStatus())) {
                 continue;
             }
-            dataSet.put(item.getStatus(), dataSet.getOrDefault(item.getStatus(), 0) + 1);
+            String propValue = item.getStringValue(properties);
+            if (propValue.isEmpty()) {
+                continue;
+            }
+            dataSet.put(propValue, dataSet.getOrDefault(propValue, 0) + 1);
         }
         String data = "";
         try {
@@ -99,15 +97,26 @@ public class ChartWorkItemsDisplayer extends AbstractWorkItemsDisplayer
                     "datasets", Collections.singletonList(Collections.singletonMap("data", dataSet.values()))));
 
             WikiPrinter wikiPrinter = new DefaultWikiPrinter();
-            renderer.render(new MacroBlock("chartjs", Map.of("type", "pie"), data, false),
+            renderer.render(new MacroBlock("chartjs", Map.of("type", getChartType()), data, false),
                 wikiPrinter);
             String renderedChartJsMacro = wikiPrinter.toString();
 
             XDOM xdom = contentParser.parse(renderedChartJsMacro, context, true, false);
 
             return Collections.singletonList(new GroupBlock(xdom.getChildren()));
-        } catch (JsonProcessingException | MacroExecutionException e) {
-            return Collections.singletonList(new MacroBlock("error", Collections.emptyMap(), "Error", false));
+        } catch (JsonProcessingException e) {
+            throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
         }
+    }
+
+    /**
+     * @return the chart type that will be passed to the ChartJS implementation.
+     */
+    public abstract String getChartType();
+
+    @Override
+    public Class<?> getParameterType()
+    {
+        return Map.class;
     }
 }

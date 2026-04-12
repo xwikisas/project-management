@@ -21,7 +21,6 @@ package com.xwiki.projectmanagement.internal.displayers;
  */
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -33,23 +32,16 @@ import javax.inject.Named;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
-import org.xwiki.component.manager.ComponentLookupException;
-import org.xwiki.component.manager.ComponentManager;
-import org.xwiki.livedata.LiveDataConfiguration;
-import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
-import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
-import com.xwiki.projectmanagement.ProjectManagementManager;
-import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -60,28 +52,13 @@ import com.xwiki.projectmanagement.model.WorkItem;
  *
  * @version $Id$
  */
-public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectManagementMacroParameters>
+public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<ProjectManagementMacroParameters>
 {
     private static final String KEY_CLIENT = "client";
 
     @Inject
     @Named("ssrx")
     protected SkinExtension ssrx;
-
-    @Inject
-    protected ProjectManagementManager projectManagementManager;
-
-    @Inject
-    protected ProjectManagementClientExecutionContext macroContext;
-
-    @Inject
-    private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
-
-    @Inject
-    private WorkItemPropertyDisplayerManager displayerManager;
-
-    @Inject
-    private ComponentManager componentManager;
 
     /**
      * @param name the name of the work item.
@@ -147,59 +124,5 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractMacro<ProjectMa
     protected void setDefaultCategories(Set<String> defaultCategories)
     {
         super.setDefaultCategories(Collections.singleton("Internal"));
-    }
-
-    protected PaginatedResult<WorkItem> getWorkItems(String clientId, ProjectManagementMacroParameters parameters,
-        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
-    {
-        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
-        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset),
-            parameters.getLimit(), filters, sortEntries);
-    }
-
-    protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()
-    {
-        String clientId = (String) macroContext.get(KEY_CLIENT);
-        if (clientId == null || clientId.isEmpty()) {
-            return displayerManager;
-        }
-        try {
-            return componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId);
-        } catch (ComponentLookupException e) {
-            return displayerManager;
-        }
-    }
-
-    private List<LiveDataQuery.Filter> getFilters(String filtersString) throws LiveDataException
-    {
-        String serializedCfg = filtersString == null ? "" : filtersString;
-        LiveDataConfiguration configuration = this.stringLiveDataConfigResolver.resolve(serializedCfg);
-        if (configuration == null) {
-            return Collections.emptyList();
-        }
-
-        if (configuration.getQuery() == null || configuration.getQuery().getFilters() == null) {
-            return Collections.emptyList();
-        }
-        return configuration.getQuery().getFilters();
-    }
-
-    private List<LiveDataQuery.SortEntry> getSortEntries(String sort)
-    {
-        if (sort == null || sort.trim().isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
-        for (String strSortEntry : sort.split("\\s*,\\s*")) {
-            String[] components = strSortEntry.split(":");
-            String property = components[0];
-            LiveDataQuery.SortEntry sortEntry = new LiveDataQuery.SortEntry(property);
-            if (components.length >= 2) {
-                sortEntry.setDescending("desc".equals(components[1]));
-            }
-            sortEntries.add(sortEntry);
-        }
-        return sortEntries;
     }
 }

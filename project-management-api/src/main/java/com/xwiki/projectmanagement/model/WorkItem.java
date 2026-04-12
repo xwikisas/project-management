@@ -589,4 +589,22 @@ public class WorkItem extends HashMap<String, Object>
 
         return (String) getLinkable(key).get(Linkable.KEY_LOCATION);
     }
+
+    /**
+     * @param key the identifier of a work item property.
+     * @return the property itself if it is a string or the value of the linkable property.
+     * @since 1.1.0
+     */
+    public String getStringValue(String key)
+    {
+        Object val = get(key);
+        if (val == null) {
+            return "";
+        }
+        if (val instanceof Linkable) {
+            return ((Linkable) val).getValue();
+        } else {
+            return val.toString();
+        }
+    }
 }
