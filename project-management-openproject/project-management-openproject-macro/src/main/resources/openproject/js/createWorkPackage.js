@@ -38,14 +38,6 @@ require(["jquery"], function ($) {
     function initializeConnectionIfOnlyOneAvailable() {
       var $conn = $("#op-connection");
 
-      var $macroParam = $(".macro-parameter[data-id='OPRequest']");
-      var $fieldContainer = $macroParam.find(".macro-parameter-field");
-      if ($fieldContainer.length && $fieldContainer.find("input[name='opRequest']").length === 0) {
-        $fieldContainer.append(
-          $("<input>", { type: "hidden", name: "opRequest", value: "" })
-        );
-      }
-
       if ($conn.find("option").length === 1) {
         $conn.prop("selectedIndex", 0).prop("disabled", true);
         loadProjects(
@@ -57,11 +49,9 @@ require(["jquery"], function ($) {
       }
     }
 
-    $(document).on("shown.bs.modal", ".modal", function () {
-      if ($(this).find('[data-macroid="openproject-create-work-package/xwiki/2.1"]').length) {
-        resetDependentFields();
-        initializeConnectionIfOnlyOneAvailable();
-      }
+    $(".macro-editor-modal").on("shown.bs.modal", function () {
+      resetDependentFields();
+      initializeConnectionIfOnlyOneAvailable();
     });
 
     async function createWorkPackagesRequest(connection, requestBody) {
@@ -75,7 +65,6 @@ require(["jquery"], function ($) {
     }
 
     async function loadProjects(connectionSelectId, projectSelectId, projectContainerId, incorrectTokenId) {
-
       const connection = $(connectionSelectId).val();
       const url = `${baseUrl}${connection}/workPackages/availableProjects`;
       try {
@@ -204,21 +193,6 @@ require(["jquery"], function ($) {
       new XWiki.widgets.Notification(message, type);
     }
 
-    function updateHiddenOpRequest() {
-     const $macroParameter = $(".macro-parameter[data-id='OPRequest']");
-      const $fieldContainer = $macroParameter.find(".macro-parameter-field");
-      if ($fieldContainer.length === 0) return;
-
-      const $dynamicFields = $("#dynamic-fields-container");
-      const payload = {
-          ...buildPayloadFrom($dynamicFields),
-          project: $("#op-project").val(),
-          connection: $("#op-connection").val()
-      };
-
-      $fieldContainer.find("input[name='opRequest']").val(JSON.stringify(payload));
-    }
-
     async function onProjectChange() {
       const connection = $("#op-connection").val();
       const requestBody = { project: $("#op-project").val() };
@@ -236,14 +210,64 @@ require(["jquery"], function ($) {
         });
 
         container.removeClass("hidden");
-        updateHiddenOpRequest();
       } catch (err) {
         notify("An error occurred while trying to create the inputs!", "error");
       }
     }
 
+    function isFormValid() {
+			const requiredFields = $("#dynamic-fields-container").find("input[required], select[required], textarea[required]");
+
+			if (requiredFields.length === 0) {
+				return true;
+			}
+
+			let isValid = true;
+
+			requiredFields.each(function() {
+				const $field = $(this);
+				const value = $field.val();
+
+				if (value == null || String(value).trim() === "") {
+					isValid = false;
+					return false;
+				}
+			});
+
+			return isValid;
+		}
+
     $(document).on("change", "#op-project", function () {
       onProjectChange();
+    });
+
+    $('.macro-editor-modal .btn-primary').on('click', async function (e) {
+    	 e.preventDefault();
+
+    	 if (!isFormValid()) {
+    	    notify("Please fill in all required fields!", "error");
+			    return;
+    	 }
+
+    	 const project = $("#op-project").val();
+    	 const payload = {...buildPayloadFrom($("#dynamic-fields-container")), 'project': project};
+
+			 try {
+			 const workPackage = await createWorkPackagesRequest($("#op-connection").val(), payload);
+			 const connection = $("#op-connection").val();
+			 $('.macro-editor-modal').modal('hide');
+       CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
+          name: 'openproject',
+          inline: 'enforce',
+          parameters: {
+            instance: connection,
+            identifier: workPackage.id,
+            workItemsDisplayer: "workItemsSingle"
+          }
+        });
+			} catch (err) {
+				return notify("An error occurred while trying to create the work package!", "error");
+			}
     });
 
     $(document).on("change", "#op-connection", function () {
@@ -254,13 +278,5 @@ require(["jquery"], function ($) {
         "#incorrect-token-create-work-package"
       );
     });
-
-    $(document).on("input change",
-      "#dynamic-fields-container input, #dynamic-fields-container select, #dynamic-fields-container textarea, #op-project, #op-connection",
-      updateHiddenOpRequest
-    );
-
-    initializeConnectionIfOnlyOneAvailable();
-    updateHiddenOpRequest();
   });
 });

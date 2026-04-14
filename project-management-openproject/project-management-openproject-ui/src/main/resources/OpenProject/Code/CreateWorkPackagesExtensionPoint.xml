@@ -135,14 +135,14 @@
 
     async function createWorkPackagesRequest(connection, requestBody) {
       const url = `${baseUrl}${connection}/workPackages/create`;
-      const projects = await $.ajax({
+      const response = await $.ajax({
         method: "POST",
         contentType: "application/json",
         url: url,
         data: JSON.stringify(requestBody),
       });
 
-      return projects;
+      return response;
     }
 
     async function loadProjects(connectionSelectId, projectSelectId, projectContainerId, incorrectTokenId) {

@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyMandatory;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectCreateWorkPackage;
 
@@ -45,6 +46,7 @@ public class OpenProjectCreateWorkPackageMacroParameters
      * @param request see {@link #getOPRequest()}.
      */
     @PropertyDisplayType(OpenProjectCreateWorkPackage.class)
+    @PropertyMandatory
     public void setOPRequest(String request)
     {
         this.opRequest = request;
