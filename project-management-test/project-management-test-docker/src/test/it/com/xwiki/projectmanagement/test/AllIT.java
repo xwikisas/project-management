@@ -34,7 +34,7 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
  * @since 1.0-rc-4
  */
 @UITest
-public class AllITs
+public class AllIT
 {
     @Nested
     @Order(1)
