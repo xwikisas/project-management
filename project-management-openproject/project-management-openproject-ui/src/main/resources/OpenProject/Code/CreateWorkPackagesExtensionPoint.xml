@@ -663,7 +663,7 @@
       }
     });
 
-    $('#work-packages-container, #single-dynamic-fields-container').on('input change', '.wp-subject', function() {
+    $("#work-packages-container").on('input change', '.wp-subject', function() {
       const input = $(this);
       const inputId = input.attr('id');
       const index = inputId.split('-').pop();
@@ -722,11 +722,14 @@
         const template = $("#work-package-card-template");
         const container = $("#single-dynamic-fields-container");
         container.empty();
-        const card = generateCard(template, response, selectedText, 0);
-        card.find("#wp-subject-0").val(selectedText);
-        card.find("#wp-selected-0").remove();
-        card.find("label[for='wp-selected-0']").remove();
-        container.append(card);
+
+        Object.entries(response).forEach(([key, value]) =&gt; {
+          const id = `wp-${key}`;
+          const inputClass = `wp-${key}`;
+          const input = createInput(id, key, inputClass, value);
+          container.append(input);
+        });
+
         container.removeClass("hidden");
 
         $("#create-single-work-package-form-button").removeClass("hidden");
@@ -1092,7 +1095,6 @@
           #incorrectToken('incorrect-token-single-work-package')
           #projectInput('project-select-single-work-package' $connectionOptions)
           &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
-            &lt;p class="text-muted"&gt;The following work package will be created&lt;/p&gt;
           &lt;/div&gt;
         &lt;/div&gt;
         &lt;div class="modal-footer"&gt;
