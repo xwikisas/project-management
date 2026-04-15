@@ -55,11 +55,38 @@ setTimeout(function () {
         builder.clean();
       });
       $(document).on('shown.bs.modal', '.modal', function () {
-        builder.clean();
-        builder.init();
-        initBuilder();
+        let modal = $(this);
+        setTimeout(function () {
+          const content = modal.find('.macro-editor');
+          if (!content || content.length <= 0) {
+            console.log('Modal content not found');
+            return;
+          }
+          debugger;
+          if (!content[0].classList.contains('loading')) {
+            builder.clean();
+            builder.init();
+            initBuilder();
+            return;
+          }
+          const observer = new MutationObserver(() => {
+            if (!content[0].classList.contains('loading')) {
+              observer.disconnect();
+              builder.clean();
+              builder.init();
+              initBuilder();
+            }
+          });
+
+          observer.observe(content[0], {
+            attributes: true,
+            attributeFilter: ['class'],
+            subtree: true
+          });
+        });
+
       });
-      $(document).on('filterBuilderInitialized', function(e, builderElem) {
+      $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
       });
     });
