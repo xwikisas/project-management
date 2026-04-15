@@ -27,6 +27,4 @@
 <suppressions>
   <suppress checks="FanOutComplexity" files="DefaultOpenProjectApiClient.java"/>
   <suppress checks="FanOutComplexity" files="AsyncMacroCallResource.java"/>
-  <suppress checks="ParameterNumber" files="OpenProjectLinkSearchResource.java"/>
-  <suppress checks="ClassFanOutComplexity|ReturnCount" files="DefaultOpenProjectSpaceResource.java"/>
 </suppressions>

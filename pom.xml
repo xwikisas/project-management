@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.parent</groupId>
     <artifactId>xwikisas-parent-platform</artifactId>
-    <version>15.10</version>
+    <version>14.10</version>
   </parent>
   <groupId>com.xwiki.projectmanagement</groupId>
   <artifactId>project-management</artifactId>
@@ -33,8 +33,7 @@
   <name>Project Management - Parent POM</name>
   <properties>
     <xwikipro.commons.version>1.0.4</xwikipro.commons.version>
-    <licensing.version>1.32</licensing.version>
-    <urlshortener.version>1.3</urlshortener.version>
+    <licensing.version>1.28</licensing.version>
   </properties>
   <packaging>pom</packaging>
   <issueManagement>

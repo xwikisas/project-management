@@ -44,8 +44,8 @@ import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.ViewPage;
+import org.xwiki.test.ui.po.editor.EditPage;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
-import org.xwiki.test.ui.po.editor.WikiEditPage;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -59,8 +59,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 @UITest(
     properties = {
-        // The scheduler UI need programming right
-        "xwikiPropertiesAdditionalProperties=test.prchecker.excludePattern=xwiki:Scheduler\\.WebHome",
         // Add the Scheduler plugin used by the Style sync job.
         "xwikiCfgPlugins=com.xpn.xwiki.plugin.scheduler.SchedulerPlugin," +
             // Add the jsrx and ssrx plugins used by the app.
@@ -68,11 +66,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
             + "com.xpn.xwiki.plugin.skinx.CssResourceSkinExtensionPlugin"
     },
     extraJARs = {
-        // Because of https://jira.xwiki.org/browse/XWIKI-17972 we need to install the jython jar manually in
-        // WEB-INF/lib.
-        "org.python:jython-slim:2.7.3",
         // Needed by the scheduler plugin, otherwise it fails.
-        "org.xwiki.platform:xwiki-platform-scheduler-api:15.10"
+        "org.xwiki.platform:xwiki-platform-scheduler-api:14.10.2"
     }
 //    , servletEngine = ServletEngine.EXTERNAL
 )
@@ -193,18 +188,16 @@ public class OpenProjectIT
     @Order(30)
     void testStyleSyncJob(TestUtils setup) throws OperationNotSupportedException, InterruptedException
     {
+        setup.gotoPage(Arrays.asList("OpenProject", "Code"), "StylingSetupJob", "edit",
+            Collections.singletonMap("force", 1));
+        EditPage editPage = new EditPage();
+        editPage.clickSaveAndView();
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         ViewPage schedulerPage = adminPage.triggerColorSyncJob();
         schedulerPage.waitUntilPageIsReady();
         setup.getDriver()
             .findElement(By.xpath(
                 "//div[contains(@class, 'infomessage')]/p[text() = 'Job Open Project Styling Updater triggered']"));
-        // Workaround to make the scheduler job work during tests.
-        setup.gotoPage(List.of("StartStylingJob"), "WebHome", "edit",
-            Collections.singletonMap("force", 1));
-        WikiEditPage editPage = new WikiEditPage();
-        editPage.setContent("{{velocity}}$services.openproject.generateStyling(){{/velocity}}");
-        editPage.clickSaveAndView();
         // Wait 1 sec for the job to execute. Might need a better way to check this.
         Thread.sleep(1000);
         DocumentReference docRef = new DocumentReference(page1, wiki);
@@ -277,7 +270,7 @@ public class OpenProjectIT
         setup.getDriver().scrollTo(setup.getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
 //        Thread.currentThread().wait(1000L);
         modal.getSuggestInput("properties")
-            .clear().clear().clear().clear().clear().clear().clear()
+            .clear()
             .selectByValue("identifier")
             .selectByValue("type")
             .selectByValue("assignees")

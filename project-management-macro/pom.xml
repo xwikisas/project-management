@@ -47,11 +47,6 @@
       <artifactId>xwiki-commons-properties</artifactId>
       <version>${commons.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.xwiki.rendering</groupId>
-      <artifactId>xwiki-rendering-api</artifactId>
-      <version>${rendering.version}</version>
-    </dependency>
     <!--  Livedata is a major dependency for this app since we display the work packages mainly in livedata.  -->
     <dependency>
       <groupId>org.xwiki.platform</groupId>
