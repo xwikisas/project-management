@@ -19,31 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Describes the priority object of a work package.
  *
  * @version $Id$
- * @since 1.1
+ * @since 1.0
  */
 public class Priority extends ColoredOpenProjectObject
 {
-    /**
-     * Create a Priority object from a JsonNode.
-     *
-     * @param priorityNode the JsonNode containing the priority information.
-     */
-    public Priority(JsonNode priorityNode)
-    {
-        super(priorityNode);
-    }
-
-    /**
-     * Default constructor.
-     */
-    public Priority()
-    {
-
-    }
 }

@@ -19,8 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Describes the type object of a work package.
  *
@@ -29,20 +27,4 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class Type extends ColoredOpenProjectObject
 {
-    /**
-     * Create a Type object from a JsonNode.
-     *
-     * @param typeNode the JsonNode containing the type information.
-     */
-    public Type(JsonNode typeNode)
-    {
-        super(typeNode);
-    }
-
-    /**
-     * Default constructor.
-     */
-    public Type()
-    {
-    }
 }

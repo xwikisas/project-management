@@ -27,6 +27,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -54,11 +56,6 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
-
-import static javax.ws.rs.HttpMethod.GET;
-import static javax.ws.rs.HttpMethod.POST;
-import static javax.ws.rs.HttpMethod.PUT;
-import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 /**
  * Default Open project get items client helper.
@@ -93,11 +90,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_RESPONSE_PROJECT = "project";
 
+    private static final String OP_RESPONSE_NAME = "name";
+
     private static final String OP_RESPONSE_PRIORITY = "priority";
 
     private static final String OP_RESPONSE_TITLE = "title";
 
     private static final String OP_DESCRIPTION = "description";
+
+    private static final String OP_PROJECTS = "projects";
 
     private static final String OP_START_DATE = "startDate";
 
@@ -117,13 +118,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_RESPONSE_TYPE = "type";
 
+    private static final String OP_RESPONSE_COLOR = "color";
+
     private static final String OP_RESPONSE_PERCENTAGE_DONE = "percentageDone";
 
     private static final String API_URL_PART = "/api/v3";
 
     private static final String API_URL_WORK_PACKAGES = "/api/v3/work_packages";
-
-    private static final String API_URL_FORM_WORK_PACKAGES = "/api/v3/work_packages/form";
 
     private static final String API_URL_TYPES = "/api/v3/types";
 
@@ -137,12 +138,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
 
-    private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
+    private static final DateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
     private static final String OP_OFFSET = "offset";
-
-    private static final String PROJECT_MANAGEMENT_EXCEPTION_MESSAGE = "Failed to build the open project entity "
-        + "retrieval url [%s].";
 
     private final HttpClient client;
 
@@ -192,43 +190,28 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException
     {
-        JsonNode usersJson = getOpenProjectResponseEntities(
-            API_URL_USERS,
-            String.valueOf(offset),
-            String.valueOf(pageSize),
-            filters,
-            "",
-            API_URL_SELECT_ELEMENTS_PARAM
-        );
+        JsonNode elements =
+            getOpenProjectResponseEntities(
+                API_URL_USERS,
+                "",
+                String.valueOf(pageSize),
+                filters,
+                "",
+                API_URL_SELECT_ELEMENTS_PARAM
+            );
 
         List<User> users = new ArrayList<>();
 
-        for (JsonNode element : usersJson) {
-            User user = new User(element);
-            user.initializeSelfWithPath(connectionUrl, String.format("/users/%s", user.getId()));
+        for (JsonNode element : elements) {
+            User user = new User();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+
+            String name = element.path(OP_RESPONSE_NAME).asText();
+            user.setId(id);
+            user.setName(name);
+            user.setSelf(new Linkable("", String.format("%s/users/%s", connectionUrl,
+                user.getId())));
             users.add(user);
-        }
-
-        return new PaginatedResult<>(users, offset, pageSize, users.size());
-    }
-
-    @Override
-    public PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
-        throws ProjectManagementException
-    {
-        JsonNode usersJson = getOpenProjectResponseEntities(
-            url,
-            String.valueOf(offset),
-            String.valueOf(pageSize),
-            filters,
-            "",
-            ""
-        );
-
-        List<User> users = new ArrayList<>();
-
-        for (JsonNode element : usersJson) {
-            users.add(new User(element));
         }
 
         return new PaginatedResult<>(users, offset, pageSize, users.size());
@@ -251,32 +234,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Project> projects = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Project project = new Project(element);
-            project.initializeSelfWithPath(connectionUrl, String.format("/projects/%s", project.getId()));
+            Project project = new Project();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
+            project.setId(id);
+            project.setName(name);
+            project.setSelf(new Linkable("", String.format("%s/projects/%s", connectionUrl, id)));
             projects.add(project);
-        }
-
-        return new PaginatedResult<>(projects, offset, pageSize, projects.size());
-    }
-
-    @Override
-    public PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
-        throws ProjectManagementException
-    {
-        JsonNode elements =
-            getOpenProjectResponseEntities(
-                url,
-                "",
-                String.valueOf(pageSize),
-                filters,
-                "",
-                ""
-            );
-
-        List<Project> projects = new ArrayList<>();
-
-        for (JsonNode element : elements) {
-            projects.add(new Project(element));
         }
 
         return new PaginatedResult<>(projects, offset, pageSize, projects.size());
@@ -290,8 +254,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Type> types = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Type type = new Type(element);
-            type.initializeSelfWithPath(connectionUrl, String.format("/types/%s/edit/settings", type.getId()));
+            Type type = new Type();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
+            type.setName(name);
+            type.setId(id);
+            type.setColor(color);
+            type.setSelf(new Linkable("", String.format("%s/types/%s/edit/settings", connectionUrl, type.getId())));
             types.add(type);
         }
 
@@ -305,34 +275,18 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Status> statuses = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Status status = new Status(element);
-            status.initializeSelfWithPath(connectionUrl, String.format("/statuses/%s/edit", status.getId()));
+            Status status = new Status();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String labelName = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
+            status.setId(id);
+            status.setName(labelName);
+            status.setColor(color);
+            status.setSelf(new Linkable("", buildEditUrl(connectionUrl, "statuses", id)));
             statuses.add(status);
         }
 
         return new PaginatedResult<>(statuses, 0, statuses.size(), statuses.size());
-    }
-
-    @Override
-    public JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException
-    {
-        try {
-            URI uri = new URI(connectionUrl + API_URL_FORM_WORK_PACKAGES);
-            HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            handleOpenProjectWorkPackagesRequestExceptions(response);
-
-            String body = response.body();
-            return objectMapper.readTree(body);
-        } catch (URISyntaxException e) {
-            throw new ProjectManagementException(
-                String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE,
-                    connectionUrl + API_URL_FORM_WORK_PACKAGES), e);
-        } catch (IOException | InterruptedException e) {
-            throw new ProjectManagementException(
-                String.format(COMMUNICATING_ISSUE_MESSAGE, connectionUrl + API_URL_FORM_WORK_PACKAGES), e);
-        }
     }
 
     @Override
@@ -342,8 +296,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Priority> priorities = new ArrayList<>();
 
         for (JsonNode element : elements) {
-            Priority priority = new Priority(element);
-            priority.initializeSelfWithPath(connectionUrl, String.format("/priorities/%s/edit", priority.getId()));
+            Priority priority = new Priority();
+            int id = element.path(OP_RESPONSE_ID).asInt();
+            String name = element.path(OP_RESPONSE_NAME).asText();
+            String color = element.path(OP_RESPONSE_COLOR).asText();
+            priority.setId(id);
+            priority.setName(name);
+            priority.setSelf(new Linkable("", buildEditUrl(connectionUrl, "priorities", id)));
+            priority.setColor(color);
             priorities.add(priority);
         }
 
@@ -358,7 +318,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         try {
             uri = new URI(uriStr);
             HttpRequest request =
-                createAuthorizedGetHttpRequest(uri);
+                createAuthorizedGetHttpRequest(uri, MediaType.MEDIA_TYPE_WILDCARD);
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() != 200) {
@@ -374,7 +334,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 }
             }
             String contentType = response.headers()
-                .firstValue(CONTENT_TYPE)
+                .firstValue("Content-Type")
                 .orElse("application/octet-stream");
 
             StreamingOutput streamingOutput = output -> {
@@ -391,28 +351,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (URISyntaxException | IOException | InterruptedException e) {
             throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
                 e);
-        }
-    }
-
-    @Override
-    public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
-    {
-        String uriStr = connectionUrl + url;
-        try {
-            URI uri = new URI(uriStr);
-            HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
-            handleOpenProjectWorkPackagesRequestExceptions(response);
-
-            String body = response.body();
-            return objectMapper.readTree(body);
-        } catch (URISyntaxException | JsonProcessingException e) {
-            throw new ProjectManagementException(
-                String.format("Failed to build the open project entity creation url [%s].", uriStr), e);
-        } catch (IOException | InterruptedException | SecurityException e) {
-            throw new ProjectManagementException(
-                String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
         }
     }
 
@@ -434,7 +372,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             if (!selectedElementsString.isEmpty()) {
                 uriBuilder.addParameter(OP_SELECT, selectedElementsString);
             }
-            if (!pageSize.isEmpty() && !pageSize.equals("0")) {
+            if (!pageSize.isEmpty()) {
                 uriBuilder.addParameter(PAGE_SIZE, pageSize);
             }
             HttpRequest request =
@@ -447,13 +385,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             return objectMapper.readTree(body);
         } catch (URISyntaxException e) {
             throw new ProjectManagementException(
-                String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, uri), e);
+                String.format("Failed to build the open project entity retrieval url [%s].", uri), e);
         } catch (JsonProcessingException e) {
             throw new ProjectManagementException(
                 String.format("Error trying to read the open project response from [%s].", uri), e);
         } catch (IOException | InterruptedException | SecurityException e) {
             throw new ProjectManagementException(
-                String.format(COMMUNICATING_ISSUE_MESSAGE, uri), e);
+                String.format("There was an issue in communicating with [%s].", uri), e);
         }
     }
 
@@ -596,60 +534,25 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return paginatedResult;
     }
 
-    private HttpRequest createAuthorizedRequest(
-        URI uri,
-        String method,
-        HttpRequest.BodyPublisher body,
-        String accept
-    )
+    private String buildEditUrl(String connectionUrl, String entity, Object id)
     {
-        HttpRequest.Builder builder = HttpRequest.newBuilder()
-            .uri(uri)
+        return String.format("%s/%s/%s/edit", connectionUrl, entity, id);
+    }
+
+    private HttpRequest createAuthorizedGetHttpRequest(URI uri, String accept)
+    {
+        return HttpRequest
+            .newBuilder()
             .header("Accept", accept)
-            .header("Authorization", "Bearer " + token);
-
-        if (POST.equals(method) || PUT.equals(method)) {
-            builder.header(CONTENT_TYPE, MediaType.APPLICATION_JSON);
-        }
-
-        switch (method.toUpperCase()) {
-            case GET:
-                builder.GET();
-                break;
-            case POST:
-                builder.POST(body);
-                break;
-            case PUT:
-                builder.PUT(body);
-                break;
-            case "DELETE":
-                builder.DELETE();
-                break;
-            default:
-                throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-        }
-
-        return builder.build();
+            .header("Authorization", "Bearer " + token)
+            .uri(uri)
+            .GET()
+            .build();
     }
 
     private HttpRequest createAuthorizedGetHttpRequest(URI uri)
     {
-        return createAuthorizedRequest(
-            uri,
-            GET,
-            HttpRequest.BodyPublishers.noBody(),
-            MediaType.APPLICATION_JSON
-        );
-    }
-
-    private HttpRequest createAuthorizedPostRequest(URI uri, String jsonBody)
-    {
-        return createAuthorizedRequest(
-            uri,
-            POST,
-            HttpRequest.BodyPublishers.ofString(jsonBody),
-            MediaType.APPLICATION_JSON
-        );
+        return createAuthorizedGetHttpRequest(uri, MediaType.APPLICATION_JSON);
     }
 
     private void handleOpenProjectWorkPackagesRequestExceptions(HttpResponse<String> response)
