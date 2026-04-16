@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,10 +36,12 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.csrf.CSRFToken;
 import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.macro.MacroExecutionException;
@@ -46,6 +49,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.licensing.Licensor;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
@@ -63,6 +67,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 {
     private static final String CLASS = "class";
 
+    private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
+
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
@@ -70,6 +76,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Inject
     @Named("jsx")
     private SkinExtension jsx;
+
+    @Inject
+    private Licensor licensor;
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
@@ -110,12 +119,24 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        XWikiContext xContext = this.xContextProvider.get();
+
+        if (!licensor.hasLicensure(
+            new DocumentReference(xContext.getWikiId(), OPEN_PROJECT_CODE_SPACE, "OpenProjectConnectionClass")))
+        {
+            return List.of(new MacroBlock(
+                "missingLicenseMessage",
+                Map.of("extensionName", "openproject.extension.name"),
+                null,
+                context.isInline())
+            );
+        }
+
         ssrx.use("openproject/css/propertyStyles.css");
         stylingSetupManager.useInstanceStyle(parameters.getInstance());
         jsx.use("OpenProject.Code.ViewAction");
 
         String viewAction = "view";
-        XWikiContext xContext = this.xContextProvider.get();
         if (xContext.getAction().equals(viewAction)) {
             String connectionName = parameters.getInstance();
 
@@ -127,7 +148,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                 if (xContext.getUserReference() != null) {
                     String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
                     LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                        Arrays.asList("OpenProject", "Code"), "RenewOAuthConnection");
+                        OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
                     String redirectUrl =
                         xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
                             + "?connectionName="

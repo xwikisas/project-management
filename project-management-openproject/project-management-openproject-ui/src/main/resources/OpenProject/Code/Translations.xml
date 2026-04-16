@@ -85,6 +85,8 @@ openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
 openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project. You should be authorized to the Open Project instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
+
+openproject.extension.name=Open Project Integration (Pro)
 </content>
   <object>
     <name>OpenProject.Code.Translations</name>
