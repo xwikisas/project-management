@@ -37,6 +37,9 @@
   </description>
   <properties>
     <xwiki.extension.name>Open Project Integration (Pro)</xwiki.extension.name>
+    <xwiki.extension.licensing.excludedDocuments>
+      OpenProject.Code.OpenProjectConfiguration
+    </xwiki.extension.licensing.excludedDocuments>
   </properties>
   <dependencies>
     <dependency>
