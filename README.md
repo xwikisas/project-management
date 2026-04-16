@@ -7,7 +7,7 @@ Provides the tools necessary for integrating project management software into XW
 * Communication: [Forum and mailing list](http://dev.xwiki.org/xwiki/bin/view/Community/MailingLists), [chat](http://dev.xwiki.org/xwiki/bin/view/Community/IRC)
 * [Development Practices](http://dev.xwiki.org)
 * License: LGPL 2.1+
-* Minimal XWiki version supported: XWiki 14.10
+* Minimal XWiki version supported: XWiki 15.10
 * Translations: N/A
 * Sonar Dashboard: N/A
 * Continuous Integration Status: [![Build Status](http://ci.xwikisas.com/view/All/job/xwikisas/job/project-management/job/master/badge/icon)](https://ci.xwikisas.com/view/All/job/xwikisas/job/project-management/job/main/)
