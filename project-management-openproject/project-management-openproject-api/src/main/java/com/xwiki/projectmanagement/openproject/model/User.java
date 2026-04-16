@@ -19,8 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Describes the user object of a work package.
  *
@@ -29,20 +27,4 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class User extends BaseOpenProjectObject
 {
-    /**
-     * Create a User object from a JsonNode.
-     *
-     * @param userJson the JsonNode containing the user information.
-     */
-    public User(JsonNode userJson)
-    {
-        super(userJson);
-    }
-
-    /**
-     * Default constructor.
-     */
-    public User()
-    {
-    }
 }

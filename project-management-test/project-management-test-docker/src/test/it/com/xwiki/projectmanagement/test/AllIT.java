@@ -1,6 +1,4 @@
-<?xml version="1.1" encoding="UTF-8"?>
-
-<!--
+/*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
  *
@@ -18,23 +16,30 @@
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
--->
+ */
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Template.WebHome" locale="">
-  <web>OpenProject.Code.Template</web>
-  <name>WebHome</name>
-  <language/>
-  <defaultLanguage/>
-  <translation>0</translation>
-  <creator>xwiki:XWiki.Admin</creator>
-  <parent>Main.WebHome</parent>
-  <author>xwiki:XWiki.Admin</author>
-  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
-  <version>1.1</version>
-  <title>Template</title>
-  <comment/>
-  <minorEdit>false</minorEdit>
-  <syntaxId>xwiki/2.1</syntaxId>
-  <hidden>true</hidden>
-  <content>Home Space</content>
-</xwikidoc>
+package com.xwiki.projectmanagement.test;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
+import org.xwiki.test.docker.junit5.UITest;
+
+import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
+
+/**
+ * Groups all the integration tests for the project management implementations.
+ *
+ * @version $Id$
+ * @since 1.0-rc-4
+ */
+@UITest
+public class AllIT
+{
+    @Nested
+    @Order(1)
+    @DisplayName("Overall Open Project UI test")
+    class NestedOpenProjectIT extends OpenProjectIT
+    {
+    }
+}

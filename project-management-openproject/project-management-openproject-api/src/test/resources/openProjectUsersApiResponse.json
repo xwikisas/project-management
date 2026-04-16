@@ -3,21 +3,11 @@
     "elements": [
       {
         "id": 1,
-        "name": "First User",
-        "_links": {
-          "self": {
-            "href": "/api/v3/users/1"
-          }
-        }
+        "name": "First user"
       },
       {
         "id": 2,
-        "name": "Second User",
-        "_links": {
-          "self": {
-            "href": "/api/v3/users/2"
-          }
-        }
+        "name": "Second user"
       }
     ]
   }

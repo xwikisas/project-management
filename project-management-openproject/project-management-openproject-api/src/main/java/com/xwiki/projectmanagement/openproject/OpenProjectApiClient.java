@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject;
 
 import org.xwiki.component.annotation.Role;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -82,54 +81,16 @@ public interface OpenProjectApiClient
     PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException;
 
     /**
-     * Retrieves a list of available users for creating a work package based on the specified page size and filter
-     * criteria from the current OpenProject configuration.
-     *
-     * @param url the URL of the work package for which we want to retrieve the available users.
-     * @param offset the offset from which to start retrieving users.
-     * @param pageSize the number of users to retrieve per page.
-     * @param filters a JSON-formatted string representing filter criteria to apply to the request
-     * @return a list of {@link User}
-     * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
-     * @since 1.1
-     */
-    default PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
-        throws ProjectManagementException
-    {
-        throw new UnsupportedOperationException(
-            "Retrieving available users is not supported by this client implementation.");
-    }
-
-    /**
      * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
      * current OpenProject configuration.
      *
      * @param offset the offset from which to start retrieving projects.
-     * @param pageSize the number of projects to retrieve per page.
+     * @param pageSize the number of users to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request.
      * @return a list of {@link Project}.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      */
     PaginatedResult<Project> getProjects(int offset, int pageSize, String filters) throws ProjectManagementException;
-
-    /**
-     * Retrieves a paginated list of available projects for creating work packages based on the specified page size and
-     * filter criteria from the current OpenProject configuration.
-     *
-     * @param url the URL of the work package for which we want to retrieve the available projects.
-     * @param offset the offset from which to start retrieving projects.
-     * @param pageSize the number of projects to retrieve per page.
-     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
-     * @return a list of {@link Project}.
-     * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
-     * @since 1.1
-     */
-    default PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
-        throws ProjectManagementException
-    {
-        throw new UnsupportedOperationException(
-            "Retrieving available projects is not supported by this client implementation.");
-    }
 
     /**
      * Retrieves all available types from the current OpenProject configuration.
@@ -163,34 +124,4 @@ public interface OpenProjectApiClient
      * @since 1.0-rc-5
      */
     UserAvatar getUserAvatar(String userId) throws ProjectManagementException;
-
-    /**
-     * Retrieves work packages form response.
-     *
-     * @param jsonBody the json body.
-     * @return the json node.
-     * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages
-     *     form
-     * @since 1.1
-     */
-    default JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException
-    {
-        throw new UnsupportedOperationException(
-            "Retrieving work packages form response is not supported by this client implementation.");
-    }
-
-    /**
-     * Creates a work package in OpenProject.
-     *
-     * @param url the URL to create the work package.
-     * @param jsonBody the JSON body representing the work package to be created.
-     * @return the created work package.
-     * @throws ProjectManagementException if there was an issue during the creation process.
-     * @since 1.1
-     */
-    default JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
-    {
-        throw new UnsupportedOperationException(
-            "Creating work packages is not supported by this client implementation.");
-    }
 }

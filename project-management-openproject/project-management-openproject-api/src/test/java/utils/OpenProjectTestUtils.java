@@ -27,69 +27,38 @@ import org.apache.commons.io.IOUtils;
 
 public class OpenProjectTestUtils
 {
-    private OpenProjectTestUtils()
-    {
-
-    }
-
-    public static String getWorkPackagesValidResponse() throws IOException
+    public String getWorkPackagesValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectWorkPackagesApiResponse.json");
     }
 
-    public static String getUsersValidResponse() throws IOException
+    public String getUsersValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectUsersApiResponse.json");
     }
 
-    public static String getProjectsValidResponse() throws IOException
+    public String getProjectsValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectProjectsApiResponse.json");
     }
 
-    public static String getTypesValidResponse() throws IOException
+    public String getTypesValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectTypesApiResponse.json");
     }
 
-    public static String getStatusesValidResponse() throws IOException
-    {
+    public String getStatusesValidResponse() throws IOException{
         return getJsonFromResource("openProjectStatusesApiResponse.json");
     }
 
-    public static String getPrioritiesValidResponse() throws IOException
+    public String getPrioritiesValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectPrioritiesApiResponse.json");
     }
 
-    public static String getCreateWorkPackageProjectsFormResponse() throws IOException
+    private String getJsonFromResource(String fileName) throws IOException
     {
-        return getJsonFromResource("openProjectCreateWorkPackageProjectsFormResponse.json");
-    }
-
-    public static String getCreateWorkPackageValidationFailsApiResponse() throws IOException
-    {
-        return getJsonFromResource("openProjectCreateWorkPackageValidationFailsApiResponse.json");
-    }
-
-    public static String getCreateWorkPackageValidationFailsResponse() throws IOException
-    {
-        return getJsonFromResource("openProjectCreateWorkPackageValidationFailsResponse.json");
-    }
-
-    public static String getCreateWorkPackageRequestExample() throws IOException
-    {
-        return getJsonFromResource("openProjectCreateWorkPackageRequestExample.json");
-    }
-
-    public static String getCreateWorkPackageValidationSuccessResponse() throws IOException
-    {
-        return getJsonFromResource("openProjectCreateWorkPackageValidationSuccessResponse.json");
-    }
-
-    private static String getJsonFromResource(String fileName) throws IOException
-    {
-        InputStream stream = OpenProjectTestUtils.class.getClassLoader().getResourceAsStream(fileName);
+        InputStream stream = this.getClass().getClassLoader().getResourceAsStream(fileName);
 
         if (stream == null) {
             throw new RuntimeException(String.format("Could not find %s", fileName));
@@ -97,4 +66,5 @@ public class OpenProjectTestUtils
 
         return IOUtils.toString(stream, Charset.defaultCharset());
     }
+
 }

@@ -20,8 +20,6 @@
 
 package com.xwiki.projectmanagement.openproject.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Describes the Open Project entities that can have custom colors associated to them such as Status and Type.
  *
@@ -34,25 +32,6 @@ public class ColoredOpenProjectObject extends BaseOpenProjectObject
      * The key that retrieves the color attribute of this entity.
      */
     public static final String KEY_COLOR = "color";
-
-    /**
-     * Default constructor.
-     */
-    public ColoredOpenProjectObject()
-    {
-    }
-
-    /**
-     * Create a ColoredOpenProjectObject from a JsonNode.
-     *
-     * @param jsonNode the JsonNode containing the colored open project object information.
-     */
-    public ColoredOpenProjectObject(JsonNode jsonNode)
-    {
-        super(jsonNode);
-        String color = jsonNode.path(KEY_COLOR).asText();
-        this.setColor(color);
-    }
 
     /**
      * @return the color associated to this entity. It is used by the client to display this property in a specific

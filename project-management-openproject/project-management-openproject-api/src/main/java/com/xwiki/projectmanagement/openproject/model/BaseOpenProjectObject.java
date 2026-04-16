@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.model;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
 
 /**
@@ -47,26 +46,6 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      * The key identifying the open project object itself.
      */
     private static final String SELF = "self";
-
-    /**
-     * Default constructor.
-     */
-    public BaseOpenProjectObject()
-    {
-
-    }
-
-    /**
-     * Create a BaseOpenProjectObject from a JsonNode.
-     *
-     * @param jsonNode the JsonNode containing the base open project object information.
-     */
-    public BaseOpenProjectObject(JsonNode jsonNode)
-    {
-        this.setId(jsonNode.path(KEY_ID).asInt());
-        this.setName(jsonNode.path(KEY_NAME).asText());
-        this.setSelf(new Linkable("", jsonNode.path("_links").path(SELF).path("href").asText()));
-    }
 
     /**
      * @return the id of the work item project.
@@ -135,17 +114,5 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     public void putEntry(String key, Object value)
     {
         this.put(key, value);
-    }
-
-    /**
-     * Initializes the self link of the object from a connection URL and a resource path.
-     *
-     * @param connectionUrl the connection URL to the Open Project instance.
-     * @param resourcePath the resource path of the resource.
-     * @since 1.1
-     */
-    public void initializeSelfWithPath(String connectionUrl, String resourcePath)
-    {
-        this.setSelf(new Linkable("", String.format("%s%s", connectionUrl, resourcePath)));
     }
 }

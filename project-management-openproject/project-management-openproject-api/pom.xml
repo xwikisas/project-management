@@ -33,7 +33,7 @@
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
-    <xwiki.jacoco.instructionRatio>0.53</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.57</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <dependency>
@@ -50,11 +50,6 @@
       <groupId>org.xwiki.commons</groupId>
       <artifactId>xwiki-commons-component-api</artifactId>
       <version>${commons.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.xwiki.urlshortener</groupId>
-      <artifactId>application-urlshortener-default</artifactId>
-      <version>${urlshortener.version}</version>
     </dependency>
     <dependency>
       <groupId>com.xwiki.licensing</groupId>
