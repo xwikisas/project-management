@@ -27,7 +27,6 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
-
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -49,7 +48,8 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
      */
     public OpenProjectCreateWorkPackageMacro()
     {
-        super("Open Project Create Work Package", "Allows to create a work package in Open Project from XWiki.",
+        super("Open Project Create Work Package",
+            "Easily create a new work package in OpenProject directly from XWiki.",
             OpenProjectCreateWorkPackageMacroParameters.class);
     }
 

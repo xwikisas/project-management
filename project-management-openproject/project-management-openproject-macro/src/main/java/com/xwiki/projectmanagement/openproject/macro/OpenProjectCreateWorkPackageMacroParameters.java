@@ -35,20 +35,20 @@ public class OpenProjectCreateWorkPackageMacroParameters
     private String opRequest;
 
     /**
-     * @return the request for creating the work package.
+     * @return the opRequest for creating the work package.
      */
-    public String getOPRequest()
+    public String getOpRequest()
     {
         return this.opRequest;
     }
 
     /**
-     * @param request see {@link #getOPRequest()}.
+     * @param opRequest see {@link #getOpRequest()}.
      */
     @PropertyDisplayType(OpenProjectCreateWorkPackage.class)
     @PropertyMandatory
-    public void setOPRequest(String request)
+    public void setOpRequest(String opRequest)
     {
-        this.opRequest = request;
+        this.opRequest = opRequest;
     }
 }

@@ -157,7 +157,10 @@ require(["jquery"], function ($) {
     $container.find('input[name], select[name], textarea[name]').not('.wp-selected').each(function () {
       const $field = $(this);
       const value = $field.val();
-      if (!value) return;
+
+      if (value == null || value === "") {
+        return;
+      }
 
       const $card = $field.closest('.work-package-card');
       const $checkbox = $card.find('.wp-selected');
@@ -180,7 +183,7 @@ require(["jquery"], function ($) {
     try {
       const response = await createWorkPackagesRequest(connection, requestBody);
       const container = $("#dynamic-fields-container");
-      container.empty();
+      container.empty().addClass("hidden");
 
       Object.entries(response).forEach(([key, value]) => {
         const id = `wp-${key}-0`;
@@ -210,8 +213,6 @@ require(["jquery"], function ($) {
 
 			if (value == null || String(value).trim() === "") {
 				isValid = false;
-				$field.trigger("focus");
-				return false;
 			}
 		});
 
@@ -222,22 +223,44 @@ require(["jquery"], function ($) {
     onProjectChange();
   });
 
-  $('.macro-editor-modal .btn-primary').on('click', async function (e) {
-    e.preventDefault();
+  $(document).on('click', '.macro-editor-modal .btn-primary', async function (e) {
+    const modal = $(this).closest('.macro-editor-modal');
 
-	   if (!isFormValid()) {
-	      notify("Please fill in all required fields!", "error");
-		    return;
-	   }
+    if (modal.find('[data-macroid="openproject-create-work-package/xwiki/2.1"]').length) {
+      e.preventDefault();
 
-     const project = $("#op-project").val();
-     const payload = {...buildPayloadFrom($("#dynamic-fields-container")), 'project': project};
+      if (!isFormValid()) {
+        notify("Please fill in all required fields!", "error");
+        return;
+      }
 
-		 try {
-		 const workPackage = await createWorkPackagesRequest($("#op-connection").val(), payload);
-		 const connection = $("#op-connection").val();
-		 $('.macro-editor-modal').modal('hide');
-     CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
+      const connection = $("#op-connection").val();
+
+      if (!connection) {
+        notify("Please select a connection!", "error");
+        return;
+      }
+
+      const project = $("#op-project").val();
+
+      if (!project) {
+        notify("Please select a project!", "error");
+        return;
+      }
+
+      const payload = {...buildPayloadFrom($("#dynamic-fields-container")), 'project': project};
+
+      try {
+        const workPackage = await createWorkPackagesRequest(connection, payload);
+
+        if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
+        notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
+        return;
+      }
+
+      modal.modal('hide');
+
+      CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
         name: 'openproject',
         inline: 'enforce',
         parameters: {
@@ -247,12 +270,14 @@ require(["jquery"], function ($) {
         }
       });
       notify("Work package created and inserted successfully!", "done");
-		} catch (err) {
-			return notify("An error occurred while trying to create the work package!", "error");
-		}
+      } catch (err) {
+        notify("An error occurred while trying to create the work package!", "error");
+      }
+    }
   });
 
   $(document).on("change", "#op-connection", function () {
+    $("#dynamic-fields-container").empty().addClass("hidden");
     loadProjects(
       "#op-connection",
       "#op-project",

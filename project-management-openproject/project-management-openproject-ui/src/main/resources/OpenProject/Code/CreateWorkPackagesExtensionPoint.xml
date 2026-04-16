@@ -170,8 +170,6 @@
           projectSelect.prop("disabled", true).trigger("change");
           generateCards(projects, rowsData.map(() =&gt; ""));
         } else {
-          projectSelect.prop("disabled", false);
-
           projectSelect.append(
             $("&lt;option&gt;", {
               value: "",
@@ -201,6 +199,9 @@
           url.searchParams.set("connectionName", connection);
           link.attr("href", url.toString());
           $(incorrectTokenId).removeClass("hidden");
+          // Hide project select and dynamic fields if token is incorrect
+          $(projectContainerId).addClass("hidden");
+
           return;
         }
 		$(connectionSelectId).val("");
@@ -269,7 +270,6 @@
       $("#project-select-single-work-package-container").addClass("hidden");
       $("#project-select-single-work-package").prop("disabled", false);
       $("#single-dynamic-fields-container").empty().addClass("hidden");
-      $("#create-single-work-package-form-button").addClass("hidden");
       $("#incorrect-token-single-work-package").addClass("hidden");
     }
 
@@ -283,20 +283,21 @@
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
       $("#project-select-multiple-work-packages-container").addClass("hidden");
-      $("#create-multiple-work-packages-form-button").addClass("hidden");
       $("#incorrect-token-multiple-work-packages").addClass("hidden");
     }
 
     function generateCards(projectApiResponse, elements) {
       const template = $("#work-package-card-template");
       let container = $("#work-packages-container");
-	  container.empty();
+      let multipleWorkPackagesContainer = $("#multiple-work-packages-container");
+      multipleWorkPackagesContainer.addClass("hidden");
+	    container.empty()
       elements.forEach((element, index) =&gt; {
         let card = generateCard(template, projectApiResponse, element, index)
         container.append(card);
       });
-
-      $("#multiple-work-packages-container").removeClass("hidden");
+      multipleWorkPackagesContainer.removeClass("hidden");
+      $("#select-all-work-packages").prop("checked", true);
     }
 
     function generateCard(template, projectApiResponse, element, index) {
@@ -513,7 +514,6 @@
 
     function findAndOpenFirstInvalid($container) {
       let firstInvalid = null;
-
       $container
         .find('input[required], select[required], textarea[required]')
         .each(function () {
@@ -678,9 +678,13 @@
         "#project-select-multiple-work-packages-container",
         "#incorrect-token-multiple-work-packages"
       );
+      $("#mappings-container").empty();
+			$("#work-packages-table-mapping-container").addClass("hidden");
+			$("#multiple-work-packages-container").addClass("hidden");
     });
 
     $("#connection-select-single-work-package").on("change", function () {
+      $("#single-dynamic-fields-container").empty().addClass("hidden");
       loadProjects(
         "#connection-select-single-work-package",
         "#project-select-single-work-package",
@@ -698,13 +702,13 @@
       try {
         const response = await createWorkPackagesRequest(connection, requestBody);
         generateCards(response, rowsData.map(() =&gt; ""));
+
         if ($(".mapping-row").length &gt; 0) {
           updateMapping();
         }
         else {
           initializeMapping(response);
         }
-        $("#create-multiple-work-packages-form-button").removeClass("hidden");
       } catch (err) {
         notify("An error occurred while trying to set the available values!", "error")
       }
@@ -721,7 +725,7 @@
 
         const template = $("#work-package-card-template");
         const container = $("#single-dynamic-fields-container");
-        container.empty();
+        container.empty().addClass("hidden");
 
         Object.entries(response).forEach(([key, value]) =&gt; {
           const id = `wp-${key}`;
@@ -732,7 +736,6 @@
 
         container.removeClass("hidden");
 
-        $("#create-single-work-package-form-button").removeClass("hidden");
       } catch (err) {
         notify("An error occurred while trying to create the inputs!", "error");
       }
@@ -751,8 +754,19 @@
 
       const $container = $("#single-dynamic-fields-container");
       const project = $("#project-select-single-work-package").val();
+
+      if (!project) {
+				notify('Please select a project.', 'error');
+				return;
+			}
+
       const payload = {...buildPayloadFrom($container), 'project': project};
       const connection = $("#connection-select-single-work-package").val();
+
+      if (!connection) {
+				notify('Please select a connection.', 'error');
+				return;
+			}
       try {
         const response = await createWorkPackagesRequest(connection, payload);
         resetCreateSingleWorkPackageForm();
@@ -772,7 +786,19 @@
       }
 
       const connection = $("#connection-select-multiple-work-packages").val();
+
+      if (!connection) {
+				notify('Please select a connection.', 'error');
+				return;
+			}
+
       const project = $("#project-select-multiple-work-packages").val();
+
+      if (!project) {
+        notify('Please select a project.', 'error');
+        return;
+      }
+
       const tasks = [];
 
       $('.work-package-card').each(function() {
@@ -843,17 +869,25 @@
           return;
       }
 
-      $('#selection-menu')
-        .attr('style', 'display:block; position:fixed; z-index:1050;')
+			const menu = $('#selection-menu');
+
+      menu
         .css({
-          top: rect.top - 40 + window.scrollY + 'px',
-          left: rect.left + rect.width / 2 - $('#selection-menu').outerWidth() / 2 + window.scrollX + 'px'
+          display: 'block',
+          position: 'fixed',
+          zIndex: 1050,
+          top: rect.top - menu.outerHeight() - 8 + 'px',
+          left: rect.left + rect.width / 2 - menu.outerWidth() / 2 + 'px'
         });
 
-      const startNode = range.startContainer;
-      const table = $(startNode).closest("table");
+      let node = range.commonAncestorContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        node = node.parentNode;
+      }
 
-      if (table.length) {
+      const isInTable = $(node).closest("table").length;
+
+      if (isInTable) {
         $('#create-wp-from-table').removeClass('hidden');
       } else {
         $('#create-wp-from-table').addClass('hidden');
@@ -1102,7 +1136,7 @@
                   data-dismiss="modal"&gt;
             Cancel
           &lt;/button&gt;
-          &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary hidden"&gt;
+          &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary"&gt;
             Create work package
           &lt;/button&gt;
         &lt;/div&gt;
@@ -1144,7 +1178,7 @@
                   data-dismiss="modal"&gt;
             Cancel
           &lt;/button&gt;
-          &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary hidden"&gt;
+          &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary"&gt;
             Create work packages
           &lt;/button&gt;
         &lt;/div&gt;
