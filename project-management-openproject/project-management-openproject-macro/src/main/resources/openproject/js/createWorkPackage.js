@@ -17,15 +17,21 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-require(["jquery"], function ($) {
-  const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
+ require.config({
+   paths: {
+ 		'create-work-package-utils': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
+ 		('jsx', 'resource=js/openproject/create-work-packages-utils.js&minify=false')
+   }
+ });
+
+require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
   function initializeConnectionIfOnlyOneAvailable() {
     var $conn = $("#op-connection");
 
     if ($conn.find("option").length === 1) {
       $conn.prop("selectedIndex", 0).prop("disabled", true);
-      loadProjects(
+      createWpUtils.loadProjects(
         "#op-connection",
         "#op-project",
         "#op-project-container",
@@ -34,167 +40,25 @@ require(["jquery"], function ($) {
     }
   }
 
-  async function createWorkPackagesRequest(connection, requestBody) {
-    const url = `${baseUrl}${connection}/workPackages/create`;
-    return await $.ajax({
-      method: "POST",
-      contentType: "application/json",
-      url: url,
-      data: JSON.stringify(requestBody),
-    });
-  }
-
-  async function loadProjects(connectionSelectId, projectSelectId, projectContainerId, incorrectTokenId) {
-    const connection = $(connectionSelectId).val();
-    const url = `${baseUrl}${connection}/workPackages/availableProjects`;
-    try {
-      const projects = await $.ajax({
-        method: "GET",
-        contentType: "application/json",
-        url: url,
-      });
-
-      const projectSelect = $(projectSelectId);
-      projectSelect.empty();
-
-      if (projects.length === 1) {
-        projectSelect.append(
-          $("<option>", { value: projects[0].self.location, text: projects[0].name, selected: true })
-        );
-        projectSelect.prop("disabled", true);
-        await onProjectChange();
-      } else {
-        projectSelect.append(
-          $("<option>", { value: "", text: "Select project...", disabled: true, selected: true })
-        );
-        projects.forEach((project) => {
-          projectSelect.append(
-            $("<option>", { value: project.self.location, text: project.name })
-          );
-        });
-      }
-
-      $(incorrectTokenId).addClass("hidden");
-      $(projectContainerId).removeClass("hidden");
-    } catch (err) {
-      if (err.status === 409) {
-        const link = $(`${incorrectTokenId} a`);
-        const url = new URL(link.attr("href"), window.location.origin);
-        url.searchParams.set("connectionName", connection);
-        link.attr("href", url.toString());
-        $(incorrectTokenId).removeClass("hidden");
-        $(projectContainerId).addClass("hidden");
-        return;
-      }
-      $(connectionSelectId).val("");
-      notify("An error occurred while trying to get the project options!", "error");
-    }
-  }
-
-  function createInput(id, name, fieldClass, fieldData) {
-    let field;
-
-    switch (fieldData.type) {
-      case "select":
-        field = $("<select>", { id, name, class: fieldClass, required: fieldData.required });
-        populateSelect(field, fieldData);
-        break;
-      case "date":
-      case "text":
-        field = $("<input>", {
-          type: fieldData.type,
-          id,
-          name,
-          class: fieldClass,
-          required: fieldData.required,
-          placeholder: `Enter ${fieldData.label}...`,
-          value: fieldData.defaultValue || ""
-        });
-        break;
-      default:
-        field = $("<input>", {
-          type: "text",
-          id,
-          name,
-          class: fieldClass,
-          required: fieldData.required,
-          placeholder: `Enter ${fieldData.label}...`,
-          value: fieldData.defaultValue?.id || ""
-        });
-        break;
-    }
-
-    const wrapper = $("<div>", { class: "form-group" });
-    wrapper.append($("<label>", { for: id, text: fieldData.label }));
-    wrapper.append(field);
-    return wrapper;
-  }
-
-  function populateSelect(selectElement, fieldData) {
-    if (!fieldData || !fieldData.allowedValues) return;
-
-    selectElement.empty();
-    const hasDefault = !!fieldData.defaultValue;
-
-    selectElement.append(
-      $("<option>", { value: "", text: `Select ${fieldData.label}...`, disabled: true, selected: !hasDefault })
-    );
-
-    fieldData.allowedValues.forEach(option => {
-      const value = option.self.location;
-      selectElement.append(
-        $("<option>", {
-          value,
-          text: option.name,
-          selected: hasDefault && fieldData.defaultValue.self.location === value
-        })
-      );
-    });
-  }
-
-  function buildPayloadFrom($container) {
-    const payload = {};
-    $container.find('input[name], select[name], textarea[name]').not('.wp-selected').each(function () {
-      const $field = $(this);
-      const value = $field.val();
-
-      if (value == null || value === "") {
-        return;
-      }
-
-      const $card = $field.closest('.work-package-card');
-      const $checkbox = $card.find('.wp-selected');
-      if ($checkbox.length && !$checkbox.is(':checked')) return;
-
-      const key = $field.attr('name').replace(/^wp-/, '');
-      payload[key] = value;
-    });
-    return payload;
-  }
-
-  function notify(message, type) {
-    new XWiki.widgets.Notification(message, type);
-  }
-
   async function onProjectChange() {
     const connection = $("#op-connection").val();
     const requestBody = { project: $("#op-project").val() };
 
     try {
-      const response = await createWorkPackagesRequest(connection, requestBody);
+      const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
       const container = $("#dynamic-fields-container");
       container.empty().addClass("hidden");
 
       Object.entries(response).forEach(([key, value]) => {
         const id = `wp-${key}-0`;
         const inputClass = `wp-${key}`;
-        const input = createInput(id, key, inputClass, value);
+        const input = createWpUtils.createInput(id, key, inputClass, value);
         container.append(input);
       });
 
       container.removeClass("hidden");
     } catch (err) {
-      notify("An error occurred while trying to create the inputs!", "error");
+      createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
     }
   }
 
@@ -230,31 +94,31 @@ require(["jquery"], function ($) {
       e.preventDefault();
 
       if (!isFormValid()) {
-        notify("Please fill in all required fields!", "error");
+        createWpUtils.notify("Please fill in all required fields!", "error");
         return;
       }
 
       const connection = $("#op-connection").val();
 
       if (!connection) {
-        notify("Please select a connection!", "error");
+        createWpUtils.notify("Please select a connection!", "error");
         return;
       }
 
       const project = $("#op-project").val();
 
       if (!project) {
-        notify("Please select a project!", "error");
+        createWpUtils.notify("Please select a project!", "error");
         return;
       }
 
-      const payload = {...buildPayloadFrom($("#dynamic-fields-container")), 'project': project};
+      const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
 
       try {
-        const workPackage = await createWorkPackagesRequest(connection, payload);
+        const workPackage = await createWpUtils.createWorkPackagesRequest(connection, payload);
 
         if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
-        notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
+        createWpUtils.notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
         return;
       }
 
@@ -269,16 +133,16 @@ require(["jquery"], function ($) {
           workItemsDisplayer: "workItemsSingle"
         }
       });
-      notify("Work package created and inserted successfully!", "done");
+      createWpUtils.notify("Work package created and inserted successfully!", "done");
       } catch (err) {
-        notify("An error occurred while trying to create the work package!", "error");
+        createWpUtils.notify("An error occurred while trying to create the work package!", "error");
       }
     }
   });
 
   $(document).on("change", "#op-connection", function () {
     $("#dynamic-fields-container").empty().addClass("hidden");
-    loadProjects(
+    createWpUtils.loadProjects(
       "#op-connection",
       "#op-project",
       "#op-project-container",

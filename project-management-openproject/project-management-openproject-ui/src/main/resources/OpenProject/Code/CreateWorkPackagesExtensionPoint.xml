@@ -125,144 +125,20 @@
       <cache>long</cache>
     </property>
     <property>
-      <code>require(["jquery"], function ($) {
+      <code> require.config({
+   paths: {
+ 		'create-work-package-utils': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
+ 		('jsx', 'resource=js/openproject/create-work-packages-utils.js&amp;minify=false')
+   }
+ });
+
+require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
   $(document).ready(function () {
     const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
     let selectedText = "";
     let rowsData = [];
     let mapping = {};
-
-    async function createWorkPackagesRequest(connection, requestBody) {
-      const url = `${baseUrl}${connection}/workPackages/create`;
-      const response = await $.ajax({
-        method: "POST",
-        contentType: "application/json",
-        url: url,
-        data: JSON.stringify(requestBody),
-      });
-
-      return response;
-    }
-
-    async function loadProjects(connectionSelectId, projectSelectId, projectContainerId, incorrectTokenId) {
-      const connection = $(connectionSelectId).val();
-      const url = `${baseUrl}${connection}/workPackages/availableProjects`;
-      try {
-        const projects = await $.ajax({
-          method: "GET",
-          contentType: "application/json",
-          url: url,
-        });
-
-        const projectSelect = $(projectSelectId);
-        projectSelect.empty();
-
-        if (projects.length === 1) {
-          projectSelect.append(
-            $("&lt;option&gt;", {
-              value: projects[0].self.location,
-              text: projects[0].name,
-              selected: true
-            })
-          );
-
-          projectSelect.prop("disabled", true).trigger("change");
-          generateCards(projects, rowsData.map(() =&gt; ""));
-        } else {
-          projectSelect.append(
-            $("&lt;option&gt;", {
-              value: "",
-              text: "Select project...",
-              disabled: true,
-              selected: true,
-            })
-          );
-
-          projects.forEach((project) =&gt; {
-            projectSelect.append(
-              $("&lt;option&gt;", {
-                value: project.self.location,
-                text: project.name,
-              })
-            );
-          });
-        }
-
-	    $(incorrectTokenId).addClass("hidden");
-        $(projectContainerId).removeClass("hidden");
-      } catch (err) {
-        if (err.status === 409) {
-          const link = $(`${incorrectTokenId} a`);
-          const url = new URL(link.attr("href"), window.location.origin);
-
-          url.searchParams.set("connectionName", connection);
-          link.attr("href", url.toString());
-          $(incorrectTokenId).removeClass("hidden");
-          // Hide project select and dynamic fields if token is incorrect
-          $(projectContainerId).addClass("hidden");
-
-          return;
-        }
-		$(connectionSelectId).val("");
-        notify("An error occurred while trying to get the project options!", "error");
-      }
-    }
-
-    function createInput(id, name, fieldClass, fieldData) {
-      let field;
-
-      switch (fieldData.type) {
-        case "select":
-          field = $("&lt;select&gt;", {
-            id: id,
-            name: name,
-            class: fieldClass,
-            required: fieldData.required,
-          });
-          populateSelect(field, fieldData);
-          break;
-
-        case "date":
-        case "text":
-          field = $("&lt;input&gt;", {
-            type: fieldData.type,
-            id: id,
-            name: name,
-            class: fieldClass,
-            required: fieldData.required,
-            placeholder: `Enter ${fieldData.label}...`,
-            value: fieldData.defaultValue || ""
-          });
-          break;
-
-        default:
-          field = $("&lt;input&gt;", {
-            type: "text",
-            id: id,
-            name: name,
-            class: fieldClass,
-            required: fieldData.required,
-            placeholder: `Enter ${fieldData.label}...`,
-            value: fieldData.defaultValue?.id || ""
-          });
-          break;
-      }
-
-      const wrapper = $("&lt;div&gt;", {
-        class: "form-group",
-      });
-
-      wrapper.append(
-        $("&lt;label&gt;", {
-          for: id,
-          text: fieldData.label,
-        })
-      );
-      wrapper.append(field);
-
-      return wrapper;
-    }
 
     function resetCreateSingleWorkPackageForm() {
       $('#connection-select-single-work-package').val("");
@@ -323,7 +199,7 @@
       Object.entries(projectApiResponse).forEach(([key, value]) =&gt; {
         const id = `wp-${key}-${index}`;
 		const inputClass = `wp-${key}`;
-        const input = createInput(id, key, inputClass, value);
+        const input = createWpUtils.createInput(id, key, inputClass, value);
         collapseOptions.append(input);
       });
 
@@ -452,66 +328,6 @@
       });
     }
 
-    function populateSelect(selectElement, fieldData) {
-      if (!fieldData || !fieldData.allowedValues) {
-        return;
-      }
-
-      selectElement.empty();
-
-      const hasDefault = !!fieldData.defaultValue;
-
-      selectElement.append(
-        $("&lt;option&gt;", {
-          value: "",
-          text: `Select ${fieldData.label}...`,
-          disabled: true,
-          selected: !hasDefault
-        })
-      );
-
-      fieldData.allowedValues.forEach(option =&gt; {
-        const value = option.self.location;
-
-        selectElement.append(
-          $("&lt;option&gt;", {
-            value: value,
-            text: option.name,
-            selected:
-              hasDefault &amp;&amp;
-              fieldData.defaultValue.self.location === value
-          })
-        );
-      });
-    }
-
-    function buildPayloadFrom($container) {
-      const payload = {};
-
-      $container
-        .find('input[name], select[name], textarea[name]')
-        .not('.wp-selected')
-        .each(function () {
-          const $field = $(this);
-          const value = $field.val();
-
-          if (!value) {
-            return;
-          }
-
-          const $card = $field.closest('.work-package-card');
-          const $checkbox = $card.find('.wp-selected');
-
-          if ($checkbox.length &amp;&amp; !$checkbox.is(':checked')) return;
-
-          const key = $field.attr('name').replace(/^wp-/, '');
-
-          payload[key] = value;
-        });
-
-      return payload;
-    }
-
     function findAndOpenFirstInvalid($container) {
       let firstInvalid = null;
       $container
@@ -568,10 +384,6 @@
       $("#wp-create-modal-title").text("Create Multiple Work Packages");
       $("#create-multiple-work-packages-form").removeClass("hidden");
       $("#create-single-work-package-form").addClass("hidden");
-    }
-
-    function notify(message, type) {
-      new XWiki.widgets.Notification(message, type);
     }
 
     function getConnection(isSingleWorkPackage) {
@@ -672,7 +484,7 @@
     });
 
     $("#connection-select-multiple-work-packages").on("change", function () {
-      loadProjects(
+      createWpUtils.loadProjects(
         "#connection-select-multiple-work-packages",
         "#project-select-multiple-work-packages",
         "#project-select-multiple-work-packages-container",
@@ -685,7 +497,7 @@
 
     $("#connection-select-single-work-package").on("change", function () {
       $("#single-dynamic-fields-container").empty().addClass("hidden");
-      loadProjects(
+      createWpUtils.loadProjects(
         "#connection-select-single-work-package",
         "#project-select-single-work-package",
         "#project-select-single-work-package-container",
@@ -700,7 +512,7 @@
       };
 
       try {
-        const response = await createWorkPackagesRequest(connection, requestBody);
+        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
         generateCards(response, rowsData.map(() =&gt; ""));
 
         if ($(".mapping-row").length &gt; 0) {
@@ -710,7 +522,7 @@
           initializeMapping(response);
         }
       } catch (err) {
-        notify("An error occurred while trying to set the available values!", "error")
+        createWpUtils.notify("An error occurred while trying to set the available values!", "error")
       }
      });
 
@@ -721,7 +533,7 @@
       };
 
       try {
-        const response = await createWorkPackagesRequest(connection, requestBody);
+        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
 
         const template = $("#work-package-card-template");
         const container = $("#single-dynamic-fields-container");
@@ -730,14 +542,20 @@
         Object.entries(response).forEach(([key, value]) =&gt; {
           const id = `wp-${key}`;
           const inputClass = `wp-${key}`;
-          const input = createInput(id, key, inputClass, value);
+          const input = createWpUtils.createInput(id, key, inputClass, value);
           container.append(input);
         });
 
-        container.removeClass("hidden");
+        if (selectedText &amp;&amp; String(selectedText).trim() !== "") {
+          const subjectInputs = container.find("input[name='subject']");
+          if (subjectInputs.length) {
+            subjectInputs.first().val(selectedText);
+          }
+        }
 
+        container.removeClass("hidden");
       } catch (err) {
-        notify("An error occurred while trying to create the inputs!", "error");
+        createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
       }
     });
 
@@ -748,7 +566,7 @@
       const firstInvalidSingle = findAndOpenFirstInvalid(singleContainer);
 
       if (firstInvalidSingle) {
-        notify('Please fill the required fields highlighted.', 'error');
+        createWpUtils.notify('Please fill the required fields highlighted.', 'error');
         return;
       }
 
@@ -756,24 +574,24 @@
       const project = $("#project-select-single-work-package").val();
 
       if (!project) {
-				notify('Please select a project.', 'error');
+				createWpUtils.notify('Please select a project.', 'error');
 				return;
 			}
 
-      const payload = {...buildPayloadFrom($container), 'project': project};
+      const payload = {...createWpUtils.buildPayload($container), 'project': project};
       const connection = $("#connection-select-single-work-package").val();
 
       if (!connection) {
-				notify('Please select a connection.', 'error');
+				createWpUtils.notify('Please select a connection.', 'error');
 				return;
 			}
       try {
-        const response = await createWorkPackagesRequest(connection, payload);
+        const response = await createWpUtils.createWorkPackagesRequest(connection, payload);
         resetCreateSingleWorkPackageForm();
         $("#create-work-packages-modal").modal("hide");
-        notify("The Work Package was created successfully!", "done");
+        createWpUtils.notify("The Work Package was created successfully!", "done");
       } catch (err) {
-        notify("Failed to create the Work Package!", "error")
+        createWpUtils.notify("Failed to create the Work Package!", "error")
       }
     });
 
@@ -781,21 +599,21 @@
       e.preventDefault();
       const firstInvalidMultiple = findAndOpenFirstInvalid($(this));
       if (firstInvalidMultiple) {
-        notify('Please fill the required fields highlighted in selected work packages.', 'error');
+        createWpUtils.notify('Please fill the required fields highlighted in selected work packages.', 'error');
         return;
       }
 
       const connection = $("#connection-select-multiple-work-packages").val();
 
       if (!connection) {
-				notify('Please select a connection.', 'error');
+				createWpUtils.notify('Please select a connection.', 'error');
 				return;
 			}
 
       const project = $("#project-select-multiple-work-packages").val();
 
       if (!project) {
-        notify('Please select a project.', 'error');
+        createWpUtils.notify('Please select a project.', 'error');
         return;
       }
 
@@ -809,13 +627,13 @@
           return;
         }
 
-        const payload = buildPayloadFrom(card);
+        const payload = createWpUtils.buildPayload(card);
         payload.project = project;
 
         const titleEl = card.find('.wp-subject-title');
         titleEl.removeClass('text-success text-danger');
 
-        const p = createWorkPackagesRequest(connection, payload)
+        const p = createWpUtils.createWorkPackagesRequest(connection, payload)
         .then(resp =&gt; {
           titleEl.addClass('text-success');
           return { success: true, resp };
@@ -829,18 +647,18 @@
       });
 
       if (tasks.length === 0) {
-        notify('No work packages selected', 'warning');
+        createWpUtils.notify('No work packages selected', 'warning');
         return;
       }
 
       const results = await Promise.all(tasks);
       const allSuccess = results.every(r =&gt; r.success === true);
       if (allSuccess) {
-        notify('All work packages created successfully!', 'done');
+        createWpUtils.notify('All work packages created successfully!', 'done');
       } else if (results.some(r =&gt; r.success)) {
-        notify('Some work packages were created, some failed.', 'warning');
+        createWpUtils.notify('Some work packages were created, some failed.', 'warning');
       } else {
-        notify('Failed to create work packages!', 'error');
+        createWpUtils.notify('Failed to create work packages!', 'error');
       }
     });
 
@@ -900,7 +718,7 @@
       }
     });
 
-    $(document).on("click", ".wp-selected", function(e) {
+    $(document).on("click", ".wp-selected, label[for^='wp-selected']", function(e) {
       e.stopPropagation();
     });
 
@@ -915,11 +733,6 @@
 
       $('#select-all-work-packages').prop('checked', total === checked);
     });
-
-    $(document).on('click', "label[for^='wp-selected']", function(e) {
-      e.stopPropagation();
-    });
-
   });
 })</code>
     </property>
@@ -1124,6 +937,7 @@
       &lt;/div&gt;
       &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
         &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
+          &lt;p class="text-muted"&gt;This form allows you to create a new work package in OpenProject based on the selected text.&lt;/p&gt;
           #set ($connectionOptions = $services.openproject.getConnectionOptions())
           #connectionInput('connection-select-single-work-package' $connectionOptions)
           #incorrectToken('incorrect-token-single-work-package')
@@ -1143,6 +957,7 @@
       &lt;/form&gt;
       &lt;form id="create-multiple-work-packages-form" class="withLock xform" novalidate&gt;
         &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
+          &lt;p class="text-muted"&gt;This form allows you to create multiple work packages in OpenProject based on the selected table.&lt;/p&gt;
           #connectionInput('connection-select-multiple-work-packages')
           #incorrectToken('incorrect-token-multiple-work-packages')
           #projectInput('project-select-multiple-work-packages')
