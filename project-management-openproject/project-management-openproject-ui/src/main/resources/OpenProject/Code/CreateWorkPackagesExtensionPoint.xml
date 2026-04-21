@@ -1,0 +1,1088 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.6" reference="OpenProject.Code.CreateWorkPackagesExtensionPoint" locale="">
+  <web>OpenProject.Code</web>
+  <name>CreateWorkPackagesExtensionPoint</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>CreateWorkPackagesExtensionPoint</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content/>
+  <object>
+    <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>b04befac-6a29-475a-bf3a-83b3ac23cbf3</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code> require.config({
+   paths: {
+ 		'create-work-package-utils': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
+ 		('jsx', 'resource=js/openproject/create-work-packages-utils.js&amp;minify=false')
+   }
+ });
+
+require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
+
+  $(document).ready(function () {
+    const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
+    let selectedText = "";
+    let rowsData = [];
+    let mapping = {};
+
+    function getConnection(isSingleWorkPackage) {
+      if (isSingleWorkPackage) {
+        return $("#connection-select-single-work-package").val();
+      }
+
+      return $("#connection-select-multiple-work-packages").val();
+    }
+
+    function resetCreateSingleWorkPackageForm() {
+      $('#connection-select-single-work-package').val("");
+      $("#project-select-single-work-package").val("").empty();
+      $("#project-select-single-work-package-container").addClass("hidden");
+      $("#project-select-single-work-package").prop("disabled", false);
+      $("#single-dynamic-fields-container").empty().addClass("hidden");
+      $("#incorrect-token-single-work-package").addClass("hidden");
+    }
+
+    function resetCreateMultipleWorkPackagesForm() {
+      $("#work-packages-container").empty();
+      $("#multiple-work-packages-container").addClass("hidden");
+      $("#select-all-work-packages").prop("checked", true);
+      $('#connection-select-multiple-work-packages').val("");
+      $("#project-select-multiple-work-packages").val("").empty();
+      $("#project-select-multiple-work-packages").prop("disabled", false);
+      $("#mappings-container").empty();
+      $("#work-packages-table-mapping-container").addClass("hidden");
+      $("#project-select-multiple-work-packages-container").addClass("hidden");
+      $("#incorrect-token-multiple-work-packages").addClass("hidden");
+    }
+
+    function generateCards(projectApiResponse, elements) {
+      const template = $("#work-package-card-template");
+      let container = $("#work-packages-container");
+      let multipleWorkPackagesContainer = $("#multiple-work-packages-container");
+      multipleWorkPackagesContainer.addClass("hidden");
+	  container.empty()
+      elements.forEach((element, index) =&gt; {
+        let card = generateCard(template, projectApiResponse, element, index)
+        container.append(card);
+      });
+      multipleWorkPackagesContainer.removeClass("hidden");
+      $("#select-all-work-packages").prop("checked", true);
+    }
+
+    function generateCard(template, projectApiResponse, element, index) {
+      const clone = template[0].content.cloneNode(true);
+      const card = $(clone).find(".work-package-card");
+      const collapseId = "advanced-options_" + index;
+
+      const collapseOptions = card.find(".advanced-options");
+      const toggle = card.find("[data-toggle='collapse']");
+      const title = card.find(".wp-subject-title");
+
+      title.attr("id", `wp-subject-title-${index}`);
+
+      collapseOptions.attr("id", collapseId);
+      toggle.attr("data-target", "#" + collapseId);
+
+      const checkBoxInput = card.find("#wp-selected");
+      checkBoxInput.attr("id", `wp-selected-${index}`);
+      checkBoxInput.attr("name", `wp-selected-${index}`);
+      const checkBoxLabel = card.find("label[for='wp-selected']");
+      checkBoxLabel.attr("for", `wp-selected-${index}`);
+
+      Object.entries(projectApiResponse).forEach(([key, value]) =&gt; {
+        const id = `wp-${key}-${index}`;
+		const inputClass = `wp-${key}`;
+        const input = createWpUtils.createInput(id, key, inputClass, value);
+        collapseOptions.append(input);
+      });
+
+      const subjectInput = card.find(".wp-subject");
+      const defaultText = "Work package " + (index + 1);
+      const valueToSet = element &amp;&amp; String(element).trim() !== "" ? element : defaultText;
+
+      subjectInput.val(valueToSet);
+      title.text(valueToSet);
+
+      return card;
+    }
+
+    function initializeMapping(response) {
+      const container = $("#work-packages-table-mapping-container");
+      container.removeClass("hidden");
+      $('#mappings-container').empty();
+      $("#add-mapping").off("click").on("click", function() {
+        addMappingRow(rowsData, response);
+      });
+    }
+
+    function addMappingRow(tableKeys, openProjectResponse) {
+      const template = document.querySelector("#mapping-row-template");
+      const clone = template.content.cloneNode(true);
+      const row = $(clone).find(".mapping-row");
+
+      const tableSelect = row.find(".table-key");
+      const opSelect = row.find(".op-key");
+
+      tableKeys = Object.keys(tableKeys[0] || {});
+
+      tableKeys.forEach(key =&gt; {
+        tableSelect.append(`&lt;option value="${key}"&gt;${key}&lt;/option&gt;`);
+      });
+
+      Object.entries(openProjectResponse).forEach(([key, value]) =&gt; {
+        opSelect.append(
+          `&lt;option value="${key}"&gt;${value.label}&lt;/option&gt;`
+        );
+      });
+
+      tableSelect.add(opSelect).on("change", updateMapping);
+
+      row.find(".delete-mapping").on("click", function() {
+        const opKey = row.find(".op-key").val();
+        row.remove();
+        clearMappedField(opKey)
+        updateMapping();
+      });
+
+      $("#mappings-container").append(row);
+    }
+
+    function updateMapping() {
+      mapping = {};
+      $(".mapping-row").each(function() {
+        const tableKey = $(this).find(".table-key").val();
+        const opKey = $(this).find(".op-key").val();
+        if (tableKey &amp;&amp; opKey) {
+          mapping[tableKey] = opKey;
+        }
+      });
+
+      applyMappingToCards();
+    }
+
+    function clearMappedField(opKey) {
+      $(".work-package-card").each(function(index) {
+        const inputId = `#wp-${opKey}-${index}`;
+        const input = $(inputId);
+
+        if (!input.length) {
+          return;
+        }
+
+        if (input.is("select")) {
+          input.prop("selectedIndex", 0).trigger("change");
+        } else {
+          if (input.hasClass("wp-subject")) {
+            const defaultText = "Work package " + (index + 1);
+            input.val(defaultText).trigger("change");
+          } else {
+            input.val("").trigger("change");
+          }
+        }
+      });
+    }
+
+    function applyMappingToCards() {
+      $(".work-package-card").each(function(index) {
+        const rowData = rowsData[index];
+
+        if (!rowData) {
+          return;
+        }
+
+        Object.entries(mapping).forEach(([tableKey, opKey]) =&gt; {
+          const value = rowData[tableKey];
+
+          if (value === undefined || value === null) {
+            return;
+          }
+
+          const inputId = `#wp-${opKey}-${index}`;
+          const input = $(inputId);
+
+          if (!input.length) {
+            return;
+          }
+
+          if (input.is("select")) {
+            const normalizedValue = String(value).trim().toLowerCase();
+
+            const matchingOption = input.find("option").filter(function() {
+              return $(this).text().trim().toLowerCase() === normalizedValue;
+            });
+
+            if (matchingOption.length) {
+              input.val(matchingOption.val()).trigger("change");
+            }
+          } else {
+            input.val(value).trigger("change");
+          }
+        });
+      });
+    }
+
+		function handleHighlight() {
+			const selection = window.getSelection();
+      const text = selection.toString().trim();
+
+      if (!text) {
+        $('#selection-menu').hide();
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+
+      if (rect.width === 0 &amp;&amp; rect.height === 0) {
+        $('#selection-menu').hide();
+        return;
+      }
+
+      const menu = $('#selection-menu');
+
+      menu
+        .css({
+          display: 'block',
+          position: 'fixed',
+          zIndex: 1050,
+          top: rect.top - menu.outerHeight() - 8 + 'px',
+          left: rect.left + rect.width / 2 - menu.outerWidth() / 2 + 'px'
+        });
+
+      let node = range.commonAncestorContainer;
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        node = node.parentNode;
+      }
+
+      const isInTable = $(node).closest("table").length;
+
+      if (isInTable) {
+        $('#create-wp-from-table').removeClass('hidden');
+      } else {
+        $('#create-wp-from-table').addClass('hidden');
+      }
+		}
+
+		function handleTextHighlight() {
+		  const selection = window.getSelection();
+      selectedText = selection.toString().trim();
+
+      $('#selection-menu').hide();
+      window.getSelection().removeAllRanges();
+
+      renderSingleMode();
+      $("#create-work-packages-modal").modal("show");
+
+      const connectionSelect = $("#connection-select-single-work-package");
+
+      if (connectionSelect.find("option").length === 1) {
+        connectionSelect.prop("selectedIndex", 0);
+        connectionSelect.prop("disabled", true);
+        connectionSelect.trigger("change");
+      }
+		}
+
+		function handleTableHighlight() {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0);
+      const startNode = range.startContainer;
+
+      const table = $(startNode).closest("table");
+      if (!table.length) return;
+
+      rowsData = [];
+
+      const rows = table.find("tr");
+      const headers = [];
+      const hasHeader = rows.first().find("th").length &gt; 0;
+
+      if (hasHeader) {
+        rows.first().find("th, td").each((_, el) =&gt; {
+          headers.push($(el).text().trim());
+        });
+      } else {
+        const colCount = rows.first().find("td").length;
+        for (let i = 0; i &lt; colCount; i++) {
+          headers.push(`Col${i + 1}`);
+        }
+      }
+
+      rows.each((rowIndex, rowEl) =&gt; {
+        if (hasHeader &amp;&amp; rowIndex === 0) {
+            return;
+          }
+
+        const rowObject = {};
+        const cells = $(rowEl).find("td");
+
+        cells.each((cellIndex, cellEl) =&gt; {
+          const key = headers[cellIndex];
+          rowObject[key] = $(cellEl).text().trim();
+        });
+
+        if (Object.keys(rowObject).length &gt; 0) {
+          rowsData.push(rowObject);
+        }
+      });
+
+      $('#selection-menu').hide();
+      window.getSelection().removeAllRanges();
+
+      renderMultipleMode();
+      $("#create-work-packages-modal").modal("show");
+
+      const $connectionSelect = $("#connection-select-multiple-work-packages");
+      if ($connectionSelect.find("option").length === 1) {
+        $connectionSelect.prop("selectedIndex", 0);
+        $connectionSelect.prop("disabled", true);
+        $connectionSelect.trigger("change");
+      }
+		}
+
+    function findAndOpenFirstInvalid(container) {
+      let firstInvalid = null;
+      container
+        .find('input[required], select[required], textarea[required]')
+        .each(function () {
+          const field = $(this);
+
+          if (field.hasClass('wp-selected')) {
+            return;
+          }
+
+          const checkbox = field.closest('.work-package-card').find('.wp-selected');
+
+          if (checkbox.length &amp;&amp; !checkbox.is(':checked')) {
+            return;
+          }
+
+          const value = field.val();
+
+          if (value === null || String(value).trim() === '') {
+            firstInvalid = field;
+            return false;
+          }
+        });
+
+      if (!firstInvalid) {
+        return null;
+      }
+
+      const collapse = firstInvalid.closest('.collapse');
+
+      if (collapse.length) {
+        collapse.one('shown.bs.collapse', function () {
+          firstInvalid.trigger('focus');
+        });
+
+        collapse.collapse('show');
+      } else {
+        firstInvalid.trigger('focus');
+      }
+
+      return firstInvalid;
+    }
+
+    async function onSingleWorkPackageProjectSelect(element) {
+      const connection = getConnection(true);
+      const requestBody = {
+        project: $(element).val(),
+      };
+
+      try {
+        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+
+        const template = $("#work-package-card-template");
+        const container = $("#single-dynamic-fields-container");
+        container.empty().addClass("hidden");
+
+        Object.entries(response).forEach(([key, value]) =&gt; {
+          const id = `wp-${key}`;
+          const inputClass = `wp-${key}`;
+          const input = createWpUtils.createInput(id, key, inputClass, value);
+          container.append(input);
+        });
+
+        if (selectedText &amp;&amp; String(selectedText).trim() !== "") {
+          const subjectInputs = container.find("input[name='subject']");
+          if (subjectInputs.length) {
+            subjectInputs.first().val(selectedText);
+          }
+        }
+
+        container.removeClass("hidden");
+      } catch (err) {
+        createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
+      }
+    }
+
+    async function onMultipleWorkPackagesProjectSelect(element) {
+			const connection = getConnection(false);
+      const requestBody = {
+        project: element.val(),
+      };
+
+      try {
+        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+        generateCards(response, rowsData.map(() =&gt; ""));
+
+        if ($(".mapping-row").length &gt; 0) {
+          updateMapping();
+        }
+        else {
+          initializeMapping(response);
+        }
+      } catch (err) {
+        createWpUtils.notify("An error occurred while trying to set the available values!", "error")
+      }
+    }
+
+    async function submitSingleWorkPackageForm() {
+      const singleContainer = $("#single-dynamic-fields-container");
+      const firstInvalidSingle = findAndOpenFirstInvalid(singleContainer);
+
+      if (firstInvalidSingle) {
+        createWpUtils.notify('Please fill the required fields highlighted.', 'error');
+        return;
+      }
+
+      const container = $("#single-dynamic-fields-container");
+      const project = $("#project-select-single-work-package").val();
+
+      if (!project) {
+        createWpUtils.notify('Please select a project.', 'error');
+        return;
+      }
+
+      const payload = {...createWpUtils.buildPayload(container), 'project': project};
+      const connection = $("#connection-select-single-work-package").val();
+
+      if (!connection) {
+        createWpUtils.notify('Please select a connection.', 'error');
+        return;
+      }
+
+      try {
+        const response = await createWpUtils.createWorkPackagesRequest(connection, payload);
+        resetCreateSingleWorkPackageForm();
+        $("#create-work-packages-modal").modal("hide");
+        createWpUtils.notify("The Work Package was created successfully!", "done");
+      } catch (err) {
+        createWpUtils.notify("Failed to create the Work Package!", "error")
+      }
+    }
+
+    async function submitMultipleWorkPackagesForm(element) {
+      const firstInvalidMultiple = findAndOpenFirstInvalid(element);
+      if (firstInvalidMultiple) {
+        createWpUtils.notify('Please fill the required fields highlighted in selected work packages.', 'error');
+        return;
+      }
+
+      const connection = $("#connection-select-multiple-work-packages").val();
+
+      if (!connection) {
+        createWpUtils.notify('Please select a connection.', 'error');
+        return;
+      }
+
+      const project = $("#project-select-multiple-work-packages").val();
+
+      if (!project) {
+        createWpUtils.notify('Please select a project.', 'error');
+        return;
+      }
+
+      const tasks = [];
+
+      $('.work-package-card').each(function() {
+        const card = $(this);
+        const isSelected = card.find('.wp-selected').is(':checked');
+
+        if (!isSelected) {
+          return;
+        }
+
+        const payload = createWpUtils.buildPayload(card);
+        payload.project = project;
+
+        const titleEl = card.find('.wp-subject-title');
+        titleEl.removeClass('text-success text-danger');
+
+        const p = createWpUtils.createWorkPackagesRequest(connection, payload)
+        .then(resp =&gt; {
+          titleEl.addClass('text-success');
+          return { success: true, resp };
+        })
+        .catch(err =&gt; {
+          titleEl.addClass('text-danger');
+          return { success: false, err };
+        });
+
+        tasks.push(p);
+      });
+
+      if (tasks.length === 0) {
+        createWpUtils.notify('No work packages selected', 'warning');
+        return;
+      }
+
+      const results = await Promise.all(tasks);
+      const allSuccess = results.every(r =&gt; r.success === true);
+      if (allSuccess) {
+        createWpUtils.notify('All work packages created successfully!', 'done');
+      } else if (results.some(r =&gt; r.success)) {
+        createWpUtils.notify('Some work packages were created, some failed.', 'warning');
+      } else {
+        createWpUtils.notify('Failed to create work packages!', 'error');
+      }
+    }
+
+    function renderSingleMode() {
+      resetCreateSingleWorkPackageForm();
+      $("#wp-create-modal-title").text("Create Single Work Package");
+      $("#create-multiple-work-packages-form").addClass("hidden");
+      $("#create-single-work-package-form").removeClass("hidden");
+    }
+
+    function renderMultipleMode() {
+      resetCreateMultipleWorkPackagesForm();
+      $("#wp-create-modal-title").text("Create Multiple Work Packages");
+      $("#create-multiple-work-packages-form").removeClass("hidden");
+      $("#create-single-work-package-form").addClass("hidden");
+    }
+
+    $('#create-wp').on('click', function(e) {
+      e.preventDefault();
+      handleTextHighlight();
+    });
+
+    $('#create-wp-from-table').on('click', (e) =&gt; {
+			e.preventDefault();
+      handleTableHighlight();
+    });
+
+    $("#work-packages-container").on('input change', '.wp-subject', function() {
+      const input = $(this);
+      const inputId = input.attr('id');
+      const index = inputId.split('-').pop();
+      const titleId = `#wp-subject-title-${index}`;
+      $(titleId).text(input.val());
+    });
+
+    $("#connection-select-multiple-work-packages").on("change", function () {
+      createWpUtils.loadProjects(
+        "#connection-select-multiple-work-packages",
+        "#project-select-multiple-work-packages",
+        "#project-select-multiple-work-packages-container",
+        "#incorrect-token-multiple-work-packages"
+      );
+      $("#mappings-container").empty();
+      $("#work-packages-table-mapping-container").addClass("hidden");
+      $("#multiple-work-packages-container").addClass("hidden");
+    });
+
+    $("#connection-select-single-work-package").on("change", function () {
+      $("#single-dynamic-fields-container").empty().addClass("hidden");
+      createWpUtils.loadProjects(
+        "#connection-select-single-work-package",
+        "#project-select-single-work-package",
+        "#project-select-single-work-package-container",
+        "#incorrect-token-single-work-package"
+      );
+    });
+
+    $("#project-select-multiple-work-packages").on("change", async function () {
+      onMultipleWorkPackagesProjectSelect($(this));
+    });
+
+    $("#project-select-single-work-package").on("change", async function () {
+      onSingleWorkPackageProjectSelect($(this));
+    });
+
+    $("#create-single-work-package-form").on("submit", async function (e) {
+      e.preventDefault();
+      submitSingleWorkPackageForm();
+    });
+
+    $("#create-multiple-work-packages-form").on("submit", async function (e) {
+      e.preventDefault();
+      submitMultipleWorkPackagesForm($(this));
+    });
+
+    $("#create-multiple-work-packages-cancel-button").on("click", function() {
+      resetCreateMultipleWorkPackagesForm();
+    });
+
+    $("#create-single-work-package-cancel-button").on("click", function() {
+      resetCreateSingleWorkPackageForm();
+    });
+
+    $(document).on('mouseup', function () {
+      handleHighlight();
+    });
+
+    $(document).on('mousedown', function(e) {
+      if (!$(e.target).closest('#selection-menu').length) {
+        $('#selection-menu').hide();
+      }
+    });
+
+    $(document).on("click", ".wp-selected, label[for^='wp-selected']", function(e) {
+      e.stopPropagation();
+    });
+
+    $(document).on('change', '#select-all-work-packages', function () {
+      const checked = $(this).is(':checked');
+      $('#work-packages-container .wp-selected').prop('checked', checked);
+    });
+
+    $(document).on('change', '.wp-selected', function () {
+      const total = $('#work-packages-container .wp-selected').length;
+      const checked = $('#work-packages-container .wp-selected:checked').length;
+
+      $('#select-all-work-packages').prop('checked', total === checked);
+    });
+  });
+})</code>
+    </property>
+    <property>
+      <name>CreateWorkPackagesJs</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
+    <number>0</number>
+    <className>XWiki.UIExtensionClass</className>
+    <guid>17c5fc98-d456-4d64-aff5-182cd08959d0</guid>
+    <class>
+      <name>XWiki.UIExtensionClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <async_cached>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_cached</name>
+        <number>3</number>
+        <prettyName>Cached</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_cached>
+      <async_context>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>1</multiSelect>
+        <name>async_context</name>
+        <number>4</number>
+        <prettyName>Context elements</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>, </separator>
+        <separators>|, </separators>
+        <size>5</size>
+        <unmodifiable>0</unmodifiable>
+        <values>action=Action|doc.reference=Document|doc.revision|icon.theme=Icon theme|locale=Language|rendering.defaultsyntax=Default syntax|rendering.restricted=Restricted|rendering.targetsyntax=Target syntax|request.base=Request base URL|request.cookies|request.headers|request.parameters=Request parameters|request.remoteAddr|request.session|request.url=Request URL|request.wiki=Request wiki|sheet|user=User|wiki=Wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </async_context>
+      <async_enabled>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_enabled</name>
+        <number>2</number>
+        <prettyName>Asynchronous rendering</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_enabled>
+      <content>
+        <disabled>0</disabled>
+        <editor>Text</editor>
+        <name>content</name>
+        <number>1</number>
+        <prettyName>Executed Content</prettyName>
+        <restricted>0</restricted>
+        <rows>25</rows>
+        <size>120</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <extensionPointId>
+        <disabled>0</disabled>
+        <name>extensionPointId</name>
+        <number>5</number>
+        <prettyName>Extension Point ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </extensionPointId>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>6</number>
+        <prettyName>Extension ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parameters>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>parameters</name>
+        <number>7</number>
+        <prettyName>Extension Parameters</prettyName>
+        <restricted>0</restricted>
+        <rows>10</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </parameters>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>8</number>
+        <prettyName>Extension Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>wiki=Current Wiki|user=Current User|global=Global</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <async_cached>0</async_cached>
+    </property>
+    <property>
+      <async_context/>
+    </property>
+    <property>
+      <async_enabled>0</async_enabled>
+    </property>
+    <property>
+      <content>{{velocity}}
+#set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
+#macro (connectionInput $selectConnectionId $connectionOptions)
+&lt;div class="form-group"&gt;
+  #if ($connectionOptions.size() == 0)
+  &lt;div class="box warningmessage"&gt;
+    &lt;p&gt;No OpenProject connections available! Please create a connection first.&lt;/p&gt;
+  &lt;/div&gt;
+  #else
+  &lt;label for="$selectConnectionId"&gt;Connection&lt;/label&gt;
+  &lt;select id="$selectConnectionId" name="connection" class="form-control"&gt;
+    #if($connectionOptions.size() &gt; 1)
+    &lt;option value="" disabled selected&gt;Select connection...&lt;/option&gt;
+    #end
+    #foreach ($option in $connectionOptions)
+    &lt;option value="$option.value"&gt;$option.name&lt;/option&gt;
+    #end
+  &lt;/select&gt;
+  #end
+&lt;/div&gt;
+#end
+#macro (incorrectToken $incorrectTokenId)
+&lt;div id="$incorrectTokenId" class="hidden"&gt;
+  #set($redirect = $escapetool.url($doc.getURL('view')))
+  #set($token = $escapetool.url($services.csrf.getToken()))
+  #set($params = "redirectUrl=$redirect&amp;token=$token")
+  &lt;div class="box warningmessage"&gt;
+    &lt;p&gt;This connection is not available! Follow this &lt;a
+      href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)"&gt;link&lt;/a&gt; to authenticate and try
+      again!&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+#end
+#macro (projectInput $projectSelectId $connectionOptions)
+&lt;div id="${projectSelectId}-container" class="form-group hidden"&gt;
+  &lt;label for="$projectSelectId"&gt;Project&lt;/label&gt;
+  &lt;select id="$projectSelectId" name="project"&gt;&lt;/select&gt;
+&lt;/div&gt;
+#end
+{{html}}
+
+&lt;div id="selection-menu" class="btn-group" style="display:none; position:fixed; z-index:1050;"&gt;
+  &lt;div class="dropdown"&gt;
+    &lt;button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"&gt;Open Project
+      &lt;span class="caret"&gt;&lt;/span&gt;&lt;/button&gt;
+    &lt;ul class="dropdown-menu"&gt;
+      &lt;li id="create-wp"&gt;&lt;a href="#"&gt;Create work package&lt;/a&gt;&lt;/li&gt;
+      &lt;li id="create-wp-from-table" class="hidden"&gt;&lt;a href="#"&gt;Create work package from table&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;div class="modal" id="create-work-packages-modal" tabindex="-1" role="dialog"
+     aria-labelledby="create-work-packages-modal-label" data-backdrop="static" data-keyboard="false"&gt;
+  &lt;div class="modal-dialog" role="document"&gt;
+    &lt;div class="modal-content"&gt;
+      &lt;div class="modal-header"&gt;
+        &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+          &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+        &lt;/button&gt;
+        &lt;div class="modal-title" id="wp-create-modal-title"&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
+        &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
+          &lt;p class="text-muted"&gt;This form allows you to create a new work package in OpenProject based on the selected text.&lt;/p&gt;
+          #set ($connectionOptions = $services.openproject.getConnectionOptions())
+          #connectionInput('connection-select-single-work-package' $connectionOptions)
+          #incorrectToken('incorrect-token-single-work-package')
+          #projectInput('project-select-single-work-package' $connectionOptions)
+          &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="modal-footer"&gt;
+          &lt;button id="create-single-work-package-cancel-button" type="button" class="btn btn-default"
+                  data-dismiss="modal"&gt;
+            Cancel
+          &lt;/button&gt;
+          &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary"&gt;
+            Create work package
+          &lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/form&gt;
+      &lt;form id="create-multiple-work-packages-form" class="withLock xform" novalidate&gt;
+        &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
+          &lt;p class="text-muted"&gt;This form allows you to create multiple work packages in OpenProject based on the selected table.&lt;/p&gt;
+          #connectionInput('connection-select-multiple-work-packages')
+          #incorrectToken('incorrect-token-multiple-work-packages')
+          #projectInput('project-select-multiple-work-packages')
+          &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
+            &lt;div class="form-group row" style="margin-bottom:0px;"&gt;
+              &lt;div class="col-xs-12"&gt;
+                &lt;p class="text"&gt;OpenProject Mapping&lt;/p&gt;
+              &lt;/div&gt;
+              &lt;div class="col-xs-12"&gt;
+                &lt;p class="text-muted"&gt;Map the columns of your table to OpenProject fields. Each mapping will map the
+                  values of a column to the OpenProject field of you choice.&lt;/p&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div id="mappings-container"&gt;&lt;/div&gt;
+            &lt;div class="form-group" style="margin-top:10px;"&gt;
+              &lt;a href="#" id="add-mapping"&gt;+ Add mapping&lt;/a&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div id="multiple-work-packages-container" class="form-group hidden"&gt;
+            &lt;p class="text-muted"&gt;The following work packages will be created&lt;/p&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label class="text-muted"&gt;
+                &lt;input type="checkbox" id="select-all-work-packages" checked&gt;
+                Select all
+              &lt;/label&gt;
+            &lt;/div&gt;
+            &lt;div id="work-packages-container" class="form-group"&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="modal-footer"&gt;
+          &lt;button id="create-multiple-work-packages-cancel-button" type="button" class="btn btn-default"
+                  data-dismiss="modal"&gt;
+            Cancel
+          &lt;/button&gt;
+          &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary"&gt;
+            Create work packages
+          &lt;/button&gt;
+        &lt;/div&gt;
+      &lt;/form&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;template id="work-package-card-template"&gt;
+  &lt;div class="panel panel-default work-package-card"&gt;
+    &lt;div class="panel-body"&gt;
+      &lt;div class="row"&gt;
+        &lt;div class="col-xs-12" data-toggle="collapse" data-target=""&gt;
+          &lt;label for="wp-selected"&gt;&lt;/label&gt;
+          &lt;input id="wp-selected" type="checkbox" class="wp-selected" checked/&gt;
+          &lt;span&gt;
+            &lt;span id="wp-subject-title" class="wp-subject-title"&gt;&lt;/span&gt;
+            &lt;span class="glyphicon glyphicon-menu-down pull-right"&gt;&lt;/span&gt;
+          &lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class="collapse advanced-options"&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;template id="mapping-row-template"&gt;
+  &lt;div class="mapping-row row" style="display:flex; margin-top:10px;"&gt;
+    &lt;div class="col-xs-4"&gt;
+      &lt;select class="form-control table-key"&gt;
+        &lt;option value="" disabled selected&gt;Select table column&lt;/option&gt;
+      &lt;/select&gt;
+    &lt;/div&gt;
+    &lt;div class="col-xs-3" style="display:flex; align-items:center; justify-content:center;"&gt;
+      &lt;p class="text-muted" style="margin:0px"&gt;is mapped to&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div class="col-xs-4"&gt;
+      &lt;select class="form-control op-key"&gt;
+        &lt;option value="" disabled selected&gt;Select OpenProject field&lt;/option&gt;
+      &lt;/select&gt;
+    &lt;/div&gt;
+    &lt;div class="col-xs-1" style="display:flex; align-items:center; justify-content:left;"&gt;
+      &lt;span class="delete-mapping glyphicon glyphicon-trash"&gt;&lt;/span&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+{{/html}}
+{{/velocity}}</content>
+    </property>
+    <property>
+      <extensionPointId>org.xwiki.platform.template.header.after</extensionPointId>
+    </property>
+    <property>
+      <name>com.xwiki.projectmanagement.openproject</name>
+    </property>
+    <property>
+      <parameters/>
+    </property>
+    <property>
+      <scope>global</scope>
+    </property>
+  </object>
+</xwikidoc>

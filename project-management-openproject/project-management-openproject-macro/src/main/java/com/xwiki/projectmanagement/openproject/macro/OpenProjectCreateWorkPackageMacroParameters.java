@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal;
+package com.xwiki.projectmanagement.openproject.macro;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,27 +20,35 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyMandatory;
+
+import com.xwiki.projectmanagement.openproject.OpenProjectCreateWorkPackage;
+
 /**
- * An enum listing the different ways a list of work items can be displayed.
+ * Open Project Create Work Package macro parameters.
  *
  * @version $Id$
  */
-public enum WorkItemsDisplayer
+public class OpenProjectCreateWorkPackageMacroParameters
 {
+    private String opRequest;
+
     /**
-     * Display the work items using a livedata.
+     * @return the opRequest for creating the work package.
      */
-    liveData,
+    public String getOpRequest()
+    {
+        return this.opRequest;
+    }
+
     /**
-     * Display the work items using a livedata in the card layout.
+     * @param opRequest see {@link #getOpRequest()}.
      */
-    liveDataCards,
-    /**
-     * Display a single work item in a page structure.
-     */
-    workItemsSingle,
-    /**
-     * Display a single work item as an inline badge.
-     */
-    workItemInline;
+    @PropertyDisplayType(OpenProjectCreateWorkPackage.class)
+    @PropertyMandatory
+    public void setOpRequest(String opRequest)
+    {
+        this.opRequest = opRequest;
+    }
 }
