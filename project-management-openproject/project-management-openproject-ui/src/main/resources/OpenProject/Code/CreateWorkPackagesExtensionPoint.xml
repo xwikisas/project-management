@@ -140,6 +140,14 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     let rowsData = [];
     let mapping = {};
 
+    function getConnection(isSingleWorkPackage) {
+      if (isSingleWorkPackage) {
+        return $("#connection-select-single-work-package").val();
+      }
+
+      return $("#connection-select-multiple-work-packages").val();
+    }
+
     function resetCreateSingleWorkPackageForm() {
       $('#connection-select-single-work-package').val("");
       $("#project-select-single-work-package").val("").empty();
@@ -167,7 +175,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       let container = $("#work-packages-container");
       let multipleWorkPackagesContainer = $("#multiple-work-packages-container");
       multipleWorkPackagesContainer.addClass("hidden");
-	    container.empty()
+	  container.empty()
       elements.forEach((element, index) =&gt; {
         let card = generateCard(template, projectApiResponse, element, index)
         container.append(card);
@@ -205,7 +213,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
       const subjectInput = card.find(".wp-subject");
       const defaultText = "Work package " + (index + 1);
-      const valueToSet = element &amp;&amp; element.trim() !== "" ? element : defaultText;
+      const valueToSet = element &amp;&amp; String(element).trim() !== "" ? element : defaultText;
 
       subjectInput.val(valueToSet);
       title.text(valueToSet);
@@ -315,7 +323,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
             const normalizedValue = String(value).trim().toLowerCase();
 
             const matchingOption = input.find("option").filter(function() {
-            return $(this).text().trim().toLowerCase() === normalizedValue;
+              return $(this).text().trim().toLowerCase() === normalizedValue;
             });
 
             if (matchingOption.length) {
@@ -328,75 +336,51 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       });
     }
 
-    function findAndOpenFirstInvalid($container) {
-      let firstInvalid = null;
-      $container
-        .find('input[required], select[required], textarea[required]')
-        .each(function () {
-          const $field = $(this);
+		function handleHighlight() {
+			const selection = window.getSelection();
+      const text = selection.toString().trim();
 
-          if ($field.hasClass('wp-selected')) {
-            return;
-          }
-
-          const $checkbox = $field.closest('.work-package-card').find('.wp-selected');
-
-          if ($checkbox.length &amp;&amp; !$checkbox.is(':checked')) {
-            return;
-          }
-
-          const value = $field.val();
-
-          if (value === null || String(value).trim() === '') {
-            firstInvalid = $field;
-            return false;
-          }
-        });
-
-      if (!firstInvalid) {
-        return null;
+      if (!text) {
+        $('#selection-menu').hide();
+        return;
       }
 
-      const $collapse = firstInvalid.closest('.collapse');
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
 
-      if ($collapse.length) {
-        $collapse.one('shown.bs.collapse', function () {
-          firstInvalid.trigger('focus');
+      if (rect.width === 0 &amp;&amp; rect.height === 0) {
+        $('#selection-menu').hide();
+        return;
+      }
+
+      const menu = $('#selection-menu');
+
+      menu
+        .css({
+          display: 'block',
+          position: 'fixed',
+          zIndex: 1050,
+          top: rect.top - menu.outerHeight() - 8 + 'px',
+          left: rect.left + rect.width / 2 - menu.outerWidth() / 2 + 'px'
         });
 
-        $collapse.collapse('show');
+      let node = range.commonAncestorContainer;
+
+      if (node.nodeType === Node.TEXT_NODE) {
+        node = node.parentNode;
+      }
+
+      const isInTable = $(node).closest("table").length;
+
+      if (isInTable) {
+        $('#create-wp-from-table').removeClass('hidden');
       } else {
-        firstInvalid.trigger('focus');
+        $('#create-wp-from-table').addClass('hidden');
       }
+		}
 
-      return firstInvalid;
-    }
-
-    function renderSingleMode() {
-      resetCreateSingleWorkPackageForm();
-      $("#wp-create-modal-title").text("Create Single Work Package");
-      $("#create-multiple-work-packages-form").addClass("hidden");
-      $("#create-single-work-package-form").removeClass("hidden");
-    }
-
-    function renderMultipleMode() {
-      resetCreateMultipleWorkPackagesForm();
-      $("#wp-create-modal-title").text("Create Multiple Work Packages");
-      $("#create-multiple-work-packages-form").removeClass("hidden");
-      $("#create-single-work-package-form").addClass("hidden");
-    }
-
-    function getConnection(isSingleWorkPackage) {
-      if (isSingleWorkPackage) {
-        return $("#connection-select-single-work-package").val();
-      }
-
-      return $("#connection-select-multiple-work-packages").val();
-    }
-
-    $('#create-wp').on('click', function(e) {
-      e.preventDefault();
-      const selection = window.getSelection();
+		function handleTextHighlight() {
+		  const selection = window.getSelection();
       selectedText = selection.toString().trim();
 
       $('#selection-menu').hide();
@@ -405,18 +389,16 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       renderSingleMode();
       $("#create-work-packages-modal").modal("show");
 
-      const $connectionSelect = $("#connection-select-single-work-package");
+      const connectionSelect = $("#connection-select-single-work-package");
 
-      if ($connectionSelect.find("option").length === 1) {
-        $connectionSelect.prop("selectedIndex", 0);
-        $connectionSelect.prop("disabled", true);
-        $connectionSelect.trigger("change");
+      if (connectionSelect.find("option").length === 1) {
+        connectionSelect.prop("selectedIndex", 0);
+        connectionSelect.prop("disabled", true);
+        connectionSelect.trigger("change");
       }
-    });
+		}
 
-    $('#create-wp-from-table').on('click', (e) =&gt; {
-      e.preventDefault();
-
+		function handleTableHighlight() {
       const selection = window.getSelection();
       if (!selection.rangeCount) return;
 
@@ -448,17 +430,17 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
             return;
           }
 
-          const rowObject = {};
-          const cells = $(rowEl).find("td");
+        const rowObject = {};
+        const cells = $(rowEl).find("td");
 
-          cells.each((cellIndex, cellEl) =&gt; {
-            const key = headers[cellIndex];
-            rowObject[key] = $(cellEl).text().trim();
-          });
+        cells.each((cellIndex, cellEl) =&gt; {
+          const key = headers[cellIndex];
+          rowObject[key] = $(cellEl).text().trim();
+        });
 
-          if (Object.keys(rowObject).length &gt; 0) {
-            rowsData.push(rowObject);
-          }
+        if (Object.keys(rowObject).length &gt; 0) {
+          rowsData.push(rowObject);
+        }
       });
 
       $('#selection-menu').hide();
@@ -473,63 +455,56 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         $connectionSelect.prop("disabled", true);
         $connectionSelect.trigger("change");
       }
-    });
+		}
 
-    $("#work-packages-container").on('input change', '.wp-subject', function() {
-      const input = $(this);
-      const inputId = input.attr('id');
-      const index = inputId.split('-').pop();
-      const titleId = `#wp-subject-title-${index}`;
-      $(titleId).text(input.val());
-    });
+    function findAndOpenFirstInvalid(container) {
+      let firstInvalid = null;
+      container
+        .find('input[required], select[required], textarea[required]')
+        .each(function () {
+          const field = $(this);
 
-    $("#connection-select-multiple-work-packages").on("change", function () {
-      createWpUtils.loadProjects(
-        "#connection-select-multiple-work-packages",
-        "#project-select-multiple-work-packages",
-        "#project-select-multiple-work-packages-container",
-        "#incorrect-token-multiple-work-packages"
-      );
-      $("#mappings-container").empty();
-			$("#work-packages-table-mapping-container").addClass("hidden");
-			$("#multiple-work-packages-container").addClass("hidden");
-    });
+          if (field.hasClass('wp-selected')) {
+            return;
+          }
 
-    $("#connection-select-single-work-package").on("change", function () {
-      $("#single-dynamic-fields-container").empty().addClass("hidden");
-      createWpUtils.loadProjects(
-        "#connection-select-single-work-package",
-        "#project-select-single-work-package",
-        "#project-select-single-work-package-container",
-        "#incorrect-token-single-work-package"
-      );
-    });
+          const checkbox = field.closest('.work-package-card').find('.wp-selected');
 
-    $("#project-select-multiple-work-packages").on("change", async function () {
-      const connection = getConnection(false);
-      const requestBody = {
-        project: $(this).val(),
-      };
+          if (checkbox.length &amp;&amp; !checkbox.is(':checked')) {
+            return;
+          }
 
-      try {
-        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
-        generateCards(response, rowsData.map(() =&gt; ""));
+          const value = field.val();
 
-        if ($(".mapping-row").length &gt; 0) {
-          updateMapping();
-        }
-        else {
-          initializeMapping(response);
-        }
-      } catch (err) {
-        createWpUtils.notify("An error occurred while trying to set the available values!", "error")
+          if (value === null || String(value).trim() === '') {
+            firstInvalid = field;
+            return false;
+          }
+        });
+
+      if (!firstInvalid) {
+        return null;
       }
-     });
 
-    $("#project-select-single-work-package").on("change", async function () {
+      const collapse = firstInvalid.closest('.collapse');
+
+      if (collapse.length) {
+        collapse.one('shown.bs.collapse', function () {
+          firstInvalid.trigger('focus');
+        });
+
+        collapse.collapse('show');
+      } else {
+        firstInvalid.trigger('focus');
+      }
+
+      return firstInvalid;
+    }
+
+    async function onSingleWorkPackageProjectSelect(element) {
       const connection = getConnection(true);
       const requestBody = {
-        project: $(this).val(),
+        project: $(element).val(),
       };
 
       try {
@@ -557,11 +532,30 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       } catch (err) {
         createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
       }
-    });
+    }
 
-    $("#create-single-work-package-form").on("submit", async function (e) {
-      e.preventDefault();
+    async function onMultipleWorkPackagesProjectSelect(element) {
+			const connection = getConnection(false);
+      const requestBody = {
+        project: element.val(),
+      };
 
+      try {
+        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+        generateCards(response, rowsData.map(() =&gt; ""));
+
+        if ($(".mapping-row").length &gt; 0) {
+          updateMapping();
+        }
+        else {
+          initializeMapping(response);
+        }
+      } catch (err) {
+        createWpUtils.notify("An error occurred while trying to set the available values!", "error")
+      }
+    }
+
+    async function submitSingleWorkPackageForm() {
       const singleContainer = $("#single-dynamic-fields-container");
       const firstInvalidSingle = findAndOpenFirstInvalid(singleContainer);
 
@@ -570,21 +564,22 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         return;
       }
 
-      const $container = $("#single-dynamic-fields-container");
+      const container = $("#single-dynamic-fields-container");
       const project = $("#project-select-single-work-package").val();
 
       if (!project) {
-				createWpUtils.notify('Please select a project.', 'error');
-				return;
-			}
+        createWpUtils.notify('Please select a project.', 'error');
+        return;
+      }
 
-      const payload = {...createWpUtils.buildPayload($container), 'project': project};
+      const payload = {...createWpUtils.buildPayload(container), 'project': project};
       const connection = $("#connection-select-single-work-package").val();
 
       if (!connection) {
-				createWpUtils.notify('Please select a connection.', 'error');
-				return;
-			}
+        createWpUtils.notify('Please select a connection.', 'error');
+        return;
+      }
+
       try {
         const response = await createWpUtils.createWorkPackagesRequest(connection, payload);
         resetCreateSingleWorkPackageForm();
@@ -593,11 +588,10 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       } catch (err) {
         createWpUtils.notify("Failed to create the Work Package!", "error")
       }
-    });
+    }
 
-    $("#create-multiple-work-packages-form").on("submit", async function (e) {
-      e.preventDefault();
-      const firstInvalidMultiple = findAndOpenFirstInvalid($(this));
+    async function submitMultipleWorkPackagesForm(element) {
+      const firstInvalidMultiple = findAndOpenFirstInvalid(element);
       if (firstInvalidMultiple) {
         createWpUtils.notify('Please fill the required fields highlighted in selected work packages.', 'error');
         return;
@@ -606,9 +600,9 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       const connection = $("#connection-select-multiple-work-packages").val();
 
       if (!connection) {
-				createWpUtils.notify('Please select a connection.', 'error');
-				return;
-			}
+        createWpUtils.notify('Please select a connection.', 'error');
+        return;
+      }
 
       const project = $("#project-select-multiple-work-packages").val();
 
@@ -660,6 +654,78 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       } else {
         createWpUtils.notify('Failed to create work packages!', 'error');
       }
+    }
+
+    function renderSingleMode() {
+      resetCreateSingleWorkPackageForm();
+      $("#wp-create-modal-title").text("Create Single Work Package");
+      $("#create-multiple-work-packages-form").addClass("hidden");
+      $("#create-single-work-package-form").removeClass("hidden");
+    }
+
+    function renderMultipleMode() {
+      resetCreateMultipleWorkPackagesForm();
+      $("#wp-create-modal-title").text("Create Multiple Work Packages");
+      $("#create-multiple-work-packages-form").removeClass("hidden");
+      $("#create-single-work-package-form").addClass("hidden");
+    }
+
+    $('#create-wp').on('click', function(e) {
+      e.preventDefault();
+      handleTextHighlight();
+    });
+
+    $('#create-wp-from-table').on('click', (e) =&gt; {
+			e.preventDefault();
+      handleTableHighlight();
+    });
+
+    $("#work-packages-container").on('input change', '.wp-subject', function() {
+      const input = $(this);
+      const inputId = input.attr('id');
+      const index = inputId.split('-').pop();
+      const titleId = `#wp-subject-title-${index}`;
+      $(titleId).text(input.val());
+    });
+
+    $("#connection-select-multiple-work-packages").on("change", function () {
+      createWpUtils.loadProjects(
+        "#connection-select-multiple-work-packages",
+        "#project-select-multiple-work-packages",
+        "#project-select-multiple-work-packages-container",
+        "#incorrect-token-multiple-work-packages"
+      );
+      $("#mappings-container").empty();
+      $("#work-packages-table-mapping-container").addClass("hidden");
+      $("#multiple-work-packages-container").addClass("hidden");
+    });
+
+    $("#connection-select-single-work-package").on("change", function () {
+      $("#single-dynamic-fields-container").empty().addClass("hidden");
+      createWpUtils.loadProjects(
+        "#connection-select-single-work-package",
+        "#project-select-single-work-package",
+        "#project-select-single-work-package-container",
+        "#incorrect-token-single-work-package"
+      );
+    });
+
+    $("#project-select-multiple-work-packages").on("change", async function () {
+      onMultipleWorkPackagesProjectSelect($(this));
+    });
+
+    $("#project-select-single-work-package").on("change", async function () {
+      onSingleWorkPackageProjectSelect($(this));
+    });
+
+    $("#create-single-work-package-form").on("submit", async function (e) {
+      e.preventDefault();
+      submitSingleWorkPackageForm();
+    });
+
+    $("#create-multiple-work-packages-form").on("submit", async function (e) {
+      e.preventDefault();
+      submitMultipleWorkPackagesForm($(this));
     });
 
     $("#create-multiple-work-packages-cancel-button").on("click", function() {
@@ -671,45 +737,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     });
 
     $(document).on('mouseup', function () {
-      const selection = window.getSelection();
-      const text = selection.toString().trim();
-
-      if (!text) {
-        $('#selection-menu').hide();
-        return;
-      }
-
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-
-      if (rect.width === 0 &amp;&amp; rect.height === 0) {
-          $('#selection-menu').hide();
-          return;
-      }
-
-			const menu = $('#selection-menu');
-
-      menu
-        .css({
-          display: 'block',
-          position: 'fixed',
-          zIndex: 1050,
-          top: rect.top - menu.outerHeight() - 8 + 'px',
-          left: rect.left + rect.width / 2 - menu.outerWidth() / 2 + 'px'
-        });
-
-      let node = range.commonAncestorContainer;
-      if (node.nodeType === Node.TEXT_NODE) {
-        node = node.parentNode;
-      }
-
-      const isInTable = $(node).closest("table").length;
-
-      if (isInTable) {
-        $('#create-wp-from-table').removeClass('hidden');
-      } else {
-        $('#create-wp-from-table').addClass('hidden');
-      }
+      handleHighlight();
     });
 
     $(document).on('mousedown', function(e) {

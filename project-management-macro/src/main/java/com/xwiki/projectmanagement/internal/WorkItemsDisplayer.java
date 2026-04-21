@@ -38,5 +38,9 @@ public enum WorkItemsDisplayer
     /**
      * Display a single work item in a page structure.
      */
-    workItemsSingle;
+    workItemsSingle,
+    /**
+     * Display a single work item as an inline badge.
+     */
+    workItemInline;
 }

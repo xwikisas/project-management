@@ -27,10 +27,10 @@
 require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
   function initializeConnectionIfOnlyOneAvailable() {
-    var $conn = $("#op-connection");
+    var conn = $("#op-connection");
 
-    if ($conn.find("option").length === 1) {
-      $conn.prop("selectedIndex", 0).prop("disabled", true);
+    if (conn.find("option").length === 1) {
+      conn.prop("selectedIndex", 0).prop("disabled", true);
       createWpUtils.loadProjects(
         "#op-connection",
         "#op-project",
@@ -62,6 +62,55 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     }
   }
 
+  async function onMacroSubmit(element) {
+    const modal = element.closest('.macro-editor-modal');
+
+    if (!isFormValid()) {
+      createWpUtils.notify("Please fill in all required fields!", "error");
+      return;
+    }
+
+    const connection = $("#op-connection").val();
+
+    if (!connection) {
+      createWpUtils.notify("Please select a connection!", "error");
+      return;
+    }
+
+    const project = $("#op-project").val();
+
+    if (!project) {
+      createWpUtils.notify("Please select a project!", "error");
+      return;
+    }
+
+    const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
+
+    try {
+      const workPackage = await createWpUtils.createWorkPackagesRequest(connection, payload);
+
+      if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
+      createWpUtils.notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
+      return;
+    }
+
+    modal.modal('hide');
+
+    CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
+      name: 'openproject',
+      inline: 'enforce',
+      parameters: {
+        instance: connection,
+        identifier: workPackage.id,
+        workItemsDisplayer: "workItemInline"
+      }
+    });
+    createWpUtils.notify("Work package created and inserted successfully!", "done");
+    } catch (err) {
+      createWpUtils.notify("An error occurred while trying to create the work package!", "error");
+    }
+  }
+
   function isFormValid() {
 		const requiredFields = $("#dynamic-fields-container").find("input[required], select[required], textarea[required]");
 
@@ -72,8 +121,8 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 		let isValid = true;
 
 		requiredFields.each(function() {
-			const $field = $(this);
-			const value = $field.val();
+			const field = $(this);
+			const value = field.val();
 
 			if (value == null || String(value).trim() === "") {
 				isValid = false;
@@ -90,54 +139,12 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
   $(document).on('click', '.macro-editor-modal .btn-primary', async function (e) {
     const modal = $(this).closest('.macro-editor-modal');
 
-    if (modal.find('[data-macroid="openproject-create-work-package/xwiki/2.1"]').length) {
-      e.preventDefault();
+    if (!modal.find('[data-macroid="openproject-create-work-package/xwiki/2.1"]').length) {
+      return;
+		}
 
-      if (!isFormValid()) {
-        createWpUtils.notify("Please fill in all required fields!", "error");
-        return;
-      }
-
-      const connection = $("#op-connection").val();
-
-      if (!connection) {
-        createWpUtils.notify("Please select a connection!", "error");
-        return;
-      }
-
-      const project = $("#op-project").val();
-
-      if (!project) {
-        createWpUtils.notify("Please select a project!", "error");
-        return;
-      }
-
-      const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
-
-      try {
-        const workPackage = await createWpUtils.createWorkPackagesRequest(connection, payload);
-
-        if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
-        createWpUtils.notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
-        return;
-      }
-
-      modal.modal('hide');
-
-      CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
-        name: 'openproject',
-        inline: 'enforce',
-        parameters: {
-          instance: connection,
-          identifier: workPackage.id,
-          workItemsDisplayer: "workItemsSingle"
-        }
-      });
-      createWpUtils.notify("Work package created and inserted successfully!", "done");
-      } catch (err) {
-        createWpUtils.notify("An error occurred while trying to create the work package!", "error");
-      }
-    }
+		e.preventDefault();
+    await onMacroSubmit($(this));
   });
 
   $(document).on("change", "#op-connection", function () {
