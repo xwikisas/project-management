@@ -336,8 +336,8 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       });
     }
 
-		function handleHighlight() {
-			const selection = window.getSelection();
+	function handleHighlight() {
+	  const selection = window.getSelection();
       const text = selection.toString().trim();
 
       if (!text) {
@@ -377,10 +377,10 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       } else {
         $('#create-wp-from-table').addClass('hidden');
       }
-		}
+	}
 
-		function handleTextHighlight() {
-		  const selection = window.getSelection();
+	function handleTextHighlight() {
+	  const selection = window.getSelection();
       selectedText = selection.toString().trim();
 
       $('#selection-menu').hide();
@@ -398,7 +398,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       }
 		}
 
-		function handleTableHighlight() {
+	function handleTableHighlight() {
       const selection = window.getSelection();
       if (!selection.rangeCount) return;
 
@@ -654,6 +654,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       } else {
         createWpUtils.notify('Failed to create work packages!', 'error');
       }
+      $("#create-multiple-work-packages-form-button").addClass("hidden");
     }
 
     function renderSingleMode() {
@@ -736,11 +737,11 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       resetCreateSingleWorkPackageForm();
     });
 
-    $(document).on('mouseup', function () {
+    $('#xwikicontent').on('mouseup', function () {
       handleHighlight();
     });
 
-    $(document).on('mousedown', function(e) {
+    $('#xwikicontent').on('mousedown', function(e) {
       if (!$(e.target).closest('#selection-menu').length) {
         $('#selection-menu').hide();
       }
