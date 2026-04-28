@@ -23,7 +23,10 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -131,5 +134,14 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
             }
         }
         return stringBuilder.toString();
+    }
+
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Override
+    public Response putPage(String wikiName, String spaceName, String pageName, Boolean minorRevision, Page page)
+        throws XWikiRestException
+    {
+        return super.putPage(wikiName, spaceName, pageName, minorRevision, page);
     }
 }
