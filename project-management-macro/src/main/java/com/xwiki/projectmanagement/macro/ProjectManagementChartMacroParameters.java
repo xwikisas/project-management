@@ -20,7 +20,16 @@ package com.xwiki.projectmanagement.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.properties.annotation.PropertyDisplayType;
+
+import com.xwiki.projectmanagement.JSONArray;
+import com.xwiki.projectmanagement.ProjectManagementChartType;
+import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
+import com.xwiki.projectmanagement.ProjectManagementFilters;
+import com.xwiki.projectmanagement.ProjectManagementProperty;
 import com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.internal.chart.PieChartDisplayer;
 
 /**
  * Class.
@@ -32,17 +41,17 @@ public class ProjectManagementChartMacroParameters
 {
     private String client;
 
-    private String type;
+    private String type = PieChartDisplayer.TYPE;
 
     private String property;
 
     private String filters;
 
-    private Integer limit;
+    private String datasetsLabels;
 
-    private Long offset;
+    private Integer limit = 10;
 
-    private String clientParams;
+    private Long offset = 0L;
 
     private String typeParams;
 
@@ -74,6 +83,7 @@ public class ProjectManagementChartMacroParameters
     /**
      * @param type see {@link #getType()}.
      */
+    @PropertyDisplayType(ProjectManagementChartType.class)
     public void setType(String type)
     {
         this.type = type;
@@ -90,6 +100,7 @@ public class ProjectManagementChartMacroParameters
     /**
      * @param property see {@link #getProperty()}.
      */
+    @PropertyDisplayType(ProjectManagementProperty.class)
     public void setProperty(String property)
     {
         this.property = property;
@@ -107,6 +118,7 @@ public class ProjectManagementChartMacroParameters
     /**
      * @param filters see {@link #getFilters()}.
      */
+    @PropertyDisplayType(ProjectManagementFilters.class)
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -144,21 +156,6 @@ public class ProjectManagementChartMacroParameters
         this.offset = offset;
     }
 
-    /**
-     * @return a URL encoded list of parameters that might be needed by the client implementation. i.e. instance.
-     */
-    public String getClientParams()
-    {
-        return clientParams;
-    }
-
-    /**
-     * @param clientParams see {@link #getClientParams()}.
-     */
-    public void setClientParams(String clientParams)
-    {
-        this.clientParams = clientParams;
-    }
 
     /**
      * @return a JSON representation of the chart type implementor configuration object. A
@@ -173,8 +170,26 @@ public class ProjectManagementChartMacroParameters
     /**
      * @param typeParams see {@link #getTypeParams()}.
      */
+    @PropertyDisplayType(ProjectManagementChartTypeParams.class)
     public void setTypeParams(String typeParams)
     {
         this.typeParams = typeParams;
+    }
+
+    /**
+     * @return a JSON array of labels used to describe each dataset displayed.
+     */
+    public String getDatasetsLabels()
+    {
+        return datasetsLabels;
+    }
+
+    /**
+     * @param datasetsLabels see {@link #getDatasetsLabels()}.
+     */
+    @PropertyDisplayType(JSONArray.class)
+    public void setDatasetsLabels(String datasetsLabels)
+    {
+        this.datasetsLabels = datasetsLabels;
     }
 }

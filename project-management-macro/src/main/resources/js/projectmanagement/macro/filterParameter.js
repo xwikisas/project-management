@@ -27,41 +27,79 @@ setTimeout(function () {
   });
   require(['filterBuilder'], function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
+      let livedataCfgs = new Map();
       let updateFilterInput = function (e, constraints) {
+        debugger;
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
         }
-        $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
+        livedataCfgs.set(e.target, livedataCfg);
+        $('#proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
       };
-      builder.element.on('constraintsUpdated', updateFilterInput);
+      // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);
+      builder.instances.values().forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
       let initBuilder = function () {
         let initialFilter = $('#proj-manag-filter').val();
         if (!initialFilter) {
           return;
         }
-        const filterCfg = JSON.parse(initialFilter);
-        let filters = (filterCfg.query && filterCfg.query.filters) || [];
-        filters.forEach((filter) => {
-          filter.constraints.forEach((constraint) => {
-            let filterCopy = { ...filter };
-            filterCopy.constraints = [constraint];
-            builder.addFilter(filterCopy);
+        let filterCfgs = JSON.parse(initialFilter);
+
+        filterCfgs = filterCfgs instanceof Array ? filterCfgs : [filterCfgs];
+
+        let currentBuilder = builder.instances.values().next().value;
+
+        for (let i = 1; i < filterCfgs.length; i++) {
+          let clone = currentBuilder.element.clone();
+          currentBuilder.element.parent().append(clone);
+          builder.inializeBuilder(clone);
+        }
+
+        let i = 0;
+        builder.instances.values().forEach(bld => {
+          let filterCfg = filterCfgs[i];
+          i++;
+          let filters = (filterCfg.query && filterCfg.query.filters) || [];
+          filters.forEach((filter) => {
+            filter.constraints.forEach((constraint) => {
+              let filterCopy = { ...filter };
+              filterCopy.constraints = [constraint];
+              bld.addFilter(filterCopy);
+            });
           });
         });
+
       };
       initBuilder();
       $(document).on('hide.bs.modal', '.modal', function () {
-        builder.clean();
+        if ($('#proj-manag-filter').length <= 0) {
+          return;
+        }
+        livedataCfgs.clear();
+        builder.instances.values().forEach(builder => builder.clean());
+        builder.instances.clear();
+        $('.proj-manag-constraint-builder').each(function () {
+          $(this).remove();
+        });
       });
       $(document).on('shown.bs.modal', '.modal', function () {
-        builder.clean();
-        builder.init();
+        if ($('#proj-manag-filter').length <= 0) {
+          return;
+        }
+        $('.proj-manag-constraint-builder').each(function () {
+          builder.inializeBuilder($(this))
+        });
+        builder.instances.values().forEach(builder => {
+          builder.clean();
+          builder.init();
+        });
         initBuilder();
       });
-      $(document).on('filterBuilderInitialized', function(e, builderElem) {
+      $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
       });
     });
   });
 });
+

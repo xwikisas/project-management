@@ -17,5 +17,13 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#template('html_displayer/projectmanagementfilter/edit.vm')
-#set ($discard = $xwiki.jsrx.use('openproject/js/filters.js', {'minify': false}))
+<select value="$!escapetool.xml($!displayer.value)"
+  #foreach ($parameter in $displayer.parameters.entrySet())
+    $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
+  #end
+  >
+  #foreach ($chartType in $services.component.componentManager.getInstanceList('com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer'))
+    #set ($localizationKey = "projectmanagement.macro.chart.type.$!{chartType.chartType}")
+    <option value="$escapetool.xml($!{chartType.chartType})">$escapetool.xml($services.localization.render($localizationKey))</option>
+  #end
+</select>

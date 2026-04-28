@@ -17,18 +17,33 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
- require(['jquery'], function ($) {
-   let init = function (event, builderElement) {
-     let element = builderElement || (window.FilterBuilder && window.FilterBuilder.instances.values().next().value.element);
-     if (element) {
-       element.on('displayingFilter', function (e, a, b, c, d) {
-         let instance = $('.macro-editor-modal :input[name="instance"]').val();
-         if (d.searchURL && instance) {
-           d.searchURL = d.searchURL.replace('{instance}', instance);
-         }
-       });
-     }
-   };
-   init();
-   $(document).on('filterBuilderInitialized', init);
- });
+package com.xwiki.projectmanagement.internal.chart;
+
+import org.xwiki.stability.Unstable;
+
+/**
+ * Define the possible period of time to use for getting created vs resolved statistics.
+ *
+ * @version $Id$
+ * @since 10.0
+ */
+@Unstable
+public enum ChartPeriod
+{
+    /**
+     * To retrieve data split by hour.
+     */
+    HOURLY,
+    /**
+     * To retrieve data split by day.
+     */
+    DAILY,
+    /**
+     * To retrieve data split by month.
+     */
+    MONTHLY,
+    /**
+     * To retrieve data split by year.
+     */
+    YEARLY;
+}

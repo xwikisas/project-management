@@ -20,7 +20,8 @@ package com.xwiki.projectmanagement.internal.chart;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.Set;
+import java.util.List;
+import java.util.List;
 
 /**
  * Represents the data that gets passed to ChartJS for displaying.
@@ -29,18 +30,18 @@ import java.util.Set;
  */
 public class ChartJSData
 {
-    private Set<String> labels;
+    private List<String> labels;
 
-    private Set<String> xLabels;
+    private List<String> xLabels;
 
-    private Set<String> yLabels;
+    private List<String> yLabels;
 
-    private Set<ChartJSDataset> datasets;
+    private List<ChartJSDataset> datasets;
 
     /**
      * @return the labels associated to each dataset.
      */
-    public Set<String> getLabels()
+    public List<String> getLabels()
     {
         return labels;
     }
@@ -48,7 +49,7 @@ public class ChartJSData
     /**
      * @param labels see {@link #getLabels()}.
      */
-    public void setLabels(Set<String> labels)
+    public void setLabels(List<String> labels)
     {
         this.labels = labels;
     }
@@ -56,7 +57,7 @@ public class ChartJSData
     /**
      * @return the xlabels.
      */
-    public Set<String> getxLabels()
+    public List<String> getxLabels()
     {
         return xLabels;
     }
@@ -64,7 +65,7 @@ public class ChartJSData
     /**
      * @param xLabels see {@link #getxLabels()};
      */
-    public void setxLabels(Set<String> xLabels)
+    public void setxLabels(List<String> xLabels)
     {
         this.xLabels = xLabels;
     }
@@ -72,7 +73,7 @@ public class ChartJSData
     /**
      * @return the ylabels.
      */
-    public Set<String> getyLabels()
+    public List<String> getyLabels()
     {
         return yLabels;
     }
@@ -80,7 +81,7 @@ public class ChartJSData
     /**
      * @param yLabels see {@link #getyLabels()}.
      */
-    public void setyLabels(Set<String> yLabels)
+    public void setyLabels(List<String> yLabels)
     {
         this.yLabels = yLabels;
     }
@@ -88,7 +89,7 @@ public class ChartJSData
     /**
      * @return the datasets.
      */
-    public Set<ChartJSDataset> getDatasets()
+    public List<ChartJSDataset> getDatasets()
     {
         return datasets;
     }
@@ -96,7 +97,7 @@ public class ChartJSData
     /**
      * @param datasets see {@link #getDatasets()}.
      */
-    public void setDatasets(Set<ChartJSDataset> datasets)
+    public void setDatasets(List<ChartJSDataset> datasets)
     {
         this.datasets = datasets;
     }

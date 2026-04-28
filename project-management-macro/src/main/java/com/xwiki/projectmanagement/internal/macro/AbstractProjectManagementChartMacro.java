@@ -23,7 +23,9 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
@@ -32,6 +34,7 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.WorkItemException;
@@ -50,7 +53,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public abstract class AbstractProjectManagementChartMacro<T extends ProjectManagementChartMacroParameters>
     extends AbstractWorkItemsMacro<T>
 {
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    protected final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * constructor.
@@ -92,20 +95,19 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     parameters.getLimit(), filter, Collections.emptyList()));
             }
 
+            List<String> labels = objectMapper.readValue(parameters.getDatasetsLabels(),
+                new TypeReference<List<String>>()
+                {
+                });
+
             if (workItemsList.isEmpty()) {
                 workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
                     Math.toIntExact(parameters.getOffset()), parameters.getLimit(), Collections.emptyList(),
                     Collections.emptyList()));
             }
 
-            List<String> properties = List.of(parameters.getProperty().split("\\s*,\\s*"));
-
-            if (properties.size() > workItemsList.size()) {
-//                for (int )
-            }
-
-            return chartTypeDisplayer.execute(workItemsList, properties,
-                context, typeDisplayerParams);
+            return chartTypeDisplayer.execute(workItemsList, parameters.getProperty(), labels, context,
+                typeDisplayerParams);
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (WorkItemException e) {

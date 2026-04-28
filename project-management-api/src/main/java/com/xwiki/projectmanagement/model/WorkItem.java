@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.model;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -606,5 +607,17 @@ public class WorkItem extends HashMap<String, Object>
         } else {
             return val.toString();
         }
+    }
+
+    /**
+     * Utility method to determine whether a given property is considered to be a date or not.
+     *
+     * @param key the key that identifies a work item property
+     * @return true is the identified property is considered a date or not.
+     */
+    public static boolean isDate(String key)
+    {
+        return Arrays.asList(KEY_CLOSE_DATE, KEY_CREATION_DATE, KEY_DUE_DATE, KEY_START_DATE, KEY_UPDATE_DATE)
+            .contains(key);
     }
 }

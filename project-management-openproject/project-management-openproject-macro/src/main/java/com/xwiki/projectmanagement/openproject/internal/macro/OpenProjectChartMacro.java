@@ -27,6 +27,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -64,6 +65,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        parameters.setClient("openproject");
         if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
             Map<String, Object> clientContext = Map.of("instance", parameters.getInstance());
             ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);

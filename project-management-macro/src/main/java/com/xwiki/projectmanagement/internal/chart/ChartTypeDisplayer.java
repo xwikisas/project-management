@@ -42,13 +42,14 @@ public interface ChartTypeDisplayer
     /**
      * @param workItems a lis of work items that will be used to display the chart.
      * @param property the main property that will be used to generate the chart on.
+     * @param labels the labels associated to each set of work items.
      * @param transformationContext the transformation context of the macro.
      * @param typeDisplayerParams the configuration class for the implementing displayer. It should have the same
      *     type as the {@link #getParameterType()} return value.
      * @return a list of blocks ready for rendering.
      * @throws MacroExecutionException in case of errors.
      */
-    List<Block> execute(List<PaginatedResult<WorkItem>> workItems, List<String> property,
+    List<Block> execute(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
         MacroTransformationContext transformationContext, Object typeDisplayerParams) throws MacroExecutionException;
 
     /**
