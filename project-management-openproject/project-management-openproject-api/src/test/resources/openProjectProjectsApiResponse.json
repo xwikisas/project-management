@@ -3,15 +3,30 @@
     "elements": [
       {
         "id": 1,
-        "name": "First project"
+        "name": "First project",
+        "_links": {
+          "self": {
+            "href": "/api/v3/projects/1"
+          }
+        }
       },
       {
         "id": 2,
-        "name": "Second project"
+        "name": "Second project",
+        "_links": {
+          "self": {
+            "href": "/api/v3/projects/2"
+          }
+        }
       },
       {
         "id": 3,
-        "name": "Third project"
+        "name": "Third project",
+        "_links": {
+          "self": {
+            "href": "/api/v3/projects/3"
+          }
+        }
       }
     ]
   }
