@@ -167,6 +167,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
       $("#project-select-multiple-work-packages-container").addClass("hidden");
+      $("#create-multiple-work-packages-form-button").removeClass("hidden")
       $("#incorrect-token-multiple-work-packages").addClass("hidden");
     }
 
