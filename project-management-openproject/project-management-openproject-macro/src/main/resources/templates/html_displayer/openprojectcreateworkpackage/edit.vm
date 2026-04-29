@@ -18,43 +18,7 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('openproject/js/createWorkPackage.js'))
-#macro (connectionInput $selectConnectionId $connectionOptions)
-<div class="form-group">
-  #if ($connectionOptions.size() == 0)
-  <div class="box warningmessage">
-    <p>No OpenProject connections available! Please create a connection first.</p>
-  </div>
-  #else
-  <label for="$selectConnectionId">Connection</label>
-  <select id="$selectConnectionId" name="connection" class="form-control">
-    #if($connectionOptions.size() > 1)
-    <option value="" disabled selected>Select connection...</option>
-    #end
-    #foreach ($option in $connectionOptions)
-    <option value="$option.value">$option.name</option>
-    #end
-  </select>
-  #end
-</div>
-#end
-#macro (incorrectToken $incorrectTokenId)
-<div id="$incorrectTokenId" class="hidden">
-  #set($redirect = $escapetool.url($doc.getURL('view')))
-  #set($token = $escapetool.url($services.csrf.getToken()))
-  #set($params = "redirectUrl=$redirect&token=$token")
-  <div class="box warningmessage">
-    <p>This connection is not available! Follow this <a
-      href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)">link</a> to authenticate and try
-      again!</p>
-  </div>
-</div>
-#end
-#macro (projectInput $projectSelectId $connectionOptions)
-<div id="${projectSelectId}-container" class="form-group hidden">
-  <label for="$projectSelectId">Project</label>
-  <select id="$projectSelectId" name="project" class="form-control"></select>
-</div>
-#end
+#template("create_work_package_helper_macros.vm")
 #set ($connectionOptions = $services.openproject.getConnectionOptions())
 <div class="withLock xform">
   #connectionInput('op-connection' $connectionOptions)

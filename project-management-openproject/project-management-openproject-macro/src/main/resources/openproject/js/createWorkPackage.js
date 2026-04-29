@@ -17,15 +17,19 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
- require.config({
-   paths: {
- 		'create-work-package-utils': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
- 		('jsx', 'resource=js/openproject/create-work-packages-utils.js&minify=false')
-   }
- });
+require.config({
+  paths: {
+    'create-work-package-utils': new XWiki.Document(
+      new XWiki.Model.resolve(
+        'Main.WebHome',
+        XWiki.EntityType.DOCUMENT
+      )
+    )
+    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&minify=false')
+  }
+});
 
 require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
-
   function initializeConnectionIfOnlyOneAvailable() {
     var conn = $("#op-connection");
 
@@ -161,5 +165,5 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 	  initializeConnectionIfOnlyOneAvailable();
   });
 
-	 initializeConnectionIfOnlyOneAvailable();
+	initializeConnectionIfOnlyOneAvailable();
 });

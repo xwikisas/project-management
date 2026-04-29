@@ -125,12 +125,17 @@
       <cache>long</cache>
     </property>
     <property>
-      <code> require.config({
-   paths: {
- 		'create-work-package-utils': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
- 		('jsx', 'resource=js/openproject/create-work-packages-utils.js&amp;minify=false')
-   }
- });
+      <code>require.config({
+  paths: {
+    'create-work-package-utils': new XWiki.Document(
+      new XWiki.Model.resolve(
+        'Main.WebHome',
+        XWiki.EntityType.DOCUMENT
+      )
+    )
+    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
+  }
+});
 
 require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
@@ -779,6 +784,162 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
   <object>
     <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
     <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>dd21a6c7-af9a-4bb8-95c9-8f398ea60aa2</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>#selection-menu {
+  display: none;
+  position: fixed;
+  z-index: 1050;
+}
+
+#create-work-packages-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.mapping-row {
+  display: flex;
+  margin-top: 10px;
+}
+
+.wp-mapping-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mapping-label {
+  margin: 0;
+}
+
+.wp-mapping-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.wp-mapping-spacing {
+  margin-top: 10px;
+}</code>
+    </property>
+    <property>
+      <contentType/>
+    </property>
+    <property>
+      <name>CreateWorkPackagesCss</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use/>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
+    <number>0</number>
     <className>XWiki.UIExtensionClass</className>
     <guid>17c5fc98-d456-4d64-aff5-182cd08959d0</guid>
     <class>
@@ -903,175 +1064,140 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     </property>
     <property>
       <content>{{velocity}}
-#set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
-#macro (connectionInput $selectConnectionId $connectionOptions)
-&lt;div class="form-group"&gt;
-  #if ($connectionOptions.size() == 0)
-  &lt;div class="box warningmessage"&gt;
-    &lt;p&gt;No OpenProject connections available! Please create a connection first.&lt;/p&gt;
+#if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest'))
+  $xwiki.parseTemplate("create_work_package_helper_macros.vm")
+  #set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
+  #set ($discard = $xwiki.ssx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
+  {{html}}
+  &lt;div id="selection-menu" class="btn-group"&gt;
+    &lt;div class="dropdown"&gt;
+      &lt;button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"&gt;Open Project
+        &lt;span class="caret"&gt;&lt;/span&gt;&lt;/button&gt;
+      &lt;ul class="dropdown-menu"&gt;
+        &lt;li id="create-wp"&gt;&lt;a href="#"&gt;Create work package&lt;/a&gt;&lt;/li&gt;
+        &lt;li id="create-wp-from-table" class="hidden"&gt;&lt;a href="#"&gt;Create work package from table&lt;/a&gt;&lt;/li&gt;
+      &lt;/ul&gt;
+    &lt;/div&gt;
   &lt;/div&gt;
-  #else
-  &lt;label for="$selectConnectionId"&gt;Connection&lt;/label&gt;
-  &lt;select id="$selectConnectionId" name="connection" class="form-control"&gt;
-    #if($connectionOptions.size() &gt; 1)
-    &lt;option value="" disabled selected&gt;Select connection...&lt;/option&gt;
-    #end
-    #foreach ($option in $connectionOptions)
-    &lt;option value="$option.value"&gt;$option.name&lt;/option&gt;
-    #end
-  &lt;/select&gt;
-  #end
-&lt;/div&gt;
-#end
-#macro (incorrectToken $incorrectTokenId)
-&lt;div id="$incorrectTokenId" class="hidden"&gt;
-  #set($redirect = $escapetool.url($doc.getURL('view')))
-  #set($token = $escapetool.url($services.csrf.getToken()))
-  #set($params = "redirectUrl=$redirect&amp;token=$token")
-  &lt;div class="box warningmessage"&gt;
-    &lt;p&gt;This connection is not available! Follow this &lt;a
-      href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)"&gt;link&lt;/a&gt; to authenticate and try
-      again!&lt;/p&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-#end
-#macro (projectInput $projectSelectId $connectionOptions)
-&lt;div id="${projectSelectId}-container" class="form-group hidden"&gt;
-  &lt;label for="$projectSelectId"&gt;Project&lt;/label&gt;
-  &lt;select id="$projectSelectId" name="project"&gt;&lt;/select&gt;
-&lt;/div&gt;
-#end
-{{html}}
 
-&lt;div id="selection-menu" class="btn-group" style="display:none; position:fixed; z-index:1050;"&gt;
-  &lt;div class="dropdown"&gt;
-    &lt;button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"&gt;Open Project
-      &lt;span class="caret"&gt;&lt;/span&gt;&lt;/button&gt;
-    &lt;ul class="dropdown-menu"&gt;
-      &lt;li id="create-wp"&gt;&lt;a href="#"&gt;Create work package&lt;/a&gt;&lt;/li&gt;
-      &lt;li id="create-wp-from-table" class="hidden"&gt;&lt;a href="#"&gt;Create work package from table&lt;/a&gt;&lt;/li&gt;
-    &lt;/ul&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;div class="modal" id="create-work-packages-modal" tabindex="-1" role="dialog"
-     aria-labelledby="create-work-packages-modal-label" data-backdrop="static" data-keyboard="false"&gt;
-  &lt;div class="modal-dialog" role="document"&gt;
-    &lt;div class="modal-content"&gt;
-      &lt;div class="modal-header"&gt;
-        &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
-          &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
-        &lt;/button&gt;
-        &lt;div class="modal-title" id="wp-create-modal-title"&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-      &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
-        &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
-          &lt;p class="text-muted"&gt;This form allows you to create a new work package in OpenProject based on the selected text.&lt;/p&gt;
-          #set ($connectionOptions = $services.openproject.getConnectionOptions())
-          #connectionInput('connection-select-single-work-package' $connectionOptions)
-          #incorrectToken('incorrect-token-single-work-package')
-          #projectInput('project-select-single-work-package' $connectionOptions)
-          &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
+  &lt;div class="modal" id="create-work-packages-modal" tabindex="-1" role="dialog"
+       aria-labelledby="create-work-packages-modal-label" data-backdrop="static" data-keyboard="false"&gt;
+    &lt;div class="modal-dialog" role="document"&gt;
+      &lt;div class="modal-content"&gt;
+        &lt;div class="modal-header"&gt;
+          &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+            &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+          &lt;/button&gt;
+          &lt;div class="modal-title" id="wp-create-modal-title"&gt;
           &lt;/div&gt;
         &lt;/div&gt;
-        &lt;div class="modal-footer"&gt;
-          &lt;button id="create-single-work-package-cancel-button" type="button" class="btn btn-default"
-                  data-dismiss="modal"&gt;
-            Cancel
-          &lt;/button&gt;
-          &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary"&gt;
-            Create work package
-          &lt;/button&gt;
-        &lt;/div&gt;
-      &lt;/form&gt;
-      &lt;form id="create-multiple-work-packages-form" class="withLock xform" novalidate&gt;
-        &lt;div class="modal-body" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;"&gt;
-          &lt;p class="text-muted"&gt;This form allows you to create multiple work packages in OpenProject based on the selected table.&lt;/p&gt;
-          #connectionInput('connection-select-multiple-work-packages')
-          #incorrectToken('incorrect-token-multiple-work-packages')
-          #projectInput('project-select-multiple-work-packages')
-          &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
-            &lt;div class="form-group row" style="margin-bottom:0px;"&gt;
-              &lt;div class="col-xs-12"&gt;
-                &lt;p class="text"&gt;OpenProject Mapping&lt;/p&gt;
+        &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
+          &lt;div class="modal-body"&gt;
+            &lt;p class="text-muted"&gt;This form allows you to create a new work package in OpenProject based on the selected text.&lt;/p&gt;
+            #set ($connectionOptions = $services.openproject.getConnectionOptions())
+            #connectionInput('connection-select-single-work-package' $connectionOptions)
+            #incorrectToken('incorrect-token-single-work-package')
+            #projectInput('project-select-single-work-package' $connectionOptions)
+            &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="modal-footer"&gt;
+            &lt;button id="create-single-work-package-cancel-button" type="button" class="btn btn-default"
+                    data-dismiss="modal"&gt;
+              Cancel
+            &lt;/button&gt;
+            &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary"&gt;
+              Create work package
+            &lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/form&gt;
+        &lt;form id="create-multiple-work-packages-form" class="withLock xform" novalidate&gt;
+          &lt;div class="modal-body"&gt;
+            &lt;p class="text-muted"&gt;This form allows you to create multiple work packages in OpenProject based on the selected table.&lt;/p&gt;
+            #connectionInput('connection-select-multiple-work-packages')
+            #incorrectToken('incorrect-token-multiple-work-packages')
+            #projectInput('project-select-multiple-work-packages')
+            &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
+              &lt;div class="form-group row"&gt;
+                &lt;div class="col-xs-12"&gt;
+                  &lt;p class="text"&gt;OpenProject Mapping&lt;/p&gt;
+                &lt;/div&gt;
+                &lt;div class="col-xs-12"&gt;
+                  &lt;p class="text-muted"&gt;Map the columns of your table to OpenProject fields. Each mapping will map the
+                    values of a column to the OpenProject field of you choice.&lt;/p&gt;
+                &lt;/div&gt;
               &lt;/div&gt;
-              &lt;div class="col-xs-12"&gt;
-                &lt;p class="text-muted"&gt;Map the columns of your table to OpenProject fields. Each mapping will map the
-                  values of a column to the OpenProject field of you choice.&lt;/p&gt;
+              &lt;div id="mappings-container"&gt;&lt;/div&gt;
+              &lt;div class="form-group wp-mapping-spacing"&gt;
+                &lt;a href="#" id="add-mapping"&gt;+ Add mapping&lt;/a&gt;
               &lt;/div&gt;
             &lt;/div&gt;
-            &lt;div id="mappings-container"&gt;&lt;/div&gt;
-            &lt;div class="form-group" style="margin-top:10px;"&gt;
-              &lt;a href="#" id="add-mapping"&gt;+ Add mapping&lt;/a&gt;
+            &lt;div id="multiple-work-packages-container" class="form-group hidden"&gt;
+              &lt;p class="text-muted"&gt;The following work packages will be created&lt;/p&gt;
+              &lt;div class="form-group"&gt;
+                &lt;label class="text-muted"&gt;
+                  &lt;input type="checkbox" id="select-all-work-packages" checked&gt;
+                  Select all
+                &lt;/label&gt;
+              &lt;/div&gt;
+              &lt;div id="work-packages-container" class="form-group"&gt;
+              &lt;/div&gt;
             &lt;/div&gt;
           &lt;/div&gt;
-          &lt;div id="multiple-work-packages-container" class="form-group hidden"&gt;
-            &lt;p class="text-muted"&gt;The following work packages will be created&lt;/p&gt;
-            &lt;div class="form-group"&gt;
-              &lt;label class="text-muted"&gt;
-                &lt;input type="checkbox" id="select-all-work-packages" checked&gt;
-                Select all
-              &lt;/label&gt;
-            &lt;/div&gt;
-            &lt;div id="work-packages-container" class="form-group"&gt;
-            &lt;/div&gt;
+          &lt;div class="modal-footer"&gt;
+            &lt;button id="create-multiple-work-packages-cancel-button" type="button" class="btn btn-default"
+                    data-dismiss="modal"&gt;
+              Cancel
+            &lt;/button&gt;
+            &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary"&gt;
+              Create work packages
+            &lt;/button&gt;
           &lt;/div&gt;
-        &lt;/div&gt;
-        &lt;div class="modal-footer"&gt;
-          &lt;button id="create-multiple-work-packages-cancel-button" type="button" class="btn btn-default"
-                  data-dismiss="modal"&gt;
-            Cancel
-          &lt;/button&gt;
-          &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary"&gt;
-            Create work packages
-          &lt;/button&gt;
-        &lt;/div&gt;
-      &lt;/form&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-
-&lt;template id="work-package-card-template"&gt;
-  &lt;div class="panel panel-default work-package-card"&gt;
-    &lt;div class="panel-body"&gt;
-      &lt;div class="row"&gt;
-        &lt;div class="col-xs-12" data-toggle="collapse" data-target=""&gt;
-          &lt;label for="wp-selected"&gt;&lt;/label&gt;
-          &lt;input id="wp-selected" type="checkbox" class="wp-selected" checked/&gt;
-          &lt;span&gt;
-            &lt;span id="wp-subject-title" class="wp-subject-title"&gt;&lt;/span&gt;
-            &lt;span class="glyphicon glyphicon-menu-down pull-right"&gt;&lt;/span&gt;
-          &lt;/span&gt;
-        &lt;/div&gt;
+        &lt;/form&gt;
       &lt;/div&gt;
-      &lt;div class="collapse advanced-options"&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
-&lt;/template&gt;
 
-&lt;template id="mapping-row-template"&gt;
-  &lt;div class="mapping-row row" style="display:flex; margin-top:10px;"&gt;
-    &lt;div class="col-xs-4"&gt;
-      &lt;select class="form-control table-key"&gt;
-        &lt;option value="" disabled selected&gt;Select table column&lt;/option&gt;
-      &lt;/select&gt;
+  &lt;template id="work-package-card-template"&gt;
+    &lt;div class="panel panel-default work-package-card"&gt;
+      &lt;div class="panel-body"&gt;
+        &lt;div class="row"&gt;
+          &lt;div class="col-xs-12" data-toggle="collapse" data-target=""&gt;
+            &lt;label for="wp-selected"&gt;&lt;/label&gt;
+            &lt;input id="wp-selected" type="checkbox" class="wp-selected" checked/&gt;
+            &lt;span&gt;
+              &lt;span id="wp-subject-title" class="wp-subject-title"&gt;&lt;/span&gt;
+              &lt;span class="glyphicon glyphicon-menu-down pull-right"&gt;&lt;/span&gt;
+            &lt;/span&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="collapse advanced-options"&gt;&lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
-    &lt;div class="col-xs-3" style="display:flex; align-items:center; justify-content:center;"&gt;
-      &lt;p class="text-muted" style="margin:0px"&gt;is mapped to&lt;/p&gt;
-    &lt;/div&gt;
-    &lt;div class="col-xs-4"&gt;
-      &lt;select class="form-control op-key"&gt;
-        &lt;option value="" disabled selected&gt;Select OpenProject field&lt;/option&gt;
-      &lt;/select&gt;
-    &lt;/div&gt;
-    &lt;div class="col-xs-1" style="display:flex; align-items:center; justify-content:left;"&gt;
-      &lt;span class="delete-mapping glyphicon glyphicon-trash"&gt;&lt;/span&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/template&gt;
+  &lt;/template&gt;
 
-{{/html}}
+  &lt;template id="mapping-row-template"&gt;
+    &lt;div class="mapping-row row"&gt;
+      &lt;div class="col-xs-4"&gt;
+        &lt;select class="form-control table-key"&gt;
+          &lt;option value="" disabled selected&gt;Select table column&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/div&gt;
+      &lt;div class="col-xs-3 wp-mapping-center"&gt;
+        &lt;p class="text-muted mapping-label"&gt;is mapped to&lt;/p&gt;
+      &lt;/div&gt;
+      &lt;div class="col-xs-4"&gt;
+        &lt;select class="form-control op-key"&gt;
+          &lt;option value="" disabled selected&gt;Select OpenProject field&lt;/option&gt;
+        &lt;/select&gt;
+      &lt;/div&gt;
+      &lt;div class="col-xs-1 wp-mapping-actions"&gt;
+        &lt;span class="delete-mapping glyphicon glyphicon-trash"&gt;&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/template&gt;
+  {{/html}}
+#end
 {{/velocity}}</content>
     </property>
     <property>

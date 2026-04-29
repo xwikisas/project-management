@@ -20,13 +20,17 @@
 
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.util.Collections;
 import java.util.List;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -43,6 +47,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCreateWorkPackag
 @Named("openproject-create-work-package")
 public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProjectCreateWorkPackageMacroParameters>
 {
+    @Inject
+    private ContextualLocalizationManager l10n;
+
     /**
      * Default constructor.
      */
@@ -63,6 +70,9 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
     public List<Block> execute(OpenProjectCreateWorkPackageMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        return List.of();
+        Block infoMessage =
+            l10n.getTranslation("openproject-create-work-package.display.viewMode.message").render();
+        return List.of(new GroupBlock(List.of(infoMessage), Collections.singletonMap("class", "box "
+            + "infomessage")));
     }
 }

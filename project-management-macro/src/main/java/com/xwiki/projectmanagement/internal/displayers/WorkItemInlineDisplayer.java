@@ -34,14 +34,13 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
 import org.xwiki.rendering.block.WordBlock;
-import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -160,11 +159,13 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
     private void addSummaryBadge(List<Block> children, WorkItem workItem)
     {
         String summary = workItem.getLinkableValue(WorkItem.KEY_SUMMARY);
+
         if (summary != null && !summary.isEmpty()) {
-            children.add(new FormatBlock(
-                Collections.singletonList(new WordBlock(summary)),
-                Format.NONE,
-                Collections.singletonMap(ATTRIBUTE_CLASS, "text-muted")));
+            List<Block> summaryBlocks = getPropertyDisplayerManager().displayProperty(String.class.getName(), summary,
+                Collections.emptyMap());
+            GroupBlock summaryGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(summaryBlocks)),
+                Collections.singletonMap(ATTRIBUTE_CLASS, "text-muted"));
+            children.add(summaryGroup);
         }
     }
 }

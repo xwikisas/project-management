@@ -1,0 +1,56 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#macro (connectionInput $selectConnectionId $connectionOptions)
+<div class="form-group">
+  #if ($connectionOptions.size() == 0)
+  <div class="box warningmessage">
+    <p>$escapetool.xml($services.localization.render('openproject.create-work-package.unavailableConnection'))</p>
+  </div>
+  #else
+  <label for="$selectConnectionId">Connection</label>
+  <select id="$selectConnectionId" name="connection" class="form-control">
+    #if($connectionOptions.size() > 1)
+    <option value="" disabled selected>Select connection...</option>
+    #end
+    #foreach ($option in $connectionOptions)
+    <option value="$option.value">$option.name</option>
+    #end
+  </select>
+  #end
+</div>
+#end
+#macro (incorrectToken $incorrectTokenId)
+<div id="$incorrectTokenId" class="hidden">
+  #set($redirect = $escapetool.url($doc.getURL('view')))
+  #set($token = $escapetool.url($services.csrf.getToken()))
+  #set($params = "redirectUrl=$redirect&token=$token")
+  <div class="box warningmessage">
+    <p>This connection is not available! Follow the next link to authenticate and try again <a
+      href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)">link!</a>
+    </p>
+  </div>
+</div>
+#end
+#macro (projectInput $projectSelectId $connectionOptions)
+<div id="${projectSelectId}-container" class="form-group hidden">
+  <label for="$projectSelectId">Project</label>
+  <select id="$projectSelectId" name="project" class="form-control"></select>
+</div>
+#end
