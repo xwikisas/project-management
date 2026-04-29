@@ -23,7 +23,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-openproject</artifactId>
-    <version>1.1.1</version>
+    <version>1.1.2-SNAPSHOT</version>
   </parent>
   <artifactId>project-management-openproject-xip</artifactId>
   <name>Project Management - Open Project - XIP</name>
