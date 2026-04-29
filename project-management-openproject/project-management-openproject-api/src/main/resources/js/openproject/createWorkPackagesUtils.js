@@ -17,7 +17,17 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-define('create-work-package-utils', ['jquery'], function ($) {
+define("openproject.createworkpackage.utils", {
+  prefix: "openproject.createworkpackage.utils.",
+  keys: [
+    "selectPlaceholder",
+    "inputPlaceholder",
+    "selectProjectPlaceholder",
+    "loadProjects.error",
+  ],
+});
+
+define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createworkpackage.utils'], function ($, l10n) {
 	const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
 
 	function populateSelect(selectElement, fieldData) {
@@ -32,7 +42,7 @@ define('create-work-package-utils', ['jquery'], function ($) {
 	  selectElement.append(
 	    $("<option>", {
 	      value: "",
-	      text: `Select ${fieldData.label}...`,
+	      text: l10n.get("selectPlaceholder", fieldData.label),
 	      disabled: true,
 	      selected: !hasDefault
 	    })
@@ -78,7 +88,7 @@ define('create-work-package-utils', ['jquery'], function ($) {
 	        name: name,
 	        class: fieldClass,
 	        required: fieldData.required,
-	        placeholder: `Enter ${fieldData.label}...`,
+	        placeholder: l10n.get("inputPlaceholder", fieldData.label),
 	        value: fieldData.defaultValue || ""
 	      });
 	      break;
@@ -90,7 +100,7 @@ define('create-work-package-utils', ['jquery'], function ($) {
 	        name: name,
 	        class: fieldClass,
 	        required: fieldData.required,
-	        placeholder: `Enter ${fieldData.label}...`,
+	        placeholder: l10n.get("inputPlaceholder", fieldData.label),
 	        value: fieldData.defaultValue?.id || ""
 	      });
 	      break;
@@ -165,7 +175,7 @@ define('create-work-package-utils', ['jquery'], function ($) {
 	      projectSelect.prop("disabled", true).trigger("change");
 	    } else {
 	      projectSelect.append(
-	        $("<option>", { value: "", text: "Select project...", disabled: true, selected: true })
+	        $("<option>", { value: "", text: l10n.get("selectProjectPlaceholder"), disabled: true, selected: true })
 	      );
 	      projects.forEach((project) => {
 	        projectSelect.append(
@@ -187,7 +197,7 @@ define('create-work-package-utils', ['jquery'], function ($) {
 	      return;
 	    }
 	    $(connectionSelectId).val("");
-	    notify("An error occurred while trying to get the project options!", "error");
+	    notify(l10n.get("loadProjects.error"), "error");
 	  }
 	}
 

@@ -21,16 +21,16 @@
 <div class="form-group">
   #if ($connectionOptions.size() == 0)
   <div class="box warningmessage">
-    <p>$escapetool.xml($services.localization.render('openproject.create-work-package.unavailableConnection'))</p>
+    <p>$escapetool.xml($services.localization.render('openproject.createworkpackage.unavailableConnection'))</p>
   </div>
   #else
-  <label for="$selectConnectionId">Connection</label>
+  <label for="$selectConnectionId">$escapetool.xml($services.localization.render('openproject.createworkpackage.connectionLabel'))</label>
   <select id="$selectConnectionId" name="connection" class="form-control">
     #if($connectionOptions.size() > 1)
-    <option value="" disabled selected>Select connection...</option>
+    <option value="" disabled selected>$escapetool.xml($services.localization.render('openproject.createworkpackage.selectConnectionPlaceholder'))</option>
     #end
     #foreach ($option in $connectionOptions)
-    <option value="$option.value">$option.name</option>
+    <option value="$option.value">$escapetool.xml($option.name)</option>
     #end
   </select>
   #end
@@ -42,15 +42,17 @@
   #set($token = $escapetool.url($services.csrf.getToken()))
   #set($params = "redirectUrl=$redirect&token=$token")
   <div class="box warningmessage">
-    <p>This connection is not available! Follow the next link to authenticate and try again <a
-      href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)">link!</a>
+    <p>$escapetool.xml($services.localization.render('openproject.createworkpackage.incorrectTokenMessage'))
+      <a href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)">
+        $escapetool.xml($services.localization.render('openproject.createworkpackage.incorrectTokenMessage.link'))
+      </a>
     </p>
   </div>
 </div>
 #end
 #macro (projectInput $projectSelectId $connectionOptions)
 <div id="${projectSelectId}-container" class="form-group hidden">
-  <label for="$projectSelectId">Project</label>
+  <label for="$projectSelectId">$escapetool.xml($services.localization.render('openproject.createworkpackage.projectLabel'))</label>
   <select id="$projectSelectId" name="project" class="form-control"></select>
 </div>
 #end

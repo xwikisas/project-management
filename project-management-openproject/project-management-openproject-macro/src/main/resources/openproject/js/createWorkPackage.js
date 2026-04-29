@@ -29,8 +29,21 @@ require.config({
   }
 });
 
-require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
-  function initializeConnectionIfOnlyOneAvailable() {
+define("openproject.createworkpackage.macro", {
+  prefix: "openproject.createworkpackage.macro.",
+  keys: [
+    "notify.fillRequiredFields",
+    "notify.selectConnection",
+    "notify.selectProject",
+    "notify.inputs.error",
+    "notify.submit.noCkeditor",
+    "notify.submit.success",
+    "notify.submit.error",
+  ],
+});
+
+require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createworkpackage.macro"], function ($, createWpUtils, l10n) {
+  async function initializeConnectionIfOnlyOneAvailable() {
     var conn = $("#op-connection");
 
     if (conn.find("option").length === 1) {
@@ -62,7 +75,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
       container.removeClass("hidden");
     } catch (err) {
-      createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
+      createWpUtils.notify(l10n.get("notify.inputs.error"), "error");
     }
   }
 
@@ -70,21 +83,21 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     const modal = element.closest('.macro-editor-modal');
 
     if (!isFormValid()) {
-      createWpUtils.notify("Please fill in all required fields!", "error");
+      createWpUtils.notify(l10n.get("notify.fillRequiredFields"), "error");
       return;
     }
 
     const connection = $("#op-connection").val();
 
     if (!connection) {
-      createWpUtils.notify("Please select a connection!", "error");
+      createWpUtils.notify(l10n.get("notify.selectConnection"), "error");
       return;
     }
 
     const project = $("#op-project").val();
 
     if (!project) {
-      createWpUtils.notify("Please select a project!", "error");
+      createWpUtils.notify(l10n.get("notify.selectProject"), "error");
       return;
     }
 
@@ -94,7 +107,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       const workPackage = await createWpUtils.createWorkPackagesRequest(connection, payload);
 
       if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
-      createWpUtils.notify("Work package created successfully! Please insert it manually as CKEditor instance was not found.", "done");
+      createWpUtils.notify(l10n.get("notify.submit.noCkeditor"), "done");
       return;
     }
 
@@ -109,9 +122,9 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         workItemsDisplayer: "workItemInline"
       }
     });
-    createWpUtils.notify("Work package created and inserted successfully!", "done");
+    createWpUtils.notify(l10n.get("notify.submit.success"), "done");
     } catch (err) {
-      createWpUtils.notify("An error occurred while trying to create the work package!", "error");
+      createWpUtils.notify(l10n.get("notify.submit.error"), "error");
     }
   }
 

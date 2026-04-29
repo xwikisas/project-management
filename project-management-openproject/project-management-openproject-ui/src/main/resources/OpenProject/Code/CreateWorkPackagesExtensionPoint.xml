@@ -125,7 +125,27 @@
       <cache>long</cache>
     </property>
     <property>
-      <code>require.config({
+      <code>define("openproject.createworkpackage", {
+  prefix: "openproject.createworkpackage.",
+  keys: [
+    "notify.fillRequiredFields",
+    "notify.selectProject",
+    "notify.selectConnection",
+    "notify.single.success",
+    "notify.single.error",
+    "notify.multiple.fillRequiredFields",
+    "notify.multiple.noSelection",
+    "notify.multiple.allSuccess",
+    "notify.multiple.partialSuccess",
+    "notify.multiple.error",
+    "notify.inputs.error",
+    "notify.values.error",
+    "modal.title.single",
+    "modal.title.multiple",
+  ],
+});
+
+require.config({
   paths: {
     'create-work-package-utils': new XWiki.Document(
       new XWiki.Model.resolve(
@@ -137,7 +157,7 @@
   }
 });
 
-require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
+require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createworkpackage"], function ($, createWpUtils, l10n) {
 
   $(document).ready(function () {
     const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
@@ -402,7 +422,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         connectionSelect.prop("disabled", true);
         connectionSelect.trigger("change");
       }
-		}
+	}
 
 	function handleTableHighlight() {
       const selection = window.getSelection();
@@ -461,7 +481,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         $connectionSelect.prop("disabled", true);
         $connectionSelect.trigger("change");
       }
-		}
+	}
 
     function findAndOpenFirstInvalid(container) {
       let firstInvalid = null;
@@ -536,12 +556,12 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
 
         container.removeClass("hidden");
       } catch (err) {
-        createWpUtils.notify("An error occurred while trying to create the inputs!", "error");
+        createWpUtils.notify(l10n.get("notify.inputs.error"), "error");
       }
     }
 
     async function onMultipleWorkPackagesProjectSelect(element) {
-			const connection = getConnection(false);
+	  const connection = getConnection(false);
       const requestBody = {
         project: element.val(),
       };
@@ -557,7 +577,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
           initializeMapping(response);
         }
       } catch (err) {
-        createWpUtils.notify("An error occurred while trying to set the available values!", "error")
+        createWpUtils.notify(l10n.get("notify.values.error"), "error")
       }
     }
 
@@ -566,7 +586,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       const firstInvalidSingle = findAndOpenFirstInvalid(singleContainer);
 
       if (firstInvalidSingle) {
-        createWpUtils.notify('Please fill the required fields highlighted.', 'error');
+        createWpUtils.notify(l10n.get('notify.fillRequiredFields'), 'error');
         return;
       }
 
@@ -574,7 +594,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       const project = $("#project-select-single-work-package").val();
 
       if (!project) {
-        createWpUtils.notify('Please select a project.', 'error');
+        createWpUtils.notify(l10n.get('notify.selectProject'), 'error');
         return;
       }
 
@@ -582,7 +602,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       const connection = $("#connection-select-single-work-package").val();
 
       if (!connection) {
-        createWpUtils.notify('Please select a connection.', 'error');
+        createWpUtils.notify(l10n.get('notify.selectConnection'), 'error');
         return;
       }
 
@@ -590,30 +610,30 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         const response = await createWpUtils.createWorkPackagesRequest(connection, payload);
         resetCreateSingleWorkPackageForm();
         $("#create-work-packages-modal").modal("hide");
-        createWpUtils.notify("The Work Package was created successfully!", "done");
+        createWpUtils.notify(l10n.get("notify.single.success"), "done");
       } catch (err) {
-        createWpUtils.notify("Failed to create the Work Package!", "error")
+        createWpUtils.notify(l10n.get("notify.single.error"), "error")
       }
     }
 
     async function submitMultipleWorkPackagesForm(element) {
       const firstInvalidMultiple = findAndOpenFirstInvalid(element);
       if (firstInvalidMultiple) {
-        createWpUtils.notify('Please fill the required fields highlighted in selected work packages.', 'error');
+        createWpUtils.notify(l10n.get('notify.multiple.fillRequiredFields'), 'error');
         return;
       }
 
       const connection = $("#connection-select-multiple-work-packages").val();
 
       if (!connection) {
-        createWpUtils.notify('Please select a connection.', 'error');
+        createWpUtils.notify(l10n.get('notify.selectConnection'), 'error');
         return;
       }
 
       const project = $("#project-select-multiple-work-packages").val();
 
       if (!project) {
-        createWpUtils.notify('Please select a project.', 'error');
+        createWpUtils.notify(l10n.get('notify.selectProject'), 'error');
         return;
       }
 
@@ -647,32 +667,32 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
       });
 
       if (tasks.length === 0) {
-        createWpUtils.notify('No work packages selected', 'warning');
+        createWpUtils.notify(l10n.get('notify.multiple.noSelection'), 'warning');
         return;
       }
 
       const results = await Promise.all(tasks);
       const allSuccess = results.every(r =&gt; r.success === true);
       if (allSuccess) {
-        createWpUtils.notify('All work packages created successfully!', 'done');
+        createWpUtils.notify(l10n.get('notify.multiple.allSuccess'), 'done');
       } else if (results.some(r =&gt; r.success)) {
-        createWpUtils.notify('Some work packages were created, some failed.', 'warning');
+        createWpUtils.notify(l10n.get('notify.multiple.partialSuccess'), 'warning');
       } else {
-        createWpUtils.notify('Failed to create work packages!', 'error');
+        createWpUtils.notify(l10n.get('notify.multiple.error'), 'error');
       }
       $("#create-multiple-work-packages-form-button").addClass("hidden");
     }
 
     function renderSingleMode() {
       resetCreateSingleWorkPackageForm();
-      $("#wp-create-modal-title").text("Create Single Work Package");
+      $("#wp-create-modal-title").text(l10n.get("modal.title.single"));
       $("#create-multiple-work-packages-form").addClass("hidden");
       $("#create-single-work-package-form").removeClass("hidden");
     }
 
     function renderMultipleMode() {
       resetCreateMultipleWorkPackagesForm();
-      $("#wp-create-modal-title").text("Create Multiple Work Packages");
+      $("#wp-create-modal-title").text(l10n.get("modal.title.multiple"));
       $("#create-multiple-work-packages-form").removeClass("hidden");
       $("#create-single-work-package-form").addClass("hidden");
     }
@@ -683,7 +703,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     });
 
     $('#create-wp-from-table').on('click', (e) =&gt; {
-			e.preventDefault();
+	  e.preventDefault();
       handleTableHighlight();
     });
 
@@ -1071,11 +1091,11 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
   {{html}}
   &lt;div id="selection-menu" class="btn-group"&gt;
     &lt;div class="dropdown"&gt;
-      &lt;button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"&gt;Open Project
+      &lt;button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.highlight'))
         &lt;span class="caret"&gt;&lt;/span&gt;&lt;/button&gt;
       &lt;ul class="dropdown-menu"&gt;
-        &lt;li id="create-wp"&gt;&lt;a href="#"&gt;Create work package&lt;/a&gt;&lt;/li&gt;
-        &lt;li id="create-wp-from-table" class="hidden"&gt;&lt;a href="#"&gt;Create work package from table&lt;/a&gt;&lt;/li&gt;
+        &lt;li id="create-wp"&gt;&lt;a href="#"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.highlight.single'))&lt;/a&gt;&lt;/li&gt;
+        &lt;li id="create-wp-from-table" class="hidden"&gt;&lt;a href="#"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.highlight.multiple'))&lt;/a&gt;&lt;/li&gt;
       &lt;/ul&gt;
     &lt;/div&gt;
   &lt;/div&gt;
@@ -1093,7 +1113,7 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
         &lt;/div&gt;
         &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
           &lt;div class="modal-body"&gt;
-            &lt;p class="text-muted"&gt;This form allows you to create a new work package in OpenProject based on the selected text.&lt;/p&gt;
+            &lt;p class="text-muted"&gt; $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.single.description'))&lt;/p&gt;
             #set ($connectionOptions = $services.openproject.getConnectionOptions())
             #connectionInput('connection-select-single-work-package' $connectionOptions)
             #incorrectToken('incorrect-token-single-work-package')
@@ -1104,40 +1124,39 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
           &lt;div class="modal-footer"&gt;
             &lt;button id="create-single-work-package-cancel-button" type="button" class="btn btn-default"
                     data-dismiss="modal"&gt;
-              Cancel
+              $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.cancel'))
             &lt;/button&gt;
             &lt;button id="create-single-work-package-form-button" type="submit" class="btn btn-primary"&gt;
-              Create work package
+              $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.create.single'))
             &lt;/button&gt;
           &lt;/div&gt;
         &lt;/form&gt;
         &lt;form id="create-multiple-work-packages-form" class="withLock xform" novalidate&gt;
           &lt;div class="modal-body"&gt;
-            &lt;p class="text-muted"&gt;This form allows you to create multiple work packages in OpenProject based on the selected table.&lt;/p&gt;
+            &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.multiple.description'))&lt;/p&gt;
             #connectionInput('connection-select-multiple-work-packages')
             #incorrectToken('incorrect-token-multiple-work-packages')
             #projectInput('project-select-multiple-work-packages')
             &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
               &lt;div class="form-group row"&gt;
                 &lt;div class="col-xs-12"&gt;
-                  &lt;p class="text"&gt;OpenProject Mapping&lt;/p&gt;
+                  &lt;p class="text"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.title'))&lt;/p&gt;
                 &lt;/div&gt;
                 &lt;div class="col-xs-12"&gt;
-                  &lt;p class="text-muted"&gt;Map the columns of your table to OpenProject fields. Each mapping will map the
-                    values of a column to the OpenProject field of you choice.&lt;/p&gt;
+                  &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.description'))&lt;/p&gt;
                 &lt;/div&gt;
               &lt;/div&gt;
               &lt;div id="mappings-container"&gt;&lt;/div&gt;
               &lt;div class="form-group wp-mapping-spacing"&gt;
-                &lt;a href="#" id="add-mapping"&gt;+ Add mapping&lt;/a&gt;
+                &lt;a href="#" id="add-mapping"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.add'))&lt;/a&gt;
               &lt;/div&gt;
             &lt;/div&gt;
             &lt;div id="multiple-work-packages-container" class="form-group hidden"&gt;
-              &lt;p class="text-muted"&gt;The following work packages will be created&lt;/p&gt;
+              &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.multiple.preview'))&lt;/p&gt;
               &lt;div class="form-group"&gt;
                 &lt;label class="text-muted"&gt;
                   &lt;input type="checkbox" id="select-all-work-packages" checked&gt;
-                  Select all
+                  $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.select.all'))
                 &lt;/label&gt;
               &lt;/div&gt;
               &lt;div id="work-packages-container" class="form-group"&gt;
@@ -1147,10 +1166,10 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
           &lt;div class="modal-footer"&gt;
             &lt;button id="create-multiple-work-packages-cancel-button" type="button" class="btn btn-default"
                     data-dismiss="modal"&gt;
-              Cancel
+              $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.cancel'))
             &lt;/button&gt;
             &lt;button id="create-multiple-work-packages-form-button" type="submit" class="btn btn-primary"&gt;
-              Create work packages
+              $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.create.multiple'))
             &lt;/button&gt;
           &lt;/div&gt;
         &lt;/form&gt;
@@ -1180,15 +1199,15 @@ require(["jquery", "create-work-package-utils"], function ($, createWpUtils) {
     &lt;div class="mapping-row row"&gt;
       &lt;div class="col-xs-4"&gt;
         &lt;select class="form-control table-key"&gt;
-          &lt;option value="" disabled selected&gt;Select table column&lt;/option&gt;
+          &lt;option value="" disabled selected&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.selectColumn'))&lt;/option&gt;
         &lt;/select&gt;
       &lt;/div&gt;
       &lt;div class="col-xs-3 wp-mapping-center"&gt;
-        &lt;p class="text-muted mapping-label"&gt;is mapped to&lt;/p&gt;
+        &lt;p class="text-muted mapping-label"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.isMappedTo'))&lt;/p&gt;
       &lt;/div&gt;
       &lt;div class="col-xs-4"&gt;
         &lt;select class="form-control op-key"&gt;
-          &lt;option value="" disabled selected&gt;Select OpenProject field&lt;/option&gt;
+          &lt;option value="" disabled selected&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.mapping.selectField'))&lt;/option&gt;
         &lt;/select&gt;
       &lt;/div&gt;
       &lt;div class="col-xs-1 wp-mapping-actions"&gt;
