@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.macro;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,36 +17,28 @@ package com.xwiki.projectmanagement.openproject.macro;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.rest;
 
-import org.xwiki.properties.annotation.PropertyDisplayType;
+import java.util.List;
 
-import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
-import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+
+import org.xwiki.rest.XWikiRestException;
 
 /**
- * dsadasda.
+ * Resource for retrieving information about the chart displayers.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
-public class OpenProjectChartMacroParameters extends ProjectManagementChartMacroParameters
+@Path("/wikis/{wikiName}/projectmanagement/chart/displayers/{type}")
+public interface ChartDisplayerResource
 {
-    private String instance;
-
     /**
-     * @return the OpenProject instance that should be used to retrieve work packages.
+     * @return a structure containing the
      */
-    public String getInstance()
-    {
-        return instance;
-    }
-
-    /**
-     * @param instance see {@link #getInstance()}.
-     */
-    @PropertyDisplayType(OpenProjectInstance.class)
-    public void setInstance(String instance)
-    {
-        this.instance = instance;
-    }
+    @GET
+    List<ChartDisplayerParameterInfo> getChartDisplayerInfo(@PathParam("type") String type) throws XWikiRestException;
 }

@@ -44,10 +44,10 @@
   #if ($filterableProperties.isEmpty())
     <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
   #else
-    <div class="proj-manag-constraint-builder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+    <div class="proj-manag-constraint-builder proj-manag-macro-param" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
       <div class="proj-manag-header">
       #if ($parameters.title)
-        <span>$escapetool.xml($parameters.title)</span>
+        <span class="proj-manag-header-title">$escapetool.xml($parameters.title)</span>
       #end
       #if ($parameters.removable)
         <a class="proj-manag-remove-filter">$services.icon.renderHTML('trash')</a>

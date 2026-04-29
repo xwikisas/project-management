@@ -23,9 +23,7 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
@@ -85,7 +83,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 parameters.getType());
 
             Object typeDisplayerParams =
-                objectMapper.readValue(parameters.getTypeParams(), chartTypeDisplayer.getParameterType());
+                objectMapper.readValue(parameters.getTypeParams(),
+                    chartTypeDisplayer.getParameterTypeTemplate().getClass());
 
             List<PaginatedResult<WorkItem>> workItemsList = new ArrayList<>();
 

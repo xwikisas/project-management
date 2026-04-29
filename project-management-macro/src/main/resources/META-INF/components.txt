@@ -1,5 +1,6 @@
 com.xwiki.projectmanagement.internal.chart.DoughnutChartDisplayer
 com.xwiki.projectmanagement.internal.chart.LineChartDisplayer
+com.xwiki.projectmanagement.internal.rest.DefaultChartDisplayerResource
 com.xwiki.projectmanagement.internal.chart.BarChartDisplayer
 com.xwiki.projectmanagement.internal.chart.PieChartDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsSingleDisplayer

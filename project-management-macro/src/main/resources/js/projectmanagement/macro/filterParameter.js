@@ -29,7 +29,7 @@ setTimeout(function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
       let livedataCfgs = new Map();
       let updateFilterInput = function (e, constraints) {
-        debugger;
+        console.log("Input updated");
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
@@ -60,6 +60,7 @@ setTimeout(function () {
         builder.instances.values().forEach(bld => {
           let filterCfg = filterCfgs[i];
           i++;
+          bld.setTitle("Dataset #" + i);
           let filters = (filterCfg.query && filterCfg.query.filters) || [];
           filters.forEach((filter) => {
             filter.constraints.forEach((constraint) => {
@@ -71,6 +72,9 @@ setTimeout(function () {
         });
 
       };
+      $(document).on('click', '.project-management-new-dataset', function () {
+        builder.newBuilder();
+      });
       initBuilder();
       $(document).on('hide.bs.modal', '.modal', function () {
         if ($('#proj-manag-filter').length <= 0) {
@@ -83,6 +87,15 @@ setTimeout(function () {
           $(this).remove();
         });
       });
+      $(document).on('click', '.project-management-new-dataset', function() {
+
+        setTimeout(() => {
+          let i = 1;
+          builder.instances.values().forEach(bld => {
+            bld.setTitle("Dataset #" + (i++));
+          })
+        }, 0);
+      });
       $(document).on('shown.bs.modal', '.modal', function () {
         if ($('#proj-manag-filter').length <= 0) {
           return;
@@ -90,14 +103,21 @@ setTimeout(function () {
         $('.proj-manag-constraint-builder').each(function () {
           builder.inializeBuilder($(this))
         });
+        let i = 1;
         builder.instances.values().forEach(builder => {
           builder.clean();
           builder.init();
+          // builder.setTitle("Dataset #" + i);
+          i++;
         });
         initBuilder();
       });
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
+        builderElem.on('builderRemoved', function(e) {
+          livedataCfgs.delete(e.target);
+          $('#proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
+        });
       });
     });
   });

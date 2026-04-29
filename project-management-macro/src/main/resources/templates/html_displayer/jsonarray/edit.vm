@@ -17,19 +17,20 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/chartTypeParams.js', {'minify': false}))
-<div class="proj-manag-chart-type-params proj-manag-macro-param">
-</div>
-<template id="proj-manag-chart-type-param-template">
-  <div class="proj-manag-chart-type-param">
-    <div>
-      <div class="proj-manag-chart-type-param-name"></div>
-      <div class="proj-manag-chart-type-param-description"></div>
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/labelsParameter.js', {'minify': false}))
+<div class="proj-manag-chart-labels">
+  <template id="proj-manag-chart-label-template">
+    <div class="proj-manag-chart-label proj-manag-macro-param">
+      <div class="proj-manag-header">
+        <label>Dataset #n Label..</label>
+        <a class="proj-manag-chart-label-remove">$services.icon.renderHTML('trash')</a>
+      </div>
+      <input type="text" placeholder="Dataset #1">
     </div>
-    <input type="text" />
-  </div>
-</template>
-<textarea id="proj-manag-chart-type-params" class="" value="$!escapetool.xml($!displayer.value)"
+  </template>
+</div>
+<button class="btn btn-default proj-manag-chart-label-new">Add new label</button>
+<textarea id="proj-manag-chart-parameter-labels" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end

@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.chart;
  */
 
 import java.util.List;
+import java.util.Map;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.rendering.block.Block;
@@ -45,7 +46,7 @@ public interface ChartTypeDisplayer
      * @param labels the labels associated to each set of work items.
      * @param transformationContext the transformation context of the macro.
      * @param typeDisplayerParams the configuration class for the implementing displayer. It should have the same
-     *     type as the {@link #getParameterType()} return value.
+     *     type as the {@link #getParameterTypeTemplate()} return value.
      * @return a list of blocks ready for rendering.
      * @throws MacroExecutionException in case of errors.
      */
@@ -55,5 +56,11 @@ public interface ChartTypeDisplayer
     /**
      * @return the class of the configuration used by the implementer.
      */
-    Class<?> getParameterType();
+    Map<String, Object> getParameterTypeTemplate();
+
+    /**
+     * @return a map containing the attributes of {@link #getParameterTypeTemplate()} as keys and a list of possible values for
+     *     said attribute as values.
+     */
+    Map<String, List<String>> getParameterTypeValues();
 }

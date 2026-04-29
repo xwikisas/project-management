@@ -184,6 +184,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       }
       builder.cfg[index].valueDisplayer = displayer;
     };
+    let setTitle = function(newTitle) {
+      builder.constraintBuilder.find('.proj-manag-heder-title').text(newTitle);
+    }
     let init = function () {
       builder.constraintBuilder = element;
       builder.addButton = builder.constraintBuilder.find('#proj-manag-add-constraint');
@@ -196,6 +199,13 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         $(this).val('');
         $(this).find(`option[value='${selectedVal}']`).remove();
         addFilter({ property: selectedVal });
+      });
+      builder.constraintBuilder.find('.proj-manag-remove-filter').on('click', function() {
+        builder.constraintBuilder.trigger('builderRemoved');
+        if (window.FilterBuilder && window.FilterBuilder.instances) {
+          window.FilterBuilder.instances.delete(builder.constraintBuilder[0]);
+        }
+        builder.constraintBuilder.remove();
       });
       $(document).trigger('filterBuilderInitialized', [builder.constraintBuilder]);
       // if (window.FilterBuilder) {
@@ -211,8 +221,20 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       addDisplayer: addDisplayer,
       clean: clean,
       cfg: builder.cfg,
-      init: init
+      init: init,
+      setTitle: setTitle
     });
+  };
+  let newBuilder = (window.FilterBuilder && window.FilterBuilder.newBuilder()) || function () {
+    if (!window.FilterBuilder || window.FilterBuilder.instances.size <= 0) {
+      return;
+    }
+    let existingBuilder = window.FilterBuilder.instances.values().next().value.element;
+    let cloned = existingBuilder.clone();
+    cloned.find('.proj-manag-constraints').empty();
+    existingBuilder.parent().append(cloned);
+    window.FilterBuilder.inializeBuilder(cloned);
+    return window.FilterBuilder.instances[cloned[0]];
   };
 
   $('.proj-manag-constraint-builder').each(function () {
@@ -221,5 +243,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
   window.FilterBuilder = window.FilterBuilder || {};
   window.FilterBuilder.inializeBuilder = initBuilder;
   window.FilterBuilder.instances = builders;
+  window.FilterBuilder.newBuilder = newBuilder;
   return window.FilterBuilder;
 });

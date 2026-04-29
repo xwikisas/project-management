@@ -18,7 +18,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-.proj-manag-constraint-builder {
+.proj-manag-macro-param {
   border: 1px solid;
   border-radius: 5px;
   padding: 10px;
@@ -28,6 +28,11 @@
 .proj-manag-header {
   display: flex;
   justify-content: space-between;
+  padding: 5px;
+}
+.proj-manag-chart-type-param-description {
+  color: #555555;
+  font-size: smaller;
 }
 .proj-manag-constraint-title {
   display: inline-block;

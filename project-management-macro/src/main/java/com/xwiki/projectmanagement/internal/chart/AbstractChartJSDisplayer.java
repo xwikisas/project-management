@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.internal.chart;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -51,6 +52,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
+import static com.xwiki.projectmanagement.internal.chart.ChartPeriod.DAILY;
+
 /**
  * Abstract chartjs displayer.
  *
@@ -62,7 +65,13 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     /**
      * The metric key.
      */
-    public static final String METRIC = "metric";
+    public static final String PARAM_METRIC = "metric";
+
+    public static final String PARAM_METRIC_COUNT = "count";
+
+    public static final String PARAM_METRIC_ACCUMULATE = "accumulate";
+
+    public static final String PARAM_PERIOD = "period";
 
     public static final String UNSET = "UNSET";
 
@@ -91,8 +100,8 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         Map<Integer, Integer> unsetValuesCount = new HashMap<>();
 //        chartJSData.setLabels(new TreeSet<>());
         String metric = "count";
-        if (typeDisplayerParams instanceof Map && ((Map<?, ?>) typeDisplayerParams).containsKey(METRIC)) {
-            metric = (String) ((Map<?, ?>) typeDisplayerParams).get(METRIC);
+        if (typeDisplayerParams instanceof Map && ((Map<?, ?>) typeDisplayerParams).containsKey(PARAM_METRIC)) {
+            metric = (String) ((Map<?, ?>) typeDisplayerParams).get(PARAM_METRIC);
         }
 
         // Create the set of all possible labels across all datasets.
@@ -210,8 +219,17 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     public abstract String getChartType();
 
     @Override
-    public Class<?> getParameterType()
+    public Map<String, Object> getParameterTypeTemplate()
     {
-        return Map.class;
+        return Map.of(PARAM_METRIC, PARAM_METRIC_COUNT, PARAM_PERIOD, DAILY.toString());
+    }
+
+    @Override
+    public Map<String, List<String>> getParameterTypeValues()
+    {
+        return Map.of(
+            PARAM_METRIC, Arrays.asList(PARAM_METRIC_COUNT, PARAM_METRIC_ACCUMULATE),
+            PARAM_PERIOD, Arrays.stream(ChartPeriod.values()).map(Enum::name).collect(Collectors.toList())
+        );
     }
 }
