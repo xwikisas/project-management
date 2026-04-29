@@ -29,8 +29,14 @@
 #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
 #set ($clientId = "$!parameters.client")
+## TODO: Not a great way to do it. We are basically using variables defined in other scripts. Need to find another way.
 #if ($clientId == '')
-  #set ($clientId = $macroId)
+  #set ($clientId = "$!macroId")
+#end
+#if ($clientId == '')
+  #set ($clientId = "$!macroIdAsString")
+  ## i.e. macroname/xwiki/2.1
+  #set ($clientId = $clientId.split('/')[0])
 #end
 #set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($clientId))
 #if ("$!clientCfg" != '')

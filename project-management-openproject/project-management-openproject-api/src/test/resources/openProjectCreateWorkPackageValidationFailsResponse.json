@@ -1,0 +1,132 @@
+{
+  "subject": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Subject",
+    "type": "text",
+    "required": true
+  },
+  "description": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Description",
+    "type": "text",
+    "required": false
+  },
+  "type": {
+    "allowedValues": [
+      {
+        "color": "#1A67A3",
+        "name": "Task",
+        "self": {
+          "location": "/api/v3/types/1",
+          "value": ""
+        },
+        "id": 1
+      },
+      {
+        "color": "#35C53F",
+        "name": "Milestone",
+        "self": {
+          "location": "/api/v3/types/2",
+          "value": ""
+        },
+        "id": 2
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Type",
+    "type": "select",
+    "required": true
+  },
+  "priority": {
+    "allowedValues": [
+      {
+        "color": "#C5F6FA",
+        "name": "Low",
+        "self": {
+          "location": "/api/v3/priorities/7",
+          "value": ""
+        },
+        "id": 7
+      },
+      {
+        "color": "#74C0FC",
+        "name": "Normal",
+        "self": {
+          "location": "/api/v3/priorities/8",
+          "value": ""
+        },
+        "id": 8
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Priority",
+    "type": "select",
+    "required": true
+  },
+  "status": {
+    "allowedValues": [
+      {
+        "color": "#1098AD",
+        "name": "New",
+        "self": {
+          "location": "/api/v3/statuses/1",
+          "value": ""
+        },
+        "id": 1
+      },
+      {
+        "color": "#A5D8FF",
+        "name": "In specification",
+        "self": {
+          "location": "/api/v3/statuses/2",
+          "value": ""
+        },
+        "id": 2
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Status",
+    "type": "select",
+    "required": true
+  },
+  "assignee": {
+    "allowedValues": [
+      {
+        "name": "User 1",
+        "self": {
+          "location": "/api/v3/users/1",
+          "value": "User 1"
+        },
+        "id": 1
+      },
+      {
+        "name": "User 2",
+        "self": {
+          "location": "/api/v3/users/2",
+          "value": "User 2"
+        },
+        "id": 2
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Assignee",
+    "type": "select",
+    "required": false
+  },
+  "startDate": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Start date",
+    "type": "date",
+    "required": false
+  },
+  "dueDate": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Finish date",
+    "type": "date",
+    "required": false
+  }
+}

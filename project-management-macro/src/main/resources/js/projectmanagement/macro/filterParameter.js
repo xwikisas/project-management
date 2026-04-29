@@ -100,17 +100,52 @@ setTimeout(function () {
         if ($('#proj-manag-filter').length <= 0) {
           return;
         }
-        $('.proj-manag-constraint-builder').each(function () {
-          builder.inializeBuilder($(this))
+        let modal = $(this);
+        setTimeout(function () {
+          const content = modal.find('.macro-editor');
+          if (!content || content.length <= 0) {
+            console.log('Modal content not found');
+            return;
+          }
+          debugger;
+          if (!content[0].classList.contains('loading')) {
+            $('.proj-manag-constraint-builder').each(function () {
+              builder.inializeBuilder($(this))
+            });
+            let i = 1;
+            builder.instances.values().forEach(builder => {
+              builder.clean();
+              builder.init();
+              // builder.setTitle("Dataset #" + i);
+              i++;
+            });
+            initBuilder();
+            return;
+          }
+          const observer = new MutationObserver(() => {
+            if (!content[0].classList.contains('loading')) {
+              observer.disconnect();
+              $('.proj-manag-constraint-builder').each(function () {
+                builder.inializeBuilder($(this))
+              });
+              let i = 1;
+              builder.instances.values().forEach(builder => {
+                builder.clean();
+                builder.init();
+                // builder.setTitle("Dataset #" + i);
+                i++;
+              });
+              initBuilder();
+            }
+          });
+
+          observer.observe(content[0], {
+            attributes: true,
+            attributeFilter: ['class'],
+            subtree: true
+          });
         });
-        let i = 1;
-        builder.instances.values().forEach(builder => {
-          builder.clean();
-          builder.init();
-          // builder.setTitle("Dataset #" + i);
-          i++;
-        });
-        initBuilder();
+
       });
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);

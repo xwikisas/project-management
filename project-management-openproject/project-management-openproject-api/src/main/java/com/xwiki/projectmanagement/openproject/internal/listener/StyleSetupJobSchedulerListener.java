@@ -41,6 +41,7 @@ import org.xwiki.observation.event.Event;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.internal.event.XObjectAddedEvent;
 import com.xpn.xwiki.internal.event.XObjectUpdatedEvent;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.objects.BaseObjectReference;
@@ -90,7 +91,7 @@ public class StyleSetupJobSchedulerListener extends AbstractEventListener
     public StyleSetupJobSchedulerListener()
     {
         super(StyleSetupJobSchedulerListener.class.getName(),
-            Arrays.asList(new XObjectUpdatedEvent(CLASS_OPEN_PROJECT)));
+            Arrays.asList(new XObjectAddedEvent(CLASS_OPEN_PROJECT), new XObjectUpdatedEvent(CLASS_OPEN_PROJECT)));
     }
 
     @Override

@@ -170,10 +170,16 @@ public class OpenProjectClient implements ProjectManagementClient
                 JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
                 project = extractProjectFromPath(url.getPath());
 
+                JsonNode filtersNode = null;
+                JsonNode sortNode = null;
+
                 if (parametersNode != null) {
-                    filters = extractFiltersFromQuery(filtersEntries, parametersNode.path("f"));
-                    sortBy = extractSortByString(sortEntries, parametersNode.path("t"));
+                    filtersNode = parametersNode.path("f");
+                    sortNode = parametersNode.path("t");
                 }
+
+                filters = extractFiltersFromQuery(filtersEntries, filtersNode);
+                sortBy = extractSortByString(sortEntries, sortNode);
                 break;
             case IDS:
                 filters = extractFiltersFromIdentifier(filtersEntries, identifier);

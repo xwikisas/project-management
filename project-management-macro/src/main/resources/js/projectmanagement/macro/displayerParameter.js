@@ -37,6 +37,31 @@ require(['jquery'], function ($) {
   };
   $(document).on('change', '.macro-editor select[name="workItemsDisplayer"]', hideShowParams);
   $(document).on('show.bs.modal', '.modal', function () {
+    let modal = $(this);
+    setTimeout(function () {
+      const content = modal.find('.macro-editor');
+      if (!content || content.length <= 0) {
+        console.log('Modal content not found');
+        return;
+      }
+      debugger;
+      if (!content[0].classList.contains('loading')) {
+        hideShowParams();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          hideShowParams();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
     setTimeout(hideShowParams);
   });
   hideShowParams();

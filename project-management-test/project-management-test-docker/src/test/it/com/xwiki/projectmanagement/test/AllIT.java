@@ -17,32 +17,29 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.model;
 
-import com.fasterxml.jackson.databind.JsonNode;
+package com.xwiki.projectmanagement.test;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Order;
+import org.xwiki.test.docker.junit5.UITest;
+
+import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
 
 /**
- * Describes the type object of a work package.
+ * Groups all the integration tests for the project management implementations.
  *
  * @version $Id$
- * @since 1.0
+ * @since 1.0-rc-4
  */
-public class Type extends ColoredOpenProjectObject
+@UITest
+public class AllIT
 {
-    /**
-     * Create a Type object from a JsonNode.
-     *
-     * @param typeNode the JsonNode containing the type information.
-     */
-    public Type(JsonNode typeNode)
-    {
-        super(typeNode);
-    }
-
-    /**
-     * Default constructor.
-     */
-    public Type()
+    @Nested
+    @Order(1)
+    @DisplayName("Overall Open Project UI test")
+    class NestedOpenProjectIT extends OpenProjectIT
     {
     }
 }

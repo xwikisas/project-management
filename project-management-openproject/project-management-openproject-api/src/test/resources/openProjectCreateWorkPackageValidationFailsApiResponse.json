@@ -1,0 +1,189 @@
+{
+  "_type": "Form",
+  "_embedded": {
+    "payload": {
+      "subject": "",
+      "description": {
+        "raw": "this is the description for this wp"
+      },
+      "startDate": "2025-02-05",
+      "dueDate": "2025-02-10",
+      "estimatedTime": null,
+      "duration": "P4D",
+      "ignoreNonWorkingDays": false,
+      "percentageDone": null,
+      "storyPoints": null,
+      "_links": {
+        "category": {
+          "href": null
+        },
+        "type": {
+          "href": "/api/v3/types/4",
+          "title": "Feature"
+        },
+        "priority": {
+          "href": "/api/v3/priorities/1",
+          "title": "High"
+        },
+        "project": {
+          "href": "/api/v3/projects/1",
+          "title": "Scrum project"
+        },
+        "status": {
+          "href": "/api/v3/statuses/1",
+          "title": "New"
+        },
+        "responsible": {
+          "href": null
+        },
+        "assignee": {
+          "href": "/api/v3/users/`",
+          "title": "OpenProject Admin"
+        },
+        "version": {
+          "href": null
+        },
+        "parent": {
+          "href": null,
+          "title": null
+        }
+      }
+    },
+    "schema": {
+      "subject": {
+        "name": "Subject",
+        "required": true
+      },
+      "description": {
+        "name": "Description",
+        "required": false
+      },
+      "startDate": {
+        "name": "Start date",
+        "required": false
+      },
+      "dueDate": {
+        "name": "Finish date",
+        "required": false
+      },
+      "assignee": {
+        "name": "Assignee",
+        "required": false,
+        "_links": {
+          "allowedValues": {
+            "href": "/api/v3/projects/2/available_assignees"
+          }
+        }
+      },
+      "type": {
+        "name": "Type",
+        "required": true,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 1,
+              "name": "Task",
+              "color": "#1A67A3",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/types/1"
+                }
+              }
+            },
+            {
+              "id": 2,
+              "name": "Milestone",
+              "color": "#35C53F",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/types/2"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "status": {
+        "name": "Status",
+        "required": true,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 1,
+              "name": "New",
+              "color": "#1098AD",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/statuses/1"
+                }
+              }
+            },
+            {
+              "id": 2,
+              "name": "In specification",
+              "color": "#A5D8FF",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/statuses/2"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "priority": {
+        "name": "Priority",
+        "required": true,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 7,
+              "name": "Low",
+              "color": "#C5F6FA",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/priorities/7"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "name": "Normal",
+              "color": "#74C0FC",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/priorities/8"
+                }
+              }
+            }
+          ]
+        },
+        "_links": {
+          "allowedValues": [
+            {
+              "href": "/api/v3/priorities/7",
+              "title": "Low"
+            },
+            {
+              "href": "/api/v3/priorities/8",
+              "title": "Normal"
+            },
+            {
+              "href": "/api/v3/priorities/9",
+              "title": "High"
+            },
+            {
+              "href": "/api/v3/priorities/10",
+              "title": "Immediate"
+            }
+          ]
+        }
+      }
+    },
+    "validationErrors": {
+      "subject": {
+        "_type": "Error"
+      }
+    }
+  }
+}

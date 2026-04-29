@@ -30,6 +30,7 @@ require(['jquery'], function ($) {
     $.fn.substring = function (startIndex, endIndex) {
       return this.prop('outerHTML').substring(startIndex, endIndex);
     };
+
     $('#proj-manag-property-picker').xwikiSelectize({
       plugins: {
         remove_button: {
@@ -42,7 +43,32 @@ require(['jquery'], function ($) {
     //delete $.fn.substring;
   };
   $(document).on('show.bs.modal', '.modal', function () {
-    setTimeout(selectizeWithCustomizations);
+    let modal = $(this);
+    setTimeout(() => {
+      const content = $(this).find('.macro-editor'); // adjust selector
+      if (!content || content.length <= 0) {
+        console.log('Modal content not found');
+        return;
+      }
+      debugger;
+      if (!content[0].classList.contains('loading')) {
+        selectizeWithCustomizations();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          selectizeWithCustomizations();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
+
   });
   $(document).on('hide.bs.modal', '.modal', function () {
     delete $.fn.search;
