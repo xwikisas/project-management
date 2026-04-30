@@ -94,7 +94,7 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
     protected List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
         ProjectManagementMacroParameters parameters, MacroTransformationContext context)
     {
-
+        this.ssrx.use("css/projectmanagement/displayer/inline.css", Collections.singletonMap("forceSkinAction", true));
         if (workItemList.getItems().isEmpty()) {
 
             return Collections.singletonList(
@@ -164,7 +164,7 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
             List<Block> summaryBlocks = getPropertyDisplayerManager().displayProperty(String.class.getName(), summary,
                 Collections.emptyMap());
             GroupBlock summaryGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(summaryBlocks)),
-                Collections.singletonMap(ATTRIBUTE_CLASS, "text-muted"));
+                Collections.singletonMap(ATTRIBUTE_CLASS, "text-muted work-package-inline-summary"));
             children.add(summaryGroup);
         }
     }

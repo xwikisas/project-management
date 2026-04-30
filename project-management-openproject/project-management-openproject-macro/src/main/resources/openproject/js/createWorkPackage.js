@@ -102,18 +102,19 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     }
 
     const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
-
+    let ckeditorInstance = CKEDITOR && CKEDITOR.instances &&
+      (CKEDITOR.instances.content || CKEDITOR.instances.xwikicontent);
     try {
       const workPackage = await createWpUtils.createWorkPackagesRequest(connection, payload);
 
-      if (!CKEDITOR || !CKEDITOR.instances || !CKEDITOR.instances.content) {
+      if (!ckeditorInstance) {
       createWpUtils.notify(l10n.get("notify.submit.noCkeditor"), "done");
       return;
     }
 
     modal.modal('hide');
 
-    CKEDITOR.instances.content.execCommand('xwiki-macro-insert', {
+    ckeditorInstance.execCommand('xwiki-macro-insert', {
       name: 'openproject',
       inline: 'enforce',
       parameters: {

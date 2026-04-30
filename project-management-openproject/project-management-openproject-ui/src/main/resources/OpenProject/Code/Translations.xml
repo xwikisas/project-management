@@ -130,9 +130,8 @@ openproject.createworkpackage.macro.notify.selectProject=Please select a project
 openproject.createworkpackage.macro.notify.inputs.error=An error occurred while trying to create the inputs!
 openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
 openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
-openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!</content>
-openproject.extension.name=Open Project Integration (Pro)
-</content>
+openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
+openproject.extension.name=Open Project Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>
