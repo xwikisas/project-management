@@ -64,7 +64,7 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * Default implementation of the {@link OpenProjectSpaceResource}.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Component
 @Singleton

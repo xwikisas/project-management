@@ -30,19 +30,49 @@ require(['jquery'], function ($) {
     $.fn.substring = function (startIndex, endIndex) {
       return this.prop('outerHTML').substring(startIndex, endIndex);
     };
-    $('#proj-manag-property-picker').xwikiSelectize({
+
+    let options = {
       plugins: {
         remove_button: {
           title: $('#proj-manag-property-picker').data('remove-title') || 'Remove',
           className: 'proj-manag-property-remove'
         }
       }
-    });
+    };
+    let element = $('#proj-manag-property-picker');
+    if (!element.attr('multiple')) {
+      delete options.plugins;
+    }
+    element.xwikiSelectize(options);
     //delete $.fn.search;
     //delete $.fn.substring;
   };
   $(document).on('show.bs.modal', '.modal', function () {
-    setTimeout(selectizeWithCustomizations);
+    let modal = $(this);
+    setTimeout(() => {
+      const content = $(this).find('.macro-editor'); // adjust selector
+      if (!content || content.length <= 0) {
+        console.log('Modal content not found');
+        return;
+      }
+      if (!content[0].classList.contains('loading')) {
+        selectizeWithCustomizations();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          selectizeWithCustomizations();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
+
   });
   $(document).on('hide.bs.modal', '.modal', function () {
     delete $.fn.search;

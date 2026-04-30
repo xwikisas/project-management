@@ -21,47 +21,131 @@ setTimeout(function () {
   let projManagFilterDeps = JSON.parse(document.getElementById('proj-manag-filter').getAttribute('data-deps')) || {};
   projManagFilterDeps.filterBuilder = new XWiki.Document(
     new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
-  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=false')
+  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=true')
   require.config({
     paths: projManagFilterDeps
   });
   require(['filterBuilder'], function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
+      let livedataCfgs = new Map();
       let updateFilterInput = function (e, constraints) {
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
         }
-        $('#proj-manag-filter').val(JSON.stringify(livedataCfg));
+        livedataCfgs.set(e.target, livedataCfg);
+        $('#proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
       };
-      builder.element.on('constraintsUpdated', updateFilterInput);
+      // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);
+      builder.instances.values().forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
       let initBuilder = function () {
         let initialFilter = $('#proj-manag-filter').val();
         if (!initialFilter) {
           return;
         }
-        const filterCfg = JSON.parse(initialFilter);
-        let filters = (filterCfg.query && filterCfg.query.filters) || [];
-        filters.forEach((filter) => {
-          filter.constraints.forEach((constraint) => {
-            let filterCopy = { ...filter };
-            filterCopy.constraints = [constraint];
-            builder.addFilter(filterCopy);
+        let filterCfgs = JSON.parse(initialFilter);
+
+        filterCfgs = filterCfgs instanceof Array ? filterCfgs : [filterCfgs];
+
+        let currentBuilder = builder.instances.values().next().value;
+
+        for (let i = 1; i < filterCfgs.length; i++) {
+          let clone = currentBuilder.element.clone();
+          currentBuilder.element.parent().append(clone);
+          builder.inializeBuilder(clone);
+        }
+
+        let i = 0;
+        builder.instances.values().forEach(bld => {
+          let filterCfg = filterCfgs[i];
+          i++;
+          bld.setTitle("Dataset #" + i);
+          let filters = (filterCfg.query && filterCfg.query.filters) || [];
+          filters.forEach((filter) => {
+            filter.constraints.forEach((constraint) => {
+              let filterCopy = { ...filter };
+              filterCopy.constraints = [constraint];
+              bld.addFilter(filterCopy);
+            });
           });
         });
+
       };
+      let init = function () {
+        if ($('#proj-manag-filter').length <= 0) {
+          return;
+        }
+        $('.proj-manag-constraint-builder').each(function () {
+          builder.inializeBuilder($(this))
+        });
+        let i = 1;
+        builder.instances.values().forEach(builder => {
+          builder.clean();
+          builder.init();
+          builder.setTitle("Dataset #" + i);
+          i++;
+        });
+        initBuilder();
+      };
+      $(document).on('click', '.project-management-new-dataset', function () {
+        builder.newBuilder();
+      });
       initBuilder();
       $(document).on('hide.bs.modal', '.modal', function () {
-        builder.clean();
+        if ($('#proj-manag-filter').length <= 0) {
+          return;
+        }
+        livedataCfgs.clear();
+        builder.instances.values().forEach(builder => builder.clean());
+        builder.instances.clear();
+        $('.proj-manag-constraint-builder').each(function () {
+          $(this).remove();
+        });
+      });
+      $(document).on('click', '.project-management-new-dataset', function (e) {
+        e.preventDefault();
+        setTimeout(() => {
+          let i = 1;
+          builder.instances.values().forEach(bld => {
+            bld.setTitle("Dataset #" + (i++));
+          })
+        }, 0);
       });
       $(document).on('shown.bs.modal', '.modal', function () {
-        builder.clean();
-        builder.init();
-        initBuilder();
+        let modal = $(this);
+        setTimeout(function () {
+          const content = modal.find('.macro-editor');
+          if (!content || content.length <= 0) {
+            console.log('Modal content not found');
+            return;
+          }
+          if (!content[0].classList.contains('loading')) {
+            init();
+            return;
+          }
+          const observer = new MutationObserver(() => {
+            if (!content[0].classList.contains('loading')) {
+              observer.disconnect();
+              init();
+            }
+          });
+
+          observer.observe(content[0], {
+            attributes: true,
+            attributeFilter: ['class'],
+            subtree: true
+          });
+        });
+
       });
-      $(document).on('filterBuilderInitialized', function(e, builderElem) {
+      $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
+        builderElem.on('builderRemoved', function (e) {
+          livedataCfgs.delete(e.target);
+          $('#proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
+        });
       });
     });
   });
 });
+

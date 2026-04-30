@@ -46,7 +46,7 @@ import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
  * {@link org.xwiki.rest.resources.wikis.WikiSearchQueryResource} and simply prepares the parameters for its methods.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Component
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkSearchResource")

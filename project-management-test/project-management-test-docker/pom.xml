@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-test</artifactId>
-    <version>1.1.0-alpha-3-SNAPSHOT</version>
+    <version>1.1.1-SNAPSHOT</version>
   </parent>
   <artifactId>project-management-test-docker</artifactId>
   <name>Project Management - Tests - Functional Docker Tests</name>
@@ -59,7 +59,12 @@
       <version>${platform.version}</version>
     </dependency>
     <!-- Use a fake licensor script service while running the functional tests. -->
-
+    <dependency>
+      <groupId>com.xwiki.licensing</groupId>
+      <artifactId>application-licensing-test-api</artifactId>
+      <version>${licensing.version}</version>
+      <scope>runtime</scope>
+    </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-test-docker</artifactId>

@@ -26,6 +26,8 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
+import com.xwiki.projectmanagement.openproject.OpenProjectSort;
 
 /**
  * Open project macro params.
@@ -67,5 +69,19 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     public void setFilters(String filters)
     {
         super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(OpenProjectProperties.class)
+    @Override
+    public void setProperties(String properties)
+    {
+        super.setProperties(properties);
+    }
+
+    @PropertyDisplayType(OpenProjectSort.class)
+    @Override
+    public void setSort(String sort)
+    {
+        super.setSort(sort);
     }
 }

@@ -19,7 +19,7 @@
  */
  require(['jquery'], function ($) {
    let init = function (event, builderElement) {
-     let element = builderElement || (window.FilterBuilder && window.FilterBuilder.element);
+     let element = builderElement || (window.FilterBuilder && window.FilterBuilder.instances.values().next().value.element);
      if (element) {
        element.on('displayingFilter', function (e, a, b, c, d) {
          let instance = $('.macro-editor-modal :input[name="instance"]').val();

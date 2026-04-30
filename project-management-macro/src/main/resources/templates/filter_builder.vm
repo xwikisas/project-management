@@ -21,15 +21,22 @@
  * Generate the html structure for a filter builder.
  *
  * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
- *   retrieve the filterable livedata properties.
+ *   retrieve the filterable livedata properties. The 'title' property will be used to set the title of the builder. The
+ *   'removable' property will denote whether the builder can be removed or not.
  *#
 #macro (filterBuilder $parameters)
 #picker_import
 #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
 #set ($clientId = "$!parameters.client")
+## TODO: Not a great way to do it. We are basically using variables defined in other scripts. Need to find another way.
 #if ($clientId == '')
-  #set ($clientId = $macroId)
+  #set ($clientId = "$!macroId")
+#end
+#if ($clientId == '')
+  #set ($clientId = "$!macroIdAsString")
+  ## i.e. macroname/xwiki/2.1
+  #set ($clientId = $clientId.split('/')[0])
 #end
 #set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($clientId))
 #if ("$!clientCfg" != '')
@@ -43,7 +50,15 @@
   #if ($filterableProperties.isEmpty())
     <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
   #else
-    <div class="proj-manag-constraint-builder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+    <div class="proj-manag-constraint-builder proj-manag-macro-param" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+      <div class="proj-manag-header">
+      #if ($parameters.title)
+        <span class="proj-manag-header-title">$escapetool.xml($parameters.title)</span>
+      #end
+      #if ($parameters.removable)
+        <a class="proj-manag-remove-filter">$services.icon.renderHTML('trash')</a>
+      #end
+      </div>
       <div>
         <select id="proj-manag-add-constraint" class="btn btn-default">
           <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>

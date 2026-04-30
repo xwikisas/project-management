@@ -25,7 +25,7 @@
  * @param $clientHint the hint of the project management client implementation. It will be used to retrieve the livedata
  *   configuration defined by that client.
  *#
-#macro (propertyPicker $params $clientHint)
+#macro (propertyPicker $params $clientHint $isSinglePick)
   #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js'))
   #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
@@ -43,6 +43,9 @@
     'options': $options,
     'prefix': ' '
   })
+  #if ($isSinglePick)
+    #set ($discard = $parameters.remove('multiple'))
+  #end
   #set ($discard = $parameters.putAll($params))
   #suggestInput($parameters, 'staticPickerDisplayOptions')
 #end
