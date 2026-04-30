@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="">
+<xwikidoc version="1.6" reference="OpenProject.Code.Translations" locale="">
   <web>OpenProject.Code</web>
   <name>Translations</name>
   <language/>
@@ -86,6 +86,51 @@ openproject.config.stylejob.trigger.title=Color sync
 openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project. You should be authorized to the Open Project instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
 
+openproject.createworkpackage.highlight=Open Project
+openproject.createworkpackage.highlight.single=Create work package
+openproject.createworkpackage.highlight.multiple=Create work packages from table
+openproject.createworkpackage.modal.cancel=Cancel
+openproject.createworkpackage.modal.create.single=Create work package
+openproject.createworkpackage.modal.create.multiple=Create work packages
+openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.
+openproject.createworkpackage.modal.multiple.description=This form allows you to create multiple work packages in OpenProject based on the selected table.
+openproject.createworkpackage.modal.mapping.title=OpenProject Mapping
+openproject.createworkpackage.modal.mapping.description=Map the columns of your table to OpenProject fields. Each mapping will map the values of a column to the OpenProject field of your choice.
+openproject.createworkpackage.modal.mapping.add=+ Add mapping
+openproject.createworkpackage.modal.mapping.selectColumn=Select table column
+openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
+openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
+openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
+openproject.createworkpackage.modal.select.all=Select all
+
+openproject.createworkpackage.modal.title.single=Create Single Work Package
+openproject.createworkpackage.modal.title.multiple=Create Multiple Work Packages
+
+openproject.createworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
+openproject.createworkpackage.notify.selectProject=Please select a project.
+openproject.createworkpackage.notify.selectConnection=Please select a connection.
+openproject.createworkpackage.notify.single.success=The work package was created successfully!
+openproject.createworkpackage.notify.single.error=Failed to create the work package!
+openproject.createworkpackage.notify.multiple.fillRequiredFields=Please fill the required fields highlighted in selected work packages.
+openproject.createworkpackage.notify.multiple.noSelection=No work packages selected.
+openproject.createworkpackage.notify.multiple.allSuccess=All work packages created successfully!
+openproject.createworkpackage.notify.multiple.partialSuccess=Some work packages were created, some failed.
+openproject.createworkpackage.notify.multiple.error=Failed to create work packages!
+openproject.createworkpackage.notify.inputs.error=An error occurred while trying to create the inputs!
+openproject.createworkpackage.notify.values.error=An error occurred while trying to set the available values!
+
+openproject.createworkpackage.utils.selectPlaceholder=Select {0}...
+openproject.createworkpackage.utils.inputPlaceholder=Enter {0}...
+openproject.createworkpackage.utils.selectProjectPlaceholder=Select project...
+openproject.createworkpackage.utils.loadProjects.error=An error occurred while trying to get the project options!
+
+openproject.createworkpackage.macro.notify.fillRequiredFields=Please fill in all required fields!
+openproject.createworkpackage.macro.notify.selectConnection=Please select a connection!
+openproject.createworkpackage.macro.notify.selectProject=Please select a project!
+openproject.createworkpackage.macro.notify.inputs.error=An error occurred while trying to create the inputs!
+openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
+openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
+openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!</content>
 openproject.extension.name=Open Project Integration (Pro)
 </content>
   <object>
