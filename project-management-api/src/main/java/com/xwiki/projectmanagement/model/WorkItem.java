@@ -594,7 +594,7 @@ public class WorkItem extends HashMap<String, Object>
     /**
      * @param key the identifier of a work item property.
      * @return the property itself if it is a string or the value of the linkable property.
-     * @since 1.1.0
+     * @since 1.2.0-rc-1
      */
     public String getStringValue(String key)
     {
@@ -614,6 +614,7 @@ public class WorkItem extends HashMap<String, Object>
      *
      * @param key the key that identifies a work item property
      * @return true is the identified property is considered a date or not.
+     * @since 1.2.0-rc-1
      */
     public static boolean isDate(String key)
     {

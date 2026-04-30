@@ -36,8 +36,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
-import com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -47,12 +47,13 @@ import com.xwiki.projectmanagement.model.WorkItem;
  *
  * @param <T> macro parameter type.
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
 public abstract class AbstractProjectManagementChartMacro<T extends ProjectManagementChartMacroParameters>
     extends AbstractWorkItemsMacro<T>
 {
     private static final String JSON_EMPTY_ARRAY = "[]";
+
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -68,7 +69,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     }
 
     /**
-     * @param parameters the macro parameters in the form of a bean defined by the {@link Macro} implementation
+     * @param parameters the macro parameters in the form of a bean defined by the
+     *     {@link org.xwiki.rendering.macro.Macro} implementation
      * @param content the content of the macro
      * @param context the context of the macros transformation process
      * @return the executed blocks.
@@ -97,8 +99,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     parameters.getLimit(), filter, Collections.emptyList()));
             }
 
-            String labelsJSON = StringUtils.isEmpty(parameters.getDatasetsLabels()) ? JSON_EMPTY_ARRAY :
-                parameters.getDatasetsLabels();
+            String labelsJSON = StringUtils.isEmpty(parameters.getDatasetsLabels()) ? JSON_EMPTY_ARRAY
+                : parameters.getDatasetsLabels();
             List<String> labels = objectMapper.readValue(labelsJSON, new TypeReference<List<String>>()
             {
             });

@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.chart.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -27,21 +27,23 @@ import org.xwiki.component.annotation.Role;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Comp.
+ * Defines the template for a chart type displayer. These displayers will be used by the chart macro.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
+@Unstable
 @Role
 public interface ChartTypeDisplayer
 {
     /**
-     * @param workItems a lis of work items that will be used to display the chart.
+     * @param workItems a list of work items that will be used to display the chart.
      * @param property the main property that will be used to generate the chart on.
      * @param labels the labels associated to each set of work items.
      * @param transformationContext the transformation context of the macro.
@@ -59,8 +61,8 @@ public interface ChartTypeDisplayer
     Map<String, Object> getParameterTypeTemplate();
 
     /**
-     * @return a map containing the attributes of {@link #getParameterTypeTemplate()} as keys and a list of possible values for
-     *     said attribute as values.
+     * @return a map containing the attributes of {@link #getParameterTypeTemplate()} as keys and a list of possible
+     *     values for said attribute as values.
      */
     Map<String, List<String>> getParameterTypeValues();
 }

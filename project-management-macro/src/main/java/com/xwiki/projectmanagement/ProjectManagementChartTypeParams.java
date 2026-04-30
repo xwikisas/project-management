@@ -20,9 +20,10 @@
 package com.xwiki.projectmanagement;
 
 /**
- * Interface representing the project management macro filter.
+ * Interface representing the project management chart type params.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public interface ProjectManagementChartTypeParams
 {

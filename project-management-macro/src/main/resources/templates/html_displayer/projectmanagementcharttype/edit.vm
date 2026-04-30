@@ -22,7 +22,7 @@
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
   >
-  #foreach ($chartType in $services.component.componentManager.getInstanceList('com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer'))
+  #foreach ($chartType in $services.component.componentManager.getInstanceList('com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer'))
     #set ($localizationKey = "projectmanagement.macro.chart.type.$!{chartType.chartType}")
     <option value="$escapetool.xml($!{chartType.chartType})">$escapetool.xml($services.localization.render($localizationKey))</option>
   #end

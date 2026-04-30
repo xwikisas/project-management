@@ -17,32 +17,31 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.chart.rest;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
+import java.util.List;
 
-import org.xwiki.component.annotation.Component;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+
+import org.xwiki.rest.XWikiRestException;
+
+import com.xwiki.projectmanagement.chart.model.ChartDisplayerParameterInfo;
 
 /**
- * Displays a PIE chart.
+ * Resource for retrieving information about the chart displayers.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
-@Component
-@Singleton
-@Named(LineChartDisplayer.TYPE)
-public class LineChartDisplayer extends AbstractChartJSDisplayer
+@Path("/wikis/{wikiName}/projectmanagement/chart/displayers/{type}")
+public interface ChartDisplayerResource
 {
     /**
-     * The type of the chart.
+     * @param type the type of the chart displayer. It's id.
+     * @return a structure containing the
      */
-    public static final String TYPE = "line";
-
-    @Override
-    public String getChartType()
-    {
-        return TYPE;
-    }
+    @GET
+    List<ChartDisplayerParameterInfo> getChartDisplayerInfo(@PathParam("type") String type) throws XWikiRestException;
 }

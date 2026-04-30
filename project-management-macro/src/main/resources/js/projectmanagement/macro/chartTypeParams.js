@@ -45,7 +45,6 @@ require(['jquery', 'xwiki-selectize'], function ($) {
     let notif = new XWiki.widgets.Notification('Loading chart type parameters', 'inprogress');
     $.getJSON(getChartTypeParamsURL)
       .done(function (paramTemplates) {
-        console.log(paramTemplates);
         var htmlTemplate = document.getElementById("proj-manag-chart-type-param-template").content;
 
         paramTemplates.forEach(template => {

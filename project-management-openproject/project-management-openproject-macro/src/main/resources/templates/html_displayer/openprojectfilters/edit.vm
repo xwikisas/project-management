@@ -18,4 +18,4 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template('html_displayer/projectmanagementfilters/edit.vm')
-#set ($discard = $xwiki.jsrx.use('openproject/js/filters.js', {'minify': false}))
+#set ($discard = $xwiki.jsrx.use('openproject/js/filters.js', {'minify': true}))

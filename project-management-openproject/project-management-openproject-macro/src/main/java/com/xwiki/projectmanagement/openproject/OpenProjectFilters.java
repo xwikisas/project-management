@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject;
  * Class representing the Open Project filters.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public interface OpenProjectFilters
 {

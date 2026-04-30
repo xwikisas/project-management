@@ -24,7 +24,7 @@ package com.xwiki.projectmanagement.openproject.model;
  * The model of a link to a work package.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 public class WorkPackageLink
 {

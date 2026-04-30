@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.internal.chart.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -20,48 +20,30 @@ package com.xwiki.projectmanagement.internal.chart;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.List;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+import org.xwiki.component.annotation.Component;
 
 /**
- * Represents the ChartJS dataset.
+ * Displays a PIE chart with chartjs.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
-public class ChartJSDataset
+@Component
+@Singleton
+@Named(PieChartDisplayer.TYPE)
+public class PieChartDisplayer extends AbstractChartJSDisplayer
 {
-    private String label;
-
-    private List<Long> data;
-
     /**
-     * @return the label of the dataset.
+     * The type of the chart.
      */
-    public String getLabel()
-    {
-        return label;
-    }
+    public static final String TYPE = "pie";
 
-    /**
-     * @param label see {@link #getLabel()}.
-     */
-    public void setLabel(String label)
+    @Override
+    public String getChartType()
     {
-        this.label = label;
-    }
-
-    /**
-     * @return the data of the dataset.
-     */
-    public List<Long> getData()
-    {
-        return data;
-    }
-
-    /**
-     * @param data see {@link #getData()}.
-     */
-    public void setData(List<Long> data)
-    {
-        this.data = data;
+        return TYPE;
     }
 }

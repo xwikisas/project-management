@@ -21,7 +21,7 @@ setTimeout(function () {
   let projManagFilterDeps = JSON.parse(document.getElementById('proj-manag-filter').getAttribute('data-deps')) || {};
   projManagFilterDeps.filterBuilder = new XWiki.Document(
     new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
-  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=false')
+  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=true')
   require.config({
     paths: projManagFilterDeps
   });
@@ -29,7 +29,6 @@ setTimeout(function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
       let livedataCfgs = new Map();
       let updateFilterInput = function (e, constraints) {
-        console.log("Input updated");
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
@@ -60,7 +59,6 @@ setTimeout(function () {
         builder.instances.values().forEach(bld => {
           let filterCfg = filterCfgs[i];
           i++;
-          debugger;
           bld.setTitle("Dataset #" + i);
           let filters = (filterCfg.query && filterCfg.query.filters) || [];
           filters.forEach((filter) => {
@@ -84,7 +82,6 @@ setTimeout(function () {
         builder.instances.values().forEach(builder => {
           builder.clean();
           builder.init();
-          debugger;
           builder.setTitle("Dataset #" + i);
           i++;
         });
@@ -110,7 +107,6 @@ setTimeout(function () {
         setTimeout(() => {
           let i = 1;
           builder.instances.values().forEach(bld => {
-            debugger;
             bld.setTitle("Dataset #" + (i++));
           })
         }, 0);

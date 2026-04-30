@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.internal.chart.model;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -21,12 +21,12 @@ package com.xwiki.projectmanagement.internal.chart;
  */
 
 import java.util.List;
-import java.util.List;
 
 /**
  * Represents the data that gets passed to ChartJS for displaying.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public class ChartJSData
 {

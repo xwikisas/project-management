@@ -17,33 +17,14 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.internal.chart;
-
-import org.xwiki.stability.Unstable;
+package com.xwiki.projectmanagement;
 
 /**
- * Define the possible period of time to use for getting created vs resolved statistics.
+ * Interface representing the labels for the project management charts.
  *
  * @version $Id$
- * @since 10.0
+ * @since 1.2.0-rc-1
  */
-@Unstable
-public enum ChartPeriod
+public interface ProjectManagementLabels
 {
-    /**
-     * To retrieve data split by hour.
-     */
-    HOURLY,
-    /**
-     * To retrieve data split by day.
-     */
-    DAILY,
-    /**
-     * To retrieve data split by month.
-     */
-    MONTHLY,
-    /**
-     * To retrieve data split by year.
-     */
-    YEARLY;
 }

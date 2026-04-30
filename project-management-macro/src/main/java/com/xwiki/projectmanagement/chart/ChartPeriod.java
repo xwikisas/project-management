@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.internal.chart;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,31 +17,33 @@ package com.xwiki.projectmanagement.internal.chart;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.chart;
 
-import javax.inject.Named;
-import javax.inject.Singleton;
-
-import org.xwiki.component.annotation.Component;
+import org.xwiki.stability.Unstable;
 
 /**
- * Chart displayer.
+ * Define the possible period of time to use for displaying the charts that group their data on date types.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
-@Component
-@Named(BarChartDisplayer.TYPE)
-@Singleton
-public class BarChartDisplayer extends AbstractChartJSDisplayer
+@Unstable
+public enum ChartPeriod
 {
     /**
-     * The chart type.
+     * To retrieve data split by hour.
      */
-    public static final String TYPE = "bar";
-
-    @Override
-    public String getChartType()
-    {
-        return TYPE;
-    }
+    HOURLY,
+    /**
+     * To retrieve data split by day.
+     */
+    DAILY,
+    /**
+     * To retrieve data split by month.
+     */
+    MONTHLY,
+    /**
+     * To retrieve data split by year.
+     */
+    YEARLY;
 }

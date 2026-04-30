@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.internal.chart.displayer;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -25,10 +25,10 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 
 /**
- * Displays a PIE chart.
+ * Displays a doughnut chart with chartjs.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
 @Component
 @Singleton

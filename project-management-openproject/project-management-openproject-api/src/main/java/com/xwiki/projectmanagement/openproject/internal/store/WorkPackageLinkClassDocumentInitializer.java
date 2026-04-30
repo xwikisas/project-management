@@ -36,7 +36,7 @@ import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
  * Initializes the work package link xclass.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Component
 @Named(WorkPackageLink.CLASS_FULLNAME)

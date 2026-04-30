@@ -24,7 +24,7 @@ import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
-import com.xwiki.projectmanagement.internal.chart.BarChartDisplayer;
+import com.xwiki.projectmanagement.internal.chart.displayer.BarChartDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
@@ -32,15 +32,18 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperty;
 
 /**
- * dsadasda.
+ * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro}.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
 public class OpenProjectChartMacroParameters extends ProjectManagementChartMacroParameters
 {
     private String instance;
 
+    /**
+     * Default constructor. Sets the default values for the parameters.
+     */
     public OpenProjectChartMacroParameters()
     {
         setProperty(WorkItem.KEY_STATUS);

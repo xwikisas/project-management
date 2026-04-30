@@ -1,3 +1,5 @@
+package com.xwiki.projectmanagement.internal.chart.displayer;
+
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,28 +19,31 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.rest;
 
-import java.util.List;
+import javax.inject.Named;
+import javax.inject.Singleton;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-
-import org.xwiki.rest.XWikiRestException;
+import org.xwiki.component.annotation.Component;
 
 /**
- * Resource for retrieving information about the chart displayers.
+ * Bar chartjs displayer.
  *
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/projectmanagement/chart/displayers/{type}")
-public interface ChartDisplayerResource
+@Component
+@Named(BarChartDisplayer.TYPE)
+@Singleton
+public class BarChartDisplayer extends AbstractChartJSDisplayer
 {
     /**
-     * @return a structure containing the
+     * The chart type.
      */
-    @GET
-    List<ChartDisplayerParameterInfo> getChartDisplayerInfo(@PathParam("type") String type) throws XWikiRestException;
+    public static final String TYPE = "bar";
+
+    @Override
+    public String getChartType()
+    {
+        return TYPE;
+    }
 }

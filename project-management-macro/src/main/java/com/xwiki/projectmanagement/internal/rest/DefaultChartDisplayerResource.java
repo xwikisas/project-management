@@ -37,10 +37,16 @@ import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rest.XWikiResource;
 import org.xwiki.rest.XWikiRestException;
 
-import com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer;
-import com.xwiki.projectmanagement.rest.ChartDisplayerParameterInfo;
-import com.xwiki.projectmanagement.rest.ChartDisplayerResource;
+import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.chart.model.ChartDisplayerParameterInfo;
+import com.xwiki.projectmanagement.chart.rest.ChartDisplayerResource;
 
+/**
+ * Resource for retrieving information about the existing {@link ChartTypeDisplayer}.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-1
+ */
 @Singleton
 @Component
 @Named("com.xwiki.projectmanagement.internal.rest.DefaultChartDisplayerResource")

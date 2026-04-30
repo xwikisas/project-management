@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.internal.chart;
+package com.xwiki.projectmanagement.internal.chart.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -33,6 +33,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -50,17 +51,21 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwiki.projectmanagement.chart.ChartPeriod;
+import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.internal.chart.model.ChartJSData;
+import com.xwiki.projectmanagement.internal.chart.model.ChartJSDataset;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
-import static com.xwiki.projectmanagement.internal.chart.ChartPeriod.DAILY;
-import static com.xwiki.projectmanagement.internal.chart.ChartPeriod.MONTHLY;
+import static com.xwiki.projectmanagement.chart.ChartPeriod.DAILY;
+import static com.xwiki.projectmanagement.chart.ChartPeriod.MONTHLY;
 
 /**
- * Abstract chartjs displayer.
+ * Abstract chartjs displayer. Handles the general logic and conversion of parameters to chartjs specific params.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
 public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 {
@@ -69,18 +74,22 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
      */
     public static final String PARAM_METRIC = "metric";
 
+    /**
+     * The count value of the metric parameter.
+     */
     public static final String PARAM_METRIC_COUNT = "count";
 
+    /**
+     * The accumulate value of the metric parameter.
+     */
     public static final String PARAM_METRIC_ACCUMULATE = "accumulate";
 
+    /**
+     * The key for the period parameter.
+     */
     public static final String PARAM_PERIOD = "period";
 
-    public static final String UNSET = "UNSET";
-
-    /**
-     * The type of the chart.
-     */
-    public static final String TYPE = "pie";
+    private static final String UNSET = "UNSET";
 
     private final ObjectMapper mapper = new ObjectMapper();
 
@@ -96,37 +105,47 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         MacroTransformationContext context, Object typeDisplayerParams) throws MacroExecutionException
     {
 
-        ChartJSData chartJSData = new ChartJSData();
-        chartJSData.setDatasets(new ArrayList<>());
         Set<String> chartJSLabels = new TreeSet<>();
-        Map<Integer, Integer> unsetValuesCount = new HashMap<>();
-//        chartJSData.setLabels(new TreeSet<>());
+
         String metric = PARAM_METRIC_COUNT;
         if (typeDisplayerParams instanceof Map && ((Map<?, ?>) typeDisplayerParams).containsKey(PARAM_METRIC)) {
             metric = (String) ((Map<?, ?>) typeDisplayerParams).get(PARAM_METRIC);
         }
+        ChartJSData chartJSData =
+            initModel(workItems, property, (Map<String, String>) typeDisplayerParams, chartJSLabels);
 
-        // Create the set of all possible labels across all datasets.
-//        chartJSData.getLabels().add(UNSET);
-        for (int i = 0; i < workItems.size(); i++) {
-            for (WorkItem item : workItems.get(i).getItems()) {
-                String propValue = getChartJSLabel(item, property, (Map<String, String>) typeDisplayerParams);
-                if (UNSET.equals(propValue)) {
-                    continue;
-                }
-                chartJSLabels.add(propValue);
-            }
+        populateModel(workItems, property, labels, (Map<String, String>) typeDisplayerParams, chartJSData,
+            chartJSLabels, metric);
+
+        String data = "";
+        try {
+            data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
+
+            WikiPrinter wikiPrinter = new DefaultWikiPrinter();
+            renderer.render(new MacroBlock("chartjs", Map.of("type", getChartType()), data, false),
+                wikiPrinter);
+            String renderedChartJsMacro = wikiPrinter.toString();
+
+            XDOM xdom = contentParser.parse(renderedChartJsMacro, context, true, false);
+
+            return Collections.singletonList(new GroupBlock(xdom.getChildren()));
+        } catch (JsonProcessingException e) {
+            throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
         }
+    }
 
+    private void populateModel(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
+        Map<String, String> typeDisplayerParams, ChartJSData chartJSData, Set<String> chartJSLabels, String metric)
+    {
         boolean anyUnset = false;
-
+        Map<Integer, Integer> unsetValuesCount = new HashMap<>();
         for (int i = 0; i < workItems.size(); i++) {
             ChartJSDataset dataset = new ChartJSDataset();
             chartJSData.getDatasets().add(dataset);
             Map<String, Integer> dataSet = new TreeMap<>();
             chartJSLabels.forEach(label -> dataSet.put(label, 0));
             for (WorkItem item : workItems.get(i).getItems()) {
-                String propValue = getChartJSLabel(item, property, (Map<String, String>) typeDisplayerParams);
+                String propValue = getChartJSLabel(item, property, typeDisplayerParams);
                 if (UNSET.equals(propValue)) {
                     unsetValuesCount.put(i, unsetValuesCount.getOrDefault(i, 0) + 1);
                     anyUnset = true;
@@ -145,22 +164,25 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
                 chartJSData.getDatasets().get(i).getData().add(Long.valueOf(unsetValuesCount.get(i)));
             }
         }
+    }
 
-        String data = "";
-        try {
-            data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
-
-            WikiPrinter wikiPrinter = new DefaultWikiPrinter();
-            renderer.render(new MacroBlock("chartjs", Map.of("type", getChartType()), data, false),
-                wikiPrinter);
-            String renderedChartJsMacro = wikiPrinter.toString();
-
-            XDOM xdom = contentParser.parse(renderedChartJsMacro, context, true, false);
-
-            return Collections.singletonList(new GroupBlock(xdom.getChildren()));
-        } catch (JsonProcessingException e) {
-            throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
+    @Nonnull
+    private ChartJSData initModel(List<PaginatedResult<WorkItem>> workItems, String property,
+        Map<String, String> typeDisplayerParams, Set<String> chartJSLabels)
+    {
+        ChartJSData chartJSData = new ChartJSData();
+        chartJSData.setDatasets(new ArrayList<>());
+        // Create the set of all possible labels across all datasets.
+        for (int i = 0; i < workItems.size(); i++) {
+            for (WorkItem item : workItems.get(i).getItems()) {
+                String propValue = getChartJSLabel(item, property, typeDisplayerParams);
+                if (UNSET.equals(propValue)) {
+                    continue;
+                }
+                chartJSLabels.add(propValue);
+            }
         }
+        return chartJSData;
     }
 
     private String getChartJSLabel(WorkItem workItem, String property, Map<String, String> typeDisplayerParams)

@@ -17,7 +17,7 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/chartTypeParams.js', {'minify': false}))
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/chartTypeParams.js', {'minify': true}))
 <div class="proj-manag-chart-type-params proj-manag-macro-param">
 </div>
 <template id="proj-manag-chart-type-param-template">

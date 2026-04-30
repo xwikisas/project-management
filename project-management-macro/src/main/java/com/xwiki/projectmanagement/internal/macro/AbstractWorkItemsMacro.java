@@ -48,6 +48,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  *
  * @param <T> the macro parameter type.
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
 {
@@ -69,11 +70,11 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
     protected ComponentManager componentManager;
 
     /**
-     * COnst.
+     * Constructor.
      *
-     * @param name asdsa.
-     * @param description asdasd.
-     * @param clazz asdas.
+     * @param name the name of the macro.
+     * @param description the description of the macro.
+     * @param clazz class of the parameters bean of this macro.
      */
     public AbstractWorkItemsMacro(String name, String description, Class<?> clazz)
     {

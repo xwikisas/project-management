@@ -56,7 +56,7 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * {@link org.xwiki.rest.resources.objects.ObjectsResource} and prepares the parameters for its methods.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Component
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkObjectsResource")

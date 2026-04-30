@@ -45,6 +45,9 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
 /**
  * Responsible with checking if a connection to a given OpenProject instance exists and a token was retrieved.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-1
  */
 @Component(roles = UserTokenChecker.class)
 @Singleton

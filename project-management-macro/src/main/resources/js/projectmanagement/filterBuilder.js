@@ -20,12 +20,11 @@
 require.config({
   paths: {
     'filterDisplayer': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
-      ('jsx', 'resource=js/projectmanagement/filterDisplayer.js&minify=false')
+      ('jsx', 'resource=js/projectmanagement/filterDisplayer.js&minify=true')
   }
 });
 // TODO: All the dependencies are defined by the livedata so we can just require them. However, we might want to define
 // their urls to not depend on livedata.
-console.log('Hello there');
 define('project-management-filter-builder', ['jquery', 'filterDisplayer'], function ($, filterDisplayer) {
   let builders = (window.FilterBuilder && window.FilterBuilder.instances) || new Map();
   let initBuilder = (window.FilterBuilder && window.FilterBuilder.inializeBuilder) || function (element) {
@@ -185,7 +184,6 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       builder.cfg[index].valueDisplayer = displayer;
     };
     let setTitle = function(newTitle) {
-      debugger;
       builder.constraintBuilder.find('.proj-manag-header-title').text(newTitle);
     }
     let init = function () {

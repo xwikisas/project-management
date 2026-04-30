@@ -20,22 +20,22 @@ package com.xwiki.projectmanagement.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 
-import com.xwiki.projectmanagement.JSONArray;
+import com.xwiki.projectmanagement.ProjectManagementLabels;
 import com.xwiki.projectmanagement.ProjectManagementChartType;
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
 import com.xwiki.projectmanagement.ProjectManagementFilters;
 import com.xwiki.projectmanagement.ProjectManagementProperty;
-import com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer;
-import com.xwiki.projectmanagement.internal.chart.PieChartDisplayer;
+import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.internal.chart.displayer.PieChartDisplayer;
 
 /**
- * Class.
+ * Bean that represents the parameters used by the
+ * {@link com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro} implementers.
  *
  * @version $Id$
- * @since 1.1.0
+ * @since 1.2.0-rc-1
  */
 public class ProjectManagementChartMacroParameters
 {
@@ -156,11 +156,10 @@ public class ProjectManagementChartMacroParameters
         this.offset = offset;
     }
 
-
     /**
      * @return a JSON representation of the chart type implementor configuration object. A
-     *     {@link com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer} will return the configuration type by
-     *     calling {@link ChartTypeDisplayer#getParameterType()}.
+     *     {@link ChartTypeDisplayer} will return the configuration type by
+     *     calling {@link ChartTypeDisplayer#getParameterTypeTemplate()} ()}.
      */
     public String getTypeParams()
     {
@@ -187,7 +186,7 @@ public class ProjectManagementChartMacroParameters
     /**
      * @param datasetsLabels see {@link #getDatasetsLabels()}.
      */
-    @PropertyDisplayType(JSONArray.class)
+    @PropertyDisplayType(ProjectManagementLabels.class)
     public void setDatasetsLabels(String datasetsLabels)
     {
         this.datasetsLabels = datasetsLabels;

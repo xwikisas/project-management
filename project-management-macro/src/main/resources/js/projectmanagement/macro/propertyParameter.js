@@ -55,7 +55,6 @@ require(['jquery'], function ($) {
         console.log('Modal content not found');
         return;
       }
-      debugger;
       if (!content[0].classList.contains('loading')) {
         selectizeWithCustomizations();
         return;

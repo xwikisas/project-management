@@ -38,10 +38,10 @@ import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 
 /**
- * Hello there.
+ * Display data retrieved from OpenProject in charts.
  *
  * @version $Id$
- * @since 1.0
+ * @since 1.2.0-rc-1
  */
 @Singleton
 @Component

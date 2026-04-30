@@ -1,3 +1,5 @@
+package com.xwiki.projectmanagement.internal.chart.model;
+
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -17,13 +19,50 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement;
+
+import java.util.List;
 
 /**
- * Interface representing the project management macro filter.
+ * Represents the ChartJS dataset.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
-public interface JSONArray
+public class ChartJSDataset
 {
+    private String label;
+
+    private List<Long> data;
+
+    /**
+     * @return the label of the dataset.
+     */
+    public String getLabel()
+    {
+        return label;
+    }
+
+    /**
+     * @param label see {@link #getLabel()}.
+     */
+    public void setLabel(String label)
+    {
+        this.label = label;
+    }
+
+    /**
+     * @return the data of the dataset.
+     */
+    public List<Long> getData()
+    {
+        return data;
+    }
+
+    /**
+     * @param data see {@link #getData()}.
+     */
+    public void setData(List<Long> data)
+    {
+        this.data = data;
+    }
 }

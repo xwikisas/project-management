@@ -20,9 +20,10 @@
 package com.xwiki.projectmanagement.openproject;
 
 /**
- * Class representing the open project work package property.
+ * Class representing the open project work package properties.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public interface OpenProjectProperties
 {

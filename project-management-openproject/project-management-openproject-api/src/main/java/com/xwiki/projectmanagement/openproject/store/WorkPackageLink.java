@@ -30,7 +30,7 @@ import com.xpn.xwiki.objects.BaseObject;
  * The base object wrapper that enables the manipulation if Work Package links.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 public class WorkPackageLink
 {

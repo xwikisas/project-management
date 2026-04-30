@@ -17,13 +17,17 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.rest;
+package com.xwiki.projectmanagement.chart.model;
 
 import java.util.List;
 
+import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+
 /**
- * Model representing the metadata associated with a
- * {@link com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer}.
+ * Model representing the metadata associated with a {@link ChartTypeDisplayer}.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public class ChartDisplayerParameterInfo
 {
@@ -71,7 +75,7 @@ public class ChartDisplayerParameterInfo
 
     /**
      * @return the description of the parameter. It describes what the parameter does and how it affects the
-     *     {@link com.xwiki.projectmanagement.internal.chart.ChartTypeDisplayer}.
+     *     {@link ChartTypeDisplayer}.
      */
     public String getDescription()
     {
