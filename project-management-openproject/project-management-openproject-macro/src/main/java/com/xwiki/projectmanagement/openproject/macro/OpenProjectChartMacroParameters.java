@@ -20,10 +20,16 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyMandatory;
 
+import com.xwiki.projectmanagement.internal.chart.BarChartDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
+import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectProperty;
 
 /**
  * dsadasda.
@@ -34,6 +40,13 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 public class OpenProjectChartMacroParameters extends ProjectManagementChartMacroParameters
 {
     private String instance;
+
+    public OpenProjectChartMacroParameters()
+    {
+        setProperty(WorkItem.KEY_STATUS);
+        setType(BarChartDisplayer.TYPE);
+        setLimit(100);
+    }
 
     /**
      * @return the OpenProject instance that should be used to retrieve work packages.
@@ -46,9 +59,31 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     /**
      * @param instance see {@link #getInstance()}.
      */
+    @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
         this.instance = instance;
+    }
+
+    @PropertyDisplayType(OpenProjectFilters.class)
+    @Override
+    public void setFilters(String filters)
+    {
+        super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(OpenProjectProperty.class)
+    @Override
+    public void setProperty(String property)
+    {
+        super.setProperty(property);
+    }
+
+    @PropertyDisplayHidden
+    @Override
+    public void setClient(String client)
+    {
+        super.setClient(client);
     }
 }

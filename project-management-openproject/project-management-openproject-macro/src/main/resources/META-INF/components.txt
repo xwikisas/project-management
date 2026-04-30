@@ -1,2 +1,3 @@
+com.xwiki.projectmanagement.openproject.internal.UserTokenChecker
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectMacro

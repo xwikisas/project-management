@@ -29,7 +29,7 @@
     <input type="text" />
   </div>
 </template>
-<textarea id="proj-manag-chart-type-params" class="" value="$!escapetool.xml($!displayer.value)"
+<textarea id="proj-manag-chart-type-params" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end

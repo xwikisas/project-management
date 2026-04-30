@@ -60,6 +60,7 @@ setTimeout(function () {
         builder.instances.values().forEach(bld => {
           let filterCfg = filterCfgs[i];
           i++;
+          debugger;
           bld.setTitle("Dataset #" + i);
           let filters = (filterCfg.query && filterCfg.query.filters) || [];
           filters.forEach((filter) => {
@@ -71,6 +72,23 @@ setTimeout(function () {
           });
         });
 
+      };
+      let init = function () {
+        if ($('#proj-manag-filter').length <= 0) {
+          return;
+        }
+        $('.proj-manag-constraint-builder').each(function () {
+          builder.inializeBuilder($(this))
+        });
+        let i = 1;
+        builder.instances.values().forEach(builder => {
+          builder.clean();
+          builder.init();
+          debugger;
+          builder.setTitle("Dataset #" + i);
+          i++;
+        });
+        initBuilder();
       };
       $(document).on('click', '.project-management-new-dataset', function () {
         builder.newBuilder();
@@ -87,19 +105,17 @@ setTimeout(function () {
           $(this).remove();
         });
       });
-      $(document).on('click', '.project-management-new-dataset', function() {
-
+      $(document).on('click', '.project-management-new-dataset', function (e) {
+        e.preventDefault();
         setTimeout(() => {
           let i = 1;
           builder.instances.values().forEach(bld => {
+            debugger;
             bld.setTitle("Dataset #" + (i++));
           })
         }, 0);
       });
       $(document).on('shown.bs.modal', '.modal', function () {
-        if ($('#proj-manag-filter').length <= 0) {
-          return;
-        }
         let modal = $(this);
         setTimeout(function () {
           const content = modal.find('.macro-editor');
@@ -107,35 +123,14 @@ setTimeout(function () {
             console.log('Modal content not found');
             return;
           }
-          debugger;
           if (!content[0].classList.contains('loading')) {
-            $('.proj-manag-constraint-builder').each(function () {
-              builder.inializeBuilder($(this))
-            });
-            let i = 1;
-            builder.instances.values().forEach(builder => {
-              builder.clean();
-              builder.init();
-              // builder.setTitle("Dataset #" + i);
-              i++;
-            });
-            initBuilder();
+            init();
             return;
           }
           const observer = new MutationObserver(() => {
             if (!content[0].classList.contains('loading')) {
               observer.disconnect();
-              $('.proj-manag-constraint-builder').each(function () {
-                builder.inializeBuilder($(this))
-              });
-              let i = 1;
-              builder.instances.values().forEach(builder => {
-                builder.clean();
-                builder.init();
-                // builder.setTitle("Dataset #" + i);
-                i++;
-              });
-              initBuilder();
+              init();
             }
           });
 
@@ -149,7 +144,7 @@ setTimeout(function () {
       });
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
-        builderElem.on('builderRemoved', function(e) {
+        builderElem.on('builderRemoved', function (e) {
           livedataCfgs.delete(e.target);
           $('#proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
         });

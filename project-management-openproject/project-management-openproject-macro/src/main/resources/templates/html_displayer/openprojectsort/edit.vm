@@ -17,18 +17,5 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': false}))
-#template("filter_builder.vm")
-<div class="project-management-filters">
-#filterBuilder({"client": "openproject", "title": "Dataset 1", "removable": true})
-</div>
-#set ($deps = {
-  'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
-})
-<button class="btn btn-link project-management-new-dataset">Add new dataset</button>
-<textarea id="proj-manag-filter" class="hidden" value="$!escapetool.xml($!displayer.value)"
-  #foreach ($parameter in $displayer.parameters.entrySet())
-    $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
-  #end
-  data-deps="$escapetool.xml($jsontool.serialize($deps))"
-/>
+#template("sort_picker.vm")
+#sortPicker($displayer.parameters "openproject")

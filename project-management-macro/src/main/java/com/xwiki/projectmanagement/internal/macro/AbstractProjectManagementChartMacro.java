@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
@@ -51,6 +52,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public abstract class AbstractProjectManagementChartMacro<T extends ProjectManagementChartMacroParameters>
     extends AbstractWorkItemsMacro<T>
 {
+    private static final String JSON_EMPTY_ARRAY = "[]";
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -82,8 +84,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             ChartTypeDisplayer chartTypeDisplayer = componentManager.getInstance(ChartTypeDisplayer.class,
                 parameters.getType());
 
+            String typeParamsJSON = StringUtils.isEmpty(parameters.getTypeParams()) ? "{}" : parameters.getTypeParams();
             Object typeDisplayerParams =
-                objectMapper.readValue(parameters.getTypeParams(),
+                objectMapper.readValue(typeParamsJSON,
                     chartTypeDisplayer.getParameterTypeTemplate().getClass());
 
             List<PaginatedResult<WorkItem>> workItemsList = new ArrayList<>();
@@ -94,10 +97,11 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     parameters.getLimit(), filter, Collections.emptyList()));
             }
 
-            List<String> labels = objectMapper.readValue(parameters.getDatasetsLabels(),
-                new TypeReference<List<String>>()
-                {
-                });
+            String labelsJSON = StringUtils.isEmpty(parameters.getDatasetsLabels()) ? JSON_EMPTY_ARRAY :
+                parameters.getDatasetsLabels();
+            List<String> labels = objectMapper.readValue(labelsJSON, new TypeReference<List<String>>()
+            {
+            });
 
             if (workItemsList.isEmpty()) {
                 workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
@@ -122,7 +126,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         throws JsonProcessingException, LiveDataException
     {
         List<List<LiveDataQuery.Filter>> filtersList = new ArrayList<>();
-        JsonNode smth = objectMapper.readTree(filters);
+        JsonNode smth = objectMapper.readTree(StringUtils.isEmpty(filters) ? JSON_EMPTY_ARRAY : filters);
         for (JsonNode jsonNode : smth) {
             String sublist = objectMapper.writeValueAsString(jsonNode);
             filtersList.add(getFilters(sublist));

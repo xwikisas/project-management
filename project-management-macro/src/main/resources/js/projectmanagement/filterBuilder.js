@@ -185,7 +185,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       builder.cfg[index].valueDisplayer = displayer;
     };
     let setTitle = function(newTitle) {
-      builder.constraintBuilder.find('.proj-manag-heder-title').text(newTitle);
+      debugger;
+      builder.constraintBuilder.find('.proj-manag-header-title').text(newTitle);
     }
     let init = function () {
       builder.constraintBuilder = element;

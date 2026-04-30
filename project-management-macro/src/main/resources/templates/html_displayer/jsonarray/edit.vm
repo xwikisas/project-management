@@ -29,7 +29,7 @@
     </div>
   </template>
 </div>
-<button class="btn btn-default proj-manag-chart-label-new">Add new label</button>
+<button class="btn btn-link proj-manag-chart-label-new">Add new label</button>
 <textarea id="proj-manag-chart-parameter-labels" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"

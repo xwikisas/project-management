@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
@@ -53,6 +54,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static com.xwiki.projectmanagement.internal.chart.ChartPeriod.DAILY;
+import static com.xwiki.projectmanagement.internal.chart.ChartPeriod.MONTHLY;
 
 /**
  * Abstract chartjs displayer.
@@ -99,7 +101,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         Set<String> chartJSLabels = new TreeSet<>();
         Map<Integer, Integer> unsetValuesCount = new HashMap<>();
 //        chartJSData.setLabels(new TreeSet<>());
-        String metric = "count";
+        String metric = PARAM_METRIC_COUNT;
         if (typeDisplayerParams instanceof Map && ((Map<?, ?>) typeDisplayerParams).containsKey(PARAM_METRIC)) {
             metric = (String) ((Map<?, ?>) typeDisplayerParams).get(PARAM_METRIC);
         }
@@ -168,8 +170,9 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             Date date = (Date) workItem.get(property);
 
             SimpleDateFormat dateFormat = new SimpleDateFormat();
-
-            switch (ChartPeriod.valueOf(typeDisplayerParams.get("period"))) {
+            String period = typeDisplayerParams.get(PARAM_PERIOD);
+            period = StringUtils.isEmpty(period) ? MONTHLY.name() : period;
+            switch (ChartPeriod.valueOf(period)) {
                 case MONTHLY:
                     dateFormat.applyPattern("yyyy-MM");
                     break;
@@ -200,7 +203,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     private static void applyMetric(String metric, ChartJSData chartJSData, int i, Map<String, Integer> dataSet)
     {
-        if (metric.equals("accumulate")) {
+        if (metric.equals(PARAM_METRIC_ACCUMULATE)) {
             chartJSData.getDatasets().get(i).setData(new ArrayList<>());
             int currentVal = 0;
             for (Integer value : dataSet.values()) {

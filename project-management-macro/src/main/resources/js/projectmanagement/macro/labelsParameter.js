@@ -45,11 +45,35 @@ require(['jquery'], function ($) {
     });
   };
   init();
-  $(document).on('click', '.proj-manag-chart-label-new', function () {
+  $(document).on('click', '.proj-manag-chart-label-new', function (e) {
+    e.preventDefault();
     createNewLabel("Dataset #" + ($('.proj-manag-chart-label').length + 1) + " label", "");
   });
   $(document).on('shown.bs.modal', '.modal', function () {
-    init();
+    let modal = $(this);
+    setTimeout(function () {
+      const content = modal.find('.macro-editor');
+      if (!content || content.length <= 0) {
+        console.log('Modal content not found');
+        return;
+      }
+      if (!content[0].classList.contains('loading')) {
+        init();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          init();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
   });
 });
 

@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.internal;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,24 +17,13 @@ package com.xwiki.projectmanagement.internal;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject;
 
 /**
- * An enum listing the different ways a list of work items can be displayed.
+ * Class representing the open project work package property.
  *
  * @version $Id$
  */
-public enum WorkItemsDisplayer
+public interface OpenProjectProperty
 {
-    /**
-     * Display the work items using a livedata.
-     */
-    liveData,
-    /**
-     * Display the work items using a livedata in the card layout.
-     */
-    liveDataCards,
-    /**
-     * Display a single work item in a page structure.
-     */
-    workItemsSingle
 }
