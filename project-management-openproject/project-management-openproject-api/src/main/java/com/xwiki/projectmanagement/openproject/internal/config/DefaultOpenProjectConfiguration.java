@@ -95,7 +95,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         // The access token coming from OpenProject has a lifespan of 2 hours so we probably shouldn't have a cache
         // longer than that either.
         lru.setLifespan(7200);
-        lru.setMaxEntries(1000);
+        lru.setMaxEntries(10);
         cacheConfig.put(EntryEvictionConfiguration.CONFIGURATIONID, lru);
 
         try {
