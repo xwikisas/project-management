@@ -129,10 +129,15 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     {
         List<List<LiveDataQuery.Filter>> filtersList = new ArrayList<>();
         JsonNode smth = objectMapper.readTree(StringUtils.isEmpty(filters) ? JSON_EMPTY_ARRAY : filters);
-        for (JsonNode jsonNode : smth) {
-            String sublist = objectMapper.writeValueAsString(jsonNode);
-            filtersList.add(getFilters(sublist));
+        if (smth.isArray()) {
+            for (JsonNode jsonNode : smth) {
+                String sublist = objectMapper.writeValueAsString(jsonNode);
+                filtersList.add(getFilters(sublist));
+            }
+        } else {
+            filtersList.add(getFilters(filters));
         }
+
         return filtersList;
     }
 }

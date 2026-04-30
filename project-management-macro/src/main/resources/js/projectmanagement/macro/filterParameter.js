@@ -18,7 +18,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 setTimeout(function () {
-  let projManagFilterDeps = JSON.parse(document.getElementById('proj-manag-filter').getAttribute('data-deps')) || {};
+  let deps = document.getElementById('proj-manag-filter').getAttribute('data-deps') || "{}";
+  let projManagFilterDeps = JSON.parse(deps) || {};
   projManagFilterDeps.filterBuilder = new XWiki.Document(
     new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
   ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=true')

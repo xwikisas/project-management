@@ -39,7 +39,7 @@ require(['jquery'], function ($) {
     if (labelsInput.length <= 0) {
       return;
     }
-    let labels = JSON.parse(labelsInput.val());
+    let labels = labelsInput.val() ? JSON.parse(labelsInput.val()) : [];
     labels.forEach((element, i) => {
       createNewLabel("Dataset #" + (i + 1) + " label", element);
     });
