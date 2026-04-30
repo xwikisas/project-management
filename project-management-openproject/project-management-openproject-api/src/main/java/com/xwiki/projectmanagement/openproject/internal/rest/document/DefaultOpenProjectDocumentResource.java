@@ -50,7 +50,7 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * {@link org.xwiki.rest.resources.pages.PageResource} to perform the document operations.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Component
 @Singleton

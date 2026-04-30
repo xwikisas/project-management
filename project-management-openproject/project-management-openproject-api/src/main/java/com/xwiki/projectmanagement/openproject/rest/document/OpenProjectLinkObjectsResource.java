@@ -35,7 +35,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
  * Resource for creating the link to an Open Project entity.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Path("/wikis/{wikiName}/openproject/documents/{id}/links")
 public interface OpenProjectLinkObjectsResource

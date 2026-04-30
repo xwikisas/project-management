@@ -31,14 +31,19 @@ require(['jquery'], function ($) {
       return this.prop('outerHTML').substring(startIndex, endIndex);
     };
 
-    $('#proj-manag-property-picker').xwikiSelectize({
+    let options = {
       plugins: {
         remove_button: {
           title: $('#proj-manag-property-picker').data('remove-title') || 'Remove',
           className: 'proj-manag-property-remove'
         }
       }
-    });
+    };
+    let element = $('#proj-manag-property-picker');
+    if (!element.attr('multiple')) {
+      delete options.plugins;
+    }
+    element.xwikiSelectize(options);
     //delete $.fn.search;
     //delete $.fn.substring;
   };
@@ -50,7 +55,6 @@ require(['jquery'], function ($) {
         console.log('Modal content not found');
         return;
       }
-      debugger;
       if (!content[0].classList.contains('loading')) {
         selectizeWithCustomizations();
         return;

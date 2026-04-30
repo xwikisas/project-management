@@ -34,7 +34,7 @@ import org.xwiki.rest.model.jaxb.SearchResults;
  * Open Project entity.
  *
  * @version $Id$
- * @since 1.1.0-rc-1
+ * @since 1.2.0-rc-1
  */
 @Path("/wikis/{wikiName}/openproject/links")
 public interface OpenProjectLinkSearchResource
