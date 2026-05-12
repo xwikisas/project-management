@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.config;
 
 import java.util.List;
 
+import org.xwiki.cache.config.CacheConfiguration;
 import org.xwiki.component.annotation.Role;
 
 import com.xwiki.projectmanagement.exception.AuthenticationException;
@@ -76,6 +77,9 @@ public interface OpenProjectConfiguration
      */
     OpenProjectApiClient getOpenProjectApiClient(String connectionName);
 
+    void updateCacheTTL(String cacheId, CacheConfiguration configuration);
+
+    long getCacheTTL();
     /**
      * Clean the various caches used by the application, such as the entities retrieved from the configured Open Project
      * instances.

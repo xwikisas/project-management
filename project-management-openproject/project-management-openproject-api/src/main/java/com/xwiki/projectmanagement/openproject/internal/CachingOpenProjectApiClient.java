@@ -42,7 +42,17 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
  */
 public class CachingOpenProjectApiClient implements OpenProjectApiClient
 {
-    private final Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> workPackagesCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> projectsCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> prioritiesCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> usersCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> statusesCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> typesCache;
 
     private final OpenProjectApiClient client;
 
@@ -60,7 +70,12 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     {
         this.client = client;
         this.clientId = clientId;
-        this.cache = cache;
+        setWorkPackagesCache(cache);
+        setUsersCache(cache);
+        setProjectsCache(cache);
+        setTypesCache(cache);
+        setPrioritiesCache(cache);
+        setStatusesCache(cache);
     }
 
     @Override
@@ -68,10 +83,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey("workItems", offset, pageSize, filters, sortBy);
-        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) cache.get(cacheKey);
+        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) getFromCache(workPackagesCache, cacheKey);
         if (result == null) {
             result = client.getWorkPackages(offset, pageSize, filters, sortBy);
-            cache.set(cacheKey, result);
+            setInCache(workPackagesCache, cacheKey, result);
         }
         return result;
     }
@@ -82,10 +97,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey(String.format("project%sWorkItems", project), offset, pageSize, filters, sortBy);
-        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) cache.get(cacheKey);
+        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) getFromCache(workPackagesCache, cacheKey);
         if (result == null) {
             result = client.getProjectWorkPackages(project, offset, pageSize, filters, sortBy);
-            cache.set(cacheKey, result);
+            setInCache(workPackagesCache, cacheKey, result);
         }
         return result;
     }
@@ -94,10 +109,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException
     {
         String cacheKey = getCacheKey("users", offset, pageSize, filters, "");
-        PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
+        PaginatedResult<User> result = (PaginatedResult<User>) getFromCache(usersCache, cacheKey);
         if (result == null) {
             result = client.getUsers(offset, pageSize, filters);
-            cache.set(cacheKey, result);
+            setInCache(usersCache, cacheKey, result);
         }
         return result;
     }
@@ -107,10 +122,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey("projects", offset, pageSize, filters, "");
-        PaginatedResult<Project> result = (PaginatedResult<Project>) cache.get(cacheKey);
+        PaginatedResult<Project> result = (PaginatedResult<Project>) getFromCache(projectsCache, cacheKey);
         if (result == null) {
             result = client.getProjects(offset, pageSize, filters);
-            cache.set(cacheKey, result);
+            setInCache(projectsCache, cacheKey, result);
         }
         return result;
     }
@@ -120,10 +135,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey(String.format("availableProjects/%s", url), offset, pageSize, filters, "");
-        PaginatedResult<Project> result = (PaginatedResult<Project>) cache.get(cacheKey);
+        PaginatedResult<Project> result = (PaginatedResult<Project>) getFromCache(projectsCache, cacheKey);
         if (result == null) {
             result = client.getAvailableProjects(url, offset, pageSize, filters);
-            cache.set(cacheKey, result);
+            setInCache(projectsCache, cacheKey, result);
         }
         return result;
     }
@@ -132,10 +147,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Type> getTypes() throws ProjectManagementException
     {
         String cacheKey = getCacheKey("types", 1, Integer.MAX_VALUE, "", "");
-        PaginatedResult<Type> result = (PaginatedResult<Type>) cache.get(cacheKey);
+        PaginatedResult<Type> result = (PaginatedResult<Type>) getFromCache(typesCache, cacheKey);
         if (result == null) {
             result = client.getTypes();
-            cache.set(cacheKey, result);
+            setInCache(typesCache, cacheKey, result);
         }
         return result;
     }
@@ -144,10 +159,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Status> getStatuses() throws ProjectManagementException
     {
         String cacheKey = getCacheKey("statuses", 1, Integer.MAX_VALUE, "", "");
-        PaginatedResult<Status> result = (PaginatedResult<Status>) cache.get(cacheKey);
+        PaginatedResult<Status> result = (PaginatedResult<Status>) getFromCache(statusesCache, cacheKey);
         if (result == null) {
             result = client.getStatuses();
-            cache.set(cacheKey, result);
+            setInCache(statusesCache, cacheKey, result);
         }
         return result;
     }
@@ -156,10 +171,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Priority> getPriorities() throws ProjectManagementException
     {
         String cacheKey = getCacheKey("priorities", 1, Integer.MAX_VALUE, "", "");
-        PaginatedResult<Priority> result = (PaginatedResult<Priority>) cache.get(cacheKey);
+        PaginatedResult<Priority> result = (PaginatedResult<Priority>) getFromCache(prioritiesCache, cacheKey);
         if (result == null) {
             result = client.getPriorities();
-            cache.set(cacheKey, result);
+            setInCache(prioritiesCache, cacheKey, result);
         }
         return result;
     }
@@ -182,10 +197,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey(String.format("availableUsers/%s", url), offset, pageSize, filters, "");
-        PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
+        PaginatedResult<User> result = (PaginatedResult<User>) getFromCache(usersCache, cacheKey);
         if (result == null) {
             result = client.getAvailableUsers(url, offset, pageSize, filters);
-            cache.set(cacheKey, result);
+            setInCache(usersCache, cacheKey, result);
         }
         return result;
     }
@@ -194,6 +209,90 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
         return client.createWorkPackage(url, jsonBody);
+    }
+
+    private void setInCache(Cache<PaginatedResult<?
+        extends BaseOpenProjectObject>> cache, String key, PaginatedResult<? extends BaseOpenProjectObject> result)
+    {
+        if (cache == null) {
+            return;
+        }
+        cache.set(key, result);
+    }
+
+    private PaginatedResult<? extends BaseOpenProjectObject> getFromCache(Cache<PaginatedResult<?
+        extends BaseOpenProjectObject>> cache, String key)
+    {
+        if (cache == null) {
+            return null;
+        }
+        return cache.get(key);
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getWorkPackagesCache()
+    {
+        return workPackagesCache;
+    }
+
+    public void setWorkPackagesCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> workPackagesCache)
+    {
+        this.workPackagesCache = workPackagesCache;
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getProjectsCache()
+    {
+        return projectsCache;
+    }
+
+    public void setProjectsCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> projectsCache)
+    {
+        this.projectsCache = projectsCache;
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getPrioritiesCache()
+    {
+        return prioritiesCache;
+    }
+
+    public void setPrioritiesCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> prioritiesCache)
+    {
+        this.prioritiesCache = prioritiesCache;
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getUsersCache()
+    {
+        return usersCache;
+    }
+
+    public void setUsersCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> usersCache)
+    {
+        this.usersCache = usersCache;
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getStatusesCache()
+    {
+        return statusesCache;
+    }
+
+    public void setStatusesCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> statusesCache)
+    {
+        this.statusesCache = statusesCache;
+    }
+
+    public Cache<PaginatedResult<? extends BaseOpenProjectObject>> getTypesCache()
+    {
+        return typesCache;
+    }
+
+    public void setTypesCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> typesCache)
+    {
+        this.typesCache = typesCache;
     }
 
     private String getCacheKey(String entity, int offset, int pageSize, String filters, String sortBy)

@@ -100,4 +100,16 @@ public class OpenProjectScriptService implements ScriptService
         }
         stylingSetupManager.setupInstanceStyles();
     }
+
+    public void setCacheLifespan() {
+        openProjectConfiguration.cleanCache();
+    }
+
+    public void clearCache() throws ProjectManagementException
+    {
+        if (!authorizationManager.hasAccess(Right.ADMIN)) {
+            throw new ProjectManagementException("You are not authorized to clear the cache.");
+        }
+        openProjectConfiguration.cleanCache();
+    }
 }

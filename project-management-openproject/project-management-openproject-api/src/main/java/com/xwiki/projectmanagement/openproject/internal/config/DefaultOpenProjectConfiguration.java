@@ -24,6 +24,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
@@ -44,8 +45,11 @@ import org.xwiki.component.phase.InitializationException;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.contrib.oidc.OAuth2Exception;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.script.service.ScriptService;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -82,9 +86,19 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     private CacheManager cacheManager;
 
     @Inject
+    private Provider<XWikiContext> contextProvider;
+
+    @Inject
+    private EntityReferenceSerializer<String> serializer;
+
+    @Inject
     private Logger logger;
 
-    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> shortCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> mediumCache;
+
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> longCache;
 
     @Override
     public void initialize() throws InitializationException
@@ -99,11 +113,11 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         cacheConfig.put(EntryEvictionConfiguration.CONFIGURATIONID, lru);
 
         try {
-            this.cache = this.cacheManager.createNewCache(cacheConfig);
+            this.shortCache = this.cacheManager.createNewCache(cacheConfig);
         } catch (Exception e) {
             // Dispose the cache if it has been created.
-            if (this.cache != null) {
-                this.cache.dispose();
+            if (this.shortCache != null) {
+                this.shortCache.dispose();
             }
             throw new InitializationException("Failed to create the Open Project client cache.", e);
         }
@@ -168,22 +182,43 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         }
         OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
             accessToken, HttpClient.newHttpClient());
-        return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
+        String cacheBaseId = getCacheId(connection);
+        return new CachingOpenProjectApiClient(openProjectApiClient, cacheBaseId, shortCache);
+    }
+
+    @Override
+    public void updateCacheTTL(String cacheId, CacheConfiguration configuration)
+    {
+
+    }
+
+    private String getCacheId(OpenProjectConnection connection)
+    {
+        String id = connection.getClientId();
+        XWikiContext context = contextProvider.get();
+        if (context == null) {
+            return id;
+        }
+        DocumentReference currentUser = context.getUserReference();
+        if (currentUser == null) {
+            return id;
+        }
+        return serializer.serialize(currentUser) + id;
     }
 
     @Override
     public void dispose() throws ComponentLifecycleException
     {
-        if (this.cache != null) {
-            this.cache.dispose();
+        if (this.shortCache != null) {
+            this.shortCache.dispose();
         }
     }
 
     @Override
     public void cleanCache()
     {
-        if (this.cache != null) {
-            this.cache.removeAll();
+        if (this.shortCache != null) {
+            this.shortCache.removeAll();
         }
     }
 }
