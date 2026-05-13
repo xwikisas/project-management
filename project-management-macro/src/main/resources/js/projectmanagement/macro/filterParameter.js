@@ -18,7 +18,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 setTimeout(function () {
-  let deps = document.getElementById('proj-manag-filter').getAttribute('data-deps') || "{}";
+  let depsElems = document.getElementsByClassName('proj-manag-filter');
+  let deps = (depsElems && depsElems[0] && depsElems[0].getAttribute('data-deps')) || "{}";
   let projManagFilterDeps = JSON.parse(deps) || {};
   projManagFilterDeps.filterBuilder = new XWiki.Document(
     new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
@@ -35,12 +36,12 @@ setTimeout(function () {
           livedataCfg.query.filters.push(constraints[key]);
         }
         livedataCfgs.set(e.target, livedataCfg);
-        $('#proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
+        $('.proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
       };
       // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);
       builder.instances.values().forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
       let initBuilder = function () {
-        let initialFilter = $('#proj-manag-filter').val();
+        let initialFilter = $('.proj-manag-filter').val();
         if (!initialFilter) {
           return;
         }
@@ -73,7 +74,7 @@ setTimeout(function () {
 
       };
       let init = function () {
-        if ($('#proj-manag-filter').length <= 0) {
+        if ($('.proj-manag-filter').length <= 0) {
           return;
         }
         $('.proj-manag-constraint-builder').each(function () {
@@ -93,7 +94,7 @@ setTimeout(function () {
       });
       initBuilder();
       $(document).on('hide.bs.modal', '.modal', function () {
-        if ($('#proj-manag-filter').length <= 0) {
+        if ($('.proj-manag-filter').length <= 0) {
           return;
         }
         livedataCfgs.clear();
@@ -143,7 +144,7 @@ setTimeout(function () {
         builderElem.on('constraintsUpdated', updateFilterInput);
         builderElem.on('builderRemoved', function (e) {
           livedataCfgs.delete(e.target);
-          $('#proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
+          $('.proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
         });
       });
     });

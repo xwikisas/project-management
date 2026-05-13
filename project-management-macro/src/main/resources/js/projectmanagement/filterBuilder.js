@@ -188,7 +188,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     }
     let init = function () {
       builder.constraintBuilder = element;
-      builder.addButton = builder.constraintBuilder.find('#proj-manag-add-constraint');
+      builder.addButton = builder.constraintBuilder.find('.proj-manag-add-filter');
       builder.template = builder.constraintBuilder.find('#proj-manag-constraint-template');
       builder.addPoint = builder.constraintBuilder.find('.proj-manag-constraints');
       builder.cfg = builder.constraintBuilder.data('cfg');

@@ -34,12 +34,12 @@ require(['jquery'], function ($) {
     let options = {
       plugins: {
         remove_button: {
-          title: $('#proj-manag-property-picker').data('remove-title') || 'Remove',
+          title: $('.proj-manag-property-picker').data('remove-title') || 'Remove',
           className: 'proj-manag-property-remove'
         }
       }
     };
-    let element = $('#proj-manag-property-picker');
+    let element = $('.proj-manag-property-picker');
     if (!element.attr('multiple')) {
       delete options.plugins;
     }

@@ -53,7 +53,7 @@ public class FilterBuilderParameter extends BaseElement
      */
     public FilterBuilderFilter addFilter(String filterProperty)
     {
-        Select select = new Select(getDriver().findElement(By.id("proj-manag-add-constraint")));
+        Select select = new Select(getDriver().findElement(By.className("proj-manag-add-filter")));
 
         try {
             select.selectByValue(filterProperty);
