@@ -20,12 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="">
+<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="fr">
   <web>OpenProject.Code</web>
   <name>Translations</name>
-  <language/>
+  <language>fr</language>
   <defaultLanguage>en</defaultLanguage>
-  <translation>0</translation>
+  <translation>1</translation>
   <creator>xwiki:XWiki.Admin</creator>
   <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
@@ -37,11 +37,11 @@
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
   <content>openproject.config.addNewConnection=Ajouter une nouvelle connexion
-### Missing: openproject.config.cancel=Cancel
-### Missing: openproject.config.clientId=Client ID
-### Missing: openproject.config.clientIdDescription.first=Go to OpenProject Administration &gt; Wiki connection.
-### Missing: openproject.config.clientIdDescription.second=Start the setup &amp; copy the OpenProject OAuth Client ID. Paste it below.
-### Missing: openproject.config.clientSecret=Client Secret
+openproject.config.cancel=Annuler
+openproject.config.clientId=ID client
+openproject.config.clientIdDescription.first=Dans OpenProject, allez dans Administration &gt; Connexion Wiki.
+openproject.config.clientIdDescription.second=Commencez la configuration &amp; copiez l'ID client OAuth d'OpenProject. Collez-le ci-dessous.
+openproject.config.clientSecret=Secret Client
 ### Missing: openproject.config.clientSecretDescription=In OpenProject Administration &gt; Wiki connection, copy the OpenProject OAuth Client Secret. Paste it below.
 ### Missing: openproject.config.connectionName=Connection Name
 ### Missing: openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
@@ -84,41 +84,4 @@
 ### Missing: openproject.config.stylejob.trigger.button=Sync colors
 ### Missing: openproject.extension.name=Open Project Integration (Pro)
 </content>
-  <object>
-    <name>OpenProject.Code.Translations</name>
-    <number>0</number>
-    <className>XWiki.TranslationDocumentClass</className>
-    <guid>8ebdffe0-112f-486c-b84a-ce6d184b892b</guid>
-    <class>
-      <name>XWiki.TranslationDocumentClass</name>
-      <customClass/>
-      <customMapping/>
-      <defaultViewSheet/>
-      <defaultEditSheet/>
-      <defaultWeb/>
-      <nameField/>
-      <validationScript/>
-      <scope>
-        <cache>0</cache>
-        <disabled>0</disabled>
-        <displayType>select</displayType>
-        <freeText>forbidden</freeText>
-        <largeStorage>0</largeStorage>
-        <multiSelect>0</multiSelect>
-        <name>scope</name>
-        <number>1</number>
-        <prettyName>Scope</prettyName>
-        <relationalStorage>0</relationalStorage>
-        <separator> </separator>
-        <separators>|, </separators>
-        <size>1</size>
-        <unmodifiable>0</unmodifiable>
-        <values>GLOBAL|WIKI|USER|ON_DEMAND</values>
-        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
-      </scope>
-    </class>
-    <property>
-      <scope>WIKI</scope>
-    </property>
-  </object>
 </xwikidoc>
