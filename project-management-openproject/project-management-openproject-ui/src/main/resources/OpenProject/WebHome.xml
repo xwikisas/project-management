@@ -36,5 +36,342 @@
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content/>
+  <content>{{velocity}}
+#set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
+#set ($configObj = $doc.getObject($configClass))
+#if($request.method == 'POST' &amp;&amp; $request.action == 'saveConnection' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+  #set ($discard = $configObj.set('selectedConnection', $request.connection))
+  #set ($discard = $doc.save())
+  $response.sendRedirect($doc.getURL())
+  #stop
+#end
+#set ($connectionOptions = $services.openproject.getConnectionOptions())
+{{html clean="false"}}
+&lt;div class="form-group"&gt;
+#if ($connectionOptions.size() == 0)
+ &lt;div class="box warningmessage"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+  &lt;/div&gt;
+#elseif ($connectionOptions.size() == 1)
+  #set ($singleConnectionName = $connectionOptions.get(0).name)
+  #if(!$selectedConnection)
+    #set ($obj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass', true))
+    #set ($discard = $obj.set('selectedConnection', $singleConnectionName))
+  #end
+  &lt;div class="box infomessage"&gt;
+    &lt;p&gt;
+      &lt;strong&gt;
+        $escapetool.xml($services.localization.render('openproject.dashboard.singleConnection.connectionInfo', $escapetool.xml($singleConnectionName)))
+      &lt;/strong&gt;
+    &lt;/p&gt;
+    &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.singleConnection.description'))&lt;/p&gt;
+  &lt;/div&gt;
+#else
+  #set ($selectedConnection = '')
+  #if($configObj)
+    #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+  #end
+  &lt;div class="box infomessage"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.multipleConnections.description'))&lt;/p&gt;
+  &lt;/div&gt;
+    &lt;form id="connectionForm" method="post" class="withLock xform" action=""&gt;
+      &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
+      &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"&gt;
+        &lt;option value="" disabled&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.placeholder'))&lt;/option&gt;
+        #foreach ($option in $connectionOptions)
+        &lt;option value="$option.value" #if($selectedConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
+        #end
+      &lt;/select&gt;
+      &lt;input id="openproject-dashboard-form-token" type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
+      &lt;input type="hidden" name="action" value="saveConnection"/&gt;
+    &lt;/form&gt;
+#end
+&lt;/div&gt;
+{{/html}}
+#if ($connectionOptions.size() != 0)
+
+{{dashboard/}}
+#end
+{{/velocity}}</content>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>0</number>
+    <className>OpenProject.Code.DashboardConnectionConfigClass</className>
+    <guid>8a7928e8-71e7-4452-b47a-8844cf77b4f4</guid>
+    <class>
+      <name>OpenProject.Code.DashboardConnectionConfigClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <selectedConnection>
+        <customDisplay/>
+        <disabled>0</disabled>
+        <hint/>
+        <name>selectedConnection</name>
+        <number>1</number>
+        <picker>1</picker>
+        <prettyName>selectedConnection</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </selectedConnection>
+    </class>
+    <property>
+      <selectedConnection>vcxvcx</selectedConnection>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>0</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>97ad81ac-065e-4f2b-9def-354ac59f7162</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{velocity}}
+#set ($configObj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass'))
+
+#set ($instance = '')
+
+#if($configObj &amp;&amp; $configObj.getValue('selectedConnection'))
+  #set ($instance = $configObj.getValue('selectedConnection'))
+#end
+{{openproject instance="$!instance"/}}
+{{/velocity}}</content>
+    </property>
+    <property>
+      <position>1, 1</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>1</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>19d11b40-5028-43f4-a9d4-7e65a539483b</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{velocity}}
+#set ($configObj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass'))
+
+#set ($instance = '')
+
+#if($configObj &amp;&amp; $configObj.getValue('selectedConnection'))
+  #set ($instance = $configObj.getValue('selectedConnection'))
+#end
+{{openprojectchart instance="$!instance"/}}
+{{/velocity}}</content>
+    </property>
+    <property>
+      <position>2, 1</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openprojectchart.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>c0015b13-789b-488f-b105-922b6294d229</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>require(['jquery'], function($) {
+  $('#openproject-dashboard-connection-select').on('change', function() {
+    $('#connectionForm').submit();
+  });
+});</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
 </xwikidoc>

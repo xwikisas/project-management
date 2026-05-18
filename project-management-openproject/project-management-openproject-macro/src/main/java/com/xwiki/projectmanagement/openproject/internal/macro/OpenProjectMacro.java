@@ -88,6 +88,19 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         super("Open Project", "Retrieve work items from open project.", null, OpenProjectMacroParameters.class);
     }
 
+    /**
+     * Constructor for subclasses that need to customise the macro name, description and parameters class.
+     *
+     * @param name the macro name
+     * @param description the macro description
+     * @param parametersClass the parameters class
+     */
+    protected OpenProjectMacro(String name, String description,
+        Class<? extends OpenProjectMacroParameters> parametersClass)
+    {
+        super(name, description, null, parametersClass);
+    }
+
     @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
