@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +33,7 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
@@ -42,6 +44,7 @@ import org.xwiki.skinx.SkinExtension;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.licensing.Licensor;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -57,6 +60,8 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
     private static final String CLASS = "class";
+
+    private static final String PARAMETERS_KEY = "parameters";
 
     private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
 
@@ -79,6 +84,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     @Inject
     private StylingSetupManager stylingSetupManager;
+
+    @Inject
+    private ObservationManager observationManager;
 
     /**
      * Default constructor.
@@ -129,6 +137,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
                 context.isInline())
             );
         }
+
+        Map<String, Object> eventData = new HashMap<>();
+        eventData.put(PARAMETERS_KEY, parameters);
+        observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, eventData);
 
         ssrx.use("openproject/css/propertyStyles.css");
         stylingSetupManager.useInstanceStyle(parameters.getInstance());

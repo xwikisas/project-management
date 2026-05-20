@@ -41,22 +41,28 @@
 #set ($configObj = $doc.getObject($configClass))
 #if($request.method == 'POST' &amp;&amp; $request.action == 'saveConnection' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
   #set ($discard = $configObj.set('selectedConnection', $request.connection))
-  #set ($discard = $doc.save())
+  #set ($discard = $doc.save('Updated connection', true))
   $response.sendRedirect($doc.getURL())
   #stop
 #end
 #set ($connectionOptions = $services.openproject.getConnectionOptions())
 {{html clean="false"}}
 &lt;div class="form-group"&gt;
+#set ($selectedConnection = '')
+#if($configObj)
+  #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+#end
 #if ($connectionOptions.size() == 0)
  &lt;div class="box warningmessage"&gt;
     &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
   &lt;/div&gt;
+
 #elseif ($connectionOptions.size() == 1)
   #set ($singleConnectionName = $connectionOptions.get(0).name)
-  #if(!$selectedConnection)
-    #set ($obj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass', true))
-    #set ($discard = $obj.set('selectedConnection', $singleConnectionName))
+  #if(!$selectedConnection || !$singleConnectionName.equals($selectedConnection))
+    #set ($discard = $configObj.set('selectedConnection', $singleConnectionName))
+    #set ($discard = $doc.save('Updated connection', true))
+    $response.sendRedirect($doc.getURL())
   #end
   &lt;div class="box infomessage"&gt;
     &lt;p&gt;
@@ -67,10 +73,6 @@
     &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.singleConnection.description'))&lt;/p&gt;
   &lt;/div&gt;
 #else
-  #set ($selectedConnection = '')
-  #if($configObj)
-    #set ($selectedConnection = $configObj.getValue('selectedConnection'))
-  #end
   &lt;div class="box infomessage"&gt;
     &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.multipleConnections.description'))&lt;/p&gt;
   &lt;/div&gt;
@@ -130,7 +132,7 @@
     <name>OpenProject.WebHome</name>
     <number>0</number>
     <className>XWiki.GadgetClass</className>
-    <guid>97ad81ac-065e-4f2b-9def-354ac59f7162</guid>
+    <guid>e142c9da-1e28-4617-9905-81cf0ba2e31a</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -180,16 +182,7 @@
       </title>
     </class>
     <property>
-      <content>{{velocity}}
-#set ($configObj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass'))
-
-#set ($instance = '')
-
-#if($configObj &amp;&amp; $configObj.getValue('selectedConnection'))
-  #set ($instance = $configObj.getValue('selectedConnection'))
-#end
-{{openproject instance="$!instance"/}}
-{{/velocity}}</content>
+      <content>{{openproject instance="dsadsa"/}}</content>
     </property>
     <property>
       <position>1, 1</position>
@@ -202,7 +195,7 @@
     <name>OpenProject.WebHome</name>
     <number>1</number>
     <className>XWiki.GadgetClass</className>
-    <guid>19d11b40-5028-43f4-a9d4-7e65a539483b</guid>
+    <guid>729fe11e-0d27-4117-a4e7-7e205a00ccb8</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -252,22 +245,13 @@
       </title>
     </class>
     <property>
-      <content>{{velocity}}
-#set ($configObj = $doc.getObject('OpenProject.Code.DashboardConnectionConfigClass'))
-
-#set ($instance = '')
-
-#if($configObj &amp;&amp; $configObj.getValue('selectedConnection'))
-  #set ($instance = $configObj.getValue('selectedConnection'))
-#end
-{{openprojectchart instance="$!instance"/}}
-{{/velocity}}</content>
+      <content>{{openproject-assigned-to-me instance="OpConnection"/}}</content>
     </property>
     <property>
       <position>2, 1</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openprojectchart.name')</title>
+      <title>$services.localization.render('rendering.macro.openproject-assigned-to-me.name')</title>
     </property>
   </object>
   <object>
