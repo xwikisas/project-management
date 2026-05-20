@@ -41,13 +41,13 @@ public class PaginatedResult<T>
     private List<T> items;
 
     @JsonProperty
-    private int page;
+    private Integer page;
 
     @JsonProperty
-    private int pageSize;
+    private Integer pageSize;
 
     @JsonProperty
-    private int totalItems;
+    private Integer totalItems;
 
     /**
      * Default constructor that initializes the items with an empty list.
@@ -65,7 +65,7 @@ public class PaginatedResult<T>
      * @param totalItems the total number of items that can are present in the store where this paginated result is
      *     retrieved.
      */
-    public PaginatedResult(List<T> items, int page, int pageSize, int totalItems)
+    public PaginatedResult(List<T> items, Integer page, Integer pageSize, Integer totalItems)
     {
         this.items = items;
         this.page = page;
@@ -92,7 +92,7 @@ public class PaginatedResult<T>
     /**
      * @return the number of the page.
      */
-    public int getPage()
+    public Integer getPage()
     {
         return page;
     }
@@ -100,7 +100,7 @@ public class PaginatedResult<T>
     /**
      * @param page see {@link #getPage()}.
      */
-    public void setPage(int page)
+    public void setPage(Integer page)
     {
         this.page = page;
     }
@@ -108,7 +108,7 @@ public class PaginatedResult<T>
     /**
      * @return the maximum number of elements the {@link #getItems()} can contain.
      */
-    public int getPageSize()
+    public Integer getPageSize()
     {
         return pageSize;
     }
@@ -116,7 +116,7 @@ public class PaginatedResult<T>
     /**
      * @param pageSize see {@link #getPageSize()}.
      */
-    public void setPageSize(int pageSize)
+    public void setPageSize(Integer pageSize)
     {
         this.pageSize = pageSize;
     }
@@ -125,7 +125,7 @@ public class PaginatedResult<T>
      * @return the total number of items that can be retrieved from the store where this paginated result was retrieved
      *     from.
      */
-    public int getTotalItems()
+    public Integer getTotalItems()
     {
         return totalItems;
     }
@@ -133,7 +133,7 @@ public class PaginatedResult<T>
     /**
      * @param totalItems see {@link #getTotalItems()}.
      */
-    public void setTotalItems(int totalItems)
+    public void setTotalItems(Integer totalItems)
     {
         this.totalItems = totalItems;
     }

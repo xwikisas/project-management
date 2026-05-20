@@ -173,7 +173,8 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        $("<option>", { value: projects[0].self.location, text: projects[0].name, selected: true })
 	      );
 	      projectSelect.prop("disabled", true).trigger("change");
-	    } else {
+      } else {
+	      projectSelect.prop("disabled", false);
 	      projectSelect.append(
 	        $("<option>", { value: "", text: l10n.get("selectProjectPlaceholder"), disabled: true, selected: true })
 	      );
