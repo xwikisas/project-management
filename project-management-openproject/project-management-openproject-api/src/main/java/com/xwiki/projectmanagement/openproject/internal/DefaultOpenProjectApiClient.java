@@ -574,8 +574,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<WorkPackage> workPackages = getWorkPackagesFromResponse(node);
 
         paginatedResult.setItems(workPackages);
-        paginatedResult.setPage(offset != null ? offset : 0);
-        paginatedResult.setPageSize(pageSize != null ? pageSize : 0);
+        if (offset != null) {
+            paginatedResult.setPage(offset);
+        }
+        if (pageSize != null) {
+            paginatedResult.setPageSize(pageSize);
+        }
         paginatedResult.setTotalItems(totalNumberOfWorkPackages);
         return paginatedResult;
     }
