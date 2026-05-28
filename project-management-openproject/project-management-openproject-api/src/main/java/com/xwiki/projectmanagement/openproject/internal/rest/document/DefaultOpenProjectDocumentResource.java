@@ -40,7 +40,11 @@ import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.resources.pages.PageResourceImpl;
 import org.xwiki.rest.model.jaxb.Page;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
 
+import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.api.Document;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
 import com.xwiki.urlshortener.URLShortenerManager;
 
@@ -63,6 +67,9 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
 
     @Inject
     private URLShortenerManager urlShortenerManager;
+
+    @Inject
+    private ContextualAuthorizationManager authorizationManager;
 
     @Override
     public Response getDocument(String wiki, String id, Boolean withPrettyNames,
@@ -100,10 +107,10 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
                 .build();
         }
         DocumentReference docRef = resolver.resolve(documentReference, new WikiReference(wiki));
-        String spaces = getRestSpaces(docRef);
-        Response createResponse = putPage(wiki, spaces, docRef.getName(), minorRevision, page);
-        if (createResponse.getStatus() >= 400) {
-            return createResponse;
+
+        if (!authorizationManager.hasAccess(Right.VIEW, docRef)) {
+            return Response.status(Response.Status.UNAUTHORIZED)
+                .entity("Access denied in view mode. Can't attach unique identifier.").build();
         }
 
         String idResponse = null;
@@ -116,10 +123,38 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
                 ExceptionUtils.getRootCauseMessage(e))).build();
         }
 
+        String spaces = getRestSpaces(docRef);
+        Response createResponse = putPage(wiki, spaces, docRef.getName(), minorRevision, page);
+        if (createResponse.getStatus() >= 400) {
+            return createResponse;
+        }
+
+        return putPageAndReturn(wiki, createResponse, spaces, docRef, idResponse);
+    }
+
+    private Response putPageAndReturn(String wiki, Response createResponse, String spaces, DocumentReference docRef,
+        String idResponse) throws XWikiRestException
+    {
         Page createdPage = (Page) createResponse.getEntity();
+
+        // Probably received 304.
+        int status = createResponse.getStatus();
+        if (createdPage == null) {
+            try {
+                Document doc =
+                    this.getDocumentInfo(wiki, spaces, docRef.getName(), (String) null, (String) null, false, true)
+                        .getDocument();
+                createdPage = this.factory.toRestPage(this.uriInfo.getBaseUri(), this.uriInfo.getAbsolutePath(), doc,
+                    false, false, false, false, false);
+                status = Response.Status.ACCEPTED.getStatusCode();
+            } catch (XWikiException e) {
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
+                    .build();
+            }
+        }
         createdPage.setId(idResponse);
 
-        return Response.status(createResponse.getStatus()).entity(createdPage).build();
+        return Response.status(status).entity(createdPage).build();
     }
 
     private static String getRestSpaces(DocumentReference docRef)
