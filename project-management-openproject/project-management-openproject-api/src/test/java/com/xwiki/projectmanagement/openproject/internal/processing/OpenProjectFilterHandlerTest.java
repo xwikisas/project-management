@@ -68,8 +68,8 @@ public class OpenProjectFilterHandlerTest
         LiveDataQuery.Filter filter1 = new LiveDataQuery.Filter();
         LiveDataQuery.Filter filter2 = new LiveDataQuery.Filter();
 
-        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "contains");
-        LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "contains");
+        LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "equals");
+        LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "equals");
         LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("value3", "between");
 
         filter1.setProperty("identifier");

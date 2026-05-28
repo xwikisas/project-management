@@ -20,9 +20,9 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -32,9 +32,6 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.contrib.oidc.OIDCConsent;
-import org.xwiki.contrib.oidc.provider.internal.store.OIDCStore;
-import org.xwiki.contrib.oidc.provider.internal.store.XWikiBearerAccessToken;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
@@ -43,12 +40,11 @@ import org.xwiki.rest.internal.resources.objects.ObjectsResourceImpl;
 import org.xwiki.rest.model.jaxb.Object;
 import org.xwiki.rest.model.jaxb.Property;
 
-import com.nimbusds.oauth2.sdk.ParseException;
-import com.xpn.xwiki.XWikiException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectLinkObjectsResource;
+import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 /**
@@ -66,13 +62,12 @@ public class DefaultOpenProjectLinkObjectsResource extends ObjectsResourceImpl i
     private URLShortenerManager urlShortenerManager;
 
     @Inject
-    private OIDCStore oidcStore;
-
-    @Inject
     private OpenProjectConfiguration configuration;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     @Override
-    public Response link(String wikiName, String id, Boolean inferInstance, Boolean minorRevision, WorkPackageLink link)
+    public Response link(String wikiName, String id, String instance, Boolean minorRevision, WorkPackageLink link)
         throws XWikiRestException
     {
         try {
@@ -97,7 +92,7 @@ public class DefaultOpenProjectLinkObjectsResource extends ObjectsResourceImpl i
                 }
             }
 
-            maybeAddInstance(link, inferInstance);
+            maybeAddInstance(link, instance);
 
             Object object = linkToObject(link);
 
@@ -109,75 +104,46 @@ public class DefaultOpenProjectLinkObjectsResource extends ObjectsResourceImpl i
         }
     }
 
-    private static Object linkToObject(WorkPackageLink link)
+    private Object linkToObject(WorkPackageLink link)
     {
         Object object = new Object();
         object
-            .withClassName(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.CLASS_FULLNAME);
+            .withClassName(ProjectManagementRelation.CLASS_FULLNAME);
         List<Property> properties = new ArrayList<>();
         if (!StringUtils.isEmpty(link.getProject())) {
-            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_PROJECT,
+            createProperty(ProjectManagementRelation.FIELD_PROJECT,
                 link.getProject(), properties);
         }
         if (!StringUtils.isEmpty(link.getInstance())) {
-            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_INSTANCE,
-                link.getInstance(), properties);
+            try {
+                createProperty(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
+                    this.objectMapper.writeValueAsString(Map.of("instance", link.getInstance())), properties);
+            } catch (Exception ignored) {
+            }
         }
         if (!StringUtils.isEmpty(link.getWorkPackage())) {
-            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_WORK_PACKAGE,
+            createProperty(ProjectManagementRelation.FIELD_WORK_ITEM,
                 link.getWorkPackage(),
                 properties);
         }
-        if (link.isPrimary() != null) {
-            createProperty(com.xwiki.projectmanagement.openproject.store.WorkPackageLink.FIELD_PRIMARY,
-                link.isPrimary(),
-                properties);
-        }
+        createProperty(ProjectManagementRelation.FIELD_CLIENT, "openproject", properties);
         object.withProperties(properties);
         return object;
     }
 
-    private static void createProperty(String fieldProject, java.lang.Object link, List<Property> properties)
+    private static void createProperty(String fieldProject, String link, List<Property> properties)
     {
         Property projectProperty = new Property();
         projectProperty.setName(fieldProject);
-        projectProperty.setValue(link.toString());
+        projectProperty.setValue(link);
         properties.add(projectProperty);
     }
 
     private void maybeAddInstance(com.xwiki.projectmanagement.openproject.model.WorkPackageLink link,
-        Boolean inferInstance)
+        String instance)
     {
-        if (!inferInstance) {
-            return;
-        }
-
-        try {
-            String authorizationString = getXWikiContext().getRequest().getHeader("Authorization");
-            if (authorizationString == null || authorizationString.isEmpty()) {
-                throw new WebApplicationException(
-                    Response.status(Response.Status.UNAUTHORIZED).entity("Missing bearer token.").build());
-            }
-            XWikiBearerAccessToken xwikiAccessToken = XWikiBearerAccessToken.parse(authorizationString);
-
-            OIDCConsent consent = this.oidcStore.getConsent(xwikiAccessToken);
-            if (consent == null) {
-                throw new WebApplicationException(Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("Access token is not associated to any xwiki user.").build());
-            }
-            URI clientId = consent.getRedirectURI();
-            OpenProjectConnection connection =
-                configuration.getOpenProjectConnections().stream()
-                    .filter(cfg -> cfg.getClientId().startsWith(clientId.getHost()))
-                    .findFirst().orElse(null);
-            if (connection == null) {
-                throw new WebApplicationException(Response.status(Response.Status.UNAUTHORIZED)
-                    .entity("The Open Project Instance that made the request is not configured in the wiki.").build());
-            }
-            link.setInstance(connection.getConnectionName());
-        } catch (XWikiException | ParseException e) {
-            getLogger().error("Failed to retrieve the configured open project client for the request.", e);
-            throw new WebApplicationException(Response.serverError().entity(Response.serverError()).build());
-        }
+        // Needs implementation when the OpenProject config will also store the instance open project instance id.
+        // 1. Resolve the instance string to the OpenProject instance cfg name,
+        // 2. Store the cfg name in the instance property.
     }
 }

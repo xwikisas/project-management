@@ -43,6 +43,11 @@
     </dependency>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-relations-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-livedata</artifactId>
       <version>${project.version}</version>
     </dependency>

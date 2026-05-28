@@ -32,7 +32,7 @@
   <version>1.2.0-rc-2-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
   <properties>
-    <xwikipro.commons.version>1.0.4</xwikipro.commons.version>
+    <xwikipro.commons.version>1.3.1</xwikipro.commons.version>
     <licensing.version>1.32</licensing.version>
     <urlshortener.version>1.3</urlshortener.version>
   </properties>
@@ -52,6 +52,7 @@
     <module>project-management-livedata</module>
     <module>project-management-macro</module>
     <module>project-management-openproject</module>
+    <module>project-management-relations</module>
   </modules>
   <profiles>
     <profile>

@@ -29,9 +29,10 @@ import javax.ws.rs.QueryParam;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.model.jaxb.SearchResults;
 
+import com.xwiki.projectmanagement.relations.model.ProjectManagementRelation;
+
 /**
- * Resource for retrieving pages containing {@link com.xwiki.projectmanagement.openproject.store.WorkPackageLink} to an
- * Open Project entity.
+ * Resource for retrieving pages containing {@link ProjectManagementRelation} to an Open Project entity.
  *
  * @version $Id$
  * @since 1.2.0-rc-1
@@ -42,16 +43,15 @@ public interface OpenProjectLinkSearchResource
     /**
      * @param wikiName the wiki where to search.
      * @param projectId the OpenProject project id that should match the xwiki pages.
-     * @param forInstance if set to true, the endpoint should retrieve the links that have the instance property
-     *     matching the OpenProject instance that made the request. Otherwise, the instance property is ignored and all
-     *     the xwiki pages matching the project id will be returned.
+     * @param forInstance the id of the OpenProject instance that should be taken into consideration when returning
+     *     links.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
      * @param orderField the field on which the results should be ordered on.
      * @param order how the results should be ordered. asc or desc.
      * @param withPrettyNames denotes whether the results should contain the pretty names of the documents or not.
-     * @return a list of xwiki pages that have a {@link com.xwiki.projectmanagement.openproject.store.WorkPackageLink}
-     *     to an OpenProject entity and that the current user has view rights on.
+     * @return a list of xwiki pages that have a {@link ProjectManagementRelation} to an OpenProject entity and that the
+     *     current user has view rights on.
      * @throws XWikiRestException if there was any issue retrieving the xwiki pages.
      */
     @GET
@@ -59,8 +59,8 @@ public interface OpenProjectLinkSearchResource
     SearchResults getProjects(
         @PathParam("wikiName") String wikiName,
         @PathParam("id") String projectId,
-        @QueryParam("forInstance") @DefaultValue("true") Boolean forInstance,
-        @QueryParam("number") @DefaultValue("-1") Integer number,
+        @QueryParam("forInstance") @DefaultValue("") String forInstance,
+        @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,
         @QueryParam("order") @DefaultValue("asc") String order,
@@ -70,16 +70,15 @@ public interface OpenProjectLinkSearchResource
     /**
      * @param wikiName the wiki where to search.
      * @param workPackageId the OpenProject work package id that should match the xwiki pages.
-     * @param forInstance if set to true, the endpoint should retrieve the links that have the instance property
-     *     matching the OpenProject instance that made the request. Otherwise, the instance property is ignored and all
-     *     the xwiki pages matching the work package id will be returned.
+     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     *     returning links.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
      * @param orderField the field on which the results should be ordered on.
      * @param order how the results should be ordered. asc or desc.
      * @param withPrettyNames denotes whether the results should contain the pretty names of the documents or not.
-     * @return a list of xwiki pages that have a {@link com.xwiki.projectmanagement.openproject.store.WorkPackageLink}
-     *     to an OpenProject entity and that the current user has view rights on.
+     * @return a list of xwiki pages that have a {@link ProjectManagementRelation} to an OpenProject entity and that the
+     *     current user has view rights on.
      * @throws XWikiRestException if there was any issue retrieving the xwiki pages.
      */
     @GET
@@ -87,7 +86,7 @@ public interface OpenProjectLinkSearchResource
     SearchResults getWorkPackages(
         @PathParam("wikiName") String wikiName,
         @PathParam("id") String workPackageId,
-        @QueryParam("forInstance") @DefaultValue("true") Boolean forInstance,
+        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
         @QueryParam("number") @DefaultValue("-1") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,

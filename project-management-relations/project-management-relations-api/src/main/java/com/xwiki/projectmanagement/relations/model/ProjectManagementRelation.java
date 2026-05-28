@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.model;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,27 +17,46 @@ package com.xwiki.projectmanagement.openproject.model;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.relations.model;
 
 /**
- * The model of a link to a work package.
+ * The model representing the project management relation object. A relation between a page and project management
+ * entity.
  *
  * @version $Id$
- * @since 1.2.0-rc-1
  */
-public class WorkPackageLink
+public class ProjectManagementRelation
 {
-    private String instance;
-
-    private String workPackage;
+    private String client;
 
     private String project;
+
+    private String workItem;
+
+    private String clientParams;
+
+    /**
+     * @return the id of the project management client. i.e. openproject.
+     */
+    public String getClient()
+    {
+        return this.client;
+    }
+
+    /**
+     * @param client see {@link #getClient()} .
+     */
+    public void setClient(String client)
+    {
+        this.client = client;
+    }
 
     /**
      * @return the id of the OpenProject project that is linked to a xwiki page.
      */
     public String getProject()
     {
-        return project;
+        return this.project;
     }
 
     /**
@@ -53,33 +70,32 @@ public class WorkPackageLink
     /**
      * @return the id of the OpenProject work package that is linked to a xwiki page.
      */
-    public String getWorkPackage()
+    public String getWorkItem()
     {
-        return workPackage;
+        return workItem;
     }
 
     /**
-     * @param workPackage see {@link #getWorkPackage()}.
+     * @param workItem see {@link #getWorkItem()} ()}.
      */
-    public void setWorkPackage(String workPackage)
+    public void setWorkItem(String workItem)
     {
-        this.workPackage = workPackage;
+        this.workItem = workItem;
     }
 
     /**
-     * @return the id of the configured OpenProject instance where the linked work package/project can be found.
+     * @return the stored client params in a string format. The storage format is defined by the client.
      */
-    public String getInstance()
+    public String getClientParams()
     {
-        return instance;
+        return this.clientParams;
     }
 
     /**
-     * @param instance see {@link #getInstance()}.
+     * @param clientParams see {@link #getClientParams()}.
      */
-    public void setInstance(String instance)
+    public void setClientParams(String clientParams)
     {
-        this.instance = instance;
+        this.clientParams = clientParams;
     }
-
 }

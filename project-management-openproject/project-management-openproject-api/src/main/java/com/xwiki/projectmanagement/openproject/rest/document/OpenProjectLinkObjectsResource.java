@@ -45,12 +45,10 @@ public interface OpenProjectLinkObjectsResource
      * through the {@link OpenProjectLinkSearchResource}.
      *
      * @param wikiName the wiki where the xwiki page resides.
-     * @param id the unique identifier, created through {@link OpenProjectDocumentResource}, that uniquely identifies an
-     *     xwiki page on the instance.
-     * @param withInstance If set to true, the request goes through only if it's initiated from one of the
-     *     internally configured Open Project instances. Since multiple open project instances can be configured, we
-     *     need to make sure that we operate only on the pages linked to the instance that makes the request. If set to
-     *     false, the created link will only populate the project and/or work package properties.
+     * @param id the unique identifier, created through {@link OpenProjectDocumentResource}, that uniquely
+     *     identifies an xwiki page on the instance.
+     * @param instanceId the id of the OpenProject instance that should be taken into consideration when creating
+     *     links.
      * @param minorRevision if set to true, the new page version will be a minor one.
      * @param link the {@link WorkPackageLink} model that will be used to create a link.
      * @return 201: If the object was created (The Location header will contain the URI associated to the newly created
@@ -61,7 +59,7 @@ public interface OpenProjectLinkObjectsResource
     Response link(
         @PathParam("wikiName") String wikiName,
         @PathParam("id") String id,
-        @QueryParam("withInstance") @DefaultValue("true") Boolean withInstance,
+        @QueryParam("instanceId") @DefaultValue("") String instanceId,
         @QueryParam("minorRevision") Boolean minorRevision,
         WorkPackageLink link
     ) throws XWikiRestException;
