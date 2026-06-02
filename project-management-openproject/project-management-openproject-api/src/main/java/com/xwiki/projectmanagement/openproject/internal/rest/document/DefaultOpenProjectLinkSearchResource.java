@@ -26,7 +26,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.query.Query;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.resources.wikis.WikiSearchQueryResourceImpl;
 import org.xwiki.rest.model.jaxb.SearchResults;
@@ -47,6 +46,8 @@ import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourceImpl implements
     OpenProjectLinkSearchResource
 {
+    private static final String SOLR = "solr";
+
     @Inject
     private OpenProjectConfiguration configuration;
 
@@ -67,7 +68,7 @@ public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourc
 
         maybeAddInstanceFilter(statement, filterInstance);
 
-        return super.search(wikiName, statement.toString(), "solr", number, start, true, orderField, order,
+        return super.search(wikiName, statement.toString(), SOLR, number, start, true, orderField, order,
             withPrettyNames, ProjectManagementRelation.CLASS_FULLNAME);
     }
 
@@ -90,7 +91,7 @@ public class DefaultOpenProjectLinkSearchResource extends WikiSearchQueryResourc
 
         maybeAddInstanceFilter(statement, filterInstance);
 
-        return super.search(wikiName, statement.toString(), Query.XWQL, number, start, true, orderField, order,
+        return super.search(wikiName, statement.toString(), SOLR, number, start, true, orderField, order,
             withPrettyNames, ProjectManagementRelation.CLASS_FULLNAME);
     }
 
