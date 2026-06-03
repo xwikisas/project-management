@@ -40,7 +40,8 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
-import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
+
+import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
 
 /**
  * Listener for OpenProject macro before execution event. Handles{@link BeforeOpenProjectMacroExecutionEvent} When the
@@ -55,7 +56,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Singleton
 public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 {
-    private static final String PARAMETERS_KEY = "parameters";
+    private static final String INSTANCE_KEY = "instance";
+
+    private static final String EFFECTIVE_INSTANCE_KEY = "effectiveInstance";
 
     private static final String OPEN_PROJECT = "OpenProject";
 
@@ -94,29 +97,15 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
         if (!(data instanceof Map)) {
             return;
         }
-
         XWikiContext xContext = xContextProvider.get();
         XWikiDocument currentDoc = xContext.getDoc();
 
-        if (currentDoc == null) {
+        if (!isDashboardPage(currentDoc)) {
             return;
         }
 
-        String currentSpace = currentDoc.getDocumentReference().getLastSpaceReference().getName();
-        String currentPage = currentDoc.getDocumentReference().getName();
-
-        if (!OPEN_PROJECT.equals(currentSpace) || !DASHBOARD_PAGE_NAME.equals(currentPage)) {
-            return;
-        }
-
-        Map<String, OpenProjectMacroParameters> eventData = (Map<String, OpenProjectMacroParameters>) data;
-        Object parametersObj = eventData.get(PARAMETERS_KEY);
-
-        if (!(parametersObj instanceof OpenProjectMacroParameters)) {
-            return;
-        }
-
-        OpenProjectMacroParameters parameters = (OpenProjectMacroParameters) parametersObj;
+        Map<String, String> eventData = (Map<String, String>) data;
+        String instance = eventData.get(INSTANCE_KEY);
 
         DocumentReference classReference =
             new DocumentReference(
@@ -132,8 +121,22 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
         String selectedConnection = configObject.getStringValue(SELECTED_CONNECTION_PROPERTY);
 
-        if (StringUtils.isNotBlank(selectedConnection) && !selectedConnection.equals(parameters.getInstance())) {
-            parameters.setInstance(selectedConnection);
+        if (StringUtils.isNotBlank(selectedConnection) && (USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(
+            instance) || StringUtils.isBlank(instance)))
+        {
+            eventData.put(EFFECTIVE_INSTANCE_KEY, selectedConnection);
         }
+    }
+
+    private boolean isDashboardPage(XWikiDocument document)
+    {
+        if (document == null) {
+            return false;
+        }
+
+        String currentSpace = document.getDocumentReference().getLastSpaceReference().getName();
+        String currentPage = document.getDocumentReference().getName();
+
+        return OPEN_PROJECT.equals(currentSpace) && DASHBOARD_PAGE_NAME.equals(currentPage);
     }
 }

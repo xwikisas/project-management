@@ -1,6 +1,9 @@
 com.xwiki.projectmanagement.openproject.internal.UserTokenChecker
+com.xwiki.projectmanagement.openproject.internal.LicenseChecker
+com.xwiki.projectmanagement.openproject.internal.InstanceResolver
 com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectMacroDisplayListeners
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectAssignedToMeMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCreateWorkPackageMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro
