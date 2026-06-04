@@ -37,11 +37,10 @@ import com.xwiki.projectmanagement.relations.model.ProjectManagementRelation;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/openproject/links")
+@Path("/openproject/links")
 public interface OpenProjectLinkSearchResource
 {
     /**
-     * @param wikiName the wiki where to search.
      * @param projectId the OpenProject project id that should match the xwiki pages.
      * @param forInstance the id of the OpenProject instance that should be taken into consideration when returning
      *     links.
@@ -57,7 +56,6 @@ public interface OpenProjectLinkSearchResource
     @GET
     @Path("/projects/{id}")
     SearchResults getProjects(
-        @PathParam("wikiName") String wikiName,
         @PathParam("id") String projectId,
         @QueryParam("forInstance") @DefaultValue("") String forInstance,
         @QueryParam("number") @DefaultValue("25") Integer number,
@@ -68,7 +66,6 @@ public interface OpenProjectLinkSearchResource
     ) throws XWikiRestException;
 
     /**
-     * @param wikiName the wiki where to search.
      * @param workPackageId the OpenProject work package id that should match the xwiki pages.
      * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
      *     returning links.
@@ -84,7 +81,6 @@ public interface OpenProjectLinkSearchResource
     @GET
     @Path("/workPackages/{id}")
     SearchResults getWorkPackages(
-        @PathParam("wikiName") String wikiName,
         @PathParam("id") String workPackageId,
         @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
         @QueryParam("number") @DefaultValue("-1") Integer number,

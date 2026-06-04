@@ -20,13 +20,12 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.net.URI;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -38,10 +37,11 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rest.XWikiRestException;
-import org.xwiki.rest.internal.resources.pages.PageResourceImpl;
+import org.xwiki.rest.internal.resources.pages.ModifiablePageResource;
 import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
@@ -59,7 +59,7 @@ import com.xwiki.urlshortener.URLShortenerManager;
 @Component
 @Singleton
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectDocumentResource")
-public class DefaultOpenProjectDocumentResource extends PageResourceImpl
+public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     implements OpenProjectDocumentResource, Initializable
 {
     @Inject
@@ -71,15 +71,18 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
     @Inject
     private ContextualAuthorizationManager authorizationManager;
 
+    @Inject
+    private WikiDescriptorManager wikiDescriptorManager;
+
     @Override
-    public Response getDocument(String wiki, String id, Boolean withPrettyNames,
+    public Response getDocument(String id, Boolean withPrettyNames,
         Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
     {
         try {
             if (id == null || id.isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST).entity("Missing page id.").build();
             }
-            DocumentReference documentReference = urlShortenerManager.getDocumentReference(wiki, id);
+            DocumentReference documentReference = urlShortenerManager.getDocumentReference(null, id);
 
             if (documentReference == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
@@ -98,7 +101,7 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
     }
 
     @Override
-    public Response updateDocument(String wiki, String documentReference, Boolean minorRevision, Page page)
+    public Response updateDocument(String documentReference, Boolean minorRevision, Page page)
         throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
@@ -106,8 +109,49 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
                 .entity("Missing `docRef` query parameter pointing to the document that needs creation/updating.")
                 .build();
         }
-        DocumentReference docRef = resolver.resolve(documentReference, new WikiReference(wiki));
+        DocumentReference docRef =
+            resolver.resolve(documentReference, new WikiReference(wikiDescriptorManager.getMainWikiId()));
 
+        try {
+
+            return putPageAndReturn(docRef, page, minorRevision);
+        } catch (XWikiException e) {
+            return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
+        }
+    }
+
+    private Page getPage(String wikiName, String spaceName, String pageName, Boolean withPrettyNames,
+        Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
+    {
+        try {
+            DocumentInfo documentInfo = getDocumentInfo(wikiName, spaceName, pageName, null, null, true, false);
+
+            Document doc = documentInfo.getDocument();
+
+            URI baseUri = uriInfo.getBaseUri();
+
+            Page page =
+                this.factory.toRestPage(baseUri, uriInfo.getAbsolutePath(), doc, false, withPrettyNames, withObjects,
+                    withXClass, withAttachments);
+
+            return page;
+        } catch (Exception e) {
+            throw new WebApplicationException(
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
+                    .build());
+        }
+    }
+
+    private Response putPageAndReturn(DocumentReference docRef, Page page, Boolean minorRevision)
+        throws XWikiRestException, XWikiException
+    {
+
+        String spaces = getRestSpaces(docRef);
+        DocumentInfo documentInfo =
+            getDocumentInfo(docRef.getWikiReference().getName(), spaces, docRef.getName(), null, null, false, false);
+        Response createResponse = putPage(documentInfo, page, minorRevision);
+
+        // Attach id after making the request. Even if returns a 400 error code, we still want to try to attach the id.
         if (!authorizationManager.hasAccess(Right.VIEW, docRef)) {
             return Response.status(Response.Status.UNAUTHORIZED)
                 .entity("Access denied in view mode. Can't attach unique identifier.").build();
@@ -118,32 +162,23 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
         try {
             idResponse = urlShortenerManager.createShortenedURL(docRef);
         } catch (Exception e) {
-            getLogger().error("Failed to initialize the shortened url for document [{}].", documentReference, e);
+            getLogger().error("Failed to initialize the shortened url for document [{}].", docRef, e);
             return Response.serverError().entity(String.format("Could not attach a unique id to the page. Cause [%s].",
                 ExceptionUtils.getRootCauseMessage(e))).build();
         }
 
-        String spaces = getRestSpaces(docRef);
-        Response createResponse = putPage(wiki, spaces, docRef.getName(), minorRevision, page);
         if (createResponse.getStatus() >= 400) {
-            return createResponse;
+            Page pageWithId = new Page();
+            pageWithId.setId(idResponse);
+            return Response.status(createResponse.getStatus()).entity(pageWithId).build();
         }
-
-        return putPageAndReturn(wiki, createResponse, spaces, docRef, idResponse);
-    }
-
-    private Response putPageAndReturn(String wiki, Response createResponse, String spaces, DocumentReference docRef,
-        String idResponse) throws XWikiRestException
-    {
         Page createdPage = (Page) createResponse.getEntity();
 
         // Probably received 304.
         int status = createResponse.getStatus();
         if (createdPage == null) {
             try {
-                Document doc =
-                    this.getDocumentInfo(wiki, spaces, docRef.getName(), (String) null, (String) null, false, true)
-                        .getDocument();
+                Document doc = documentInfo.getDocument();
                 createdPage = this.factory.toRestPage(this.uriInfo.getBaseUri(), this.uriInfo.getAbsolutePath(), doc,
                     false, false, false, false, false);
                 status = Response.Status.ACCEPTED.getStatusCode();
@@ -169,14 +204,5 @@ public class DefaultOpenProjectDocumentResource extends PageResourceImpl
             }
         }
         return stringBuilder.toString();
-    }
-
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Override
-    public Response putPage(String wikiName, String spaceName, String pageName, Boolean minorRevision, Page page)
-        throws XWikiRestException
-    {
-        return super.putPage(wikiName, spaceName, pageName, minorRevision, page);
     }
 }

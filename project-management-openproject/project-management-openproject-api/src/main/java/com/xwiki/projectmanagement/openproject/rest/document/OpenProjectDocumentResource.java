@@ -37,13 +37,12 @@ import org.xwiki.rest.model.jaxb.Page;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/openproject/documents")
+@Path("/openproject/documents")
 public interface OpenProjectDocumentResource
 {
     /**
      * Retrieve the reference of a document given its unique identifier.
      *
-     * @param wiki the wiki where the document resides.
      * @param id the unique identifier associated to a xwiki document.
      * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
      *     users.
@@ -57,7 +56,6 @@ public interface OpenProjectDocumentResource
     @GET
     @Path("/{id}")
     Response getDocument(
-        @PathParam("wikiName") String wiki,
         @PathParam("id") String id,
         @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames,
         @QueryParam("objects") @DefaultValue("false") Boolean withObjects,
@@ -68,7 +66,6 @@ public interface OpenProjectDocumentResource
      * Updates or creates a xwiki document based on an unique identifier. Can also be used to attach an unique
      * identifier to existing pages.
      *
-     * @param wiki the wiki where the document resides or will be created.
      * @param documentReference the reference of the document that will be updated/created.
      * @param minorRevision whether the update will create a minor version or a major version.
      * @param page the model of the page that will be used to update/create the document.
@@ -78,7 +75,6 @@ public interface OpenProjectDocumentResource
      */
     @PUT
     Response updateDocument(
-        @PathParam("wikiName") String wiki,
         @QueryParam("docRef") String documentReference,
         @QueryParam("minorRevision") Boolean minorRevision,
         Page page)

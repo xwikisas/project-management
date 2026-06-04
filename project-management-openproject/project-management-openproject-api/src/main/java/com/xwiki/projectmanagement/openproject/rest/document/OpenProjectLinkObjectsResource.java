@@ -21,13 +21,15 @@ package com.xwiki.projectmanagement.openproject.rest.document;
  */
 
 import javax.ws.rs.DefaultValue;
-import javax.ws.rs.POST;
+import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
 import org.xwiki.rest.XWikiRestException;
+import org.xwiki.rest.model.jaxb.Object;
 
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 
@@ -37,14 +39,13 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/openproject/documents/{id}/links")
+@Path("/openproject/documents/{id}/links")
 public interface OpenProjectLinkObjectsResource
 {
     /**
      * Creates the link between an xwiki page and an OpenProject entity. Once created, these links can be accessed
      * through the {@link OpenProjectLinkSearchResource}.
      *
-     * @param wikiName the wiki where the xwiki page resides.
      * @param id the unique identifier, created through {@link OpenProjectDocumentResource}, that uniquely
      *     identifies an xwiki page on the instance.
      * @param instanceId the id of the OpenProject instance that should be taken into consideration when creating
@@ -55,12 +56,18 @@ public interface OpenProjectLinkObjectsResource
      *     object). 401: If the user is not authorized.
      * @throws XWikiRestException if any exception was thrown when the object was created.
      */
-    @POST
+    @PUT
     Response link(
-        @PathParam("wikiName") String wikiName,
         @PathParam("id") String id,
         @QueryParam("instanceId") @DefaultValue("") String instanceId,
         @QueryParam("minorRevision") Boolean minorRevision,
         WorkPackageLink link
     ) throws XWikiRestException;
+
+    /**
+     * @param id the unique identifier of the xwiki page.
+     * @return the link to the OpenProject entity if it exists.
+     */
+    @GET
+    Object getLink(@PathParam("id") String id);
 }
