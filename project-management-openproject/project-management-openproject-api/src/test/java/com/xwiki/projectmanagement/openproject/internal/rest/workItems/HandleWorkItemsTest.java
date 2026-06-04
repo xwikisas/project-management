@@ -88,7 +88,7 @@ public class HandleWorkItemsTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
 
-        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE);
+        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
     }
 
@@ -107,7 +107,7 @@ public class HandleWorkItemsTest
         when(this.openProjectApiClient.getAvailableProjects(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
             paginatedProjects);
 
-        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE);
+        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(projects, response.getEntity());
@@ -124,7 +124,7 @@ public class HandleWorkItemsTest
 
         assertThrows(
             ProjectManagementException.class,
-            () -> this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE)
+            () -> this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE)
         );
     }
 
@@ -141,7 +141,7 @@ public class HandleWorkItemsTest
         when(openProjectApiClient.getWorkPackagesFormResponse(anyString()))
             .thenReturn(workPackagesNode);
 
-        when(openProjectApiClient.getAvailableUsers(anyString(), anyInt(), anyInt(), anyString()))
+        when(openProjectApiClient.getAvailableUsers(anyString(), any(), any(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(user1, user2), OFFSET, PAGE_SIZE, 2));
 
         Response response = handleWorkItems.createWorkPackage(WIKI, INSTANCE, createWorkPackage);
