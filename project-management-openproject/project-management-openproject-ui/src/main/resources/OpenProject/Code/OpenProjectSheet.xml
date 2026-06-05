@@ -84,8 +84,6 @@
               &lt;/label&gt;
               &lt;p class="form-text text-muted"&gt;
                 &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdDescription.first'))&lt;/span&gt;
-                  &lt;br&gt;
-                &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdDescription.second'))&lt;/span&gt;
               &lt;/p&gt;
               &lt;input id="client-id" class="form-control" name="client-id" type="text"&gt;
             &lt;/div&gt;
