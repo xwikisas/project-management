@@ -32,7 +32,7 @@
   <version>1.2.0-rc-4-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
   <properties>
-    <xwikipro.commons.version>1.3.1</xwikipro.commons.version>
+    <xwikipro.commons.version>1.4.70-SNAPSHOT</xwikipro.commons.version>
     <licensing.version>1.32.3</licensing.version>
     <urlshortener.version>1.3.3</urlshortener.version>
   </properties>
