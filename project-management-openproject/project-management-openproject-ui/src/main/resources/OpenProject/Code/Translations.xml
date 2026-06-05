@@ -36,14 +36,13 @@
   <minorEdit>false</minorEdit>
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
-  <content>
-openproject.config.addNewConnection=Add new connection
+  <content>openproject.config.addNewConnection=Add new connection
 openproject.config.cancel=Cancel
 openproject.config.clientId=Client ID
-openproject.config.clientIdDescription.first=Go to OpenProject Administration &gt; Wiki connection.
+openproject.config.clientIdDescription.first=Go to OpenProject Administration &gt; Authentication &gt; OAuth Applications.
 openproject.config.clientIdDescription.second=Start the setup &amp; copy the OpenProject OAuth Client ID. Paste it below.
 openproject.config.clientSecret=Client Secret
-openproject.config.clientSecretDescription=In OpenProject Administration &gt; Wiki connection, copy the OpenProject OAuth Client Secret. Paste it below.
+openproject.config.clientSecretDescription=In OpenProject Administration &gt; Authentication &gt; OAuth Applications, copy the OpenProject OAuth Client Secret. Paste it below.
 openproject.config.connectionName=Connection Name
 openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
 openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various Open Project Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
@@ -71,21 +70,18 @@ openproject.config.update.updated=Connection {0} has been updated!
 openproject.config.isAuthorized.true=Authorized
 openproject.config.isAuthorized.false=Not yet authorized
 openproject.livedatalabels.isAuthorized=Authorized?
-openproject.livedatalabels.actions = Actions
+openproject.livedatalabels.actions=Actions
 openproject.livedatalabels.clientId=Client ID
 openproject.livedatalabels.clientSecret=Client Secret
 openproject.livedatalabels.connectionName=Connection name
 openproject.livedatalabels.serverURL=Server URL
-
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
-
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
 openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project. You should be authorized to the Open Project instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
-
 openproject.extension.name=Open Project Integration (Pro)
 </content>
   <object>
