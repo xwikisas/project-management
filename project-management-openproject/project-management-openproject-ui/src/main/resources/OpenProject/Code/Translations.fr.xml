@@ -1,0 +1,87 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="fr">
+  <web>OpenProject.Code</web>
+  <name>Translations</name>
+  <language>fr</language>
+  <defaultLanguage>en</defaultLanguage>
+  <translation>1</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>Translations</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>plain/1.0</syntaxId>
+  <hidden>true</hidden>
+  <content>openproject.config.addNewConnection=Ajouter une nouvelle connexion
+openproject.config.cancel=Annuler
+openproject.config.clientId=ID client
+openproject.config.clientIdDescription.first=Dans OpenProject, allez dans Administration &gt; Authentification &gt; Applications OAuth.
+openproject.config.clientIdDescription.second=Commencez la configuration &amp; copiez l'ID client OAuth d'OpenProject. Collez-le ci-dessous.
+openproject.config.clientSecret=Secret Client
+openproject.config.clientSecretDescription=Dans OpenProject, allez dans Administration &gt; Authentification &gt; Applications OAuth, copiez le Secret Client OpenProject OAuth. Copiez-le ci-dessous.
+openproject.config.connectionName=Nom de la connexion
+openproject.config.connectionNameDescription=Définissez un nom facilement reconnaissable pour l'instance OpenProject à laquelle vous vous connectez.
+openproject.config.connectionsDescription=Définit un accès aux instances OpenProject et y associe un Nom de Connexion pour chaque. Le Nom de la Connexion peut être utilisé dans des composants OpenProject variés, lorsqu'une instance OpenProject est requise, comme un paramètre dans la macro OpenProject.
+openproject.config.connectionsTitle=Connexions à des instances OpenProject
+openproject.config.save=Sauvegarder
+openproject.config.save.saved=La connexion {0} a été sauvegardée !
+openproject.config.save.errorOccurred=Une erreur s'est produite pendant la sauvegarde de la connexion !
+openproject.config.createConnection=Créer une nouvelle connexion
+openproject.config.updateConnection=Mettre à jour la connexion
+openproject.config.delete=Supprimer
+openproject.config.delete.info=Supprimer la connexion
+openproject.config.delete.deleted=La connexion {0} a été supprimée !
+openproject.config.delete.description.first=Vous vous apprêtez à supprimer la connexion {0}
+openproject.config.delete.description.second=Êtes-vous certain de vouloir continuer ?
+openproject.config.delete.errorOccurred=Une erreur s'est produite lors de la suppression de la connexion !
+openproject.config.noRights=Pas de droits
+openproject.config.serverURL=URL du serveur
+openproject.config.serverURLDescription=Copiez le lien depuis la barre d'adresse de votre navigateur lorsque vous êtes dans votre instance OpenProject. Copiez-la ci-dessous.
+openproject.config.serverUrl=URL du serveur
+openproject.config.update=Mettre à jour
+openproject.config.update=Mettre à jour
+openproject.config.fillInAllFields=Merci de remplir tous les champs !
+openproject.config.update.notUpdated=La connexion {0} n''a pas été mise à jour !
+openproject.config.update.updated=La connexion {0} a été mise à jour !
+openproject.config.isAuthorized.true=Autorisé
+openproject.config.isAuthorized.false=Pas encore autorisé
+openproject.livedatalabels.isAuthorized=Autorisé ?
+openproject.livedatalabels.actions=Actions
+openproject.livedatalabels.clientId=ID client
+openproject.livedatalabels.clientSecret=Secret client
+openproject.livedatalabels.connectionName=Nom de la connexion
+openproject.livedatalabels.serverURL=URL du serveur
+openproject.livedata.action.view.done=Work Package chargé avec succès
+openproject.livedata.action.view.inprogress=Chargement du Work Package
+openproject.livedata.action.view.error=Échec de chargement du Work Package
+openproject.config.stylejob.title=Couleurs et style
+openproject.config.stylejob.trigger.title=Synchronisation des couleurs
+openproject.config.stylejob.trigger.hint=Synchronisez les couleurs entre les Works Packages affichés dans XWiki et ceux affichés dans Open Project. Vous devriez être autorisé auprès des instances Open Project avant d'exécuter cette tâche.
+openproject.config.stylejob.trigger.button=Synchroniser les couleurs
+openproject.extension.name=Open Project Integration (Pro)
+</content>
+</xwikidoc>
