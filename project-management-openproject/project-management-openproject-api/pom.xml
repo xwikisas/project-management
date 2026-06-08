@@ -48,6 +48,11 @@
       <version>${xwikipro.commons.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-instance</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-relations-api</artifactId>
       <version>${project.version}</version>
