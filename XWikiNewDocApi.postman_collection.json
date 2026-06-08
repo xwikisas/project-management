@@ -1,0 +1,364 @@
+{
+  "info": {
+    "_postman_id": "c07f9d4b-7776-41ad-be9f-ba836577a58a",
+    "name": "XWikiNewDocApi",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "24599881"
+  },
+  "item": [
+    {
+      "name": "Create document and attach unique identifier",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "system",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "Superadmin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "text/plain",
+            "type": "text"
+          },
+          {
+            "key": "Authorization",
+            "value": "Basic Superadmin:system",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=test:Main.Test7.WebHome",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents"
+          ],
+          "query": [
+            {
+              "key": "docRef",
+              "value": "test:Main.Test7.WebHome"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get document by unique identifier",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents",
+            "a59bc"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Pages Linked To Project/WorkPackage",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/links/projects/2",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "links",
+            "projects",
+            "2"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Link Object to Page",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"project\": \"2\",\n    \"workPackage\": \"13\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc/links?withInstance=0",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents",
+            "a59bc",
+            "links"
+          ],
+          "query": [
+            {
+              "key": "withInstance",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Link Object of Page",
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        },
+        "disableBodyPruning": true
+      },
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"project\": \"2\",\n    \"workPackage\": \"12\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc/links?withInstance=0",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents",
+            "a59bc",
+            "links"
+          ],
+          "query": [
+            {
+              "key": "withInstance",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create space from template",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/wikis/xwiki/openproject/spaces?docRef=Main.Test19.WebHome",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "wikis",
+            "xwiki",
+            "openproject",
+            "spaces"
+          ],
+          "query": [
+            {
+              "key": "docRef",
+              "value": "Main.Test19.WebHome"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get instance id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/metadata",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "metadata"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Retrieve mentions for a given work package",
+      "request": {
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "password",
+              "value": "system",
+              "type": "string"
+            },
+            {
+              "key": "username",
+              "value": "Superadmin",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/mentions?workPackage=1",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "mentions"
+          ],
+          "query": [
+            {
+              "key": "workPackage",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "host",
+      "value": ""
+    }
+  ]
+}
