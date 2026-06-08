@@ -102,19 +102,6 @@ openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
 openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
 openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
 openproject.createworkpackage.modal.select.all=Select all
-openproject.createworkpackage.modal.cancel=Cancel
-openproject.createworkpackage.modal.create.single=Create work package
-openproject.createworkpackage.modal.create.multiple=Create work packages
-openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.
-openproject.createworkpackage.modal.multiple.description=This form allows you to create multiple work packages in OpenProject based on the selected table.
-openproject.createworkpackage.modal.mapping.title=OpenProject Mapping
-openproject.createworkpackage.modal.mapping.description=Map the columns of your table to OpenProject fields. Each mapping will map the values of a column to the OpenProject field of your choice.
-openproject.createworkpackage.modal.mapping.add=+ Add mapping
-openproject.createworkpackage.modal.mapping.selectColumn=Select table column
-openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
-openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
-openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
-openproject.createworkpackage.modal.select.all=Select all
 
 openproject.createworkpackage.modal.title.single=Create Single Work Package
 openproject.createworkpackage.modal.title.multiple=Create Multiple Work Packages
@@ -144,6 +131,12 @@ openproject.createworkpackage.macro.notify.inputs.error=An error occurred while 
 openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
 openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
 openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
+openproject.extension.name=Open Project Integration (Pro)
+
+projectmanagement.relations.clients.openproject=Open Project
+projectmanagement.relations.openproject.project.name=Linked Project
+projectmanagement.relations.openproject.workItem.name=Linked Work Package
+projectmanagement.relations.clients.openproject=Open Project</content>
 
 openproject.dashboard.selectConnection.label=Select a connection
 openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}

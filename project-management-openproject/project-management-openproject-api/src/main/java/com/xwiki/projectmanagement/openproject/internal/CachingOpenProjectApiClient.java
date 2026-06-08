@@ -64,7 +64,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters, String sortBy)
+    public PaginatedResult<WorkPackage> getWorkPackages(Integer offset, Integer pageSize, String filters, String sortBy)
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey("workItems", offset, pageSize, filters, sortBy);
@@ -77,7 +77,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize,
+    public PaginatedResult<WorkPackage> getProjectWorkPackages(String project, Integer offset, Integer pageSize,
         String filters, String sortBy)
         throws ProjectManagementException
     {
@@ -91,7 +91,8 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException
+    public PaginatedResult<User> getUsers(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
     {
         String cacheKey = getCacheKey("users", offset, pageSize, filters, "");
         PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
@@ -103,7 +104,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Project> getProjects(int offset, int pageSize, String filters)
+    public PaginatedResult<Project> getProjects(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey("projects", offset, pageSize, filters, "");
@@ -116,7 +117,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
+    public PaginatedResult<Project> getAvailableProjects(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey(String.format("availableProjects/%s", url), offset, pageSize, filters, "");
@@ -178,7 +179,7 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
+    public PaginatedResult<User> getAvailableUsers(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey(String.format("availableUsers/%s", url), offset, pageSize, filters, "");
@@ -196,8 +197,9 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         return client.createWorkPackage(url, jsonBody);
     }
 
-    private String getCacheKey(String entity, int offset, int pageSize, String filters, String sortBy)
+    private String getCacheKey(String entity, Integer offset, Integer pageSize, String filters, String sortBy)
     {
-        return String.format("%s/%s/%d/%d/%s/%s", clientId, entity, offset, pageSize, filters, sortBy);
+        return String.format("%s/%s/%d/%d/%s/%s", clientId, entity,
+            offset != null ? offset : 0, pageSize != null ? pageSize : 0, filters, sortBy);
     }
 }

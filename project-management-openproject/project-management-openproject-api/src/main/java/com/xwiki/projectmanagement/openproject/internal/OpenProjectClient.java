@@ -23,6 +23,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -41,17 +42,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.api.ProjectsApi;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
-import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.model.Project;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
@@ -61,11 +64,14 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
  *
  * @version $Id$
  */
+@SuppressWarnings("checkstyle:ClassFanOutComplexity")
 @Component
 @Named("openproject")
 @Singleton
 public class OpenProjectClient implements ProjectManagementClient
 {
+    private static final String EQUALS = "=";
+
     private static final String QUERY_PROPS_QUERY_PARAMETER = "query_props=";
 
     private static final String URL = "URL";
@@ -89,14 +95,24 @@ public class OpenProjectClient implements ProjectManagementClient
     @Inject
     private Logger logger;
 
-    private OpenProjectApiClient openProjectApiClient;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
-    public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
+    public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException, WorkItemRetrievalException
     {
-        return null;
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+
+        filter.setProperty(WorkItem.KEY_IDENTIFIER);
+        filter.getConstraints().add(new LiveDataQuery.Constraint(workItemId, EQUALS));
+
+        PaginatedResult<WorkItem> result =
+            getWorkItems(0, 1, Collections.singletonList(filter), Collections.emptyList());
+
+        if (result.getItems().isEmpty()) {
+            throw new WorkItemNotFoundException("Work Item with ID [%s] was not found.");
+        }
+
+        return result.getItems().get(0);
     }
 
     @Override
@@ -107,16 +123,11 @@ public class OpenProjectClient implements ProjectManagementClient
         try {
             int offset = (page / pageSize) + 1;
             String identifier = (String) executionContext.get("identifier");
-            String connectionName = (String) executionContext.get("instance");
-            openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
-
-            if (openProjectApiClient == null) {
-                throw new WorkItemRetrievalException(
-                    String.format("No configuration for instance [%s] was found.", connectionName));
-            }
+            OpenProjectApiClient openProjectApiClient =
+                getOpenProjectApiClient();
 
             if (identifier != null && !identifier.isEmpty()) {
-                return handleIdentifier(identifier, offset, pageSize, filters, sortEntries);
+                return handleIdentifier(openProjectApiClient, identifier, offset, pageSize, filters, sortEntries);
             }
 
             String filtersString = OpenProjectFilterHandler.convertFilters(filters);
@@ -154,7 +165,64 @@ public class OpenProjectClient implements ProjectManagementClient
         return false;
     }
 
-    private PaginatedResult<WorkItem> handleIdentifier(String identifier, int offset, int pageSize,
+    @Override
+    public ProjectsApi projects()
+    {
+        return new ProjectsApi()
+        {
+            @Override
+            public Project get(String id) throws WorkItemNotFoundException, WorkItemRetrievalException
+            {
+                LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+
+                filter.setProperty(Project.KEY_IDENTIFIER);
+                filter.getConstraints().add(new LiveDataQuery.Constraint(id, EQUALS));
+                PaginatedResult<Project> result =
+                    get(0, 1, Collections.singletonList(filter));
+                if (result.getItems().isEmpty()) {
+                    throw new WorkItemNotFoundException("Project with ID [%s] was not found.");
+                }
+
+                return result.getItems().get(0);
+            }
+
+            @Override
+            public PaginatedResult<Project> get(int page, int pageSize, List<LiveDataQuery.Filter> filters)
+                throws WorkItemRetrievalException
+            {
+                try {
+                    String filtersString = OpenProjectFilterHandler.convertFilters(filters);
+
+                    PaginatedResult<com.xwiki.projectmanagement.openproject.model.Project> projects =
+                        getOpenProjectApiClient().getProjects(page, pageSize,
+                            filtersString);
+                    return OpenProjectConverters.convertPaginatedResult(
+                        projects,
+                        OpenProjectConverters::convertProject
+                    );
+                } catch (Exception e) {
+                    throw new WorkItemRetrievalException("Failed to retrieve the OpenProject projects.", e);
+                }
+            }
+        };
+    }
+
+    private OpenProjectApiClient getOpenProjectApiClient()
+        throws WorkItemRetrievalException
+    {
+        String connectionName = (String) executionContext.get("instance");
+        OpenProjectApiClient openProjectApiClient =
+            openProjectConfiguration.getOpenProjectApiClient(connectionName);
+
+        if (openProjectApiClient == null) {
+            throw new WorkItemRetrievalException(
+                String.format("No configuration for instance [%s] was found.", connectionName));
+        }
+        return openProjectApiClient;
+    }
+
+    private PaginatedResult<WorkItem> handleIdentifier(OpenProjectApiClient openProjectApiClient, String identifier,
+        int offset, int pageSize,
         List<LiveDataQuery.Filter> filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
@@ -253,7 +321,7 @@ public class OpenProjectClient implements ProjectManagementClient
         List<String> idsList = List.of(isListAsString.split(","));
         Map<String, Object> idFiltersAsJson = Map.of(
             "n", "id",
-            "o", "=",
+            "o", EQUALS,
             "v", idsList
         );
 

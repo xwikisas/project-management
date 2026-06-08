@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject.internal.store;
+package com.xwiki.projectmanagement.relations.store;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -30,7 +30,7 @@ import org.xwiki.model.reference.LocalDocumentReference;
 
 import com.xpn.xwiki.doc.AbstractMandatoryClassInitializer;
 import com.xpn.xwiki.objects.classes.BaseClass;
-import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
+import com.xpn.xwiki.objects.classes.TextAreaClass;
 
 /**
  * Initializes the work package link xclass.
@@ -39,30 +39,31 @@ import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
  * @since 1.2.0-rc-1
  */
 @Component
-@Named(WorkPackageLink.CLASS_FULLNAME)
+@Named(ProjectManagementRelation.CLASS_FULLNAME)
 @Singleton
-public class WorkPackageLinkClassDocumentInitializer extends AbstractMandatoryClassInitializer
+public class RelationClassDocumentInitializer extends AbstractMandatoryClassInitializer
 {
     /**
      * The reference identifying the created XClass.
      */
     public static final LocalDocumentReference CLASS_REFERENCE = new LocalDocumentReference(Arrays.asList(
-        "OpenProject", "Code"), "WorkPackageLink");
+        "ProjectManagement", "Code"), "RelationClass");
 
     /**
      * Default constructor.
      */
-    public WorkPackageLinkClassDocumentInitializer()
+    public RelationClassDocumentInitializer()
     {
-        super(CLASS_REFERENCE, "Open Project Page Link Class");
+        super(CLASS_REFERENCE, "Project Management Relation Class");
     }
 
     @Override
     protected void createClass(BaseClass xclass)
     {
-        xclass.addTextField(WorkPackageLink.FIELD_PROJECT, "OpenProject Project ID", 20);
-        xclass.addTextField(WorkPackageLink.FIELD_WORK_PACKAGE, "OpenProject Work Package ID", 20);
-        xclass.addTextField(WorkPackageLink.FIELD_INSTANCE, "Open Project Instance Name", 40);
-        xclass.addBooleanField(WorkPackageLink.FIELD_PRIMARY, "Is Primary Link?");
+        xclass.addTextField(ProjectManagementRelation.FIELD_CLIENT, "Project Management Client ID", 20);
+        xclass.addTextField(ProjectManagementRelation.FIELD_PROJECT, "Project ID", 20);
+        xclass.addTextField(ProjectManagementRelation.FIELD_WORK_ITEM, "Work item ID", 20);
+        xclass.addTextAreaField(ProjectManagementRelation.FIELD_CLIENT_PARAMS, "Client Parameters", 40, 20,
+            TextAreaClass.EditorType.PURE_TEXT, TextAreaClass.ContentType.PURE_TEXT);
     }
 }

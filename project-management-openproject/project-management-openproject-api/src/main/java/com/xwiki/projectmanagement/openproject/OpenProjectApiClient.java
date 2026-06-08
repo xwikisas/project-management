@@ -51,7 +51,7 @@ public interface OpenProjectApiClient
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
      */
-    PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters, String sortBy)
+    PaginatedResult<WorkPackage> getWorkPackages(Integer offset, Integer pageSize, String filters, String sortBy)
         throws ProjectManagementException;
 
     /**
@@ -65,8 +65,8 @@ public interface OpenProjectApiClient
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
      */
-    PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize, String filters,
-        String sortBy)
+    PaginatedResult<WorkPackage> getProjectWorkPackages(String project, Integer offset, Integer pageSize,
+        String filters, String sortBy)
         throws ProjectManagementException;
 
     /**
@@ -79,7 +79,7 @@ public interface OpenProjectApiClient
      * @return a list of {@link User}
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
      */
-    PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<User> getUsers(Integer offset, Integer pageSize, String filters) throws ProjectManagementException;
 
     /**
      * Retrieves a list of available users for creating a work package based on the specified page size and filter
@@ -93,7 +93,7 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
      * @since 1.1
      */
-    default PaginatedResult<User> getAvailableUsers(String url, int offset, int pageSize, String filters)
+    default PaginatedResult<User> getAvailableUsers(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         throw new UnsupportedOperationException(
@@ -110,7 +110,8 @@ public interface OpenProjectApiClient
      * @return a list of {@link Project}.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      */
-    PaginatedResult<Project> getProjects(int offset, int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<Project> getProjects(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException;
 
     /**
      * Retrieves a paginated list of available projects for creating work packages based on the specified page size and
@@ -124,7 +125,7 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      * @since 1.1
      */
-    default PaginatedResult<Project> getAvailableProjects(String url, int offset, int pageSize, String filters)
+    default PaginatedResult<Project> getAvailableProjects(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         throw new UnsupportedOperationException(

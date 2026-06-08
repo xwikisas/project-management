@@ -30,11 +30,13 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -118,6 +120,8 @@ public class HandleWorkItems extends XWikiResource
      *
      * @param wiki the wiki that contains the configured client.
      * @param instance the open project client where to search for work item suggestions.
+     * @param offset the offset from which to start retrieving projects.
+     * @param pageSize the maximum number of projects to return.
      * @return a list of projects that can be used for creating a work package.
      * @since 1.1
      */
@@ -126,7 +130,9 @@ public class HandleWorkItems extends XWikiResource
     @Produces({ MediaType.APPLICATION_JSON })
     @Path("/availableProjects")
     public Response getAvailableProjects(@PathParam("wikiName") String wiki,
-        @PathParam("instance") String instance) throws ProjectManagementException
+        @PathParam("instance") String instance,
+        @QueryParam("offset") @DefaultValue("0") int offset,
+        @QueryParam("pageSize") @DefaultValue("20") int pageSize) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
@@ -146,7 +152,8 @@ public class HandleWorkItems extends XWikiResource
             validateResponseType(response);
 
             JsonNode schemaNode = getSchemaNode(response);
-            List<Project> projects = getRemoteProjects(apiClient, schemaNode);
+            List<Project> projects = getAvailableProjects(apiClient, schemaNode,
+                offset, pageSize);
             return Response.ok(projects).build();
         } catch (ProjectManagementException e) {
             throw new ProjectManagementException("Failed to retrieve available projects for creating a work package",
@@ -343,8 +350,7 @@ public class HandleWorkItems extends XWikiResource
             List<User> assignees;
 
             if (assigneeUrl != null && !assigneeUrl.isEmpty()) {
-                PaginatedResult<User> usersPaginatedResult = apiClient.getAvailableUsers(assigneeUrl, 0, 0,
-                    "");
+                PaginatedResult<User> usersPaginatedResult = apiClient.getAvailableUsers(assigneeUrl, null, null, "");
                 assignees = usersPaginatedResult.getItems();
             } else {
                 assignees = new ArrayList<>();
@@ -416,7 +422,8 @@ public class HandleWorkItems extends XWikiResource
         return formRequest;
     }
 
-    private List<Project> getRemoteProjects(OpenProjectApiClient apiClient, JsonNode schemaNode)
+    private List<Project> getAvailableProjects(OpenProjectApiClient apiClient, JsonNode schemaNode,
+        Integer offset, Integer pageSize)
         throws ProjectManagementException
     {
         String projectsUrl = schemaNode.path(PROJECT).path(LINKS).path(ALLOWED_VALUES).path(
@@ -424,7 +431,7 @@ public class HandleWorkItems extends XWikiResource
 
         if (projectsUrl != null && !projectsUrl.isEmpty()) {
             PaginatedResult<Project> projectsPaginatedResult =
-                apiClient.getAvailableProjects(projectsUrl, 0, 0, "");
+                apiClient.getAvailableProjects(projectsUrl, offset, pageSize, "");
             return projectsPaginatedResult.getItems();
         } else {
             return new ArrayList<>();

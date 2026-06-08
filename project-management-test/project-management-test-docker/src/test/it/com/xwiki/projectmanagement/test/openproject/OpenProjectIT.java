@@ -444,7 +444,7 @@ public class OpenProjectIT
         MacroDialogSelectModal modal = openMacrosModal(setup);
         if (!setup.getDriver().hasElement(By.cssSelector(".macro-editor-modal .macro-name"))) {
             modal.waitUntilReady();
-            modal.filterByText("Open Project", 1);
+            modal.filterByText("Open Project", 3);
 //        modal.clickSelect().waitUntilReady();
             setup.getDriver().findElement(By.cssSelector(".macro-selector-modal .modal-footer .btn-primary")).click();
         }

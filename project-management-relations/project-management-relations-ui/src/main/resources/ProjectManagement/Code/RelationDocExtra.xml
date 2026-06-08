@@ -1,0 +1,495 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="ProjectManagement.Code.RelationDocExtra" locale="">
+  <web>ProjectManagement.Code</web>
+  <name>RelationDocExtra</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>RelationDocExtra</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content/>
+  <object>
+    <name>ProjectManagement.Code.RelationDocExtra</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>329c3670-146e-40ea-a6eb-3f922fd9fd19</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>require(['jquery'], function ($) {
+  console.debug('yellow');
+  setTimeout(function () {
+    $('.proj-manag-relation').each(function () {
+      let root = $(this);
+      let client = root.data('client');
+      if (!client) {
+        return;
+      }
+      debugger;
+
+      root.find('.proj-manag-relation-property dd').each(function () {
+        let valueContainer = $(this);
+
+        // Callback function to execute when mutations are observed
+        const callback = (mutationList, observer) => {
+          debugger;
+          observer.disconnect();
+          let clientParams = root.data('params') &amp;&amp; root.data('params');
+          let workItemREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/workitems";
+          let projectsREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/projects";
+          valueContainer.toggleClass('loading');
+          // If view mode load information for the ids.
+          let entityId = valueContainer.text().trim();
+          if (!entityId) {
+            valueContainer.toggleClass('loading');
+            observer.observe(valueContainer[0], { childList: true });
+            return;
+          }
+          let url = workItemREST;
+          let dataType = valueContainer.data('prop') || 'workItem';
+          if (dataType == 'project') {
+            url = projectsREST;
+          }
+          $.getJSON(url + "/" + entityId, clientParams)
+            .done(function (response) {
+              let anchor = '';
+              let href = '';
+              if (dataType == 'project') {
+                anchor = response.name;
+                href = response.identifier.location;
+              } else {
+                anchor = response.summary.value;
+                href = response.summary.location;
+              }
+              valueContainer.html($('&lt;a/>').attr('href', href).text(anchor));
+              console.log(response);
+            })
+            .fail(function (_jqxhr, textStatus, error) {
+              new XWiki.widgets.Notification('Failed to load the entity information.', 'error');
+            })
+            .always(function () {
+              valueContainer.toggleClass('loading');
+              observer.observe(valueContainer[0], { childList: true });
+            });
+
+        };
+
+        // Create an observer instance linked to the callback function
+        const observer = new MutationObserver(callback);
+
+        callback([], observer);
+
+        // Start observing the target node for configured mutations
+        // observer.observe(valueContainer[0], { childList: true });
+      });
+      root.find('.proj-manag-relation-property').each(function () {
+        let propRoot = $(this);
+        propRoot.on('focus', ':input', function () {
+          debugger;
+          let input = propRoot.find(':input');
+          if (input &lt;= 0 || input[0].selectize) {
+            return;
+          }
+          let clientParams = root.data('params') &amp;&amp; root.data('params');
+          let workItemREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/workitems";
+          let projectsREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/projects";
+          let url = workItemREST;
+          let dataType = propRoot.find('dd').data('prop') || 'workPackage';
+          if (dataType == 'project') {
+            url = projectsREST;
+          }
+          let selectizeCfg = {
+            create: true,
+            maxItems: 1
+          };
+          let cfg = {
+            query: {
+              filters: [
+                {
+                  property: "summary",
+                  constraints: [
+                    {
+                      "operator": "contains"
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+          if (dataType == 'project') {
+            cfg.query.filters = [];
+          }
+          selectizeCfg.load = function (text, callback) {
+            let urlParams = { ...clientParams };
+            debugger;
+            if (cfg.query.filters.length &lt;= 0) {
+              if (input[0].selectize &amp;&amp; Object.keys(input[0].selectize.options).length > 1) {
+                callback([]);
+                return;
+              }
+            } else {
+              cfg.query.filters[0].constraints[0].value = text;
+            }
+            urlParams.filter = JSON.stringify(cfg);
+            $.getJSON(url, urlParams)
+              .then(function (results) {
+                console.log(results);
+                let items = (results &amp;&amp; results.items) || [];
+                if (dataType == 'project') {
+                  items = items.map(item => { return { label: item.identifier.value, value: item.identifier.value, hint: item.name }});
+                } else {
+                  items = items.map(item => { return { label: item.identifier.value, value: item.identifier.value, hint: item.summary.value }});
+                }
+                callback(items);
+              })
+              .catch(function (e) {
+                console.log(`error trying to retrieve selectize searchUrl ${searchURL} elements.` + e);
+                callback([]);
+              });
+          };
+          input.xwikiSelectize(selectizeCfg);
+        })
+      });
+    });
+  });
+});</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use/>
+    </property>
+  </object>
+  <object>
+    <name>ProjectManagement.Code.RelationDocExtra</name>
+    <number>0</number>
+    <className>XWiki.UIExtensionClass</className>
+    <guid>7c63edb8-d5da-4c6e-9db1-a324cfc69329</guid>
+    <class>
+      <name>XWiki.UIExtensionClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <async_cached>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_cached</name>
+        <number>3</number>
+        <prettyName>Cached</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_cached>
+      <async_context>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>1</multiSelect>
+        <name>async_context</name>
+        <number>4</number>
+        <prettyName>Context elements</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>, </separator>
+        <separators>|, </separators>
+        <size>5</size>
+        <unmodifiable>0</unmodifiable>
+        <values>action=Action|doc.reference=Document|doc.revision|icon.theme=Icon theme|locale=Language|rendering.defaultsyntax=Default syntax|rendering.restricted=Restricted|rendering.targetsyntax=Target syntax|request.base=Request base URL|request.cookies|request.headers|request.parameters=Request parameters|request.remoteAddr|request.session|request.url=Request URL|request.wiki=Request wiki|sheet|user=User|wiki=Wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </async_context>
+      <async_enabled>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_enabled</name>
+        <number>2</number>
+        <prettyName>Asynchronous rendering</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_enabled>
+      <content>
+        <disabled>0</disabled>
+        <editor>Text</editor>
+        <name>content</name>
+        <number>1</number>
+        <prettyName>Executed Content</prettyName>
+        <restricted>0</restricted>
+        <rows>25</rows>
+        <size>120</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <extensionPointId>
+        <disabled>0</disabled>
+        <name>extensionPointId</name>
+        <number>5</number>
+        <prettyName>Extension Point ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </extensionPointId>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>6</number>
+        <prettyName>Extension ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parameters>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>parameters</name>
+        <number>7</number>
+        <prettyName>Extension Parameters</prettyName>
+        <restricted>0</restricted>
+        <rows>10</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </parameters>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>8</number>
+        <prettyName>Extension Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>wiki=Current Wiki|user=Current User|global=Global</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <async_cached>0</async_cached>
+    </property>
+    <property>
+      <async_context/>
+    </property>
+    <property>
+      <async_enabled>0</async_enabled>
+    </property>
+    <property>
+      <content>{{velocity output=false}}
+#template('display_macros.vm')
+#macro (getTranslation $client $value)
+  #set ($key = "projectmanagement.relations.$!{client}.${value}")
+  #set ($translation = "$!services.localization.render($key)")
+  #if ($translation == $key)
+    #set ($key = "projectmanagement.relations.${value}")
+    #set ($translation = $services.localization.render($key))
+  #end
+  #if ($translation == $key)
+    #set ($translation = $value)
+  #end
+  $escapetool.xml($translation)
+#end
+## Get all xobjects.
+{{/velocity}}
+
+{{velocity}}
+## Display the sections.
+{{html clean=false}}
+#set ($objects = $doc.getObjects('ProjectManagement.Code.RelationClass'))
+#set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationDocExtra'))
+#set ($discard = $xwiki.jsfx.use('uicomponents/edit/editableProperty.js', {
+  'forceSkinAction': true,
+  'language': $xcontext.locale
+}))
+&lt;div class="proj-manag-relations"&gt;
+  #foreach($relationObj in $objects)
+    #set ($discard = $doc.use($relationObj))
+    #set ($client = ${relationObj.getValue('client')})
+    &lt;div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})"&gt;
+      &lt;h2&gt;#getTranslation('clients', $client)&lt;/h2&gt;
+      &lt;div id="proj-manag-relation-left" class="col-xs-12 col-sm-6"&gt;
+        &lt;dl&gt;
+          &lt;div class="proj-manag-relation-project proj-manag-relation-property"&gt;
+            &lt;dt#if ($hasEdit) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.number}].project" data-property-type="object"&gt;
+              &lt;label&gt;#getTranslation($client, 'project.name')&lt;/label&gt;
+            &lt;/dt&gt;
+            &lt;dd data-prop="project"&gt;
+              $doc.display('project')
+            &lt;/dd&gt;
+          &lt;/div&gt;
+          &lt;div class= "proj-manag-relation-workitem proj-manag-relation-property"&gt;
+            &lt;dt#if ($hasEdit) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.number}].workItem" data-property-type="object"&gt;
+              &lt;label&gt;#getTranslation($client, 'workItem.name')&lt;/label&gt;
+            &lt;/dt&gt;
+            &lt;dd data-prop="workItem"&gt;
+              $doc.display('workItem')
+            &lt;/dd&gt;
+          &lt;/div&gt;
+          #if ($client)
+            #foreach($uix in $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.left"))
+              #set ($content = $services.rendering.render($uix.execute(), 'html/5.0'))
+              $content
+            #end
+          #end
+        &lt;/dl&gt;
+      &lt;/div&gt;
+      ##----------------------------------------------------
+      ## Right Column - UIXs with order &gt;= $columnOrderLimit
+      ##----------------------------------------------------
+      &lt;div id="proj-manag-relation-right" class="col-xs-12 col-sm-6"&gt;
+        &lt;dl&gt;
+          #if ($client)
+            #foreach($uix in $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.right"))
+              #set ($content = $services.rendering.render($uix.execute(), 'html/5.0'))
+              $content
+            #end
+          #end
+        &lt;/dl&gt;
+      &lt;/div&gt;
+      &lt;div class="clearfloats"&gt;&amp;nbsp;&lt;/div&gt;
+    &lt;/div&gt;
+  #end
+&lt;/div&gt;
+{{/html}}
+{{/velocity}}</content>
+    </property>
+    <property>
+      <extensionPointId>org.xwiki.plaftorm.template.docextra</extensionPointId>
+    </property>
+    <property>
+      <name>com.xwiki.projectmanagement.relations.docextra</name>
+    </property>
+    <property>
+      <parameters>show=#set($show = false)#if($doc.getObjects('ProjectManagement.Code.RelationClass').size() > 0)#set($show = true)#end${show}
+title=$services.localization.render('projectmanagement.relations.docextra.title')
+itemnumber=$doc.getObjects('ProjectManagement.Code.RelationClass').size()</parameters>
+    </property>
+    <property>
+      <scope>wiki</scope>
+    </property>
+  </object>
+</xwikidoc>
