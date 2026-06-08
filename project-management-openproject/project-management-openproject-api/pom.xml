@@ -34,6 +34,7 @@
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
     <xwiki.jacoco.instructionRatio>0.53</xwiki.jacoco.instructionRatio>
+    <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
   <dependencies>
     <dependency>
