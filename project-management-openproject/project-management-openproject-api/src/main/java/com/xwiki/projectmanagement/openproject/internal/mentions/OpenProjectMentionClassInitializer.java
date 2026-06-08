@@ -31,7 +31,7 @@ import com.xpn.xwiki.doc.AbstractMandatoryClassInitializer;
 import com.xpn.xwiki.objects.classes.BaseClass;
 
 /**
- * Hello there.
+ * Initializes the mention xobject that will hold the id of work packages.
  *
  * @version $Id$
  * @since 1.2.0
@@ -42,17 +42,17 @@ import com.xpn.xwiki.objects.classes.BaseClass;
 public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassInitializer
 {
     /**
-     * asda.
+     * The name of the property that will hold the work package id.
      */
     public static final String PROP_WORK_PACKAGE_ID = "workPackageId";
 
     /**
-     * asdads.
+     * The name of the property that will hold the OpenProject instance id.
      */
     public static final String PROP_INSTANCE = "instance";
 
     /**
-     * Adasdas.
+     * The full class name of the mention.
      */
     public static final String CLASS_NAME = "OpenProject.Code.MentionClass";
 

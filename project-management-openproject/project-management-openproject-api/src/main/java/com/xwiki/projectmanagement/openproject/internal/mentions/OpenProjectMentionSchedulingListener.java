@@ -36,7 +36,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 
 /**
- * Hello there.
+ * Queues the task responsible with the creation of mention objects.
  *
  * @version $Id$
  * @since 1.2.0

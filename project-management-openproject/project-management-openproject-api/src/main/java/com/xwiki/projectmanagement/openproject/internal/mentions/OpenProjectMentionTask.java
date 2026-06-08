@@ -53,7 +53,7 @@ import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProj
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.REFERENCE;
 
 /**
- * Hello there.
+ * Searches the content of a xwiki page and creates objects for each valid work package mention.
  *
  * @version $Id$
  * @since 1.2.0
@@ -64,12 +64,12 @@ import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProj
 public class OpenProjectMentionTask implements TaskConsumer
 {
     /**
-     * ADASD.
+     * The id of the task.
      */
     public static final String TASK_ID = "openprojectmention";
 
     /**
-     * ADsada.
+     * The flag that marks when a document is saved during the execution of this task.
      */
     public static final String TASK_EXECUTING_KEY = TASK_ID + "executing";
 
@@ -120,13 +120,10 @@ public class OpenProjectMentionTask implements TaskConsumer
                     opMacro.getParameter(PROP_INSTANCE));
             }
 
-//            DocumentReference currentContextUser = context.getUserReference();
-//            context.setUserReference(documentUserSerializer.serialize(doc.getAuthors().getEffectiveMetadataAuthor()));
             // Don't create a history entry.
             doc.setMetaDataDirty(false);
             doc.setContentDirty(false);
             context.getWiki().saveDocument(doc, context);
-//            context.setUserReference(currentContextUser);
         } catch (Exception e) {
             logger.warn("Failed to create the OpenProject mention objects for the document [{}]. Cause: [{}]",
                 documentReference, ExceptionUtils.getRootCauseMessage(e));
