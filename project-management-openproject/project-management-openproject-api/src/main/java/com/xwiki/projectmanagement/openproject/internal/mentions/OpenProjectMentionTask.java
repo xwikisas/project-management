@@ -22,25 +22,34 @@ package com.xwiki.projectmanagement.openproject.internal.mentions;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
+import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.checkerframework.checker.nullness.qual.NonNull;
+import org.slf4j.Logger;
+import org.xwiki.component.annotation.Component;
 import org.xwiki.index.IndexException;
 import org.xwiki.index.TaskConsumer;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.user.UserReferenceSerializer;
 
-import com.xpn.xwiki.XWikiException;
-import com.xpn.xwiki.doc.DocumentRevisionProvider;
+import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.commons.document.MacroBlockFinder;
 
+import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_INSTANCE;
+import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_WORK_PACKAGE_ID;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.REFERENCE;
 
 /**
@@ -49,63 +58,131 @@ import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProj
  * @version $Id$
  * @since 1.2.0
  */
+@Component
+@Singleton
+@Named(OpenProjectMentionTask.TASK_ID)
 public class OpenProjectMentionTask implements TaskConsumer
 {
+    /**
+     * ADASD.
+     */
+    public static final String TASK_ID = "openprojectmention";
+
+    /**
+     * ADsada.
+     */
+    public static final String TASK_EXECUTING_KEY = TASK_ID + "executing";
+
     private static final Pattern WORK_PACKAGE_URL_ID_PATTERN = Pattern.compile(".*/work_packages/(\\d+).*");
 
     private static final Pattern WORK_PACKAGE_ID_PATTERN = Pattern.compile(".*/work_pa2ckages/(\\d+).*");
 
-    @Inject
-    private DocumentRevisionProvider documentRevisionProvider;
+    private static final String IDENTIFIER = "identifier";
 
     @Inject
     private MacroBlockFinder macroBlockFinder;
 
+    @Inject
+    private Provider<XWikiContext> xWikiContextProvider;
+
+    @Inject
+    @Named("document")
+    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
+
+    @Inject
+    private Logger logger;
+
     @Override
     public void consume(DocumentReference documentReference, String version) throws IndexException
     {
+        XWikiContext context = xWikiContextProvider.get();
+        context.put(TASK_EXECUTING_KEY, true);
+
         try {
-            XWikiDocument doc = this.documentRevisionProvider.getRevision(documentReference, version);
-            List<MacroBlock> opMacros = new ArrayList<>();
-            macroBlockFinder.find(doc.getXDOM(), doc.getSyntax(), macroBlock -> {
-                if (!"openproject".equals(macroBlock.getId())) {
-                    return MacroBlockFinder.Lookup.CONTINUE;
-                }
-                String opInstance = macroBlock.getParameter("instance");
-                if (StringUtils.isEmpty(opInstance)) {
-                    return MacroBlockFinder.Lookup.CONTINUE;
-                }
+            logger.debug("Creating OP mentions for [{}].", documentReference);
+            XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            List<MacroBlock> opMacros = getMacroBlocks(doc);
 
-                if (!StringUtils.isEmpty(macroBlock.getParameter("filter"))) {
-                    return MacroBlockFinder.Lookup.CONTINUE;
-                }
-
-                opMacros.add(macroBlock);
-
-                return MacroBlockFinder.Lookup.CONTINUE;
-            });
-
-            if (opMacros.isEmpty()) {
+            List<BaseObject> existingObjs = doc.getXObjects(REFERENCE);
+            logger.debug("Found [{}] OP macros and [{}] existing mention objects.", opMacros.size(),
+                existingObjs.size());
+            if (shouldSkipProcessing(opMacros, existingObjs)) {
                 return;
             }
-
-            int existingObjs = doc.getXObjectSize(REFERENCE);
             doc.removeXObjects(REFERENCE);
 
-            Iterator<MacroBlock> it = opMacros.iterator();
-            int added = 0;
-            while (it.hasNext()) {
-                MacroBlock macroBlock = it.next();
-                String workPackageId = getWorkPackageId(macroBlock.getParameter("identifier"));
-                if (workPackageId == null) {
-                    continue;
+            for (MacroBlock opMacro : opMacros) {
+                String workPackageId = opMacro.getParameter(IDENTIFIER);
+                BaseObject object = doc.newXObject(REFERENCE, context);
+                object.setStringValue(PROP_WORK_PACKAGE_ID, workPackageId);
+                object.setStringValue(PROP_INSTANCE, opMacro.getParameter(PROP_INSTANCE));
+                logger.debug("Created mention for work package with id [{}] and instance [{}].", workPackageId,
+                    opMacro.getParameter(PROP_INSTANCE));
+            }
+
+//            DocumentReference currentContextUser = context.getUserReference();
+//            context.setUserReference(documentUserSerializer.serialize(doc.getAuthors().getEffectiveMetadataAuthor()));
+            // Don't create a history entry.
+            doc.setMetaDataDirty(false);
+            doc.setContentDirty(false);
+            context.getWiki().saveDocument(doc, context);
+//            context.setUserReference(currentContextUser);
+        } catch (Exception e) {
+            logger.warn("Failed to create the OpenProject mention objects for the document [{}]. Cause: [{}]",
+                documentReference, ExceptionUtils.getRootCauseMessage(e));
+        } finally {
+            context.remove(TASK_EXECUTING_KEY);
+        }
+    }
+
+    private boolean shouldSkipProcessing(List<MacroBlock> opMacros, List<BaseObject> existingObjs)
+    {
+        if (opMacros.isEmpty() && existingObjs.isEmpty()) {
+            return true;
+        }
+
+        if (opMacros.size() == existingObjs.size()) {
+            for (int i = 0; i < opMacros.size(); i++) {
+                MacroBlock macroBlock = opMacros.get(i);
+                BaseObject obj = existingObjs.get(i);
+                if (!macroBlock.getParameter(IDENTIFIER).equals(obj.getStringValue(PROP_WORK_PACKAGE_ID))
+                    || !macroBlock.getParameter(PROP_INSTANCE).equals(obj.getStringValue(PROP_INSTANCE)))
+                {
+                    return false;
                 }
             }
-        } catch (XWikiException e) {
-            throw new RuntimeException(e);
-        } catch (MacroExecutionException e) {
-            throw new RuntimeException(e);
+            return true;
         }
+        return false;
+    }
+
+    private @NonNull List<MacroBlock> getMacroBlocks(XWikiDocument doc) throws MacroExecutionException
+    {
+        List<MacroBlock> opMacros = new ArrayList<>();
+        macroBlockFinder.find(doc.getXDOM(), doc.getSyntax(), macroBlock -> {
+            if (!"openproject".equals(macroBlock.getId())) {
+                return MacroBlockFinder.Lookup.CONTINUE;
+            }
+            String opInstance = macroBlock.getParameter(PROP_INSTANCE);
+            if (StringUtils.isEmpty(opInstance)) {
+                return MacroBlockFinder.Lookup.CONTINUE;
+            }
+
+            if (!StringUtils.isEmpty(macroBlock.getParameter("filter"))) {
+                return MacroBlockFinder.Lookup.CONTINUE;
+            }
+
+            String identifier = getWorkPackageId(macroBlock.getParameter(IDENTIFIER));
+            if (identifier == null) {
+                return MacroBlockFinder.Lookup.CONTINUE;
+            }
+            macroBlock.setParameter(IDENTIFIER, identifier);
+
+            opMacros.add(macroBlock);
+
+            return MacroBlockFinder.Lookup.CONTINUE;
+        });
+        return opMacros;
     }
 
     private String getWorkPackageId(String identifierParam)

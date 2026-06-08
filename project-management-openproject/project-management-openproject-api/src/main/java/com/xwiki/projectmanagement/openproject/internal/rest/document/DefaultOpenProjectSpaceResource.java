@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -68,7 +67,6 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * @since 1.2.0-rc-1
  */
 @Component
-@Singleton
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectSpaceResource")
 public class DefaultOpenProjectSpaceResource extends XWikiResource implements OpenProjectSpaceResource
 {

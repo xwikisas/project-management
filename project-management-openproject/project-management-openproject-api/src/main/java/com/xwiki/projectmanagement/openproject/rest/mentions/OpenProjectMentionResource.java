@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.rest.document;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +17,7 @@ package com.xwiki.projectmanagement.openproject.rest.document;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject.rest.mentions;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -27,37 +26,35 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 
 import org.xwiki.rest.XWikiRestException;
+import org.xwiki.rest.model.jaxb.Objects;
 import org.xwiki.rest.model.jaxb.SearchResults;
 
-import com.xwiki.projectmanagement.relations.model.ProjectManagementRelation;
-
 /**
- * Resource for retrieving pages containing {@link ProjectManagementRelation} to an Open Project entity.
+ * Endpoint for handling xwiki mentions to OpenProject packages.
  *
  * @version $Id$
- * @since 1.2.0-rc-1
+ * @since 1.2.0
  */
-@Path("/openproject/links")
-public interface OpenProjectLinkSearchResource
+@Path("/openproject")
+public interface OpenProjectMentionResource
 {
     /**
-     * @param projectId the OpenProject project id that should match the xwiki pages.
-     * @param forInstance the id of the OpenProject instance that should be taken into consideration when returning
-     *     links.
+     * @param workPackageId the OpenProject work package id that should match the xwiki pages.
+     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     *     returning mentions.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
      * @param orderField the field on which the results should be ordered on.
      * @param order how the results should be ordered. asc or desc.
      * @param withPrettyNames denotes whether the results should contain the pretty names of the documents or not.
-     * @return a list of xwiki pages that have a {@link ProjectManagementRelation} to an OpenProject entity and that the
-     *     current user has view rights on.
+     * @return a list of xwiki pages that mention the specified work package in their content.
      * @throws XWikiRestException if there was any issue retrieving the xwiki pages.
      */
     @GET
-    @Path("/projects/{id}")
-    SearchResults getProjects(
-        @PathParam("id") String projectId,
-        @QueryParam("filterInstance") @DefaultValue("") String forInstance,
+    @Path("/mentions")
+    SearchResults getPagesMentioningWorkPackage(
+        @QueryParam("workPackage") @DefaultValue("") String workPackageId,
+        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
         @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,
@@ -66,27 +63,39 @@ public interface OpenProjectLinkSearchResource
     ) throws XWikiRestException;
 
     /**
-     * @param workPackageId the OpenProject work package id that should match the xwiki pages.
+     * @param pageId the unique identifier of the page.
      * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
-     *     returning links.
+     *     returning mentions.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
-     * @param orderField the field on which the results should be ordered on.
-     * @param order how the results should be ordered. asc or desc.
      * @param withPrettyNames denotes whether the results should contain the pretty names of the documents or not.
-     * @return a list of xwiki pages that have a {@link ProjectManagementRelation} to an OpenProject entity and that the
-     *     current user has view rights on.
+     * @return a list of mention objects that the requested page contains.
      * @throws XWikiRestException if there was any issue retrieving the xwiki pages.
      */
     @GET
-    @Path("/workPackages/{id}")
-    SearchResults getWorkPackages(
-        @PathParam("id") String workPackageId,
+    @Path("/documents/{id}/mentions")
+    Objects getMentionsWithId(
+        @PathParam("id") String pageId,
         @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
-        @QueryParam("number") @DefaultValue("-1") Integer number,
+        @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
-        @QueryParam("orderField") @DefaultValue("") String orderField,
-        @QueryParam("order") @DefaultValue("asc") String order,
-        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames
-    ) throws XWikiRestException;
+        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames) throws XWikiRestException;
+
+    /**
+     * @param docRef the reference of the page.
+     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     *     returning mentions.
+     * @param number the maximum number of elements that should be returned.
+     * @param start the offset of the results.
+     * @param withPrettyNames denotes whether the results should contain the pretty names of the documents or not.
+     * @return a list of mention objects that the requested page contains.
+     * @throws XWikiRestException if there was any issue retrieving the xwiki pages.
+     */
+    @GET
+    @Path("/pages/{docRef}/mentions")
+    Objects getMentionsWithRef(@PathParam("docRef") String docRef,
+        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
+        @QueryParam("number") @DefaultValue("25") Integer number,
+        @QueryParam("start") @DefaultValue("0") Integer start,
+        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames) throws XWikiRestException;
 }

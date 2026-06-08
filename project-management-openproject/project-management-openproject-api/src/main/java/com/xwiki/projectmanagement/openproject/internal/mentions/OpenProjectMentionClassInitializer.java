@@ -21,6 +21,10 @@ package com.xwiki.projectmanagement.openproject.internal.mentions;
 
 import java.util.Arrays;
 
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.LocalDocumentReference;
 
 import com.xpn.xwiki.doc.AbstractMandatoryClassInitializer;
@@ -32,8 +36,26 @@ import com.xpn.xwiki.objects.classes.BaseClass;
  * @version $Id$
  * @since 1.2.0
  */
+@Component
+@Named(OpenProjectMentionClassInitializer.CLASS_NAME)
+@Singleton
 public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassInitializer
 {
+    /**
+     * asda.
+     */
+    public static final String PROP_WORK_PACKAGE_ID = "workPackageId";
+
+    /**
+     * asdads.
+     */
+    public static final String PROP_INSTANCE = "instance";
+
+    /**
+     * Adasdas.
+     */
+    public static final String CLASS_NAME = "OpenProject.Code.MentionClass";
+
     /**
      * Reference of the xwiki class.
      */
@@ -51,7 +73,7 @@ public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassIn
     @Override
     protected void createClass(BaseClass xclass)
     {
-        xclass.addTextField("workPackageId", "Identifier of the WorkPackage", 20);
-        xclass.addTextField("instance", "The name of the configured OpenProject instance", 20);
+        xclass.addTextField(PROP_WORK_PACKAGE_ID, "Identifier of the WorkPackage", 20);
+        xclass.addTextField(PROP_INSTANCE, "The name of the configured OpenProject instance", 20);
     }
 }

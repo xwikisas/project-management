@@ -24,7 +24,6 @@ import java.net.URI;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
@@ -57,7 +56,6 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * @since 1.2.0-rc-1
  */
 @Component
-@Singleton
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectDocumentResource")
 public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     implements OpenProjectDocumentResource, Initializable

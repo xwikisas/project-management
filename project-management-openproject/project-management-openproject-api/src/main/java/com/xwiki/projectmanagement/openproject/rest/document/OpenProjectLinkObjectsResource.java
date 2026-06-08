@@ -59,7 +59,7 @@ public interface OpenProjectLinkObjectsResource
     @PUT
     Response link(
         @PathParam("id") String id,
-        @QueryParam("instanceId") @DefaultValue("") String instanceId,
+        @QueryParam("filterInstance") @DefaultValue("") String instanceId,
         @QueryParam("minorRevision") Boolean minorRevision,
         WorkPackageLink link
     ) throws XWikiRestException;

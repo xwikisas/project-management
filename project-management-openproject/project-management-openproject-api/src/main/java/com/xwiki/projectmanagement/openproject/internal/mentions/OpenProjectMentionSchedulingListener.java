@@ -19,15 +19,20 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.mentions;
 
-import java.util.Collections;
+import java.util.Arrays;
 
 import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 
-import org.xwiki.bridge.event.DocumentUpdatingEvent;
+import org.xwiki.bridge.event.DocumentCreatedEvent;
+import org.xwiki.bridge.event.DocumentUpdatedEvent;
+import org.xwiki.component.annotation.Component;
 import org.xwiki.index.TaskManager;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 
 /**
@@ -36,7 +41,10 @@ import com.xpn.xwiki.doc.XWikiDocument;
  * @version $Id$
  * @since 1.2.0
  */
-public class DocumentUpdatingListener extends AbstractEventListener
+@Component
+@Singleton
+@Named("com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionSchedulingListener")
+public class OpenProjectMentionSchedulingListener extends AbstractEventListener
 {
     @Inject
     private TaskManager taskManager;
@@ -44,18 +52,22 @@ public class DocumentUpdatingListener extends AbstractEventListener
     /**
      * Default constructor.
      */
-    public DocumentUpdatingListener()
+    public OpenProjectMentionSchedulingListener()
     {
-        super("name", Collections.singletonList(new DocumentUpdatingEvent()));
+        super(OpenProjectMentionSchedulingListener.class.getName(),
+            Arrays.asList(new DocumentUpdatedEvent(), new DocumentCreatedEvent()));
     }
 
     @Override
     public void onEvent(Event event, Object source, Object data)
     {
+        XWikiContext context = (XWikiContext) data;
         XWikiDocument doc = (XWikiDocument) source;
+        if (context.get(OpenProjectMentionTask.TASK_EXECUTING_KEY) != null) {
+            return;
+        }
 
-//        this.taskManager.addTask(doc.getDocumentReference().getWikiReference().getName(), doc.
-//        getId(), doc.getVersion(),
-//            MENTION_TASK_ID);
+        this.taskManager.addTask(doc.getDocumentReference().getWikiReference().getName(), doc.
+            getId(), OpenProjectMentionTask.TASK_ID);
     }
 }
