@@ -95,6 +95,38 @@
       "response": []
     },
     {
+      "name": "Get document unique identifier by reference",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=Main.WebHome",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents"
+          ],
+          "query": [
+            {
+              "key": "docRef",
+              "value": "Main.WebHome"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get Pages Linked To Project/WorkPackage",
       "request": {
         "method": "GET",
@@ -331,6 +363,21 @@
       "response": []
     }
   ],
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "password",
+        "value": "system",
+        "type": "string"
+      },
+      {
+        "key": "username",
+        "value": "Superadmin",
+        "type": "string"
+      }
+    ]
+  },
   "event": [
     {
       "listen": "prerequest",

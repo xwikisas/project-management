@@ -9,7 +9,8 @@ using **Basic Auth** or an **OIDC Bearer Token**
 (`Authorization: Bearer <token>`). The endpoints only return data and perform actions that the logged-in user has
 rights to access. It works also for guests.
 
-Note: Bearer Token authentication is only available if you configured the Token authenticator in your wiki: https://extensions.xwiki.org/xwiki/bin/view/Extension/OpenID%20Connect/Token%20Authenticator/
+Note: Bearer Token authentication is only available if you configured the Token authenticator in your
+wiki: https://extensions.xwiki.org/xwiki/bin/view/Extension/OpenID%20Connect/Token%20Authenticator/
 
 **Content type:** All endpoints accept and return **JSON** (`application/json`) or **XML** (`application/xml`).
 
@@ -132,44 +133,44 @@ Returned by the document and space endpoints. Represents a wiki page.
 
 #### Field Reference
 
-| Field                         | Type              | Description                                                                                                                                     |
-|-------------------------------|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| `links`                       | `Array`           | Navigation links to related REST resources (space, history, objects, syntaxes, self, class). Each link has `href`, `rel`, `type`, and `hrefLang`. |
-| `id`                          | `String`          | The short unique identifier assigned to this page. Used to reference the page in all other endpoints.                                           |
-| `fullName`                    | `String`          | The full internal reference of the page (e.g. `Projects.MyProject.WebHome`).                                                                    |
-| `wiki`                        | `String`          | The wiki this page belongs to (e.g. `xwiki`).                                                                                                   |
-| `space`                       | `String`          | The space the page is in, using dot notation.                                                                                                   |
-| `name`                        | `String`          | The technical name of the page (last part of the reference).                                                                                    |
-| `title`                       | `String`          | The title of the page.                                                                                                                          |
-| `rawTitle`                    | `String`          | The raw title of the page.                                                                                                                      |
-| `parent`                      | `String`          | The reference of the parent page (empty if none).                                                                                               |
-| `parentId`                    | `String`          | The identifier of the parent page (empty if none).                                                                                              |
-| `version`                     | `String`          | The current version number (e.g. `5.1`).                                                                                                        |
-| `author`                      | `String`          | The internal reference of the user who last edited the page.                                                                                    |
-| `authorName`                  | `String`          | The display name of the last author. Present when `prettyNames=true`.                                                                           |
-| `xwikiRelativeUrl`            | `String`          | The URL to view this page in XWiki.                                                                                                             |
-| `xwikiAbsoluteUrl`            | `String`          | The absolute URL to view this page in XWiki.                                                                                                    |
-| `translations`                | `Object`          | Translation metadata. Contains `links`, `translations` (array of available translations), and `default` (the default language).                  |
-| `syntax`                      | `String`          | The markup syntax used (e.g. `xwiki/2.1`).                                                                                                      |
-| `language`                    | `String`          | The language of the page (empty string for the default language).                                                                               |
-| `majorVersion`                | `Integer`         | The major version number.                                                                                                                       |
-| `minorVersion`                | `Integer`         | The minor version number.                                                                                                                       |
-| `hidden`                      | `Boolean`         | Whether the page is hidden.                                                                                                                     |
-| `enforceRequiredRights`       | `Boolean`         | Whether required rights enforcement is enabled.                                                                                                 |
-| `created`                     | `Long`            | When the page was first created (Unix timestamp in milliseconds).                                                                               |
-| `creator`                     | `String`          | The internal reference of the user who created the page.                                                                                        |
-| `creatorName`                 | `String`          | The display name of the creator. Present when `prettyNames=true`.                                                                               |
-| `modified`                    | `Long`            | When the page was last modified (Unix timestamp in milliseconds).                                                                               |
-| `modifier`                    | `String`          | The internal reference of the user who last modified the page.                                                                                  |
-| `modifierName`                | `String`          | The display name of the modifier. Present when `prettyNames=true`.                                                                              |
-| `originalMetadataAuthor`      | `String`          | The reference of the original metadata author.                                                                                                  |
-| `originalMetadataAuthorName`  | `String`          | The display name of the original metadata author.                                                                                               |
-| `comment`                     | `String`          | The save comment of the last edit (can be empty).                                                                                               |
-| `content`                     | `String`          | The raw content of the page in wiki syntax.                                                                                                     |
-| `clazz`                       | `Object` or `null`| The class definition, when `class=true` is requested.                                                                                           |
-| `objects`                     | `Object` or `null`| The structured data objects attached to the page, when `objects=true` is requested. See the Objects structure below.                             |
-| `attachments`                 | `Object` or `null`| The files attached to the page, when `attachments=true` is requested.                                                                           |
-| `hierarchy`                   | `Object`          | The breadcrumb hierarchy of the page. Contains an `items` array where each item has `label`, `name`, `type` (`wiki`, `space`, or `document`), and `url`. |
+| Field                        | Type               | Description                                                                                                                                              |
+|------------------------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `links`                      | `Array`            | Navigation links to related REST resources (space, history, objects, syntaxes, self, class). Each link has `href`, `rel`, `type`, and `hrefLang`.        |
+| `id`                         | `String`           | The short unique identifier assigned to this page. Used to reference the page in all other endpoints.                                                    |
+| `fullName`                   | `String`           | The full internal reference of the page (e.g. `Projects.MyProject.WebHome`).                                                                             |
+| `wiki`                       | `String`           | The wiki this page belongs to (e.g. `xwiki`).                                                                                                            |
+| `space`                      | `String`           | The space the page is in, using dot notation.                                                                                                            |
+| `name`                       | `String`           | The technical name of the page (last part of the reference).                                                                                             |
+| `title`                      | `String`           | The title of the page.                                                                                                                                   |
+| `rawTitle`                   | `String`           | The raw title of the page.                                                                                                                               |
+| `parent`                     | `String`           | The reference of the parent page (empty if none).                                                                                                        |
+| `parentId`                   | `String`           | The identifier of the parent page (empty if none).                                                                                                       |
+| `version`                    | `String`           | The current version number (e.g. `5.1`).                                                                                                                 |
+| `author`                     | `String`           | The internal reference of the user who last edited the page.                                                                                             |
+| `authorName`                 | `String`           | The display name of the last author. Present when `prettyNames=true`.                                                                                    |
+| `xwikiRelativeUrl`           | `String`           | The URL to view this page in XWiki.                                                                                                                      |
+| `xwikiAbsoluteUrl`           | `String`           | The absolute URL to view this page in XWiki.                                                                                                             |
+| `translations`               | `Object`           | Translation metadata. Contains `links`, `translations` (array of available translations), and `default` (the default language).                          |
+| `syntax`                     | `String`           | The markup syntax used (e.g. `xwiki/2.1`).                                                                                                               |
+| `language`                   | `String`           | The language of the page (empty string for the default language).                                                                                        |
+| `majorVersion`               | `Integer`          | The major version number.                                                                                                                                |
+| `minorVersion`               | `Integer`          | The minor version number.                                                                                                                                |
+| `hidden`                     | `Boolean`          | Whether the page is hidden.                                                                                                                              |
+| `enforceRequiredRights`      | `Boolean`          | Whether required rights enforcement is enabled.                                                                                                          |
+| `created`                    | `Long`             | When the page was first created (Unix timestamp in milliseconds).                                                                                        |
+| `creator`                    | `String`           | The internal reference of the user who created the page.                                                                                                 |
+| `creatorName`                | `String`           | The display name of the creator. Present when `prettyNames=true`.                                                                                        |
+| `modified`                   | `Long`             | When the page was last modified (Unix timestamp in milliseconds).                                                                                        |
+| `modifier`                   | `String`           | The internal reference of the user who last modified the page.                                                                                           |
+| `modifierName`               | `String`           | The display name of the modifier. Present when `prettyNames=true`.                                                                                       |
+| `originalMetadataAuthor`     | `String`           | The reference of the original metadata author.                                                                                                           |
+| `originalMetadataAuthorName` | `String`           | The display name of the original metadata author.                                                                                                        |
+| `comment`                    | `String`           | The save comment of the last edit (can be empty).                                                                                                        |
+| `content`                    | `String`           | The raw content of the page in wiki syntax.                                                                                                              |
+| `clazz`                      | `Object` or `null` | The class definition, when `class=true` is requested.                                                                                                    |
+| `objects`                    | `Object` or `null` | The structured data objects attached to the page, when `objects=true` is requested. See the Objects structure below.                                     |
+| `attachments`                | `Object` or `null` | The files attached to the page, when `attachments=true` is requested.                                                                                    |
+| `hierarchy`                  | `Object`           | The breadcrumb hierarchy of the page. Contains an `items` array where each item has `label`, `name`, `type` (`wiki`, `space`, or `document`), and `url`. |
 
 #### Objects Structure (when `objects=true`)
 
@@ -213,9 +214,21 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "project" },
-              { "links": [], "name": "prettyName", "value": "OpenProject Project ID" },
-              { "links": [], "name": "size", "value": "20" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "project"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "OpenProject Project ID"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "20"
+              }
             ],
             "value": "45",
             "name": "project",
@@ -231,9 +244,21 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "workPackage" },
-              { "links": [], "name": "prettyName", "value": "OpenProject Work Package ID" },
-              { "links": [], "name": "size", "value": "20" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "workPackage"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "OpenProject Work Package ID"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "20"
+              }
             ],
             "value": "125",
             "name": "workPackage",
@@ -249,9 +274,21 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "instance" },
-              { "links": [], "name": "prettyName", "value": "Open Project Instance Name" },
-              { "links": [], "name": "size", "value": "40" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "instance"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "Open Project Instance Name"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "40"
+              }
             ],
             "value": "",
             "name": "instance",
@@ -267,9 +304,21 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "primary" },
-              { "links": [], "name": "prettyName", "value": "Is Primary Link?" },
-              { "links": [], "name": "displayFormType", "value": "select" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "primary"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "Is Primary Link?"
+              },
+              {
+                "links": [],
+                "name": "displayFormType",
+                "value": "select"
+              }
             ],
             "value": "",
             "name": "primary",
@@ -299,15 +348,15 @@ When creating or updating a page, you send a `Page` object in the request body. 
 {
   "project": "42",
   "workPackage": "123",
-  "instance": "my-openproject",
+  "instance": "my-openproject"
 }
 ```
 
-| Field         | Type      | Required | Description                                                                                                          |
-|---------------|-----------|----------|----------------------------------------------------------------------------------------------------------------------|
-| `project`     | `String`  | ❌       | The OpenProject project ID to link to.                                                                               |
-| `workPackage` | `String`  | ❌       | The OpenProject work package ID to link to.                                                                          |
-| `instance`    | `String`  | ❌       | The name of the OpenProject connection. Usually **auto-populated** from the bearer token when `filterInstance=true`.    |
+| Field         | Type     | Required | Description                                                                                                          |
+|---------------|----------|----------|----------------------------------------------------------------------------------------------------------------------|
+| `project`     | `String` | ❌        | The OpenProject project ID to link to.                                                                               |
+| `workPackage` | `String` | ❌        | The OpenProject work package ID to link to.                                                                          |
+| `instance`    | `String` | ❌        | The name of the OpenProject connection. Usually **auto-populated** from the bearer token when `filterInstance=true`. |
 
 ### `SearchResults` (Response)
 
@@ -375,9 +424,21 @@ Each search result entry represents a page that matches the query, and includes 
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "project" },
-              { "links": [], "name": "prettyName", "value": "OpenProject Project ID" },
-              { "links": [], "name": "size", "value": "20" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "project"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "OpenProject Project ID"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "20"
+              }
             ],
             "value": "45",
             "name": "project",
@@ -393,9 +454,21 @@ Each search result entry represents a page that matches the query, and includes 
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "workPackage" },
-              { "links": [], "name": "prettyName", "value": "OpenProject Work Package ID" },
-              { "links": [], "name": "size", "value": "20" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "workPackage"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "OpenProject Work Package ID"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "20"
+              }
             ],
             "value": "125",
             "name": "workPackage",
@@ -411,9 +484,21 @@ Each search result entry represents a page that matches the query, and includes 
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "instance" },
-              { "links": [], "name": "prettyName", "value": "Open Project Instance Name" },
-              { "links": [], "name": "size", "value": "40" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "instance"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "Open Project Instance Name"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "40"
+              }
             ],
             "value": "",
             "name": "instance",
@@ -429,9 +514,21 @@ Each search result entry represents a page that matches the query, and includes 
               }
             ],
             "attributes": [
-              { "links": [], "name": "name", "value": "primary" },
-              { "links": [], "name": "prettyName", "value": "Is Primary Link?" },
-              { "links": [], "name": "displayFormType", "value": "select" }
+              {
+                "links": [],
+                "name": "name",
+                "value": "primary"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "Is Primary Link?"
+              },
+              {
+                "links": [],
+                "name": "displayFormType",
+                "value": "select"
+              }
             ],
             "value": "",
             "name": "primary",
@@ -441,10 +538,30 @@ Each search result entry represents a page that matches the query, and includes 
       },
       "hierarchy": {
         "items": [
-          { "label": "xwiki", "name": "xwiki", "type": "wiki", "url": "http://localhost:8080/xwiki/bin/view/Main/" },
-          { "label": "Projects", "name": "Projects", "type": "space", "url": "http://localhost:8080/xwiki/bin/view/Projects/" },
-          { "label": "MyProject", "name": "MyProject", "type": "space", "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/" },
-          { "label": "WebHome", "name": "WebHome", "type": "document", "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/" }
+          {
+            "label": "xwiki",
+            "name": "xwiki",
+            "type": "wiki",
+            "url": "http://localhost:8080/xwiki/bin/view/Main/"
+          },
+          {
+            "label": "Projects",
+            "name": "Projects",
+            "type": "space",
+            "url": "http://localhost:8080/xwiki/bin/view/Projects/"
+          },
+          {
+            "label": "MyProject",
+            "name": "MyProject",
+            "type": "space",
+            "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/"
+          },
+          {
+            "label": "WebHome",
+            "name": "WebHome",
+            "type": "document",
+            "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/"
+          }
         ]
       }
     }
@@ -454,22 +571,22 @@ Each search result entry represents a page that matches the query, and includes 
 
 Each search result entry contains:
 
-| Field          | Type      | Description                                                                 |
-|----------------|-----------|-----------------------------------------------------------------------------|
-| `type`         | `String`  | Always `"page"`.                                                            |
-| `id`           | `String`  | The full qualified identifier of the page.                                  |
-| `pageFullName` | `String`  | The full name of the page (e.g. `Projects.MyProject.WebHome`).              |
-| `title`        | `String`  | The title of the page.                                                      |
-| `wiki`         | `String`  | The wiki the page belongs to.                                               |
-| `space`        | `String`  | The space the page is in.                                                   |
-| `pageName`     | `String`  | The technical name of the page.                                             |
-| `modified`     | `Long`    | Last modification timestamp (Unix milliseconds).                            |
-| `author`       | `String`  | The reference of the last author.                                           |
-| `version`      | `String`  | The page version.                                                           |
-| `className`    | `String`  | The class name of the matched object (`OpenProject.Code.WorkPackageLink`).  |
-| `objectNumber` | `Integer` | The index of the matched object.                                            |
+| Field          | Type      | Description                                                                                |
+|----------------|-----------|--------------------------------------------------------------------------------------------|
+| `type`         | `String`  | Always `"page"`.                                                                           |
+| `id`           | `String`  | The full qualified identifier of the page.                                                 |
+| `pageFullName` | `String`  | The full name of the page (e.g. `Projects.MyProject.WebHome`).                             |
+| `title`        | `String`  | The title of the page.                                                                     |
+| `wiki`         | `String`  | The wiki the page belongs to.                                                              |
+| `space`        | `String`  | The space the page is in.                                                                  |
+| `pageName`     | `String`  | The technical name of the page.                                                            |
+| `modified`     | `Long`    | Last modification timestamp (Unix milliseconds).                                           |
+| `author`       | `String`  | The reference of the last author.                                                          |
+| `version`      | `String`  | The page version.                                                                          |
+| `className`    | `String`  | The class name of the matched object (`OpenProject.Code.WorkPackageLink`).                 |
+| `objectNumber` | `Integer` | The index of the matched object.                                                           |
 | `object`       | `Object`  | The full object data with all properties (same structure as in the Objects section above). |
-| `hierarchy`    | `Object`  | The breadcrumb hierarchy of the page.                                       |
+| `hierarchy`    | `Object`  | The breadcrumb hierarchy of the page.                                                      |
 
 ---
 
@@ -489,11 +606,11 @@ GET /xwiki/rest/openproject/documents/{id}
 
 | Parameter     | Location | Type      | Required | Default | Description                                                                                                           |
 |---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| `id`          | path     | `String`  | ✅       | —       | The short unique identifier of the page.                                                                              |
-| `prettyNames` | query    | `Boolean` | ❌       | `false` | If `true`, user references are added to the response as human-readable display names instead of technical references. |
-| `objects`     | query    | `Boolean` | ❌       | `false` | If `true`, the response includes all structured data objects attached to the page.                                    |
-| `class`       | query    | `Boolean` | ❌       | `false` | If `true`, the response includes class definition metadata.                                                           |
-| `attachments` | query    | `Boolean` | ❌       | `false` | If `true`, the response includes the list of files attached to the page.                                              |
+| `id`          | path     | `String`  | ✅        | —       | The short unique identifier of the page.                                                                              |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are added to the response as human-readable display names instead of technical references. |
+| `objects`     | query    | `Boolean` | ❌        | `false` | If `true`, the response includes all structured data objects attached to the page.                                    |
+| `class`       | query    | `Boolean` | ❌        | `false` | If `true`, the response includes class definition metadata.                                                           |
+| `attachments` | query    | `Boolean` | ❌        | `false` | If `true`, the response includes the list of files attached to the page.                                              |
 
 **What happens:**
 
@@ -503,12 +620,12 @@ GET /xwiki/rest/openproject/documents/{id}
 
 **Responses:**
 
-| Status                        | Body                 | When                                                  |
-|-------------------------------|----------------------|-------------------------------------------------------|
-| **200 OK**                    | `Page` (JSON or XML) | The page was found and returned successfully.         |
-| **400 Bad Request**           | `"Missing page id."` | The `id` parameter was empty or not provided.         |
-| **404 Not Found**             | —                    | No page exists with the given identifier.             |
-| **500 Internal Server Error** | —                    | An unexpected error occurred.                         |
+| Status                        | Body                 | When                                          |
+|-------------------------------|----------------------|-----------------------------------------------|
+| **200 OK**                    | `Page` (JSON or XML) | The page was found and returned successfully. |
+| **400 Bad Request**           | `"Missing page id."` | The `id` parameter was empty or not provided. |
+| **404 Not Found**             | —                    | No page exists with the given identifier.     |
+| **500 Internal Server Error** | —                    | An unexpected error occurred.                 |
 
 ---
 
@@ -523,11 +640,11 @@ PUT /openproject/documents
 
 **Parameters:**
 
-| Parameter       | Location | Type          | Required | Default | Description                                                                                       |
-|-----------------|----------|---------------|----------|---------|---------------------------------------------------------------------------------------------------|
-| `docRef`        | query    | `String`      | ✅       | —       | The full page reference where the page should be created or updated (e.g. `Projects.MyProject.WebHome`). |
-| `minorRevision` | query    | `Boolean`     | ❌       | —       | If `true`, the edit is saved as a minor version (does not appear prominently in page history).    |
-| *(body)*        | body     | `Page` (JSON) | ✅       | —       | The page data (title, content, etc.). See the `Page` request model above.                        |
+| Parameter       | Location | Type          | Required | Default | Description                                                                                              |
+|-----------------|----------|---------------|----------|---------|----------------------------------------------------------------------------------------------------------|
+| `docRef`        | query    | `String`      | ✅        | —       | The full page reference where the page should be created or updated (e.g. `Projects.MyProject.WebHome`). |
+| `minorRevision` | query    | `Boolean`     | ❌        | —       | If `true`, the edit is saved as a minor version (does not appear prominently in page history).           |
+| *(body)*        | body     | `Page` (JSON) | ✅        | —       | The page data (title, content, etc.). See the `Page` request model above.                                |
 
 **What happens:**
 
@@ -538,13 +655,13 @@ PUT /openproject/documents
 
 **Responses:**
 
-| Status                        | Body                    | When                                                              |
-|-------------------------------|-------------------------|-------------------------------------------------------------------|
-| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                          |
-| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                                    |
-| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                        |
-| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.         |
-| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page.        |
+| Status                        | Body                    | When                                                      |
+|-------------------------------|-------------------------|-----------------------------------------------------------|
+| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                   |
+| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                             |
+| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                 |
+| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.  |
+| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page. |
 
 ---
 
@@ -558,12 +675,12 @@ POST /openproject/documents/{id}/links
 
 **Parameters:**
 
-| Parameter       | Location | Type                     | Required | Default | Description                                                                                                               |
-|-----------------|----------|--------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------|
-| `id`            | path     | `String`                 | ✅       | —       | The short unique identifier of the page (obtained from endpoints 1 or 2).                                                 |
-| `filterInstance`  | query    | `String`                 | ❌       | —       | The identifier of the OP instance that makes the request. It will be used o associate the link to the correct connection. |
-| `minorRevision` | query    | `Boolean`                | ❌       | —       | If `true`, adding the link is saved as a minor version change.                                                            |
-| *(body)*        | body     | `WorkPackageLink` (JSON) | ✅       | —       | The link data. See the `WorkPackageLink` model above.                                                                     |
+| Parameter        | Location | Type                     | Required | Default | Description                                                                                                               |
+|------------------|----------|--------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------|
+| `id`             | path     | `String`                 | ✅        | —       | The short unique identifier of the page (obtained from endpoints 1 or 2).                                                 |
+| `filterInstance` | query    | `String`                 | ❌        | —       | The identifier of the OP instance that makes the request. It will be used o associate the link to the correct connection. |
+| `minorRevision`  | query    | `Boolean`                | ❌        | —       | If `true`, adding the link is saved as a minor version change.                                                            |
+| *(body)*         | body     | `WorkPackageLink` (JSON) | ✅        | —       | The link data. See the `WorkPackageLink` model above.                                                                     |
 
 **What happens:**
 
@@ -574,13 +691,13 @@ POST /openproject/documents/{id}/links
 
 **Responses:**
 
-| Status                        | Body                   | When                                                                                                                              |
-|-------------------------------|------------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| **201 Created**               | —                      | The link was created. The `Location` header contains the URL of the new link object.                                              |
-| **400 Bad Request**           | `"Missing link entity"` | The request body was empty/null.                                                                                                  |
-| **401 Unauthorized**          | Error message          | The bearer token is missing, invalid, or doesn't match any configured OpenProject instance (only when `filterInstance=true`).       |
-| **404 Not Found**             | —                      | No page exists with the given `id`.                                                                                               |
-| **500 Internal Server Error** | Error message          | An unexpected error occurred.                                                                                                     |
+| Status                        | Body                    | When                                                                                                                          |
+|-------------------------------|-------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| **201 Created**               | —                       | The link was created. The `Location` header contains the URL of the new link object.                                          |
+| **400 Bad Request**           | `"Missing link entity"` | The request body was empty/null.                                                                                              |
+| **401 Unauthorized**          | Error message           | The bearer token is missing, invalid, or doesn't match any configured OpenProject instance (only when `filterInstance=true`). |
+| **404 Not Found**             | —                       | No page exists with the given `id`.                                                                                           |
+| **500 Internal Server Error** | Error message           | An unexpected error occurred.                                                                                                 |
 
 ---
 
@@ -594,30 +711,30 @@ GET /openproject/links/projects/{id}
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default  | Description                                                           |
-|---------------|----------|-----------|----------|----------|-----------------------------------------------------------------------|
-| `id`          | path     | `String`  | ✅       | —        | The OpenProject **project ID** (must be a number).                    |
-| `filterInstance` | query    | `String`  | ❌       | —    | Matches the links based on the instance that was used to create them. |
-| `number`      | query    | `Integer` | ❌       | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`       | query    | `Integer` | ❌       | `0`      | Offset for pagination (0-based).                                      |
-| `orderField`  | query    | `String`  | ❌       | `""`     | Name of the field to sort results by.                                 |
-| `order`       | query    | `String`  | ❌       | `asc`    | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames` | query    | `Boolean` | ❌       | `false`  | If `true`, user references are displayed as readable names.           |
+| Parameter        | Location | Type      | Required | Default   | Description                                                           |
+|------------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
+| `id`             | path     | `String`  | ✅        | —         | The OpenProject **project ID** (must be a number).                    |
+| `filterInstance` | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
+| `number`         | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
+| `start`          | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
+| `orderField`     | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
+| `order`          | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
+| `prettyNames`    | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
 
 **What happens:**
 
 1. Searches all wiki pages that have a link object with a `project` value matching the given `id`.
-2. If `filterInstance` is not empty, results are further filtered to only include links belonging to the caller's 
+2. If `filterInstance` is not empty, results are further filtered to only include links belonging to the caller's
    OpenProject instance.
 3. Only pages the current user has permission to view are returned.
 
 **Responses:**
 
-| Status                        | Body                                     | When                                                                      |
-|-------------------------------|------------------------------------------|---------------------------------------------------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)            | Search completed. May contain zero or more results.                       |
-| **400 Bad Request**           | `"Project id should be an integer."`     | The `id` was not a valid number.                                          |
-| **500 Internal Server Error** | Error object                             | An unexpected error occurred (e.g. token resolution failure).             |
+| Status                        | Body                                 | When                                                          |
+|-------------------------------|--------------------------------------|---------------------------------------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)        | Search completed. May contain zero or more results.           |
+| **400 Bad Request**           | `"Project id should be an integer."` | The `id` was not a valid number.                              |
+| **500 Internal Server Error** | Error object                         | An unexpected error occurred (e.g. token resolution failure). |
 
 ---
 
@@ -632,15 +749,15 @@ GET /openproject/links/workPackages/{id}
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default | Description                                    |
-|---------------|----------|-----------|----------|---------|------------------------------------------------|
-| `id`          | path     | `String`  | ✅       | —       | The OpenProject **work package ID** (must be a number). |
-| `filterInstance` | query    | `String`  | ❌       | —    | Matches the links based on the instance that was used to create them. |
-| `number`      | query    | `Integer` | ❌       | `0`     | Max results.                                   |
-| `start`       | query    | `Integer` | ❌       | `0`     | Pagination offset.                             |
-| `orderField`  | query    | `String`  | ❌       | `""`    | Sort field.                                    |
-| `order`       | query    | `String`  | ❌       | `asc`   | Sort direction.                                |
-| `prettyNames` | query    | `Boolean` | ❌       | `false` | Human-readable names.                          |
+| Parameter        | Location | Type      | Required | Default | Description                                                           |
+|------------------|----------|-----------|----------|---------|-----------------------------------------------------------------------|
+| `id`             | path     | `String`  | ✅        | —       | The OpenProject **work package ID** (must be a number).               |
+| `filterInstance` | query    | `String`  | ❌        | —       | Matches the links based on the instance that was used to create them. |
+| `number`         | query    | `Integer` | ❌        | `0`     | Max results.                                                          |
+| `start`          | query    | `Integer` | ❌        | `0`     | Pagination offset.                                                    |
+| `orderField`     | query    | `String`  | ❌        | `""`    | Sort field.                                                           |
+| `order`          | query    | `String`  | ❌        | `asc`   | Sort direction.                                                       |
+| `prettyNames`    | query    | `Boolean` | ❌        | `false` | Human-readable names.                                                 |
 
 **What happens:**
 
@@ -650,11 +767,11 @@ GET /openproject/links/workPackages/{id}
 
 **Responses:**
 
-| Status                        | Body                                     | When                              |
-|-------------------------------|------------------------------------------|-----------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)            | Search completed.                 |
-| **400 Bad Request**           | `"WorkPackage id should be an integer."` | The `id` was not a valid number.  |
-| **500 Internal Server Error** | Error object                             | Unexpected error.                 |
+| Status                        | Body                                     | When                             |
+|-------------------------------|------------------------------------------|----------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)            | Search completed.                |
+| **400 Bad Request**           | `"WorkPackage id should be an integer."` | The `id` was not a valid number. |
+| **500 Internal Server Error** | Error object                             | Unexpected error.                |
 
 ---
 
@@ -669,21 +786,21 @@ POST /openproject/spaces
 
 **Parameters:**
 
-| Parameter  | Location | Type      | Required | Default | Description                                                                                                                      |
-|------------|----------|-----------|----------|---------|----------------------------------------------------------------------------------------------------------------------------------|
-| `docRef`   | query    | `String`  | ✅       | —       | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`).                                   |
-| `withId`   | query    | `Boolean` | ❌       | `false` | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3).          |
+| Parameter | Location | Type      | Required | Default | Description                                                                                                             |
+|-----------|----------|-----------|----------|---------|-------------------------------------------------------------------------------------------------------------------------|
+| `docRef`  | query    | `String`  | ✅        | —       | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`).                          |
+| `withId`  | query    | `Boolean` | ❌        | `false` | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3). |
 
 **Responses:**
 
-| Status                        | Body                                                                            | When                                                                |
-|-------------------------------|---------------------------------------------------------------------------------|---------------------------------------------------------------------|
-| **200 OK**                    | `List<Page>` (JSON array)                                                       | All pages were created successfully. If `withId=true`, each page's `id` field contains its assigned short identifier. |
-| **400 Bad Request**           | Error message                                                                   | The `docRef` query parameter was missing.                           |
-| **401 Unauthorized**          | —                                                                               | The authenticated user does not have edit permissions.              |
-| **403 Forbidden**             | `"Document already exists."`                                                    | A page already exists at the target location.                       |
-| **406 Not Acceptable**        | `"The requested wiki does not have the OpenProject application installed."`     | The OpenProject template is not available in the target wiki.       |
-| **500 Internal Server Error** | Error details                                                                   | Something went wrong during page creation.                          |
+| Status                        | Body                                                                        | When                                                                                                                  |
+|-------------------------------|-----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
+| **200 OK**                    | `List<Page>` (JSON array)                                                   | All pages were created successfully. If `withId=true`, each page's `id` field contains its assigned short identifier. |
+| **400 Bad Request**           | Error message                                                               | The `docRef` query parameter was missing.                                                                             |
+| **401 Unauthorized**          | —                                                                           | The authenticated user does not have edit permissions.                                                                |
+| **403 Forbidden**             | `"Document already exists."`                                                | A page already exists at the target location.                                                                         |
+| **406 Not Acceptable**        | `"The requested wiki does not have the OpenProject application installed."` | The OpenProject template is not available in the target wiki.                                                         |
+| **500 Internal Server Error** | Error details                                                               | Something went wrong during page creation.                                                                            |
 
 ---
 
@@ -718,26 +835,52 @@ GET /openproject/mentions
 
 **Parameters:**
 
-| Parameter        | Location | Type      | Required | Default  | Description                                                           |
-|------------------|----------|-----------|----------|----------|-----------------------------------------------------------------------|
-| `workPackage`    | query    | `Integer` | ❌       | —        | A work package id.                                                    |
-| `filterInstance` | query    | `String`  | ❌       | —    | Matches the links based on the instance that was used to create them. |
-| `number`         | query    | `Integer` | ❌       | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`          | query    | `Integer` | ❌       | `0`      | Offset for pagination (0-based).                                      |
-| `orderField`     | query    | `String`  | ❌       | `""`     | Name of the field to sort results by.                                 |
-| `order`          | query    | `String`  | ❌       | `asc`    | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames`    | query    | `Boolean` | ❌       | `false`  | If `true`, user references are displayed as readable names.           |
+| Parameter        | Location | Type      | Required | Default   | Description                                                           |
+|------------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
+| `workPackage`    | query    | `Integer` | ❌        | —         | A work package id.                                                    |
+| `filterInstance` | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
+| `number`         | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
+| `start`          | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
+| `orderField`     | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
+| `order`          | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
+| `prettyNames`    | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
 
 **Responses:**
 
-| Status                        | Body                                      | When                                                                      |
-|-------------------------------|-------------------------------------------|---------------------------------------------------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)             | Search completed. May contain zero or more results.                       |
-| **400 Bad Request**           | `"Work package id should be an integer."` | The `id` was not a valid number.                                          |
-| **500 Internal Server Error** | Error object                              | An unexpected error occurred (e.g. token resolution failure).             |
+| Status                        | Body                                      | When                                                          |
+|-------------------------------|-------------------------------------------|---------------------------------------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)             | Search completed. May contain zero or more results.           |
+| **400 Bad Request**           | `"Work package id should be an integer."` | The `id` was not a valid number.                              |
+| **500 Internal Server Error** | Error object                              | An unexpected error occurred (e.g. token resolution failure). |
 
 ---
 
+### 8. Retrieve the page info and unique id based of a document reference.
+
+```
+GET /openproject/documents
+```
+
+**Parameters:**
+
+| Parameter     | Location | Type      | Required | Default | Description                                                                                                           |
+|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| `docRef`      | query    | `String`  | ✅        | —       | The document reference of a page.                                                                                     |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are added to the response as human-readable display names instead of technical references. |
+| `objects`     | query    | `Boolean` | ❌        | `false` | If `true`, the response includes all structured data objects attached to the page.                                    |
+| `class`       | query    | `Boolean` | ❌        | `false` | If `true`, the response includes class definition metadata.                                                           |
+| `attachments` | query    | `Boolean` | ❌        | `false` | If `true`, the response includes the list of files attached to the page.                                              |
+
+**Responses:**
+
+| Status                        | Body                                                                           | When                                                          |
+|-------------------------------|--------------------------------------------------------------------------------|---------------------------------------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)                                                  | Search completed. May contain zero or more results.           |
+| **400 Bad Request**           | "Missing `docRef` query parameter pointing to the document with an unique id." | The document reference query param is empty                   |
+| **404 Not Found**             |                                                                                | The document reference does not point to an existing page.    |
+| **500 Internal Server Error** | Error object                                                                   | An unexpected error occurred (e.g. token resolution failure). |
+
+---
 
 ## Quick Reference
 
@@ -751,6 +894,7 @@ GET /openproject/mentions
 | 6 | `POST` | `/openproject/spaces`                  | Create a full OpenProject space from template        |
 | 7 | `GET`  | `/openproject/metadata`                | Retrieves the XWiki instance id.                     |
 | 8 | `GET`  | `/openproject/mentions`                | Find pages that contain a mention to a work package. |
+| 9 | `GET`  | `/openproject/documents`               | Retrieve the information and unique id for a page.   |
 
 ---
 
