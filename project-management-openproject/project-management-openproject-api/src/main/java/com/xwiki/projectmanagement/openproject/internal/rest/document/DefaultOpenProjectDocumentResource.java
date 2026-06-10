@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  */
 
 import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -45,6 +47,7 @@ import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
+import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 /**
@@ -86,9 +89,10 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            String spaces = getRestSpaces(documentReference);
-            Page page = getPage(documentReference.getWikiReference().getName(), spaces, documentReference.getName(),
-                withPrettyNames, withObjects, withXClass, withAttachments);
+            Page page = getPage(documentReference.getWikiReference().getName(),
+                documentReference.getSpaceReferences().stream().map(EntityReference::getName)
+                    .collect(Collectors.toList()), documentReference.getName(), withPrettyNames, withObjects,
+                withXClass, withAttachments);
 
             page.setId(id);
 
@@ -118,7 +122,40 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
         }
     }
 
-    private Page getPage(String wikiName, String spaceName, String pageName, Boolean withPrettyNames,
+    @Override
+    public Response getDocumentUniqueId(String documentReference, Boolean withPrettyNames,
+        Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
+    {
+        if (documentReference == null || documentReference.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing `docRef` query parameter pointing to the document with an unique id.")
+                .build();
+        }
+        DocumentReference docRef =
+            resolver.resolve(documentReference, new WikiReference(wikiDescriptorManager.getMainWikiId()));
+
+        try {
+
+            Page page = getPage(docRef.getWikiReference().getName(),
+                docRef.getSpaceReferences().stream().map(EntityReference::getName)
+                    .collect(Collectors.toList()), docRef.getName(), withPrettyNames, withObjects,
+                withXClass, withAttachments);
+
+            String id = null;
+
+            id = urlShortenerManager.createShortenedURL(docRef);
+
+            page.setId(id);
+
+            return Response.ok(page).build();
+        } catch (URLShortenerException e) {
+            getLogger().error("Failed to create the shortened url for document [{}].", docRef, e);
+            return Response.serverError().entity(String.format("Could not create a unique id for the page. Cause [%s].",
+                ExceptionUtils.getRootCauseMessage(e))).build();
+        }
+    }
+
+    private Page getPage(String wikiName, List<String> spaceName, String pageName, Boolean withPrettyNames,
         Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
     {
         try {
@@ -133,7 +170,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                     withXClass, withAttachments);
 
             return page;
-        } catch (Exception e) {
+        } catch (XWikiException e) {
             throw new WebApplicationException(
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
                     .build());

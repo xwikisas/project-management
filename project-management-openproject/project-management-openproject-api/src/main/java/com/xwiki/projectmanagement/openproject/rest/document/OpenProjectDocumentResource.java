@@ -79,4 +79,26 @@ public interface OpenProjectDocumentResource
         @QueryParam("minorRevision") Boolean minorRevision,
         Page page)
         throws XWikiRestException;
+
+    /**
+     * Retrieve the a document identifier by its reference. The document will contain a unique identifier.
+     *
+     * @param documentReference The reference to the document that should be retrieved.
+     * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
+     *     users.
+     * @param withObjects whether the objects attached to the page should also be returned.
+     * @param withClass not sure, actually.
+     * @param withAttachments whether the attachments of the page should also be listed.
+     * @return 200 and the reference of the xwiki document that can be used for the rest api. 404 if the id was not
+     *     found.
+     * @throws XWikiRestException if something went wrong during the retrieval of the page.
+     */
+    @GET
+    Response getDocumentUniqueId(
+        @QueryParam("docRef") String documentReference,
+        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames,
+        @QueryParam("objects") @DefaultValue("false") Boolean withObjects,
+        @QueryParam("class") @DefaultValue("false") Boolean withClass,
+        @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments)
+        throws XWikiRestException;
 }
