@@ -136,7 +136,7 @@ openproject.extension.name=Open Project Integration (Pro)
 projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.project.name=Linked Project
 projectmanagement.relations.openproject.workItem.name=Linked Work Package
-projectmanagement.relations.clients.openproject=Open Project</content>
+projectmanagement.relations.clients.openproject=Open Project
 
 openproject.dashboard.selectConnection.label=Select a connection
 openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}

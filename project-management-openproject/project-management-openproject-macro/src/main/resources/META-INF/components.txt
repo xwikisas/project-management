@@ -7,3 +7,4 @@ com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectAssignedToMeMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCreateWorkPackageMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectNewsMacro

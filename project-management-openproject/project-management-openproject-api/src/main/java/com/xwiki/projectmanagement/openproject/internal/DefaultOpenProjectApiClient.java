@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
+import com.xwiki.projectmanagement.openproject.model.OpenProjectNews;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -134,6 +135,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String API_URL_USERS = "/api/v3/users";
 
     private static final String API_URL_PROJECTS = "/api/v3/projects";
+
+    private static final String API_URL_NEWS = "/api/v3/news";
 
     private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
 
@@ -331,6 +334,22 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
 
         return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
+    }
+
+    @Override
+    public PaginatedResult<OpenProjectNews> getNews(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_NEWS, offset, pageSize, filters, "", "");
+
+        List<OpenProjectNews> newsList = new ArrayList<>();
+        for (JsonNode element : elements) {
+            OpenProjectNews news = new OpenProjectNews(element);
+            news.initializeSelfWithPath(connectionUrl, String.format("/news/%s", news.getId()));
+            newsList.add(news);
+        }
+
+        return new PaginatedResult<>(newsList, offset, pageSize, newsList.size());
     }
 
     @Override

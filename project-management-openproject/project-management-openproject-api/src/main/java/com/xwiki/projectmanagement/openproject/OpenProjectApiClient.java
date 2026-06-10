@@ -25,6 +25,7 @@ import org.xwiki.component.annotation.Role;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.model.OpenProjectNews;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -194,4 +195,17 @@ public interface OpenProjectApiClient
         throw new UnsupportedOperationException(
             "Creating work packages is not supported by this client implementation.");
     }
+
+    /**
+     * Retrieves a paginated list of news items from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving news items.
+     * @param pageSize the number of news items to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project id).
+     * @return a {@link PaginatedResult} containing the list of {@link OpenProjectNews} and pagination metadata.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the news.
+     * @since 1.3
+     */
+    PaginatedResult<OpenProjectNews> getNews(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException;
 }

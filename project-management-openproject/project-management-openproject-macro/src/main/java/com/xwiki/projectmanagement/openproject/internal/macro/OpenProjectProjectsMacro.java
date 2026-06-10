@@ -126,7 +126,7 @@ public class OpenProjectProjectsMacro extends AbstractMacro<OpenProjectProjectsM
         }
 
         try {
-            return apiClient.getProjects(0, MAX_PROJECTS, "").getItems();
+            return apiClient.getProjects(null, MAX_PROJECTS, "").getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve projects from OpenProject.", e);
         }
