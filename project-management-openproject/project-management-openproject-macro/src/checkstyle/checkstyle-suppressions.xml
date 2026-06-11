@@ -27,5 +27,5 @@
 <suppressions>
   <suppress checks="FanOutComplexity" files="OpenProjectNewsMacro.java"/>
   <suppress checks="ClassFanOutComplexity" files="OpenProjectProjectDetailsMacro.java"/>
-
+  <suppress checks="ClassFanOutComplexity" files="OpenProjectSubprojectsMacro.java"/>
 </suppressions>

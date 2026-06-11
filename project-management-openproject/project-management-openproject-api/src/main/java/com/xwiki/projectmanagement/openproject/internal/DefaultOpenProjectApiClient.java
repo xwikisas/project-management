@@ -368,7 +368,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         JsonNode projectJson = getOpenProjectResponse(urlPart, null, null, "", "", "");
         Project project = new Project(projectJson);
         project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
-        return new Project(projectJson);
+        return project;
     }
 
     @Override

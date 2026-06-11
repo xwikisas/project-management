@@ -9,3 +9,4 @@ com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCreateWorkPack
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectNewsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectDetailsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSubprojectsMacro
