@@ -47,7 +47,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectNews;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -135,6 +135,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String API_URL_USERS = "/api/v3/users";
 
     private static final String API_URL_PROJECTS = "/api/v3/projects";
+
+    private static final String API_URL_PROJECT = "/api/v3/projects/%s";
+
+    private static final String API_PROJECT_PLACEHOLDER = "/projects/%s";
 
     private static final String API_URL_NEWS = "/api/v3/news";
 
@@ -246,7 +250,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         for (JsonNode element : elements) {
             Project project = new Project(element);
-            project.initializeSelfWithPath(connectionUrl, String.format("/projects/%s", project.getId()));
+            project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
             projects.add(project);
         }
 
@@ -337,19 +341,34 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<OpenProjectNews> getNews(Integer offset, Integer pageSize, String filters)
+    public PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         JsonNode elements = getOpenProjectResponseEntities(API_URL_NEWS, offset, pageSize, filters, "", "");
 
-        List<OpenProjectNews> newsList = new ArrayList<>();
+        List<News> newsList = new ArrayList<>();
         for (JsonNode element : elements) {
-            OpenProjectNews news = new OpenProjectNews(element);
+            News news = new News(element);
             news.initializeSelfWithPath(connectionUrl, String.format("/news/%s", news.getId()));
+
+            news.setProjectLink(new Linkable(
+                element.path(OP_RESPONSE_TITLE).asText(),
+                String.format("%s/%s", connectionUrl, String.format("projects/%s", news.getId()))
+            ));
             newsList.add(news);
         }
 
         return new PaginatedResult<>(newsList, offset, pageSize, newsList.size());
+    }
+
+    @Override
+    public Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        String urlPart = String.format(API_URL_PROJECT, projectId);
+        JsonNode projectJson = getOpenProjectResponse(urlPart, null, null, "", "", "");
+        Project project = new Project(projectJson);
+        project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
+        return new Project(projectJson);
     }
 
     @Override

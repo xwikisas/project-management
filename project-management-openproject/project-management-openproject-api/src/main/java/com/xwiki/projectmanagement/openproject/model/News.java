@@ -32,7 +32,7 @@ import com.xwiki.projectmanagement.model.Linkable;
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectNews extends BaseOpenProjectObject
+public class News extends BaseOpenProjectObject
 {
     private static final String KEY_TITLE = "title";
 
@@ -53,17 +53,18 @@ public class OpenProjectNews extends BaseOpenProjectObject
     /**
      * Default constructor.
      */
-    public OpenProjectNews()
+    public News()
     {
     }
 
     /**
-     * Creates an {@link OpenProjectNews} from a JsonNode element returned by the {@code /api/v3/news} endpoint.
+     * Creates an {@link News} from a JsonNode element returned by the {@code /api/v3/news} endpoint.
      *
      * @param jsonNode the JsonNode containing the news item data.
      */
-    public OpenProjectNews(JsonNode jsonNode)
+    public News(JsonNode jsonNode)
     {
+        super(jsonNode);
         setTitle(jsonNode.path(KEY_TITLE).asText());
         setSummary(jsonNode.path(KEY_SUMMARY).asText());
         setDescription(jsonNode.path(KEY_DESCRIPTION).path("html").asText());

@@ -30,12 +30,13 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.HeaderBlock;
-import org.xwiki.rendering.block.HorizontalLineBlock;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.HeaderLevel;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
@@ -50,25 +51,21 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
-import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
-import com.xwiki.projectmanagement.openproject.model.News;
+import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectDetailsMacroParameters;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 /**
- * OpenProject macro that retrieves and displays news from a specific OpenProject instance.
+ * OpenProject macro that retrieves and displays the details of a specific project.
  *
  * @version $Id$
- * @since 1.2
+ * @since 1.3
  */
 @Component
 @Singleton
-@Named("openproject-news")
-public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroParameters>
+@Named("openproject-project-details")
+public class OpenProjectProjectDetailsMacro extends AbstractMacro<OpenProjectProjectDetailsMacroParameters>
 {
-    private static final String CLASS = "class";
-
     private static final String DATE_FORMAT = "MMM d, yyyy";
-
-    private static final String TEXT_MUTED_CLASS = "text-muted";
 
     @Inject
     private UserTokenChecker userTokenChecker;
@@ -85,11 +82,11 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
     /**
      * Default constructor.
      */
-    public OpenProjectNewsMacro()
+    public OpenProjectProjectDetailsMacro()
     {
-        super("OpenProject - Project News",
-            "Retrieves and displays the latest news from a specific project on a configured OpenProject instance.",
-            null, OpenProjectNewsMacroParameters.class);
+        super("OpenProject - Project Details",
+            "Displays the details of a specific project from a configured OpenProject instance.",
+            null, OpenProjectProjectDetailsMacroParameters.class);
     }
 
     @Override
@@ -99,7 +96,7 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
     }
 
     @Override
-    public List<Block> execute(OpenProjectNewsMacroParameters parameters, String content,
+    public List<Block> execute(OpenProjectProjectDetailsMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
         List<Block> licenseBlock = licenseChecker.getMissingLicenseBlock(context);
@@ -114,14 +111,14 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
             return warningBlock;
         }
 
-        List<News> newsList = fetchNews(instanceToUse, parameters.getProject(), parameters.getCount());
+        Project project = fetchProject(instanceToUse, Integer.valueOf(parameters.getProject()));
         return Collections.singletonList(
-            new GroupBlock(buildNewsBlocks(newsList), Collections.singletonMap(CLASS, "openproject-news-list"))
-        );
+            new GroupBlock(buildProjectBlocks(project),
+                Collections.emptyMap()
+            ));
     }
 
-    private List<News> fetchNews(String instance, String project, int count)
-        throws MacroExecutionException
+    private Project fetchProject(String instance, Integer projectId) throws MacroExecutionException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
         if (apiClient == null) {
@@ -129,86 +126,74 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
                 String.format("No OpenProject connection found for instance [%s].", instance));
         }
 
-        String filters = "";
-        if (!project.isEmpty()) {
-            filters = String.format("[{\"project_id\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]", project);
-        }
-
         try {
-            return apiClient.getNews(null, count, filters).getItems();
+            return apiClient.getProject(projectId);
         } catch (ProjectManagementException e) {
-            throw new MacroExecutionException("Failed to retrieve news from OpenProject.", e);
+            throw new MacroExecutionException(
+                String.format("Failed to retrieve project [%s] from OpenProject.", projectId), e);
         }
     }
 
-    private List<Block> buildNewsBlocks(List<News> newsList)
+    private List<Block> buildProjectBlocks(Project project)
     {
         List<Block> blocks = new ArrayList<>();
 
-        if (newsList.isEmpty()) {
-            blocks.add(new ParagraphBlock(
-                List.of(new WordBlock("No news found.")),
-                Collections.singletonMap(CLASS, TEXT_MUTED_CLASS)));
-            return blocks;
+        Linkable self = project.getSelf();
+        if (self != null && !self.getValue().isBlank()) {
+            blocks.add(new HeaderBlock(
+                List.of(buildLinkBlock(self.getValue(), self.getLocation())),
+                HeaderLevel.LEVEL2
+            ));
         }
 
-        for (int index = 0; index < newsList.size(); index++) {
-            if (index > 0) {
-                blocks.add(new HorizontalLineBlock());
-            }
-            blocks.add(buildNewsItemBlock(newsList.get(index)));
+        blocks.addAll(buildProjectDetailBlocks(project));
+
+        return blocks;
+    }
+
+    private List<Block> buildProjectDetailBlocks(Project project)
+    {
+        List<Block> blocks = new ArrayList<>();
+
+        if (project.getId() != null) {
+            blocks.add(buildLabelValueBlock("ID", List.of(new WordBlock(String.valueOf(project.getId())))));
+        }
+
+        String identifier = project.getIdentifier();
+        if (identifier != null && !identifier.isBlank()) {
+            blocks.add(buildLabelValueBlock("Identifier", List.of(new WordBlock(identifier))));
+        }
+
+        String description = project.getDescription();
+        if (description != null && !description.isBlank()) {
+            blocks.add(buildLabelValueBlock("Description", List.of(new WordBlock(description))));
+        }
+
+        Linkable status = project.getStatus();
+        if (status != null && !status.getValue().isBlank()) {
+            blocks.add(buildLabelValueBlock("Status",
+                List.of(buildLinkBlock(status.getValue(), status.getLocation()))));
+        }
+
+        if (project.getCreatedAt() != null) {
+            String dateStr = new SimpleDateFormat(DATE_FORMAT).format(project.getCreatedAt());
+            blocks.add(buildLabelValueBlock("Created", List.of(new WordBlock(dateStr))));
         }
 
         return blocks;
     }
 
-    private Block buildNewsItemBlock(News news)
+    private Block buildLabelValueBlock(String label, List<Block> valueBlocks)
     {
-        List<Block> itemBlocks = new ArrayList<>();
-        itemBlocks.add(buildHeaderBlock(news));
-        itemBlocks.add(buildAuthorAndDateBlock(news));
-        itemBlocks.add(addSummaryBlock(news));
-        return new GroupBlock(itemBlocks, Collections.emptyMap());
-    }
-
-    private Block buildHeaderBlock(News news)
-    {
-        Block newsTitleBlock = buildLinkBlock(news.getTitle(), news.getSelf().getLocation());
-        Block projectReferenceBlock = buildLinkBlock(
-            news.getProjectLink().getValue(), news.getProjectLink().getLocation());
-        return new HeaderBlock(
-            List.of(projectReferenceBlock, new WordBlock(" : "), newsTitleBlock),
-            HeaderLevel.LEVEL3
-        );
-    }
-
-    private Block buildAuthorAndDateBlock(News news)
-    {
-        String dateStr = new SimpleDateFormat(DATE_FORMAT).format(news.getCreatedAt());
-
-        return new ParagraphBlock(
-            List.of(
-                buildAuthorLinkBlock(news.getAuthor()),
-                new WordBlock(" · " + dateStr)
-            ),
-            Collections.singletonMap(CLASS, TEXT_MUTED_CLASS)
-        );
-    }
-
-    private Block buildAuthorLinkBlock(Linkable author)
-    {
-        return buildLinkBlock(author.getValue(), author.getLocation());
+        List<Block> content = new ArrayList<>();
+        content.add(new FormatBlock(List.of(new WordBlock(label + ": ")), Format.BOLD));
+        content.addAll(valueBlocks);
+        return new ParagraphBlock(content);
     }
 
     private Block buildLinkBlock(String label, String url)
     {
         ResourceReference ref = new ResourceReference(url, ResourceType.URL);
         return new LinkBlock(List.of(new WordBlock(label)), ref, true);
-    }
-
-    private Block addSummaryBlock(News news)
-    {
-        String summary = news.getSummary();
-        return new ParagraphBlock(List.of(new WordBlock(summary)));
     }
 }

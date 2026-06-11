@@ -27,7 +27,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectNews;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -167,16 +167,22 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<OpenProjectNews> getNews(Integer offset, Integer pageSize, String filters)
+    public PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         String cacheKey = getCacheKey("news", offset, pageSize, filters, "");
-        PaginatedResult<OpenProjectNews> result = (PaginatedResult<OpenProjectNews>) cache.get(cacheKey);
+        PaginatedResult<News> result = (PaginatedResult<News>) cache.get(cacheKey);
         if (result == null) {
             result = client.getNews(offset, pageSize, filters);
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        return client.getProject(projectId);
     }
 
     @Override

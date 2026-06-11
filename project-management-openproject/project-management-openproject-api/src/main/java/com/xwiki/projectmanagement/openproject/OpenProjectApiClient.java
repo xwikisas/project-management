@@ -25,7 +25,7 @@ import org.xwiki.component.annotation.Role;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.openproject.model.OpenProjectNews;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -202,10 +202,24 @@ public interface OpenProjectApiClient
      * @param offset the offset from which to start retrieving news items.
      * @param pageSize the number of news items to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project id).
-     * @return a {@link PaginatedResult} containing the list of {@link OpenProjectNews} and pagination metadata.
+     * @return a {@link PaginatedResult} containing the list of {@link News} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the news.
      * @since 1.3
      */
-    PaginatedResult<OpenProjectNews> getNews(Integer offset, Integer pageSize, String filters)
+    PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException;
+
+    /**
+     * Retrieves the full details of a single project by its identifier from the current OpenProject configuration.
+     *
+     * @param projectId the id of the project to retrieve.
+     * @return the {@link Project} with all detail fields populated.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the project.
+     * @since 1.3
+     */
+    default Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving a single project is not supported by this client implementation.");
+    }
 }
