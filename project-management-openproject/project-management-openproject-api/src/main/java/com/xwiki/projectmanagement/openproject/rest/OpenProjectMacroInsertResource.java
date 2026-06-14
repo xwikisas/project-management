@@ -29,7 +29,7 @@ import javax.ws.rs.core.Response;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 
 /**
- * Hello.
+ * Resource for inserting a macro inside the content of a page.
  *
  * @version $Id$
  * @since 1.2.0
@@ -38,11 +38,15 @@ import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 public interface OpenProjectMacroInsertResource
 {
     /**
-     * @param wikiName wiki.
-     * @param spaces space.
-     * @param pageName page.
-     * @param macroInsertion selection.
-     * @return smth.
+     * Insert a macro in a xwiki page.
+     *
+     * @param wikiName the wiki where to look for the page.
+     * @param spaces the spaces under which the page resides.
+     * @param pageName the name of the page.
+     * @param macroInsertion the model pointing to the location where the macro should be inserted.
+     * @return 200 if the insertion succeeded. 423 if the document is being locked by some other user. 404 if the
+     *     document or the location of the insertion could not be found. 400 if the insertion model is missing
+     *     information. i.e. macro id.
      */
     @POST
     Response insetIntoPage(

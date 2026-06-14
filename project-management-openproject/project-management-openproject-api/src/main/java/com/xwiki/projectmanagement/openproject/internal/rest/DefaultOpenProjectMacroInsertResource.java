@@ -34,7 +34,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.model.reference.DocumentReference;
@@ -61,7 +60,9 @@ import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 import com.xwiki.projectmanagement.openproject.rest.OpenProjectMacroInsertResource;
 
 /**
- * Asd.
+ * Default implementation of {@link OpenProjectMacroInsertResource}. Splits the document in lines, renders each as
+ * plain text, looks for matching words, calculates some scores for each match, inserts the macro at the beginning of
+ * the best line.
  *
  * @version $Id$
  * @since 1.2.0
@@ -296,7 +297,7 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
         return newLine;
     }
 
-    private static @NonNull String getNewContent(SelectionSearch selectionSearch, FoundLine bestLine, String newLine)
+    private static String getNewContent(SelectionSearch selectionSearch, FoundLine bestLine, String newLine)
     {
         StringBuilder newContent = new StringBuilder();
         if (bestLine.lineIndex == 0) {
