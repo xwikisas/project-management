@@ -68,6 +68,8 @@ public interface OpenProjectDocumentResource
      *
      * @param documentReference the reference of the document that will be updated/created.
      * @param minorRevision whether the update will create a minor version or a major version.
+     * @param create if set to true, the creation of a document will fail is one already exists at the specified
+     *     reference.
      * @param page the model of the page that will be used to update/create the document.
      * @return 201: If the page was created. 202: If the page was updated. 304: If the page was not modified. 401: If
      *     the user is not authorized.
@@ -77,6 +79,7 @@ public interface OpenProjectDocumentResource
     Response updateDocument(
         @QueryParam("docRef") String documentReference,
         @QueryParam("minorRevision") Boolean minorRevision,
+        @QueryParam("create") @DefaultValue("false") Boolean create,
         Page page)
         throws XWikiRestException;
 

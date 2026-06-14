@@ -103,7 +103,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     }
 
     @Override
-    public Response updateDocument(String documentReference, Boolean minorRevision, Page page)
+    public Response updateDocument(String documentReference, Boolean minorRevision, Boolean create, Page page)
         throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
@@ -116,7 +116,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
 
         try {
 
-            return putPageAndReturn(docRef, page, minorRevision);
+            return putPageAndReturn(docRef, page, minorRevision, create);
         } catch (XWikiException e) {
             return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
         }
@@ -177,13 +177,16 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
         }
     }
 
-    private Response putPageAndReturn(DocumentReference docRef, Page page, Boolean minorRevision)
+    private Response putPageAndReturn(DocumentReference docRef, Page page, Boolean minorRevision, Boolean create)
         throws XWikiRestException, XWikiException
     {
 
         String spaces = getRestSpaces(docRef);
         DocumentInfo documentInfo =
             getDocumentInfo(docRef.getWikiReference().getName(), spaces, docRef.getName(), null, null, false, false);
+        if (create && !documentInfo.getDocument().isNew()) {
+            throw new WebApplicationException(Response.status(Response.Status.CONFLICT).build());
+        }
         Response createResponse = putPage(documentInfo, page, minorRevision);
 
         // Attach id after making the request. Even if returns a 400 error code, we still want to try to attach the id.
