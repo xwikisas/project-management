@@ -130,7 +130,7 @@
     let root = $(this);
     let updateParamsInput = function () {
       let result = {};
-      root.find('.openproj-relation-client-params-edit :input').filter((i, e) => e.attributes['name']).each((i, elem) => {
+      root.find('.openproj-relation-client-params-edit :input').filter((i, e) =&gt; e.attributes['name']).each((i, elem) =&gt; {
         result[elem.attributes['name'].value] = elem.value;
       });
       console.log(result);
@@ -153,13 +153,13 @@
         let valueContainer = $(this);
 
         // Callback function to execute when mutations are observed
-        const callback = (mutationList, observer) => {
+        const callback = (mutationList, observer) =&gt; {
           observer.disconnect();
           root.find('.openproj-relation-client-params-edit').addClass('hidden');
           valueContainer.addClass('loading');
           // If view mode load information for the ids.
           let clientParamsJSON = valueContainer.text().trim();
-          if (!clientParamsJSON || valueContainer.find(':input').length > 0) {
+          if (!clientParamsJSON || valueContainer.find(':input').length &gt; 0) {
             valueContainer.removeClass('loading');
             observer.observe(valueContainer[0], { childList: true });
             return;
@@ -167,8 +167,8 @@
           try {
             let clientParams = JSON.parse(clientParamsJSON);
             let displayValue = "";
-            Object.entries(clientParams).forEach(param => {
-              displayValue += `&lt;p>&lt;b>${param[0]}&lt;/b>: ${param[1]}&lt;/p>`;
+            Object.entries(clientParams).forEach(param =&gt; {
+              displayValue += `&lt;p&gt;&lt;b&gt;${param[0]}&lt;/b&gt;: ${param[1]}&lt;/p&gt;`;
             });
             valueContainer.html(displayValue);
             $('.proj-manag-relation').data('params', clientParams);

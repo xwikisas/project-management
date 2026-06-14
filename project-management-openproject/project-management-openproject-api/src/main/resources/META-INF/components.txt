@@ -11,6 +11,7 @@ com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService
 com.xwiki.projectmanagement.openproject.internal.rest.suggest.Suggest
 com.xwiki.projectmanagement.openproject.internal.rest.AsyncMacroCallResource
 com.xwiki.projectmanagement.openproject.internal.rest.DefaultInstanceIdResource
+com.xwiki.projectmanagement.openproject.internal.rest.DefaultOpenProjectMacroInsertResource
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkObjectsResource
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkSearchResource
 com.xwiki.projectmanagement.openproject.internal.rest.OpenProjectAvatarResource
