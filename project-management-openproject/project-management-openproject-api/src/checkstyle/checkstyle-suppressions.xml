@@ -30,6 +30,7 @@
   <suppress checks="ParameterNumber" files="OpenProjectLinkSearchResource.java"/>
   <suppress checks="ClassFanOutComplexity|ReturnCount" files="DefaultOpenProjectSpaceResource.java"/>
   <suppress checks="ClassFanOutComplexity|AnonInnerLength" files="OpenProjectClient.java"/>
+  <suppress checks="ClassFanOutComplexity" files="DefaultOpenProjectMacroInsertResource.java"/>
   <suppress checks="FanOutComplexity" files="HandleWorkItems.java"/>
 
 </suppressions>

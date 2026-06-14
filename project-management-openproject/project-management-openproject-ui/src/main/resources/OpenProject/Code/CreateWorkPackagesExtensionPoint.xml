@@ -77,7 +77,6 @@
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
-        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -153,7 +152,7 @@ require.config({
         XWiki.EntityType.DOCUMENT
       )
     )
-    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
+      .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
   }
 });
 
@@ -162,7 +161,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
   $(document).ready(function () {
     const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
     let selectedText = "";
+    let selectedElement;
     let rowsData = [];
+    let rowsExtraData = [];
     let mapping = {};
 
     function getConnection(isSingleWorkPackage) {
@@ -201,7 +202,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       let container = $("#work-packages-container");
       let multipleWorkPackagesContainer = $("#multiple-work-packages-container");
       multipleWorkPackagesContainer.addClass("hidden");
-	  container.empty()
+      container.empty()
       elements.forEach((element, index) =&gt; {
         let card = generateCard(template, projectApiResponse, element, index)
         container.append(card);
@@ -232,7 +233,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
       Object.entries(projectApiResponse).forEach(([key, value]) =&gt; {
         const id = `wp-${key}-${index}`;
-		const inputClass = `wp-${key}`;
+        const inputClass = `wp-${key}`;
         const input = createWpUtils.createInput(id, key, inputClass, value);
         collapseOptions.append(input);
       });
@@ -251,7 +252,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       const container = $("#work-packages-table-mapping-container");
       container.removeClass("hidden");
       $('#mappings-container').empty();
-      $("#add-mapping").off("click").on("click", function() {
+      $("#add-mapping").off("click").on("click", function () {
         addMappingRow(rowsData, response);
       });
     }
@@ -278,7 +279,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
       tableSelect.add(opSelect).on("change", updateMapping);
 
-      row.find(".delete-mapping").on("click", function() {
+      row.find(".delete-mapping").on("click", function () {
         const opKey = row.find(".op-key").val();
         row.remove();
         clearMappedField(opKey)
@@ -290,7 +291,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     function updateMapping() {
       mapping = {};
-      $(".mapping-row").each(function() {
+      $(".mapping-row").each(function () {
         const tableKey = $(this).find(".table-key").val();
         const opKey = $(this).find(".op-key").val();
         if (tableKey &amp;&amp; opKey) {
@@ -302,7 +303,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     }
 
     function clearMappedField(opKey) {
-      $(".work-package-card").each(function(index) {
+      $(".work-package-card").each(function (index) {
         const inputId = `#wp-${opKey}-${index}`;
         const input = $(inputId);
 
@@ -324,7 +325,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     }
 
     function applyMappingToCards() {
-      $(".work-package-card").each(function(index) {
+      $(".work-package-card").each(function (index) {
         const rowData = rowsData[index];
 
         if (!rowData) {
@@ -348,7 +349,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
           if (input.is("select")) {
             const normalizedValue = String(value).trim().toLowerCase();
 
-            const matchingOption = input.find("option").filter(function() {
+            const matchingOption = input.find("option").filter(function () {
               return $(this).text().trim().toLowerCase() === normalizedValue;
             });
 
@@ -362,8 +363,8 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       });
     }
 
-	function handleHighlight() {
-	  const selection = window.getSelection();
+    function handleHighlight() {
+      const selection = window.getSelection();
       const text = selection.toString().trim();
 
       if (!text) {
@@ -403,11 +404,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       } else {
         $('#create-wp-from-table').addClass('hidden');
       }
-	}
+    }
 
-	function handleTextHighlight() {
-	  const selection = window.getSelection();
+    function handleTextHighlight() {
+      const selection = window.getSelection();
       selectedText = selection.toString().trim();
+      selectedElement = selection.getRangeAt(0).startContainer;
 
       $('#selection-menu').hide();
       window.getSelection().removeAllRanges();
@@ -422,9 +424,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         connectionSelect.prop("disabled", true);
         connectionSelect.trigger("change");
       }
-	}
+    }
 
-	function handleTableHighlight() {
+    function handleTableHighlight() {
       const selection = window.getSelection();
       if (!selection.rangeCount) return;
 
@@ -435,6 +437,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       if (!table.length) return;
 
       rowsData = [];
+      rowsExtraData = [];
 
       const rows = table.find("tr");
       const headers = [];
@@ -453,19 +456,22 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
       rows.each((rowIndex, rowEl) =&gt; {
         if (hasHeader &amp;&amp; rowIndex === 0) {
-            return;
-          }
+          return;
+        }
 
         const rowObject = {};
+        const rowExtraObject = {};
         const cells = $(rowEl).find("td");
 
         cells.each((cellIndex, cellEl) =&gt; {
           const key = headers[cellIndex];
           rowObject[key] = $(cellEl).text().trim();
         });
+        rowExtraObject._element = rowEl;
 
         if (Object.keys(rowObject).length &gt; 0) {
           rowsData.push(rowObject);
+          rowsExtraData.push(rowExtraObject);
         }
       });
 
@@ -481,7 +487,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         $connectionSelect.prop("disabled", true);
         $connectionSelect.trigger("change");
       }
-	}
+    }
 
     function findAndOpenFirstInvalid(container) {
       let firstInvalid = null;
@@ -561,7 +567,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     }
 
     async function onMultipleWorkPackagesProjectSelect(element) {
-	  const connection = getConnection(false);
+      const connection = getConnection(false);
       const requestBody = {
         project: element.val(),
       };
@@ -598,7 +604,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         return;
       }
 
-      const payload = {...createWpUtils.buildPayload(container), 'project': project};
+      const payload = { ...createWpUtils.buildPayload(container), 'project': project };
       const connection = $("#connection-select-single-work-package").val();
 
       if (!connection) {
@@ -611,6 +617,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         resetCreateSingleWorkPackageForm();
         $("#create-work-packages-modal").modal("hide");
         createWpUtils.notify(l10n.get("notify.single.success"), "done");
+        document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
       } catch (err) {
         createWpUtils.notify(l10n.get("notify.single.error"), "error")
       }
@@ -639,8 +646,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
       const tasks = [];
 
-      $('.work-package-card').each(function() {
+      $('.work-package-card').each(function (index) {
         const card = $(this);
+        const rowExtraData = rowsExtraData[index] || {};
         const isSelected = card.find('.wp-selected').is(':checked');
 
         if (!isSelected) {
@@ -654,14 +662,15 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         titleEl.removeClass('text-success text-danger');
 
         const p = createWpUtils.createWorkPackagesRequest(connection, payload)
-        .then(resp =&gt; {
-          titleEl.addClass('text-success');
-          return { success: true, resp };
-        })
-        .catch(err =&gt; {
-          titleEl.addClass('text-danger');
-          return { success: false, err };
-        });
+          .then(resp =&gt; {
+            titleEl.addClass('text-success');
+            document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
+            return { success: true, resp };
+          })
+          .catch(err =&gt; {
+            titleEl.addClass('text-danger');
+            return { success: false, err };
+          });
 
         tasks.push(p);
       });
@@ -697,17 +706,17 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       $("#create-single-work-package-form").addClass("hidden");
     }
 
-    $('#create-wp').on('click', function(e) {
+    $('#create-wp').on('click', function (e) {
       e.preventDefault();
       handleTextHighlight();
     });
 
     $('#create-wp-from-table').on('click', (e) =&gt; {
-	  e.preventDefault();
+      e.preventDefault();
       handleTableHighlight();
     });
 
-    $("#work-packages-container").on('input change', '.wp-subject', function() {
+    $("#work-packages-container").on('input change', '.wp-subject', function () {
       const input = $(this);
       const inputId = input.attr('id');
       const index = inputId.split('-').pop();
@@ -755,11 +764,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       submitMultipleWorkPackagesForm($(this));
     });
 
-    $("#create-multiple-work-packages-cancel-button").on("click", function() {
+    $("#create-multiple-work-packages-cancel-button").on("click", function () {
       resetCreateMultipleWorkPackagesForm();
     });
 
-    $("#create-single-work-package-cancel-button").on("click", function() {
+    $("#create-single-work-package-cancel-button").on("click", function () {
       resetCreateSingleWorkPackageForm();
     });
 
@@ -767,13 +776,13 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       handleHighlight();
     });
 
-    $('#xwikicontent').on('mousedown', function(e) {
+    $('#xwikicontent').on('mousedown', function (e) {
       if (!$(e.target).closest('#selection-menu').length) {
         $('#selection-menu').hide();
       }
     });
 
-    $(document).on("click", ".wp-selected, label[for^='wp-selected']", function(e) {
+    $(document).on("click", ".wp-selected, label[for^='wp-selected']", function (e) {
       e.stopPropagation();
     });
 
@@ -799,6 +808,186 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     </property>
     <property>
       <use>currentPage</use>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
+    <number>1</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>b07a0a64-f232-4ffd-a2c2-41041dae2f95</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>require(['jquery'], function ($) {
+  let shouldReload = false;
+  let makeRequest = function (url, data, notification, forceReload) {
+    $.ajax({
+      url: url,
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify(data)
+    })
+      .done(function () {
+        shouldReload = true;
+        if (forceReload) {
+          window.location.reload();
+        }
+        notification.replace(new XWiki.widgets.Notification("Macro inserted successfully.", "done"));
+      })
+      .fail(function (xhr) {
+        if (xhr.status == 423 &amp;&amp; confirm("The page is being edited by someone else. Insert the macro anyway?")) {
+          data.force = true;
+          makeRequest(url, data, notification, forceReload);
+          return;
+        }
+        shouldReload = false;
+        notification.replace(new XWiki.widgets.Notification("Failed to insert the macro in page.", "error"));
+      });
+  };
+  $(document).on('hidden.bs.modal', '#create-work-packages-modal', function () {
+    if (shouldReload) {
+      window.location.reload();
+    }
+  });
+  document.addEventListener('op-creation-success', function (event) {
+    let workPackage = event.detail.createdWp.id;
+    let opInstance = event.detail.connection;
+    let element = event.detail.element;
+    if (!element) {
+      new XWiki.widgets.Notification("Could not insert the OpenProject.");
+      return;
+    }
+    if (element.nodeName == 'TR') {
+      element = $(element).find('td')[0];
+    }
+    let range = document.createRange();
+    range.selectNodeContents(element);
+
+    let selectedText = range.toString().trim();
+    if (!selectedText) {
+      return;
+    }
+    let container = $('#xwikicontent')[0];
+    let node = element;
+    while (node &amp;&amp; node.nodeType !== Node.ELEMENT_NODE) {
+      node = node.parentNode;
+    }
+
+    const block = node.closest('p, li, tr, h1, h2, h3, pre');
+    const line = block.innerText;
+
+    // Range from start of container to start of selection
+    const startRange = document.createRange();
+    startRange.selectNodeContents(container);
+    startRange.setEnd(range.startContainer, range.startOffset);
+    const startOffset = startRange.toString().length;
+
+    let url = XWiki.currentDocument.getRestURL("openproject/macros");
+    let data = {
+      macroId: "openproject",
+      macroParameters: {
+        instance: opInstance,
+        identifier: workPackage,
+        workItemsDisplayer: "workItemInline"
+
+      },
+      selectedText: selectedText,
+      offset: startOffset,
+      fullLine: line
+    };
+    let notification = new XWiki.widgets.Notification("Inserting macro in page.", "inprogress");
+    makeRequest(url, data, notification, !(event.detail.batch == true));
+
+  });
+});</code>
+    </property>
+    <property>
+      <name>InsertMacroInPage</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>onDemand</use>
     </property>
   </object>
   <object>
@@ -841,7 +1030,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
-        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -1017,7 +1205,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>content</name>
         <number>1</number>
         <prettyName>Executed Content</prettyName>
-        <restricted>0</restricted>
         <rows>25</rows>
         <size>120</size>
         <unmodifiable>0</unmodifiable>
@@ -1048,7 +1235,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>parameters</name>
         <number>7</number>
         <prettyName>Extension Parameters</prettyName>
-        <restricted>0</restricted>
         <rows>10</rows>
         <size>40</size>
         <unmodifiable>0</unmodifiable>
