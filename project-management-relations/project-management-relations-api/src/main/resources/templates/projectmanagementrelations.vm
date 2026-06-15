@@ -117,9 +117,16 @@
       </dt>
       <dd>
         <select name="${className}_client">
-          <option value="" disabled selected>#getTranslation('', 'relation.add.placeholder')</option>
-          #foreach ($projManagClientHint in $services.projectmanagement.clientHints)
-            <option value="$escapetool.xml($projManagClientHint)">#getTranslation('clients', $projManagClientHint)</option>
+          #set ($clientHints = $services.projectmanagement.clientHints)
+          #if ("$!clientHints" == '' || $clientHints.size() != 1)
+            <option value="" disabled selected>#getTranslation('', 'relation.add.placeholder')</option>
+          #end
+          #foreach ($projManagClientHint in $clientHints)
+            <option
+              #if("$!clientHints" != '' && $clientHints.size() == 1)selected#end
+              value="$escapetool.xml($projManagClientHint)">
+              #getTranslation('clients', $projManagClientHint)
+            </option>
           #end
         </select>
       </dd>
