@@ -23,7 +23,6 @@ package com.xwiki.projectmanagement.openproject.rest.document;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
@@ -35,13 +34,12 @@ import org.xwiki.rest.XWikiRestException;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/openproject/spaces")
+@Path("/openproject/spaces")
 public interface OpenProjectSpaceResource
 {
     /**
      * Creates the OpenProject project template at the given document reference.
      *
-     * @param wiki the wiki where the template should be created.
      * @param documentReference the reference identifying where the template should be created.
      * @param withId if set to true, also creates and attaches to the created document unique identifiers. The
      *     returned documents will also contain the attached unique id.
@@ -52,7 +50,6 @@ public interface OpenProjectSpaceResource
      */
     @POST
     Response createSpace(
-        @PathParam("wikiName") String wiki,
         @QueryParam("docRef") String documentReference,
         @QueryParam("withId") @DefaultValue("false") Boolean withId)
         throws XWikiRestException;

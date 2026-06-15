@@ -37,13 +37,12 @@ import org.xwiki.rest.model.jaxb.Page;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-@Path("/wikis/{wikiName}/openproject/documents")
+@Path("/openproject/documents")
 public interface OpenProjectDocumentResource
 {
     /**
      * Retrieve the reference of a document given its unique identifier.
      *
-     * @param wiki the wiki where the document resides.
      * @param id the unique identifier associated to a xwiki document.
      * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
      *     users.
@@ -57,7 +56,6 @@ public interface OpenProjectDocumentResource
     @GET
     @Path("/{id}")
     Response getDocument(
-        @PathParam("wikiName") String wiki,
         @PathParam("id") String id,
         @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames,
         @QueryParam("objects") @DefaultValue("false") Boolean withObjects,
@@ -68,9 +66,10 @@ public interface OpenProjectDocumentResource
      * Updates or creates a xwiki document based on an unique identifier. Can also be used to attach an unique
      * identifier to existing pages.
      *
-     * @param wiki the wiki where the document resides or will be created.
      * @param documentReference the reference of the document that will be updated/created.
      * @param minorRevision whether the update will create a minor version or a major version.
+     * @param create if set to true, the creation of a document will fail is one already exists at the specified
+     *     reference.
      * @param page the model of the page that will be used to update/create the document.
      * @return 201: If the page was created. 202: If the page was updated. 304: If the page was not modified. 401: If
      *     the user is not authorized.
@@ -78,9 +77,31 @@ public interface OpenProjectDocumentResource
      */
     @PUT
     Response updateDocument(
-        @PathParam("wikiName") String wiki,
         @QueryParam("docRef") String documentReference,
         @QueryParam("minorRevision") Boolean minorRevision,
+        @QueryParam("create") @DefaultValue("false") Boolean create,
         Page page)
+        throws XWikiRestException;
+
+    /**
+     * Retrieve the a document identifier by its reference. The document will contain a unique identifier.
+     *
+     * @param documentReference The reference to the document that should be retrieved.
+     * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
+     *     users.
+     * @param withObjects whether the objects attached to the page should also be returned.
+     * @param withClass not sure, actually.
+     * @param withAttachments whether the attachments of the page should also be listed.
+     * @return 200 and the reference of the xwiki document that can be used for the rest api. 404 if the id was not
+     *     found.
+     * @throws XWikiRestException if something went wrong during the retrieval of the page.
+     */
+    @GET
+    Response getDocumentUniqueId(
+        @QueryParam("docRef") String documentReference,
+        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames,
+        @QueryParam("objects") @DefaultValue("false") Boolean withObjects,
+        @QueryParam("class") @DefaultValue("false") Boolean withClass,
+        @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments)
         throws XWikiRestException;
 }

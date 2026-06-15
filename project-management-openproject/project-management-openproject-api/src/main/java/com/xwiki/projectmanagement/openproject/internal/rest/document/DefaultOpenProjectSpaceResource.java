@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -50,6 +49,7 @@ import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
@@ -67,7 +67,6 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * @since 1.2.0-rc-1
  */
 @Component
-@Singleton
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectSpaceResource")
 public class DefaultOpenProjectSpaceResource extends XWikiResource implements OpenProjectSpaceResource
 {
@@ -93,15 +92,19 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
     @Inject
     private DocumentReferenceResolver<String> resolver;
 
+    @Inject
+    private WikiDescriptorManager wikiDescriptorManager;
+
     @Override
-    public Response createSpace(String wiki, String documentReference, Boolean withId) throws XWikiRestException
+    public Response createSpace(String documentReference, Boolean withId) throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity("Missing `docRef` query parameter pointing to the space that will be created.")
                 .build();
         }
-        DocumentReference docRef = resolver.resolve(documentReference, new WikiReference(wiki));
+        DocumentReference docRef =
+            resolver.resolve(documentReference, new WikiReference(wikiDescriptorManager.getMainWikiId()));
 
         XWikiContext context = getXWikiContext();
         XWiki xWiki = context.getWiki();

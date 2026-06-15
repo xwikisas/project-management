@@ -26,7 +26,7 @@
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })
 <button class="btn btn-link project-management-new-dataset">Add new dataset</button>
-<textarea id="proj-manag-filter" class="hidden" value="$!escapetool.xml($!displayer.value)"
+<textarea class="proj-manag-filter hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end

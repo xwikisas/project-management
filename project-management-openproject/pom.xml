@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.2.0-rc-2-SNAPSHOT</version>
+    <version>1.2.0-rc-7-SNAPSHOT</version>
   </parent>
   <packaging>pom</packaging>
   <name>Project Management - Open Project - POM</name>
@@ -39,7 +39,7 @@
   </modules>
 
   <properties>
-    <contrib.oauth2.version>2.19.1</contrib.oauth2.version>
+    <contrib.oauth2.version>2.21.1</contrib.oauth2.version>
   </properties>
 
 </project>

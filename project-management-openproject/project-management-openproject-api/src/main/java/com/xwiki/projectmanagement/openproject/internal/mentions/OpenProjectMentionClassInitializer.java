@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.internal.store;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,6 +17,7 @@ package com.xwiki.projectmanagement.openproject.internal.store;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject.internal.mentions;
 
 import java.util.Arrays;
 
@@ -30,39 +29,51 @@ import org.xwiki.model.reference.LocalDocumentReference;
 
 import com.xpn.xwiki.doc.AbstractMandatoryClassInitializer;
 import com.xpn.xwiki.objects.classes.BaseClass;
-import com.xwiki.projectmanagement.openproject.store.WorkPackageLink;
 
 /**
- * Initializes the work package link xclass.
+ * Initializes the mention xobject that will hold the id of work packages.
  *
  * @version $Id$
- * @since 1.2.0-rc-1
+ * @since 1.2.0
  */
 @Component
-@Named(WorkPackageLink.CLASS_FULLNAME)
+@Named(OpenProjectMentionClassInitializer.CLASS_NAME)
 @Singleton
-public class WorkPackageLinkClassDocumentInitializer extends AbstractMandatoryClassInitializer
+public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassInitializer
 {
     /**
-     * The reference identifying the created XClass.
+     * The name of the property that will hold the work package id.
      */
-    public static final LocalDocumentReference CLASS_REFERENCE = new LocalDocumentReference(Arrays.asList(
-        "OpenProject", "Code"), "WorkPackageLink");
+    public static final String PROP_WORK_PACKAGE_ID = "workPackageId";
+
+    /**
+     * The name of the property that will hold the OpenProject instance id.
+     */
+    public static final String PROP_INSTANCE = "instance";
+
+    /**
+     * The full class name of the mention.
+     */
+    public static final String CLASS_NAME = "OpenProject.Code.MentionClass";
+
+    /**
+     * Reference of the xwiki class.
+     */
+    public static final LocalDocumentReference REFERENCE = new LocalDocumentReference(Arrays.asList("OpenProject",
+        "Code"), "MentionClass");
 
     /**
      * Default constructor.
      */
-    public WorkPackageLinkClassDocumentInitializer()
+    public OpenProjectMentionClassInitializer()
     {
-        super(CLASS_REFERENCE, "Open Project Page Link Class");
+        super(REFERENCE, "Open Project Work Package Mention");
     }
 
     @Override
     protected void createClass(BaseClass xclass)
     {
-        xclass.addTextField(WorkPackageLink.FIELD_PROJECT, "OpenProject Project ID", 20);
-        xclass.addTextField(WorkPackageLink.FIELD_WORK_PACKAGE, "OpenProject Work Package ID", 20);
-        xclass.addTextField(WorkPackageLink.FIELD_INSTANCE, "Open Project Instance Name", 40);
-        xclass.addBooleanField(WorkPackageLink.FIELD_PRIMARY, "Is Primary Link?");
+        xclass.addTextField(PROP_WORK_PACKAGE_ID, "Identifier of the WorkPackage", 20);
+        xclass.addTextField(PROP_INSTANCE, "The name of the configured OpenProject instance", 20);
     }
 }

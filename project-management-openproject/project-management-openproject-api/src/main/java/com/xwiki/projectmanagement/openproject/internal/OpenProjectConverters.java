@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.model.Project;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -57,6 +58,27 @@ public final class OpenProjectConverters
         setProjectAndPriority(workItem, workPackage);
 
         return workItem;
+    }
+
+    /**
+     * Converts an OpenProject project entity to a ProjectManagement project entity.
+     *
+     * @param opProject the OpenProject project model to convert.
+     * @return a ProjectManagement project that is equivalent to the OpenProject one.
+     * @since 1.2.0
+     */
+    public static Project convertProject(com.xwiki.projectmanagement.openproject.model.Project opProject)
+    {
+        Project project = new Project();
+        project.setIdentifier(opProject.getSelf());
+        if (opProject.getId() != null) {
+            project.setIdentifier(
+                new Linkable(String.valueOf(opProject.getId()), opProject.getSelf().getLocation()));
+        }
+        if (opProject.getName() != null) {
+            project.setName(opProject.getName());
+        }
+        return project;
     }
 
     private static void setBasicInfo(WorkItem workItem, WorkPackage workPackage)
