@@ -42,6 +42,7 @@ import org.xwiki.model.reference.WikiReference;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
+import org.xwiki.test.ui.po.Select;
 import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.ViewPage;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
@@ -50,6 +51,7 @@ import org.xwiki.test.ui.po.editor.WikiEditPage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the overall functionality of the Open Project integration.
@@ -84,6 +86,8 @@ public class OpenProjectIT
 
     private final LocalDocumentReference page2 = new LocalDocumentReference("Main", "Test2");
 
+    private final LocalDocumentReference page3 = new LocalDocumentReference("Main", "ChartsTest");
+
     private final OpenProjectInstance openProjectInstance = new OpenProjectInstance();
     // If you use an external instance, make sure to have it started with the same commands that
     // {@link OpenProjectInstance} starts the instance. Namely, watch for doorkeeper.rb file.
@@ -101,6 +105,7 @@ public class OpenProjectIT
         setup.loginAsSuperAdmin();
         setup.deletePage(new DocumentReference(page1, wiki));
         setup.deletePage(new DocumentReference(page2, wiki));
+        setup.deletePage(new DocumentReference(page3, wiki));
 
         // OpenProject/Code/OpenProjectConfigurations/
         DocumentReference configsHome =
@@ -381,7 +386,7 @@ public class OpenProjectIT
     }
 
     @Test
-    @Order(80)
+    @Order(150)
     void deleteAndUpdateConfiguredInstance()
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
@@ -396,6 +401,91 @@ public class OpenProjectIT
         adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", "test2"));
         livedata.waitUntilReady();
         assertEquals(0, livedata.countRows());
+    }
+
+    @Test
+    @Order(90)
+    void defaultChartsMacroTest(TestUtils setup)
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page3, wiki);
+
+        // Checks the default OP chart macro parameters, status and type bar,
+        WYSIWYGEditPage editPage = openChartsModal(setup, docRef);
+        new OpenProjectMacroEditModal().clickSubmit();
+        editPage.clickSaveAndView();
+
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+        page.waitUntilPageIsReady();
+
+        setup.getDriver().waitUntilElementIsVisible(By.cssSelector(".chart-container canvas.chart"));
+        WebElement canvas = setup.getDriver().findElement(By.cssSelector(".chart-container canvas.chart"));
+
+        assertEquals("bar", canvas.getAttribute("data-type"));
+
+        String dataSource = canvas.getAttribute("data-source");
+        assertFalse(dataSource == null || dataSource.isEmpty());
+        assertTrue(dataSource.contains("New"));
+        assertTrue(dataSource.contains("In progress"));
+        assertTrue(dataSource.contains("Closed"));
+    }
+
+    @Test
+    @Order(100)
+    void chartsMacroParameterTest(TestUtils setup)
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page3, wiki);
+
+        // Checks all the chart type parameter values.
+        WYSIWYGEditPage editPage = openChartsModal(setup, docRef);
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
+        setChartTypeAndSubmit(setup, modal, "pie");
+        editPage.clickSaveAndView();
+        assertChartType(setup, "pie");
+
+        for (String[] step : new String[][] { { "pie", "line" }, { "line", "doughnut" }, { "doughnut", "bar" } }) {
+            editPage = openMacroCharts(setup, docRef);
+            modal = new OpenProjectMacroEditModal();
+            assertEquals(step[0],
+                new Select(modal.getMacroParameterInput("type")).getFirstSelectedOption().getAttribute("value"));
+            setChartTypeAndSubmit(setup, modal, step[1]);
+            editPage.clickSaveAndView();
+            assertChartType(setup, step[1]);
+        }
+    }
+
+    @Test
+    @Order(110)
+    void chartsMacroFiletTest(TestUtils setup)
+    {
+        setup.setCurrentWiki(wiki.getName());
+        DocumentReference docRef = new DocumentReference(page3, wiki);
+
+        // Checks that the chart macro filter parameter works.
+        WYSIWYGEditPage editPage = openChartsModal(setup, docRef);
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal();
+        modal.clickMore();
+        setup.getDriver().executeScript("arguments[0].value = 'pie';", modal.getMacroParameterInput("type"));
+        modal.getSuggestInput("property").click().waitForSuggestions().selectByValue("priority");
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+        page.waitUntilPageIsReady();
+
+        setup.getDriver().waitUntilElementIsVisible(By.cssSelector(".chart-container canvas.chart"));
+        WebElement canvas = setup.getDriver().findElement(By.cssSelector(".chart-container canvas.chart"));
+        assertEquals("pie", canvas.getAttribute("data-type"));
+
+        String dataSource = canvas.getAttribute("data-source");
+        assertFalse(dataSource == null || dataSource.isEmpty());
+
+        // Checks that the default status labels are not displayed.
+        assertFalse(dataSource.contains("\"Closed\""));
+        assertFalse(dataSource.contains("\"In progress\""));
+        assertFalse(dataSource.contains("\"New\""));
+        assertTrue(dataSource.contains("\"Normal\""));
     }
 
     private static TableLayoutElement saveAndGetFirstOPMacro(WYSIWYGEditPage editPage)
@@ -481,5 +571,46 @@ public class OpenProjectIT
         setup.getDriver().switchTo().defaultContent();
         // Modal opened to a macro.
         return new MacroDialogSelectModal();
+    }
+
+    private WYSIWYGEditPage openMacroCharts(TestUtils setup, DocumentReference docRef)
+    {
+        ViewPage page = setup.gotoPage(docRef);
+        WYSIWYGEditPage wysiwygEditPage = page.editWYSIWYG();
+        CKEditor editor = new CKEditor("content").waitToLoad();
+        MacroDialogSelectModal modal = openMacrosModal(setup);
+        if (!setup.getDriver().hasElement(By.cssSelector(".macro-editor-modal .macro-name"))) {
+            modal.waitUntilReady();
+            modal.filterByText("Open Project Charts", 1);
+            setup.getDriver().findElement(By.cssSelector(".macro-selector-modal .modal-footer .btn-primary")).click();
+        }
+        setup.getDriver().waitUntilElementIsVisible(By.cssSelector(".macro-editor-modal .macro-name"));
+        return wysiwygEditPage;
+    }
+
+    private void assertChartType(TestUtils setup, String expectedType)
+    {
+        assertEquals(expectedType,
+            setup.getDriver().findElement(By.cssSelector(".chart-container canvas.chart")).getAttribute("data-type"));
+    }
+
+    private void setChartTypeAndSubmit(TestUtils setup, OpenProjectMacroEditModal modal, String type)
+    {
+        setup.getDriver().executeScript("arguments[0].value = '" + type + "';", modal.getMacroParameterInput("type"));
+        modal.clickSubmit();
+    }
+
+    private SuggestInputElement selectInstanceInChartsModal(OpenProjectMacroEditModal modal)
+    {
+        SuggestInputElement instanceSuggest = modal.getSuggestInput("instance").click().waitForSuggestions();
+        instanceSuggest.selectByValue(CONNECTION_ID);
+        return instanceSuggest;
+    }
+
+    private WYSIWYGEditPage openChartsModal(TestUtils setup, DocumentReference docRef)
+    {
+        WYSIWYGEditPage editPage = openMacroCharts(setup, docRef);
+        selectInstanceInChartsModal(new OpenProjectMacroEditModal());
+        return editPage;
     }
 }
