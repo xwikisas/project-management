@@ -27,18 +27,20 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProject;
 
 /**
- * Parameters for the OpenProject Project News macro.
+ * Parameters for the OpenProject Project Time Entries macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
+public class OpenProjectProjectTimeEntriesMacroParameters implements OpenProjectInstanceHolder
 {
-    private int count = 5;
-
     private String instance;
 
     private String project;
+
+    private int count = 25;
+
+    private int days = 7;
 
     @Override
     public String getInstance()
@@ -55,7 +57,25 @@ public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
     }
 
     /**
-     * @return the maximum number of news items to display.
+     * @return the identifier of the project within the OpenProject instance.
+     */
+    public String getProject()
+    {
+        return project;
+    }
+
+    /**
+     * @param project see {@link #getProject()}.
+     */
+    @PropertyMandatory
+    @PropertyDisplayType(OpenProjectProject.class)
+    public void setProject(String project)
+    {
+        this.project = project;
+    }
+
+    /**
+     * @return the maximum number of time entries to retrieve.
      */
     public int getCount()
     {
@@ -71,19 +91,18 @@ public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
     }
 
     /**
-     * @return the identifier of the project within the OpenProject instance.
+     * @return the number of past days to include. A value of 0 means no date filter is applied.
      */
-    public String getProject()
+    public int getDays()
     {
-        return project;
+        return days;
     }
 
     /**
-     * @param project see {@link #getProject()}.
+     * @param days see {@link #getDays()}.
      */
-    @PropertyDisplayType(OpenProjectProject.class)
-    public void setProject(String project)
+    public void setDays(int days)
     {
-        this.project = project;
+        this.days = days;
     }
 }

@@ -29,6 +29,7 @@ import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -204,7 +205,7 @@ public interface OpenProjectApiClient
      * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project id).
      * @return a {@link PaginatedResult} containing the list of {@link News} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the news.
-     * @since 1.3
+     * @since 1.2
      */
     PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException;
@@ -215,11 +216,46 @@ public interface OpenProjectApiClient
      * @param projectId the id of the project to retrieve.
      * @return the {@link Project} with all detail fields populated.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the project.
-     * @since 1.3
+     * @since 1.2
      */
     default Project getProject(Integer projectId) throws ProjectManagementException
     {
         throw new UnsupportedOperationException(
             "Retrieving a single project is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of memberships from the current OpenProject configuration.
+     * Each returned {@link User} has its roles populated from the membership data.
+     *
+     * @param offset the offset from which to start retrieving memberships.
+     * @param pageSize the maximum number of memberships to retrieve.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project).
+     * @return a {@link PaginatedResult} of {@link User} objects, each with their roles populated.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the memberships.
+     * @since 1.2
+     */
+    default PaginatedResult<User> getMemberships(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving memberships is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of time entries from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving time entries.
+     * @param pageSize the maximum number of time entries to retrieve.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project and date range).
+     * @return a {@link PaginatedResult} containing the list of {@link TimeEntry} and pagination metadata.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the time entries.
+     * @since 1.2
+     */
+    default PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving time entries is not supported by this client implementation.");
     }
 }

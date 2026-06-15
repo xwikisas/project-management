@@ -29,28 +29,23 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
-import org.xwiki.rendering.block.HeaderBlock;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.Format;
-import org.xwiki.rendering.listener.HeaderLevel;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
-import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
-import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
-import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectDetailsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -58,26 +53,29 @@ import com.xwiki.projectmanagement.openproject.model.Project;
  * OpenProject macro that retrieves and displays the details of a specific project.
  *
  * @version $Id$
- * @since 1.3
+ * @since 1.2
  */
 @Component
 @Singleton
 @Named("openproject-project-details")
-public class OpenProjectProjectDetailsMacro extends AbstractMacro<OpenProjectProjectDetailsMacroParameters>
+public class OpenProjectProjectDetailsMacro
+    extends AbstractOpenProjectDirectMacro<OpenProjectProjectDetailsMacroParameters>
 {
-    private static final String DATE_FORMAT = "MMM d, yyyy";
+    private static final String NAME = "name";
+
+    private static final String ID = "ID";
+
+    private static final String IDENTIFIER = "Identifier";
+
+    private static final String DESCRIPTION = "Description";
+
+    private static final String STATUS = "Status";
+
+    private static final String CREATED = "Created";
 
     @Inject
-    private UserTokenChecker userTokenChecker;
-
-    @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
-
-    @Inject
-    private LicenseChecker licenseChecker;
-
-    @Inject
-    private InstanceResolver instanceResolver;
+    @Named("wiki")
+    private ConfigurationSource wikiConfigSource;
 
     /**
      * Default constructor.
@@ -86,46 +84,21 @@ public class OpenProjectProjectDetailsMacro extends AbstractMacro<OpenProjectPro
     {
         super("OpenProject - Project Details",
             "Displays the details of a specific project from a configured OpenProject instance.",
-            null, OpenProjectProjectDetailsMacroParameters.class);
+            OpenProjectProjectDetailsMacroParameters.class);
     }
 
     @Override
-    public boolean supportsInlineMode()
+    protected List<Block> executeInternal(OpenProjectProjectDetailsMacroParameters parameters, String content,
+        MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
+        throws MacroExecutionException
     {
-        return false;
-    }
-
-    @Override
-    public List<Block> execute(OpenProjectProjectDetailsMacroParameters parameters, String content,
-        MacroTransformationContext context) throws MacroExecutionException
-    {
-        List<Block> licenseBlock = licenseChecker.getMissingLicenseBlock(context);
-        if (!licenseBlock.isEmpty()) {
-            return licenseBlock;
-        }
-
-        String instanceToUse = instanceResolver.resolve(parameters);
-
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
-        if (!warningBlock.isEmpty()) {
-            return warningBlock;
-        }
-
-        Project project = fetchProject(instanceToUse, Integer.valueOf(parameters.getProject()));
+        Project project = fetchProject(apiClient, Integer.valueOf(parameters.getProject()));
         return Collections.singletonList(
-            new GroupBlock(buildProjectBlocks(project),
-                Collections.emptyMap()
-            ));
+            new GroupBlock(buildProjectDetailsBlocks(project), Collections.emptyMap()));
     }
 
-    private Project fetchProject(String instance, Integer projectId) throws MacroExecutionException
+    private Project fetchProject(OpenProjectApiClient apiClient, Integer projectId) throws MacroExecutionException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
-        if (apiClient == null) {
-            throw new MacroExecutionException(
-                String.format("No OpenProject connection found for instance [%s].", instance));
-        }
-
         try {
             return apiClient.getProject(projectId);
         } catch (ProjectManagementException e) {
@@ -134,53 +107,42 @@ public class OpenProjectProjectDetailsMacro extends AbstractMacro<OpenProjectPro
         }
     }
 
-    private List<Block> buildProjectBlocks(Project project)
+    private List<Block> buildProjectDetailsBlocks(Project project)
     {
         List<Block> blocks = new ArrayList<>();
 
-        Linkable self = project.getSelf();
-        if (self != null && !self.getValue().isBlank()) {
-            blocks.add(new HeaderBlock(
-                List.of(buildLinkBlock(self.getValue(), self.getLocation())),
-                HeaderLevel.LEVEL2
-            ));
-        }
-
-        blocks.addAll(buildProjectDetailBlocks(project));
+        addStringBlock(blocks, ID, String.valueOf(project.getId()));
+        addNameBlock(blocks, project);
+        addStringBlock(blocks, IDENTIFIER, project.getIdentifier());
+        addStringBlock(blocks, DESCRIPTION, project.getDescription());
+        addStringBlock(blocks, STATUS, project.getStatus().getValue());
+        addCreatedBlock(blocks, project);
 
         return blocks;
     }
 
-    private List<Block> buildProjectDetailBlocks(Project project)
+    private void addNameBlock(List<Block> blocks, Project project)
     {
-        List<Block> blocks = new ArrayList<>();
-
-        if (project.getId() != null) {
-            blocks.add(buildLabelValueBlock("ID", List.of(new WordBlock(String.valueOf(project.getId())))));
+        Linkable self = project.getSelf();
+        if (self != null && !self.getValue().isBlank()) {
+            blocks.add(buildLabelValueBlock(NAME, List.of(buildLinkBlock(self.getValue(), self.getLocation()))));
         }
+    }
 
-        String identifier = project.getIdentifier();
-        if (identifier != null && !identifier.isBlank()) {
-            blocks.add(buildLabelValueBlock("Identifier", List.of(new WordBlock(identifier))));
+    private void addStringBlock(List<Block> blocks, String label, String value)
+    {
+        if (value != null && !value.isBlank()) {
+            blocks.add(buildLabelValueBlock(label, List.of(new WordBlock(value))));
         }
+    }
 
-        String description = project.getDescription();
-        if (description != null && !description.isBlank()) {
-            blocks.add(buildLabelValueBlock("Description", List.of(new WordBlock(description))));
-        }
-
-        Linkable status = project.getStatus();
-        if (status != null && !status.getValue().isBlank()) {
-            blocks.add(buildLabelValueBlock("Status",
-                List.of(buildLinkBlock(status.getValue(), status.getLocation()))));
-        }
-
+    private void addCreatedBlock(List<Block> blocks, Project project)
+    {
         if (project.getCreatedAt() != null) {
-            String dateStr = new SimpleDateFormat(DATE_FORMAT).format(project.getCreatedAt());
-            blocks.add(buildLabelValueBlock("Created", List.of(new WordBlock(dateStr))));
+            String dateFormat = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy");
+            String dateStr = new SimpleDateFormat(dateFormat).format(project.getCreatedAt());
+            blocks.add(buildLabelValueBlock(CREATED, List.of(new WordBlock(dateStr))));
         }
-
-        return blocks;
     }
 
     private Block buildLabelValueBlock(String label, List<Block> valueBlocks)

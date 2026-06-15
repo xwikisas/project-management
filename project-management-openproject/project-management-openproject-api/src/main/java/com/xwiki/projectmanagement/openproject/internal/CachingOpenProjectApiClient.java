@@ -31,6 +31,7 @@ import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -186,6 +187,19 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<User> getMemberships(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("memberships", offset, pageSize, filters, "");
+        PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getMemberships(offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
     public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
     {
         // We can't really cache this.
@@ -209,6 +223,13 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        return client.getTimeEntries(offset, pageSize, filters);
     }
 
     @Override

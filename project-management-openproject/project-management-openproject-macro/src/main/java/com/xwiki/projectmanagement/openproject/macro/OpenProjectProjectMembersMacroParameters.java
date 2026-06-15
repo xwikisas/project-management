@@ -27,18 +27,18 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProject;
 
 /**
- * Parameters for the OpenProject Project News macro.
+ * Parameters for the OpenProject Project Members macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
+public class OpenProjectProjectMembersMacroParameters implements OpenProjectInstanceHolder
 {
-    private int count = 5;
-
     private String instance;
 
     private String project;
+
+    private int count = 25;
 
     @Override
     public String getInstance()
@@ -55,7 +55,25 @@ public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
     }
 
     /**
-     * @return the maximum number of news items to display.
+     * @return the identifier of the project whose members will be displayed.
+     */
+    public String getProject()
+    {
+        return project;
+    }
+
+    /**
+     * @param project see {@link #getProject()}.
+     */
+    @PropertyMandatory
+    @PropertyDisplayType(OpenProjectProject.class)
+    public void setProject(String project)
+    {
+        this.project = project;
+    }
+
+    /**
+     * @return the maximum number of members to retrieve.
      */
     public int getCount()
     {
@@ -68,22 +86,5 @@ public class OpenProjectNewsMacroParameters implements OpenProjectInstanceHolder
     public void setCount(int count)
     {
         this.count = count;
-    }
-
-    /**
-     * @return the identifier of the project within the OpenProject instance.
-     */
-    public String getProject()
-    {
-        return project;
-    }
-
-    /**
-     * @param project see {@link #getProject()}.
-     */
-    @PropertyDisplayType(OpenProjectProject.class)
-    public void setProject(String project)
-    {
-        this.project = project;
     }
 }

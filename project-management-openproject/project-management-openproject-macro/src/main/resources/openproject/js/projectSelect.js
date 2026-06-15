@@ -23,6 +23,9 @@ require(['jquery'], function ($) {
       return;
     }
     let instance = $('.macro-editor-modal :input[name="instance"]').val();
+    if (instance === 'use_selected_dashboard_connection') {
+      instance = $('#openproject-dashboard-connection-select').val();
+    }
     if (!instance) {
       return;
     }

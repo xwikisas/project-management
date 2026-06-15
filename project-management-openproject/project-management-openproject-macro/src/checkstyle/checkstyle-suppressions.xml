@@ -25,7 +25,5 @@
     "http://www.puppycrawl.com/dtds/suppressions_1_0.dtd">
 
 <suppressions>
-  <suppress checks="FanOutComplexity" files="OpenProjectNewsMacro.java"/>
-  <suppress checks="ClassFanOutComplexity" files="OpenProjectProjectDetailsMacro.java"/>
-  <suppress checks="ClassFanOutComplexity" files="OpenProjectSubprojectsMacro.java"/>
+  <suppress checks="ClassFanOutComplexity" files="OpenProjectProjectTimeEntriesMacro.java"/>
 </suppressions>

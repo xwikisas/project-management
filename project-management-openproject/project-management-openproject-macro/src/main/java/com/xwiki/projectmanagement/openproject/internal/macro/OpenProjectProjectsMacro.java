@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -39,16 +38,12 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.HeaderLevel;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
-import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
-import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
-import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -61,23 +56,11 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 @Component
 @Singleton
 @Named("openproject-projects")
-public class OpenProjectProjectsMacro extends AbstractMacro<OpenProjectProjectsMacroParameters>
+public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<OpenProjectProjectsMacroParameters>
 {
     private static final Integer MAX_PROJECTS = 5;
 
     private static final String CLASS = "class";
-
-    @Inject
-    private UserTokenChecker userTokenChecker;
-
-    @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
-
-    @Inject
-    private LicenseChecker licenseChecker;
-
-    @Inject
-    private InstanceResolver instanceResolver;
 
     /**
      * Default constructor.
@@ -87,49 +70,23 @@ public class OpenProjectProjectsMacro extends AbstractMacro<OpenProjectProjectsM
         super("Open Project - Projects",
             "List the 5 latest projects from a configured OpenProject instance, based on user's OpenProject instance "
                 + "rights.",
-            null, OpenProjectProjectsMacroParameters.class);
+            OpenProjectProjectsMacroParameters.class);
     }
 
     @Override
-    public boolean supportsInlineMode()
+    protected List<Block> executeInternal(OpenProjectProjectsMacroParameters parameters, String content,
+        MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
+        throws MacroExecutionException
     {
-        return false;
-    }
-
-    @Override
-    public List<Block> execute(OpenProjectProjectsMacroParameters parameters, String content,
-        MacroTransformationContext context) throws MacroExecutionException
-    {
-        List<Block> licenseBlock = licenseChecker.getMissingLicenseBlock(context);
-        if (!licenseBlock.isEmpty()) {
-            return licenseBlock;
-        }
-
-        String instanceToUse = instanceResolver.resolve(parameters);
-
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
-
-        if (!warningBlock.isEmpty()) {
-            return warningBlock;
-        }
-
-        return Collections.singletonList(
-            new GroupBlock(buildProjectsBlocks(fetchProjects(instanceToUse)), Collections.emptyMap()));
-    }
-
-    private List<Project> fetchProjects(String instance) throws MacroExecutionException
-    {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
-        if (apiClient == null) {
-            throw new MacroExecutionException(
-                String.format("No OpenProject connection found for instance [%s].", instance));
-        }
-
+        List<Project> projects;
         try {
-            return apiClient.getProjects(null, MAX_PROJECTS, "").getItems();
+            projects = apiClient.getProjects(null, MAX_PROJECTS, "").getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve projects from OpenProject.", e);
         }
+
+        return Collections.singletonList(
+            new GroupBlock(buildProjectsBlocks(projects), Collections.emptyMap()));
     }
 
     private List<Block> buildProjectsBlocks(List<Project> projects)

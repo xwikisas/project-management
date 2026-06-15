@@ -21,7 +21,7 @@ package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.Date;
 
-import org.joda.time.LocalDate;
+import org.joda.time.DateTime;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -67,12 +67,8 @@ public class News extends BaseOpenProjectObject
         super(jsonNode);
         setTitle(jsonNode.path(KEY_TITLE).asText());
         setSummary(jsonNode.path(KEY_SUMMARY).asText());
-        setDescription(jsonNode.path(KEY_DESCRIPTION).path("html").asText());
-
-        String createdAtText = jsonNode.path(KEY_CREATED_AT).asText();
-        if (!createdAtText.isBlank() && createdAtText.length() >= 10) {
-            setCreatedAt(LocalDate.parse(createdAtText.substring(0, 10)).toDate());
-        }
+        setDescription(jsonNode.path(KEY_DESCRIPTION).path("raw").asText());
+        setCreatedAt(DateTime.parse(jsonNode.path(KEY_CREATED_AT).asText()).toDate());
 
         JsonNode linksNode = jsonNode.path(KEY_LINKS);
 

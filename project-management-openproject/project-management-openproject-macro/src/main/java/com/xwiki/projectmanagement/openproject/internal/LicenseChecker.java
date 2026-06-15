@@ -41,7 +41,7 @@ import com.xwiki.licensing.Licensor;
  * Responsible for checking if there is an active OpenProject license.
  *
  * @version $Id$
- * @since 1.3.0-rc-1
+ * @since 1.2
  */
 @Component(roles = LicenseChecker.class)
 @Singleton

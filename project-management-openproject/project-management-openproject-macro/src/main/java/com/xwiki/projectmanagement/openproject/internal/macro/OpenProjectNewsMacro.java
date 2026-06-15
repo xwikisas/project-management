@@ -29,6 +29,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.HeaderBlock;
@@ -39,17 +40,13 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.HeaderLevel;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
-import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
-import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
-import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.News;
 
@@ -62,25 +59,17 @@ import com.xwiki.projectmanagement.openproject.model.News;
 @Component
 @Singleton
 @Named("openproject-news")
-public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroParameters>
+public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenProjectNewsMacroParameters>
 {
     private static final String CLASS = "class";
 
-    private static final String DATE_FORMAT = "MMM d, yyyy";
-
     private static final String TEXT_MUTED_CLASS = "text-muted";
 
-    @Inject
-    private UserTokenChecker userTokenChecker;
+    private static final String PROJECT_FILTER = "[{\"project_id\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
-
-    @Inject
-    private LicenseChecker licenseChecker;
-
-    @Inject
-    private InstanceResolver instanceResolver;
+    @Named("wiki")
+    private ConfigurationSource wikiConfigSource;
 
     /**
      * Default constructor.
@@ -89,49 +78,24 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
     {
         super("OpenProject - Project News",
             "Retrieves and displays the latest news from a specific project on a configured OpenProject instance.",
-            null, OpenProjectNewsMacroParameters.class);
+            OpenProjectNewsMacroParameters.class);
     }
 
     @Override
-    public boolean supportsInlineMode()
-    {
-        return false;
-    }
-
-    @Override
-    public List<Block> execute(OpenProjectNewsMacroParameters parameters, String content,
-        MacroTransformationContext context) throws MacroExecutionException
-    {
-        List<Block> licenseBlock = licenseChecker.getMissingLicenseBlock(context);
-        if (!licenseBlock.isEmpty()) {
-            return licenseBlock;
-        }
-
-        String instanceToUse = instanceResolver.resolve(parameters);
-
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
-        if (!warningBlock.isEmpty()) {
-            return warningBlock;
-        }
-
-        List<News> newsList = fetchNews(instanceToUse, parameters.getProject(), parameters.getCount());
-        return Collections.singletonList(
-            new GroupBlock(buildNewsBlocks(newsList), Collections.singletonMap(CLASS, "openproject-news-list"))
-        );
-    }
-
-    private List<News> fetchNews(String instance, String project, int count)
+    protected List<Block> executeInternal(OpenProjectNewsMacroParameters parameters, String content,
+        MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
-        if (apiClient == null) {
-            throw new MacroExecutionException(
-                String.format("No OpenProject connection found for instance [%s].", instance));
-        }
+        List<News> newsList = fetchNews(apiClient, parameters.getProject(), parameters.getCount());
+        return Collections.singletonList(new GroupBlock(buildNewsBlocks(newsList), Collections.emptyMap()));
+    }
 
+    private List<News> fetchNews(OpenProjectApiClient apiClient, String project, int count)
+        throws MacroExecutionException
+    {
         String filters = "";
-        if (!project.isEmpty()) {
-            filters = String.format("[{\"project_id\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]", project);
+        if (project != null && !project.isBlank()) {
+            filters = String.format(PROJECT_FILTER, project);
         }
 
         try {
@@ -146,8 +110,7 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
         List<Block> blocks = new ArrayList<>();
 
         if (newsList.isEmpty()) {
-            blocks.add(new ParagraphBlock(
-                List.of(new WordBlock("No news found.")),
+            blocks.add(new ParagraphBlock(List.of(new WordBlock("No news found.")),
                 Collections.singletonMap(CLASS, TEXT_MUTED_CLASS)));
             return blocks;
         }
@@ -174,25 +137,22 @@ public class OpenProjectNewsMacro extends AbstractMacro<OpenProjectNewsMacroPara
     private Block buildHeaderBlock(News news)
     {
         Block newsTitleBlock = buildLinkBlock(news.getTitle(), news.getSelf().getLocation());
-        Block projectReferenceBlock = buildLinkBlock(
-            news.getProjectLink().getValue(), news.getProjectLink().getLocation());
-        return new HeaderBlock(
-            List.of(projectReferenceBlock, new WordBlock(" : "), newsTitleBlock),
-            HeaderLevel.LEVEL3
-        );
+        Linkable projectLink = news.getProjectLink();
+        if (projectLink == null || projectLink.getValue().isBlank()) {
+            return new HeaderBlock(List.of(newsTitleBlock), HeaderLevel.LEVEL3);
+        }
+        Block projectReferenceBlock = buildLinkBlock(projectLink.getValue(), projectLink.getLocation());
+        return new HeaderBlock(List.of(projectReferenceBlock, new WordBlock(": "), newsTitleBlock),
+            HeaderLevel.LEVEL3);
     }
 
     private Block buildAuthorAndDateBlock(News news)
     {
-        String dateStr = new SimpleDateFormat(DATE_FORMAT).format(news.getCreatedAt());
+        String dateFormat = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy");
+        String dateStr = new SimpleDateFormat(dateFormat).format(news.getCreatedAt());
 
-        return new ParagraphBlock(
-            List.of(
-                buildAuthorLinkBlock(news.getAuthor()),
-                new WordBlock(" · " + dateStr)
-            ),
-            Collections.singletonMap(CLASS, TEXT_MUTED_CLASS)
-        );
+        return new ParagraphBlock(List.of(buildAuthorLinkBlock(news.getAuthor()), new WordBlock(" · " + dateStr)),
+            Collections.singletonMap(CLASS, TEXT_MUTED_CLASS));
     }
 
     private Block buildAuthorLinkBlock(Linkable author)

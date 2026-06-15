@@ -157,6 +157,6 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public void initializeSelfWithPath(String connectionUrl, String resourcePath)
     {
-        this.setSelf(new Linkable("", String.format("%s%s", connectionUrl, resourcePath)));
+        this.getSelf().setLocation(String.format("%s%s", connectionUrl, resourcePath));
     }
 }

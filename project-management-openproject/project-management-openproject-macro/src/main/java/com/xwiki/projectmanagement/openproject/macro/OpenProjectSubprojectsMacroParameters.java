@@ -30,7 +30,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
  * Parameters for the OpenProject Subprojects macro.
  *
  * @version $Id$
- * @since 1.3
+ * @since 1.2
  */
 public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanceHolder
 {
