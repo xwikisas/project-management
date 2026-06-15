@@ -77,7 +77,6 @@
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
-        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -151,7 +150,9 @@
 
     root.find('dd').each(function () {
         let valueContainer = $(this);
-
+        if (valueContainer.find(':input').length &gt; 0) {
+          return;
+        }
         // Callback function to execute when mutations are observed
         const callback = (mutationList, observer) =&gt; {
           observer.disconnect();
@@ -261,7 +262,6 @@
         <name>content</name>
         <number>1</number>
         <prettyName>Executed Content</prettyName>
-        <restricted>0</restricted>
         <rows>25</rows>
         <size>120</size>
         <unmodifiable>0</unmodifiable>
@@ -292,7 +292,6 @@
         <name>parameters</name>
         <number>7</number>
         <prettyName>Extension Parameters</prettyName>
-        <restricted>0</restricted>
         <rows>10</rows>
         <size>40</size>
         <unmodifiable>0</unmodifiable>

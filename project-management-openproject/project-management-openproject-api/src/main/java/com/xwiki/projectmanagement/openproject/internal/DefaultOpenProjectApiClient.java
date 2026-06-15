@@ -135,8 +135,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_PROJECTS = "/api/v3/projects";
 
-    private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
-
     private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
 
     private static final String OP_OFFSET = "offset";
@@ -196,7 +194,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             pageSize,
             filters,
             "",
-            API_URL_SELECT_ELEMENTS_PARAM
+            ""
         );
 
         List<User> users = new ArrayList<>();
@@ -236,7 +234,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 pageSize,
                 filters,
                 "",
-                API_URL_SELECT_ELEMENTS_PARAM
+                ""
             );
 
         List<Project> projects = new ArrayList<>();
