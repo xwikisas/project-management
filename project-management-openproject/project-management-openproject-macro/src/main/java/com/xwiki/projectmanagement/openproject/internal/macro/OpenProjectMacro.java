@@ -33,8 +33,10 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
@@ -125,7 +127,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
-        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
-            Collections.singletonMap(CLASS, "open-project-macro")));
+        List<Block> result = super.execute(parameters, content, context);
+        Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
+        return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
+            : Collections.singletonList(new GroupBlock(result, params));
     }
 }

@@ -34,13 +34,14 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.MacroBlock;
-import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -108,8 +109,7 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
         addIdentifierLink(children, workItem);
         addSummaryBadge(children, workItem);
 
-        return Collections.singletonList(
-            new GroupBlock(children));
+        return context.isInline() ? children : Collections.singletonList(new GroupBlock(children));
     }
 
     private String getNoItemsMessage()
@@ -163,8 +163,8 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
         if (summary != null && !summary.isEmpty()) {
             List<Block> summaryBlocks = getPropertyDisplayerManager().displayProperty(String.class.getName(), summary,
                 Collections.emptyMap());
-            GroupBlock summaryGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(summaryBlocks)),
-                Collections.singletonMap(ATTRIBUTE_CLASS, "text-muted work-package-inline-summary"));
+            Block summaryGroup = new FormatBlock(summaryBlocks, Format.NONE, Collections.singletonMap(ATTRIBUTE_CLASS,
+                "text-muted work-package-inline-summary"));
             children.add(summaryGroup);
         }
     }
