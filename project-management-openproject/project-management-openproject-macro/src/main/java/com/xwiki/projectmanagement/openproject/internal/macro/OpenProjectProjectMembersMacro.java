@@ -68,6 +68,8 @@ public class OpenProjectProjectMembersMacro
 
     private static final String MEMBERS_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
 
+    private static final String VIEW_ALL_MEMBERS_URL = "%s/projects/%s/members";
+
     /**
      * Default constructor.
      */
@@ -94,7 +96,7 @@ public class OpenProjectProjectMembersMacro
         }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
-        String viewAllUrl = String.format("%s/projects/%s/members", serverUrl, project);
+        String viewAllUrl = String.format(VIEW_ALL_MEMBERS_URL, serverUrl, project);
 
         return Collections.singletonList(
             new GroupBlock(buildMembersBlocks(members, viewAllUrl), Collections.emptyMap()));
@@ -105,10 +107,8 @@ public class OpenProjectProjectMembersMacro
         List<Block> blocks = new ArrayList<>();
 
         if (members.isEmpty()) {
-            blocks.add(new ParagraphBlock(
-                List.of(new WordBlock("No members found.")),
-                Collections.singletonMap(CLASS, "text-muted")
-            ));
+            blocks.add(new ParagraphBlock(List.of(new WordBlock("No members found.")),
+                Collections.singletonMap(CLASS, "text-muted")));
         } else {
             Map<String, List<Linkable>> membersByRole = groupByRole(members);
             for (Map.Entry<String, List<Linkable>> entry : membersByRole.entrySet()) {
