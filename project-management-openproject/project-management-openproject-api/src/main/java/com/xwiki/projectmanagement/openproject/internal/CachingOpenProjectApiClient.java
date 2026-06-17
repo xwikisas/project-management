@@ -29,10 +29,12 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -160,6 +162,31 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         PaginatedResult<Priority> result = (PaginatedResult<Priority>) cache.get(cacheKey);
         if (result == null) {
             result = client.getPriorities();
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public PaginatedResult<Version> getVersions() throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("versions", 1, Integer.MAX_VALUE, "", "");
+        PaginatedResult<Version> result = (PaginatedResult<Version>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getVersions();
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("sprints", offset, pageSize, filters, "");
+        PaginatedResult<Sprint> result = (PaginatedResult<Sprint>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getSprints(offset, pageSize, filters);
             cache.set(cacheKey, result);
         }
         return result;

@@ -27,10 +27,12 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -155,6 +157,36 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the priorities.
      */
     PaginatedResult<Priority> getPriorities() throws ProjectManagementException;
+
+    /**
+     * Retrieves all available versions from the current OpenProject configuration.
+     *
+     * @return a {@link PaginatedResult} containing the list of {@link Version}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the versions.
+     * @since 1.2
+     */
+    default PaginatedResult<Version> getVersions() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving versions is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of available sprints from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving sprints.
+     * @param pageSize the number of sprints to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @return a {@link PaginatedResult} containing the list of {@link Sprint}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the sprints.
+     * @since 1.2
+     */
+    default PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving sprints is not supported by this client implementation.");
+    }
 
     /**
      * Retrieve the user avatar.
