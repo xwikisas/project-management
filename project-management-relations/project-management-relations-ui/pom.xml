@@ -42,6 +42,12 @@
       <artifactId>xwiki-pro-commons-webjar</artifactId>
       <version>${xwikipro.commons.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.xwiki.contrib</groupId>
+      <artifactId>macro-fullcalendar-ui</artifactId>
+      <version>${fullcalendar.version}</version>
+      <type>xar</type>
+    </dependency>
   </dependencies>
 
 </project>

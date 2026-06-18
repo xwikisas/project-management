@@ -51,7 +51,8 @@ public final class OpenProjectFilterHandler
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static final Set<String> PROPERTIES_DATE = Set.of("startDate", "dueDate", "creationDate", "updateDate");
+    private static final Set<String> PROPERTIES_DATE = Set.of("startDate", "dueDate", "creationDate", "updateDate",
+        "dates_interval");
 
     private static final Set<String> OPERATORS_EMPTY_VALS =
         Set.of("t", "w", "*", "!*", String.valueOf('o'), "c");
