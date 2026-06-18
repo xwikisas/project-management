@@ -513,7 +513,7 @@
         "id": "identifier.value",
         "filter": {
           "id": "list",
-          "searchURL": "/xwiki/rest/wikis/${services.wiki.currentWikiId}/openproject/instance/${opInstance}/suggest/id?search={encodedQuery}"
+          "searchURL": "${request.contextPath}/rest/wikis/${services.wiki.currentWikiId}/openproject/instance/${opInstance}/suggest/id?search={encodedQuery}"
          },
          "filterable": false,
          "sortable": false,
