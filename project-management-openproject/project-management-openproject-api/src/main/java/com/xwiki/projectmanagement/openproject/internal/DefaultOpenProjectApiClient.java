@@ -53,6 +53,7 @@ import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static javax.ws.rs.HttpMethod.GET;
@@ -329,6 +330,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
 
         return new PaginatedResult<>(priorities, 0, priorities.size(), priorities.size());
+    }
+
+    @Override
+    public PaginatedResult<WikiPageLink> getPageLinks(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode elements =
+            getOpenProjectResponseEntities("/api/v3/wiki_page_links", offset, pageSize, filters, "", "");
+        List<WikiPageLink> pageLinks = new ArrayList<>();
+
+        for (JsonNode element : elements) {
+            WikiPageLink pageLink = new WikiPageLink(element);
+            pageLinks.add(pageLink);
+        }
+        return new PaginatedResult<>(pageLinks, offset, pageLinks.size(), pageLinks.size());
     }
 
     @Override

@@ -136,7 +136,9 @@ openproject.extension.name=Open Project Integration (Pro)
 projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.project.name=Linked Project
 projectmanagement.relations.openproject.workItem.name=Linked Work Package
-projectmanagement.relations.clients.openproject=Open Project</content>
+projectmanagement.relations.clients.openproject=Open Project
+openproject.relations.mentions.noInstance=No OpenProject instance selected.
+openproject.relations.mentions.title=Mentioned on:</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

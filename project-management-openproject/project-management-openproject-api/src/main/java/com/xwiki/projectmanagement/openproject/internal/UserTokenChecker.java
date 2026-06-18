@@ -78,40 +78,38 @@ public class UserTokenChecker
     {
         XWikiContext xContext = contextProvider.get();
         String viewAction = "view";
-        if (xContext.getAction().equals(viewAction)) {
-            String connectionName = instance;
+        String connectionName = instance;
 
-            if (xContext.getUserReference() == null
-                || openProjectConfiguration.getAccessTokenForConfiguration(connectionName) == null)
-            {
-                List<Block> warning = new ArrayList<>();
-                warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
-                if (xContext.getUserReference() != null) {
-                    String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
-                    LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                        OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
-                    String redirectUrl =
-                        xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
-                            + "?connectionName="
-                            + connectionName
-                            + "&redirectUrl="
-                            + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
-                            + "&token="
-                            + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+        if (xContext.getUserReference() == null
+            || openProjectConfiguration.getAccessTokenForConfiguration(connectionName) == null)
+        {
+            List<Block> warning = new ArrayList<>();
+            warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
+            if (xContext.getUserReference() != null) {
+                String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
+                LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
+                    OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
+                String redirectUrl =
+                    xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
+                        + "?connectionName="
+                        + connectionName
+                        + "&redirectUrl="
+                        + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
+                        + "&token="
+                        + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
 
-                    List<Block> linkContentBlocks =
-                        Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
+                List<Block> linkContentBlocks =
+                    Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
 
-                    LinkBlock link = new LinkBlock(
-                        linkContentBlocks,
-                        new ResourceReference(redirectUrl, ResourceType.URL),
-                        false
-                    );
-                    warning.add(link);
-                }
-                return Collections.singletonList(
-                    new GroupBlock(warning, Collections.singletonMap(CLASS, "box warningmessage")));
+                LinkBlock link = new LinkBlock(
+                    linkContentBlocks,
+                    new ResourceReference(redirectUrl, ResourceType.URL),
+                    false
+                );
+                warning.add(link);
             }
+            return Collections.singletonList(
+                new GroupBlock(warning, Collections.singletonMap(CLASS, "box warningmessage")));
         }
         return Collections.emptyList();
     }

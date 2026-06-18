@@ -1,6 +1,7 @@
 com.xwiki.projectmanagement.openproject.internal.displayer.OpenProjectDisplayerManager
 com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager
 com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
+com.xwiki.projectmanagement.openproject.internal.UserTokenChecker
 com.xwiki.projectmanagement.openproject.internal.mentions.DefaultOpenProjectMentionsResource
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionSchedulingListener
