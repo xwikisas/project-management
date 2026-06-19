@@ -26,6 +26,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.xwiki.environment.Environment;
+import org.xwiki.environment.internal.ServletEnvironment;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -51,13 +53,17 @@ import static org.xwiki.xml.html.HTMLConstants.ATTRIBUTE_CLASS;
  */
 public class UserPropertyDisplayer implements WorkItemPropertyDisplayer
 {
-    private WorkItemPropertyDisplayerManager displayerManager;
+    private final Environment environment;
+
+    private final WorkItemPropertyDisplayerManager displayerManager;
 
     /**
      * @param displayerManager the displayer manager that handles this displayer.
+     * @param environment the servlet environment used to retrieve the context path.
      */
-    public UserPropertyDisplayer(WorkItemPropertyDisplayerManager displayerManager)
+    public UserPropertyDisplayer(WorkItemPropertyDisplayerManager displayerManager, Environment environment)
     {
+        this.environment = environment;
         this.displayerManager = displayerManager;
     }
 
@@ -95,7 +101,8 @@ public class UserPropertyDisplayer implements WorkItemPropertyDisplayer
             GroupBlock group = new GroupBlock();
             String userAvatarLink = ((LinkBlock) userLinkBlock).getReference().getReference();
             String userAvatarPath = userAvatarLink.substring(userAvatarLink.indexOf("/users/"));
-            String xwikiUserAvatarLink = String.format("/xwiki/rest/wikis/%s/openproject/instance/%s%s/avatar",
+            String xwikiUserAvatarLink = String.format("%s/rest/wikis/%s/openproject/instance/%s%s/avatar",
+                getContextPath(),
                 params.get(OpenProjectDisplayerManager.KEY_WIKI),
                 params.get(OpenProjectDisplayerManager.KEY_INSTANCE),
                 userAvatarPath);
@@ -110,5 +117,13 @@ public class UserPropertyDisplayer implements WorkItemPropertyDisplayer
             linksWithAvatars.add(group);
         }
         return linksWithAvatars;
+    }
+
+    private String getContextPath()
+    {
+        if (this.environment instanceof ServletEnvironment) {
+            return ((ServletEnvironment) this.environment).getServletContext().getContextPath();
+        }
+        return "";
     }
 }

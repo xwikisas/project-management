@@ -41,6 +41,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
@@ -210,10 +211,7 @@ public class Suggest extends XWikiResource
 
     private String buildFilter(String fieldName, String searchValue)
     {
-        if (searchValue.isEmpty()) {
-            return "[]";
-        }
-        return String.format("[{\"%s\":{\"operator\":\"~\",\"values\":[\"%s\"]}}]", fieldName, searchValue);
+        return new FilterBuilder().addFilter(fieldName, FilterBuilder.Operator.CONTAINS, searchValue).build();
     }
 
     private Map<String, String> createSuggestion(String value, String label, String url)
