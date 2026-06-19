@@ -130,7 +130,10 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 String serverURL = baseObject.getStringValue("serverURL");
                 String clientId = baseObject.getStringValue("clientId");
                 String clientSecret = baseObject.getStringValue("clientSecret");
-                objects.add(new OpenProjectConnection(connectionName, serverURL, clientId, clientSecret));
+                String instanceId = baseObject.getStringValue("instanceId");
+                OpenProjectConnection connection =
+                    new OpenProjectConnection(connectionName, serverURL, clientId, clientSecret, instanceId);
+                objects.add(connection);
             }
             return objects;
         } catch (QueryException e) {

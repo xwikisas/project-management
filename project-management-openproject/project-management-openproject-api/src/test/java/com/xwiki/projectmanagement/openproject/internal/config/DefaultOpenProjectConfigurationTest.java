@@ -19,7 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
-import java.lang.reflect.Field;
+import java.net.URI;
+import java.net.http.HttpRequest;
 import java.util.List;
 
 import javax.inject.Named;
@@ -28,6 +29,8 @@ import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.cache.CacheException;
@@ -47,17 +50,19 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,6 +89,15 @@ public class DefaultOpenProjectConfigurationTest
     @MockComponent
     private OAuth2ClientScriptService oauth2Client;
 
+    @MockComponent
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
+
+    @Mock
+    private OpenProjectApiClientBuilder builder;
+
+    @Mock
+    private OpenProjectApiClient apiClient;
+
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
     private List<OpenProjectConnection> connections;
@@ -96,7 +110,8 @@ public class DefaultOpenProjectConfigurationTest
         "firstConnection",
         "firstConnectionURL",
         "firstConnectionClientId",
-        "firstConnectionClientSecret"
+        "firstConnectionClientSecret",
+        "firstInstanceId"
     );
 
     private static final String GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE =
@@ -113,13 +128,15 @@ public class DefaultOpenProjectConfigurationTest
                 "secondConnection",
                 "secondConnectionURL",
                 "secondConnectionClientId",
-                "secondConnectionClientSecret"
+                "secondConnectionClientSecret",
+                "firstInstanceId"
             ),
             new OpenProjectConnection(
                 "thirdConnection",
                 "thirdConnectionURL",
                 "thirdConnectionClientId",
-                "thirdConnectionClientSecret"
+                "thirdConnectionClientSecret",
+                "firstInstanceId"
             )
         );
 
@@ -216,32 +233,29 @@ public class DefaultOpenProjectConfigurationTest
     }
 
     @Test
-    public void getOpenProjectApiClientTest() throws NoSuchFieldException, IllegalAccessException
+    public void getOpenProjectApiClientTest()
     {
+        when(openProjectApiClientFactory.builder()).thenReturn(builder);
+        when(builder.serverUrl(any())).thenReturn(builder);
+        when(builder.authentication(any())).thenReturn(builder);
+        when(builder.caching(any(), any())).thenReturn(builder);
+        when(builder.build()).thenReturn(apiClient);
+
         OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
 
-        assertNotNull(client);
+        assertSame(apiClient, client);
 
-        Assertions.assertInstanceOf(CachingOpenProjectApiClient.class, client);
+        verify(builder).serverUrl(opConnection.getServerURL());
+        verify(builder).caching(any(), eq(opConnection.getClientId()));
 
-        Field clientField = CachingOpenProjectApiClient.class.getDeclaredField("client");
-        Field clientIdField = CachingOpenProjectApiClient.class.getDeclaredField("clientId");
-        clientField.setAccessible(true);
-        clientIdField.setAccessible(true);
-        DefaultOpenProjectApiClient opApiClient = (DefaultOpenProjectApiClient) clientField.get(client);
+        ArgumentCaptor<OpenProjectAuthenticator> authCaptor = ArgumentCaptor.forClass(OpenProjectAuthenticator.class);
+        verify(builder).authentication(authCaptor.capture());
 
-        Field tokenField = DefaultOpenProjectApiClient.class.getDeclaredField("token");
-        Field connectionUrlField = DefaultOpenProjectApiClient.class.getDeclaredField("connectionUrl");
-        tokenField.setAccessible(true);
-        connectionUrlField.setAccessible(true);
-
-        String clientId = (String) clientIdField.get(client);
-        String token = (String) tokenField.get(opApiClient);
-        String connectionUrl = (String) connectionUrlField.get(opApiClient);
-
-        assertEquals(ACCESS_TOKEN, token);
-        assertEquals(opConnection.getServerURL(), connectionUrl);
-        assertEquals(clientId, opConnection.getClientId());
+        // Any valid absolute URL works here; the authenticator only adds headers, it does not depend on the URI.
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create("http://localhost"));
+        authCaptor.getValue().authenticate(requestBuilder);
+        assertEquals("Bearer " + ACCESS_TOKEN,
+            requestBuilder.build().headers().firstValue("Authorization").orElse(null));
     }
 
     @Test

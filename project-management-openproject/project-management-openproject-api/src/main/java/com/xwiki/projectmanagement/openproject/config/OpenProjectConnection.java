@@ -37,6 +37,8 @@ public class OpenProjectConnection
 
     private String clientSecret;
 
+    private String instanceId;
+
     /**
      * Constructs a new {@link OpenProjectConnection} with the provided values.
      *
@@ -44,6 +46,7 @@ public class OpenProjectConnection
      * @param serverURL the URL of the OpenProject server
      * @param clientId the client ID used for authentication
      * @param clientSecret the client secret used for authentication
+     * @param instanceId the identifier of the OpenProject instance
      */
     @JsonCreator
     public OpenProjectConnection(
@@ -54,13 +57,16 @@ public class OpenProjectConnection
         @JsonProperty("clientId")
         String clientId,
         @JsonProperty("clientSecret")
-        String clientSecret
+        String clientSecret,
+        @JsonProperty("instanceId")
+        String instanceId
     )
     {
         this.connectionName = connectionName;
         this.serverURL = serverURL;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
+        this.instanceId = instanceId;
     }
 
     /**
@@ -133,5 +139,25 @@ public class OpenProjectConnection
     public void setClientSecret(String clientSecret)
     {
         this.clientSecret = clientSecret;
+    }
+
+    /**
+     * @return the identifier of the OpenProject instance 
+     * @since 1.2
+     */
+    public String getInstanceId()
+    {
+        return instanceId;
+    }
+
+    /**
+     * Sets the identifier of the OpenProject instance.
+     *
+     * @param instanceId the instance identifier
+     * @since 1.2
+     */
+    public void setInstanceId(String instanceId)
+    {
+        this.instanceId = instanceId;
     }
 }

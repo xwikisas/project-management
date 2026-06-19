@@ -226,4 +226,19 @@ public interface OpenProjectApiClient
         throw new UnsupportedOperationException(
             "Creating work packages is not supported by this client implementation.");
     }
+
+    /**
+     * Retrieves the identifier of the OpenProject instance. This is the {@code installation_uuid} exposed by the
+     * instance through its public {@code /.well-known/openproject-metadata} endpoint, so it can be retrieved with a
+     * client that uses no authentication.
+     *
+     * @return the identifier of the OpenProject instance.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the instance id.
+     * @since 1.2
+     */
+    default String getInstanceId() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving the instance id is not supported by this client implementation.");
+    }
 }

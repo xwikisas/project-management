@@ -224,6 +224,12 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         return client.createWorkPackage(url, jsonBody);
     }
 
+    @Override
+    public String getInstanceId() throws ProjectManagementException
+    {
+        return client.getInstanceId();
+    }
+
     private String getCacheKey(String entity, Integer offset, Integer pageSize, String filters, String sortBy)
     {
         return String.format("%s/%s/%d/%d/%s/%s", clientId, entity,
