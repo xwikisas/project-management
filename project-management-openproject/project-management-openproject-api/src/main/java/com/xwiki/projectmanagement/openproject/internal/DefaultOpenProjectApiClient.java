@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
@@ -144,6 +145,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_SPRINTS = "/api/v3/sprints";
 
+    private static final String URL_INSTANCE_METADATA = "/.well-known/openproject-metadata";
+
+    private static final String OP_RESPONSE_INSTALLATION_UUID = "installation_uuid";
+
     private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
 
     private static final String OP_OFFSET = "offset";
@@ -155,21 +160,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final String token;
+    private final OpenProjectAuthenticator authenticator;
 
     private final String connectionUrl;
 
     /**
-     * Constructs a new {@code OpenProjectApiClient} with the given authentication token and connection URL.
+     * Constructs a new {@code OpenProjectApiClient} with the given authentication method and connection URL.
      *
      * @param connectionUrl the base URL of the OpenProject instance
-     * @param token the API authentication token used to access the OpenProject API
+     * @param authenticator the authentication method used to authenticate the requests sent to the OpenProject API
      * @param client the {@link HttpClient} instance used to perform HTTP requests to the OpenProject API
      */
-    public DefaultOpenProjectApiClient(String connectionUrl, String token, HttpClient client)
+    public DefaultOpenProjectApiClient(String connectionUrl, OpenProjectAuthenticator authenticator, HttpClient client)
     {
         this.connectionUrl = connectionUrl;
-        this.token = token;
+        this.authenticator = authenticator;
         this.client = client;
     }
 
@@ -443,6 +448,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
     }
 
+    @Override
+    public String getInstanceId() throws ProjectManagementException
+    {
+        JsonNode mainNode = getOpenProjectResponse(URL_INSTANCE_METADATA, null, null, "", "", "");
+        return mainNode.path(OP_RESPONSE_INSTALLATION_UUID).asText();
+    }
+
     private JsonNode getOpenProjectResponse(String urlPart, Integer offset, Integer pageSize, String filtersString,
         String sortByString, String selectedElementsString) throws ProjectManagementException
     {
@@ -637,8 +649,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
             .uri(uri)
-            .header("Accept", accept)
-            .header("Authorization", "Bearer " + token);
+            .header("Accept", accept);
+
+        authenticator.authenticate(builder);
 
         if (POST.equals(method) || PUT.equals(method)) {
             builder.header(CONTENT_TYPE, MediaType.APPLICATION_JSON);

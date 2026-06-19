@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
-import java.net.http.HttpClient;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -49,10 +48,10 @@ import org.xwiki.script.service.ScriptService;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
@@ -83,6 +82,9 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
 
     @Inject
     private Logger logger;
+
+    @Inject
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
 
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
@@ -166,9 +168,11 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
                 CLIENT_CONFIGURATION_NOT_EXISTING, connectionName));
             return null;
         }
-        OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
-            accessToken, HttpClient.newHttpClient());
-        return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
+        return openProjectApiClientFactory.builder()
+            .serverUrl(connection.getServerURL())
+            .authentication(new BearerTokenAuthenticator(accessToken))
+            .caching(cache, connection.getClientId())
+            .build();
     }
 
     @Override
