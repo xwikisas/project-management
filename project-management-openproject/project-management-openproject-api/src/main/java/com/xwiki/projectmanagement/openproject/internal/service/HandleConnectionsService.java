@@ -27,6 +27,8 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
@@ -42,6 +44,8 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.NoOpAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
@@ -60,6 +64,8 @@ public class HandleConnectionsService
     private static final String CLIENT_ID = "clientId";
 
     private static final String CLIENT_SECRET = "clientSecret";
+
+    private static final String INSTANCE_ID = "instanceId";
 
     private static final String OPEN_PROJECT = "OpenProject";
 
@@ -80,6 +86,12 @@ public class HandleConnectionsService
     @Inject
     @Named("compactwiki")
     private EntityReferenceSerializer<String> compactSerializer;
+
+    @Inject
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
+
+    @Inject
+    private Logger logger;
 
     /**
      * Creates a new OpenProject connection configuration document in XWiki.
@@ -144,6 +156,7 @@ public class HandleConnectionsService
         configObj.setStringValue(SERVER_URL, openProjectConnection.getServerURL());
         configObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
         configObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
+        configObj.setStringValue(INSTANCE_ID, retrieveInstanceId(openProjectConnection.getServerURL()));
 
         DocumentReference oidcClassRef =
             new DocumentReference(wikiName, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");
@@ -162,6 +175,25 @@ public class HandleConnectionsService
         oidcObj.setStringValue("tokenStorageScope", "USER");
 
         context.getWiki().saveDocument(doc, "Saved OpenProject and OIDC config via REST", context);
+    }
+
+    private String retrieveInstanceId(String serverURL)
+    {
+        try {
+            return openProjectApiClientFactory.builder()
+                .serverUrl(serverURL)
+                .authentication(NoOpAuthenticator.INSTANCE)
+                .build()
+                .getInstanceId();
+        } catch (ProjectManagementException e) {
+            logger.warn("Failed to retrieve the instance id from [{}]. Cause: [{}].", serverURL,
+                ExceptionUtils.getRootCauseMessage(e));
+            return "";
+        } catch (Exception e) {
+            logger.warn("There was an issue in communicating with [{}]. Cause: [{}].", serverURL,
+                ExceptionUtils.getRootCauseMessage(e));
+            return "";
+        }
     }
 
     private void setDocMetaData(XWikiContext context, XWikiDocument doc)
