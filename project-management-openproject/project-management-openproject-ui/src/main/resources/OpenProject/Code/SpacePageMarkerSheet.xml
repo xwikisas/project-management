@@ -20,54 +20,34 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Template.Child2.WebHome" locale="">
-  <web>OpenProject.Code.Template.Child2</web>
-  <name>WebHome</name>
+<xwikidoc version="1.5" reference="OpenProject.Code.SpacePageMarkerSheet" locale="">
+  <web>OpenProject.Code</web>
+  <name>SpacePageMarkerSheet</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>OpenProject.Code.Template.WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>Child2</title>
+  <title/>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>Some nice content here</content>
-  <object>
-    <name>OpenProject.Code.Template.Child2.WebHome</name>
-    <number>0</number>
-    <className>OpenProject.Code.SpacePageMarkerClass</className>
-    <guid>20f0eb07-ed86-4408-8e38-e9d1ff50f462</guid>
-    <class>
-      <name>OpenProject.Code.SpacePageMarkerClass</name>
-      <customClass/>
-      <customMapping/>
-      <defaultViewSheet/>
-      <defaultEditSheet/>
-      <defaultWeb/>
-      <nameField/>
-      <validationScript/>
-      <marker>
-        <customDisplay/>
-        <disabled>0</disabled>
-        <hint/>
-        <name>marker</name>
-        <number>1</number>
-        <picker>1</picker>
-        <prettyName>marker</prettyName>
-        <size>30</size>
-        <unmodifiable>0</unmodifiable>
-        <validationMessage/>
-        <validationRegExp/>
-        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
-      </marker>
-    </class>
-    <property>
-      <marker/>
-    </property>
-  </object>
+  <content>
+{{velocity}}
+#set ($obj = $doc.getObject("OpenProject.Code.SpacePageMarkerClass"))
+#if ("$!obj" == '' || "$!obj.getValue('marker')" != 'root' || !$doc.isNew())
+  $doc.content
+#else
+  #template('projectmanagementrelationscommon.vm')
+  {{html clean=false}}
+    #displayRelationObject($doc.getObject($className), true, $services.localization.render("openproject.template.space.setinstance"), true)
+  {{/html}}
+
+  $doc.content
+#end
+{{/velocity}}
+</content>
 </xwikidoc>
