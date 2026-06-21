@@ -57,6 +57,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.commons.document.MacroBlockFinder;
 import com.xwiki.commons.document.MacroUtils;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 /**
@@ -100,6 +101,9 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
     @Inject
     private Logger logger;
 
+    @Inject
+    private OpenProjectConfiguration configuration;
+
     /**
      * Default constructor.
      */
@@ -124,7 +128,7 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
                 return;
             }
             findAndUpdateOPMacros(document, instance);
-            // any advantage in not removing? document.removeXObject(spaceMarker);
+            document.removeXObject(spaceMarker);
         } catch (QueryException | XWikiException | JsonProcessingException | MacroExecutionException
                  | ComponentLookupException e) {
             logger.error("Failed to set the INSTANCE parameter of the OpenProject macros in [{}].",
