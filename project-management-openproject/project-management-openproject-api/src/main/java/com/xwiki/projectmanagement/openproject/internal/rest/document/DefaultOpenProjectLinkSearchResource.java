@@ -59,8 +59,8 @@ public class DefaultOpenProjectLinkSearchResource extends BaseOpenProjectWikiSea
         StringBuilder statement = new StringBuilder();
         statement.append(String.format("property.%s.project:%d", ProjectManagementRelation.CLASS_FULLNAME, id));
 
-        maybeAddInstanceFilter(statement, filterInstance);
-
+        maybeAddInstanceFilter(statement, filterInstance, ProjectManagementRelation.CLASS_FULLNAME,
+            ProjectManagementRelation.FIELD_CLIENT_PARAMS);
         return searchInternal(statement.toString(), number, start, orderField, order,
             withPrettyNames);
     }
@@ -82,7 +82,8 @@ public class DefaultOpenProjectLinkSearchResource extends BaseOpenProjectWikiSea
             String.format("property.%s.workItem:%d",
                 ProjectManagementRelation.CLASS_FULLNAME, id));
 
-        maybeAddInstanceFilter(statement, filterInstance);
+        maybeAddInstanceFilter(statement, filterInstance, ProjectManagementRelation.CLASS_FULLNAME,
+            ProjectManagementRelation.FIELD_CLIENT_PARAMS);
 
         return searchInternal(statement.toString(), number, start, orderField, order,
             withPrettyNames);

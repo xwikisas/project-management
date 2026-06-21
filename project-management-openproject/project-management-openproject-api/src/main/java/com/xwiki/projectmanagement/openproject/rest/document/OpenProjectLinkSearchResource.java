@@ -42,7 +42,7 @@ public interface OpenProjectLinkSearchResource
 {
     /**
      * @param projectId the OpenProject project id that should match the xwiki pages.
-     * @param forInstance the id of the OpenProject instance that should be taken into consideration when returning
+     * @param instance the id of the OpenProject instance that should be taken into consideration when returning
      *     links.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
@@ -57,7 +57,7 @@ public interface OpenProjectLinkSearchResource
     @Path("/projects/{id}")
     SearchResults getProjects(
         @PathParam("id") String projectId,
-        @QueryParam("filterInstance") @DefaultValue("") String forInstance,
+        @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,
@@ -67,7 +67,7 @@ public interface OpenProjectLinkSearchResource
 
     /**
      * @param workPackageId the OpenProject work package id that should match the xwiki pages.
-     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     * @param instance the id of the OpenProject instance that should be taken into consideration when
      *     returning links.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
@@ -82,7 +82,7 @@ public interface OpenProjectLinkSearchResource
     @Path("/workPackages/{id}")
     SearchResults getWorkPackages(
         @PathParam("id") String workPackageId,
-        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
+        @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("number") @DefaultValue("-1") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,
