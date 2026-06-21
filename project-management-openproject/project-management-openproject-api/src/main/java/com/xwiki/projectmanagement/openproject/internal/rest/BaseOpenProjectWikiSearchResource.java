@@ -62,6 +62,12 @@ public class BaseOpenProjectWikiSearchResource extends BaseSearchResult
     protected SearchResults searchInternal(String query, Integer number, Integer start,
         String orderField, String order, Boolean withPrettyNames) throws XWikiRestException
     {
+        return searchInternal(query, number, start, orderField, order, withPrettyNames, true);
+    }
+
+    protected SearchResults searchInternal(String query, Integer number, Integer start,
+        String orderField, String order, Boolean withPrettyNames, Boolean ignoreLocale) throws XWikiRestException
+    {
         int limit = number;
 
         try {
@@ -69,9 +75,18 @@ public class BaseOpenProjectWikiSearchResource extends BaseSearchResult
             searchResults.setTemplate(String.format("%s?%s", uriInfo.getBaseUri().toString(),
                 MULTIWIKI_QUERY_TEMPLATE_INFO));
 
+            String upatedQuery = query;
+            if (ignoreLocale) {
+                if (StringUtils.isEmpty(upatedQuery)) {
+                    upatedQuery = "-doclocale:[\"\" TO *]";
+                } else {
+                    upatedQuery = upatedQuery + " AND -doclocale:[\"\" TO *]";
+                }
+            }
+
             searchResults.getSearchResults().addAll(
                 this.solrSearch.search(
-                    query,
+                    upatedQuery,
                     getXWikiContext().getWikiId(),
                     (String) null,
                     Utils.getXWiki(componentManager).getRightService().hasProgrammingRights(
