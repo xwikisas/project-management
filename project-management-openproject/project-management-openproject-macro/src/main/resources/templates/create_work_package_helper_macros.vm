@@ -56,3 +56,9 @@
   <select id="$projectSelectId" name="project" class="form-control"></select>
 </div>
 #end
+#macro (parentInput $parentSelectId)
+<div id="${parentSelectId}-container" class="form-group hidden">
+  <label for="$parentSelectId">$escapetool.xml($services.localization.render('openproject.createworkpackage.parentLabel'))</label>
+  <select id="$parentSelectId" name="parent" class="form-control"></select>
+</div>
+#end
