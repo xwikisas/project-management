@@ -47,7 +47,7 @@
     #displayRelationObject($doc.getObject($className), true, $services.localization.render("openproject.template.space.setinstance"), true)
   {{/html}}
 
-  $doc.content
+  ##$doc.content
 #end
 {{/velocity}}
 </content>

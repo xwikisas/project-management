@@ -132,7 +132,13 @@
       root.find('.openproj-relation-client-params-edit :input').filter((i, e) =&gt; e.attributes['name']).each((i, elem) =&gt; {
         result[elem.attributes['name'].value] = elem.value;
       });
-      root.find('dd :input').val(JSON.stringify(result));
+      let newVal = JSON.stringify(result);
+      root.find('dd :input').val(newVal);
+      root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property .selectized').each(function () {
+        let input = $(this);
+        input[0].selectize.destroy();
+        input.focus();
+      });
     };
     root.find('.openproj-relation-client-params-edit :input').on('change', updateParamsInput);
     root.on('click', '.editableProperty-cancel', function () {
