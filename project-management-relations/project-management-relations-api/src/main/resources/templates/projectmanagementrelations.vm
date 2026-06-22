@@ -17,92 +17,13 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-## Load the JavaScript code required to make the object properties editable in-place.
-#set ($className = 'ProjectManagement.Code.RelationClass')
-#set ($discard = $xwiki.jsfx.use('uicomponents/edit/editableProperty.js', {
-  'forceSkinAction': true,
-  'language': $xcontext.locale
-}))
 #set($titleToDisplay = $services.localization.render('projectmanagement.relations.viewer.title', ["<a href='$doc.getURL()'>$escapetool.xml($doc.plainTitle)</a>"]))
 #template('contentheader.vm')
-
-#macro (getTranslation $client $value)
-  #set ($key = "projectmanagement.relations.$!{client}.${value}")
-  #set ($translation = "$!services.localization.render($key)")
-  #if ($translation == $key)
-    #set ($key = "projectmanagement.relations.${value}")
-    #set ($translation = $services.localization.render($key))
-  #end
-  #if ($translation == $key)
-    #set ($translation = $value)
-  #end
-  $escapetool.xml($translation)
-#end
-#macro (displayProperties $client $mode $relationObj)
-#set ($discard = $doc.use($relationObj))
-<dl>
-  <dt>
-    <label>#getTranslation($client, 'client.id.name')</label>
-  </dt>
-  <dd>
-    #getTranslation('clients', $doc.getValue('client'))
-  </dd>
-  #set ($extensions = $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.params"))
-  #if ($extensions.size() > 0)
-    ## We will probably have only one.
-    #set ($content = $services.rendering.render($extensions.get(0).execute(), 'html/5.0'))
-    $content
-  #else
-    <div class="proj-manag-relation-client-params">
-      <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].clientParams" data-property-type="object">
-        <label>#getTranslation($client, 'client.params.name')</label>
-      </dt>
-      <dd>
-        $doc.display('clientParams', $mode)
-      </dd>
-    </div>
-  #end
-  <div class="proj-manag-relation-project proj-manag-relation-property">
-    <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].project" data-property-type="object">
-      <label>#getTranslation($client, 'project.name')</label>
-    </dt>
-    <dd data-prop="project">
-      $doc.display('project', $mode)
-    </dd>
-  </div>
-  <div class= "proj-manag-relation-workitem proj-manag-relation-property">
-    <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].workItem" data-property-type="object">
-      <label>#getTranslation($client, 'workItem.name')</label>
-    </dt>
-    <dd data-prop="workItem">
-      $doc.display('workItem', $mode)
-    </dd>
-  </div>
-</dl>
-#end
-## Get all xobjects.
-#set ($objects = $doc.getObjects($className))
-#set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationDocExtra'))
-#set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationMoreOptions'))
-#set ($discard = $xwiki.linkx.use($services.webjars.url(
-    'com.xwiki.commons:xwiki-pro-commons-webjar',
-    'xwikiPropertize/xwikiPropertize.css',
-    {'evaluate': true}), {'type': 'text/css', 'rel': 'stylesheet'}))
+#template('projectmanagementrelationscommon.vm')
 ## Display the sections.
 <div class="proj-manag-relations">
-  #foreach($relationObj in $objects)
-    #set ($client = ${relationObj.getValue('client')})
-    #set ($translatedClient = "#getTranslation('clients', $client)")
-    <div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})">
-      <h2>
-        $escapetool.xml($services.localization.render("projectmanagement.relations.relation.edit", [$translatedClient]))
-        <a href="$doc.getURL('objectremove', "form_token=$!{services.csrf.getToken()}&classname=${escapetool.url($className)}&classid=${relationObj.number}&xredirect=${escapetool.url($doc.getURL('view', 'viewer=projectmanagementrelations'))}")" class="xobject-action delete" title="$services.localization.render('core.editors.object.removeObject.tooltip')">$services.icon.renderHTML('cross')</a>
-      </h2>
-      <div id="proj-manag-relation-left" class="col-xs-12 col-sm-6">
-        #displayProperties($client, 'view', $relationObj)
-      </div>
-      <div class="clearfloats">&nbsp;</div>
-    </div>
+  #foreach($relationObj in $doc.getObjects($className))
+    #displayRelationObject($relationObj)
   #end
   <h2>
    #getTranslation('', 'relation.add.title')

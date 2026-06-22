@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -43,10 +42,11 @@ import org.xwiki.rest.model.jaxb.Object;
 import org.xwiki.rest.model.jaxb.Property;
 import org.xwiki.rest.resources.objects.ObjectResource;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectLinkObjectsResource;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
@@ -70,13 +70,14 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
     @Inject
     private URLShortenerManager urlShortenerManager;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     @Inject
     private ModelFactory factory;
 
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
     @Override
-    public Response link(String id, String instance, Boolean minorRevision, WorkPackageLink link)
+    public Response link(String id, Boolean minorRevision, WorkPackageLink link)
         throws XWikiRestException
     {
         try {
@@ -91,7 +92,7 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            maybeAddInstance(link, instance);
+            maybeAddInstance(link);
 
             Object object = linkToObject(link);
 
@@ -200,11 +201,8 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
             createProperty(ProjectManagementRelation.FIELD_PROJECT, link.getProject(), properties);
         }
         if (!StringUtils.isEmpty(link.getInstance())) {
-            try {
-                createProperty(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
-                    this.objectMapper.writeValueAsString(Map.of("instance", link.getInstance())), properties);
-            } catch (Exception ignored) {
-            }
+            createProperty(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
+                "{ \"instance\": \"" + link.getInstance() + "\" }", properties);
         }
         if (!StringUtils.isEmpty(link.getWorkPackage())) {
             createProperty(ProjectManagementRelation.FIELD_WORK_ITEM, link.getWorkPackage(), properties);
@@ -222,10 +220,21 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
         properties.add(projectProperty);
     }
 
-    private void maybeAddInstance(com.xwiki.projectmanagement.openproject.model.WorkPackageLink link, String instance)
+    private void maybeAddInstance(com.xwiki.projectmanagement.openproject.model.WorkPackageLink link)
     {
-        // Needs implementation when the OpenProject config will also store the instance open project instance id.
-        // 1. Resolve the instance string to the OpenProject instance cfg name,
-        // 2. Store the cfg name in the instance property.
+        String instance = link.getInstance();
+        if (StringUtils.isEmpty(instance)) {
+            return;
+        }
+        OpenProjectConnection connection =
+            openProjectConfiguration.getOpenProjectConnections().stream()
+                .filter(cfg -> instance.equals(cfg.getInstanceId())).findFirst().orElse(null);
+
+        if (connection == null) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                .entity(String.format("Could not find a configured instance for the id [%s].", instance)).build());
+        }
+
+        link.setInstance(connection.getConnectionName());
     }
 }

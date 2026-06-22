@@ -21,13 +21,16 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  */
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
@@ -56,7 +59,11 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectSpaceResource;
+import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
 
@@ -95,8 +102,12 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
     @Inject
     private WikiDescriptorManager wikiDescriptorManager;
 
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
     @Override
-    public Response createSpace(String documentReference, Boolean withId) throws XWikiRestException
+    public Response createSpace(String documentReference, Boolean withId, String instance, Integer project,
+        Integer workPackage, String title) throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -119,12 +130,15 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
                     .entity("The requested wiki does not have the OpenProject application installed.").build();
             }
             if (xWiki.exists(docRef, context)) {
-                return Response.status(Response.Status.FORBIDDEN).entity("Document already exists.").build();
+                return Response.status(Response.Status.CONFLICT).entity("Document already exists.").build();
             }
 
             XWikiDocument document = context.getWiki().getDocument(docRef, context);
             document.readFromTemplate(templateProviderReference, context);
+            document.setTitle(title);
             UserReference userReference = userReferenceResolver.resolve(context.getUserReference());
+            String configuredInstance = findConfigurationWithInstance(instance);
+            maybeAddRelationObj(document, configuredInstance, workPackage, project);
             document.getAuthors().setCreator(userReference);
             document.getAuthors().setEffectiveMetadataAuthor(userReference);
             xWiki.saveDocument(document, context);
@@ -159,6 +173,42 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         }
     }
 
+    private String findConfigurationWithInstance(String instance)
+    {
+        if (StringUtils.isEmpty(instance)) {
+            return "";
+        }
+        OpenProjectConnection connection =
+            openProjectConfiguration.getOpenProjectConnections().stream()
+                .filter(cfg -> instance.equals(cfg.getInstanceId())).findFirst().orElse(null);
+
+        if (connection == null) {
+            throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
+                .entity(String.format("Could not find a configured instance for the id [%s].", instance)).build());
+        }
+
+        return connection.getConnectionName();
+    }
+
+    private void maybeAddRelationObj(XWikiDocument document, String instance, Integer workPackage, Integer project)
+    {
+        if (StringUtils.isEmpty(instance) && workPackage == null && project == null) {
+            return;
+        }
+        BaseObject relation = document.getXObject(ProjectManagementRelation.CLASS_REFERENCE, true, getXWikiContext());
+        if (!StringUtils.isEmpty(instance)) {
+            relation.setLargeStringValue(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
+                "{\"instance\":\"" + instance + "\"}");
+        }
+        if (workPackage != null) {
+            relation.setStringValue(ProjectManagementRelation.FIELD_WORK_ITEM, String.valueOf(workPackage));
+        }
+        if (project != null) {
+            relation.setStringValue(ProjectManagementRelation.FIELD_PROJECT, String.valueOf(project));
+        }
+        relation.setStringValue(ProjectManagementRelation.FIELD_CLIENT, "openproject");
+    }
+
     private Job startCreateJob(EntityReference entityReference, DocumentReference templateReference)
         throws XWikiException, ComponentLookupException
     {
@@ -167,11 +217,12 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         } else {
             RefactoringScriptService
                 refactoring = componentManager.getInstance(ScriptService.class, "refactoring");
-            CreateRequest request = refactoring.getRequestFactory().createCreateRequest(Arrays.asList(entityReference));
+            CreateRequest request = refactoring.getRequestFactory().createCreateRequest(
+                Collections.singletonList(entityReference));
             request.setCheckAuthorRights(false);
-            request.setEntityReferences(Arrays.asList(entityReference));
+            request.setEntityReferences(Collections.singletonList(entityReference));
             request.setTemplateReference(templateReference);
-            request.setSkippedEntities(Arrays.asList(entityReference));
+            request.setSkippedEntities(Collections.singletonList(entityReference));
             Job createJob = refactoring.create(request);
             if (createJob != null) {
                 return createJob;

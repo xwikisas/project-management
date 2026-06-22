@@ -124,7 +124,7 @@
       <cache>long</cache>
     </property>
     <property>
-      <code>require(['jquery'], function ($) {
+      <code>require(['jquery', 'xwiki-selectize'], function ($) {
   console.debug('yellow');
   setTimeout(function () {
     $('.proj-manag-relation').each(function () {
@@ -143,14 +143,14 @@
           let clientParams = root.data('params') &amp;&amp; root.data('params');
           let workItemREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/workitems";
           let projectsREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/projects";
-          valueContainer.toggleClass('loading');
           if (valueContainer.find(':input').length &gt; 0) {
             return;
           }
+          valueContainer.addClass('loading');
           // If view mode load information for the ids.
           let entityId = valueContainer.text().trim();
           if (!entityId) {
-            valueContainer.toggleClass('loading');
+            valueContainer.removeClass('loading');
             observer.observe(valueContainer[0], { childList: true });
             return;
           }
@@ -176,7 +176,7 @@
               new XWiki.widgets.Notification('Failed to load the entity information.', 'error');
             })
             .always(function () {
-              valueContainer.toggleClass('loading');
+              valueContainer.removeClass('loading');
               observer.observe(valueContainer[0], { childList: true });
             });
 
@@ -190,9 +190,8 @@
         // Start observing the target node for configured mutations
         // observer.observe(valueContainer[0], { childList: true });
       });
-      root.find('.proj-manag-relation-property').each(function () {
-        let propRoot = $(this);
-        propRoot.on('focus', ':input', function () {
+      let initInput = function (propRoot, root) {
+        debugger;
           let input = propRoot.find(':input');
           if (input &lt;= 0 || input[0].selectize) {
             return;
@@ -253,7 +252,15 @@
               });
           };
           input.xwikiSelectize(selectizeCfg);
-        })
+      };
+      root.find('.proj-manag-relation-property').each(function () {
+        let propRoot = $(this);
+        if (XWiki.contextaction == 'edit') {
+          initInput(propRoot, root);
+        }
+        propRoot.on('focus', ':input', function () {
+          initInput(propRoot, root);
+        });
       });
     });
   });

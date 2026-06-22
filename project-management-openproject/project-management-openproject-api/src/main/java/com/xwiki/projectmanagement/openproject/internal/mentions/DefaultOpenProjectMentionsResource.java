@@ -88,7 +88,8 @@ public class DefaultOpenProjectMentionsResource extends BaseOpenProjectWikiSearc
         statement.append(String.format("property.%s.%s:%s", OpenProjectMentionClassInitializer.CLASS_NAME,
             OpenProjectMentionClassInitializer.PROP_WORK_PACKAGE_ID, id));
 
-        maybeAddInstanceFilter(statement, filterInstance);
+        maybeAddInstanceFilter(statement, filterInstance, OpenProjectMentionClassInitializer.CLASS_NAME,
+            OpenProjectMentionClassInitializer.PROP_INSTANCE);
 
         return searchInternal(statement.toString(), number, start, orderField, order,
             withPrettyNames);

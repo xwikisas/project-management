@@ -20,30 +20,54 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Template.Child2.WebHome" locale="">
-  <web>OpenProject.Code.Template.Child2</web>
-  <name>WebHome</name>
+<xwikidoc version="1.5" reference="OpenProject.Code.SpacePageMarkerClass" locale="">
+  <web>OpenProject.Code</web>
+  <name>SpacePageMarkerClass</name>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
-  <parent>OpenProject.Code.Template.WebHome</parent>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>Child2</title>
+  <title/>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>Some nice content here</content>
+  <content/>
+  <class>
+    <name>OpenProject.Code.SpacePageMarkerClass</name>
+    <customClass/>
+    <customMapping/>
+    <defaultViewSheet/>
+    <defaultEditSheet/>
+    <defaultWeb/>
+    <nameField/>
+    <validationScript/>
+    <marker>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>marker</name>
+      <number>1</number>
+      <picker>1</picker>
+      <prettyName>marker</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </marker>
+  </class>
   <object>
-    <name>OpenProject.Code.Template.Child2.WebHome</name>
+    <name>OpenProject.Code.SpacePageMarkerClass</name>
     <number>0</number>
-    <className>OpenProject.Code.SpacePageMarkerClass</className>
-    <guid>20f0eb07-ed86-4408-8e38-e9d1ff50f462</guid>
+    <className>XWiki.ClassSheetBinding</className>
+    <guid>c1a1336d-2607-451a-a1bc-7a1e8a71f34c</guid>
     <class>
-      <name>OpenProject.Code.SpacePageMarkerClass</name>
+      <name>XWiki.ClassSheetBinding</name>
       <customClass/>
       <customMapping/>
       <defaultViewSheet/>
@@ -51,23 +75,34 @@
       <defaultWeb/>
       <nameField/>
       <validationScript/>
-      <marker>
+      <sheet>
+        <cache>0</cache>
+        <classname/>
         <customDisplay/>
         <disabled>0</disabled>
+        <displayType>input</displayType>
         <hint/>
-        <name>marker</name>
+        <idField/>
+        <multiSelect>0</multiSelect>
+        <name>sheet</name>
         <number>1</number>
         <picker>1</picker>
-        <prettyName>marker</prettyName>
+        <prettyName>Sheet</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators/>
         <size>30</size>
+        <sort>none</sort>
+        <sql/>
         <unmodifiable>0</unmodifiable>
         <validationMessage/>
         <validationRegExp/>
-        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
-      </marker>
+        <valueField/>
+        <classType>com.xpn.xwiki.objects.classes.PageClass</classType>
+      </sheet>
     </class>
     <property>
-      <marker/>
+      <sheet>OpenProject.Code.SpacePageMarkerSheet</sheet>
     </property>
   </object>
 </xwikidoc>

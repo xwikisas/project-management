@@ -132,7 +132,13 @@
       root.find('.openproj-relation-client-params-edit :input').filter((i, e) =&gt; e.attributes['name']).each((i, elem) =&gt; {
         result[elem.attributes['name'].value] = elem.value;
       });
-      root.find('dd :input').val(JSON.stringify(result));
+      let newVal = JSON.stringify(result);
+      root.find('dd :input').val(newVal);
+      root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property .selectized').each(function () {
+        let input = $(this);
+        input[0].selectize.destroy();
+        input.focus();
+      });
     };
     root.find('.openproj-relation-client-params-edit :input').on('change', updateParamsInput);
     root.on('click', '.editableProperty-cancel', function () {
@@ -145,6 +151,10 @@
       root.find('.openproj-relation-client-params-edit').removeClass('hidden');
       root.find('dd :input').addClass('hidden');
     });
+    if (XWiki.contextaction == 'edit') {
+      root.find('.openproj-relation-client-params-edit').removeClass('hidden');
+      root.find('dd :input').addClass('hidden');
+    }
 
     root.find('dd').each(function () {
         let valueContainer = $(this);
@@ -329,10 +339,10 @@
 #set ($discard = $xwiki.jsx.use('OpenProject.Code.Relations.OpenProjectRelationsUIXP'))
 &lt;div class="openproj-relation-client-params"&gt;
   &lt;dt#if ($hasEdit &amp;&amp; $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].clientParams" data-property-type="object"&gt;
-    &lt;label&gt;$escapetool.xml($services.localization.render('projectmanagement.relations.client.params.name'))&lt;/label&gt;
+    &lt;label&gt;$escapetool.xml($services.localization.render('projectmanagement.relations.openproject.client.params.name'))&lt;/label&gt;
   &lt;/dt&gt;
   &lt;dd&gt;
-    $doc.display('clientParams', $mode)
+    $doc.display('clientParams', $mode).replaceAll('(^..html.*?}})|(../html..$)', '')
   &lt;/dd&gt;
   #set ($clientParams = $jsontool.fromString($doc.getValue('clientParams')))
   &lt;div class="openproj-relation-client-params-edit"&gt;

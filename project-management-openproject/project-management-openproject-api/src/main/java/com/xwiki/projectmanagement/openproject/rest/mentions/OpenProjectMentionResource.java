@@ -40,7 +40,7 @@ public interface OpenProjectMentionResource
 {
     /**
      * @param workPackageId the OpenProject work package id that should match the xwiki pages.
-     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     * @param instance the id of the OpenProject instance that should be taken into consideration when
      *     returning mentions.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
@@ -54,7 +54,7 @@ public interface OpenProjectMentionResource
     @Path("/mentions")
     SearchResults getPagesMentioningWorkPackage(
         @QueryParam("workPackage") @DefaultValue("") String workPackageId,
-        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
+        @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("orderField") @DefaultValue("") String orderField,
@@ -64,7 +64,7 @@ public interface OpenProjectMentionResource
 
     /**
      * @param pageId the unique identifier of the page.
-     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     * @param instance the id of the OpenProject instance that should be taken into consideration when
      *     returning mentions.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
@@ -76,14 +76,14 @@ public interface OpenProjectMentionResource
     @Path("/documents/{id}/mentions")
     Objects getMentionsWithId(
         @PathParam("id") String pageId,
-        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
+        @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames) throws XWikiRestException;
 
     /**
      * @param docRef the reference of the page.
-     * @param filterInstance the id of the OpenProject instance that should be taken into consideration when
+     * @param instance the id of the OpenProject instance that should be taken into consideration when
      *     returning mentions.
      * @param number the maximum number of elements that should be returned.
      * @param start the offset of the results.
@@ -94,7 +94,7 @@ public interface OpenProjectMentionResource
     @GET
     @Path("/pages/{docRef}/mentions")
     Objects getMentionsWithRef(@PathParam("docRef") String docRef,
-        @QueryParam("filterInstance") @DefaultValue("") String filterInstance,
+        @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("number") @DefaultValue("25") Integer number,
         @QueryParam("start") @DefaultValue("0") Integer start,
         @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames) throws XWikiRestException;

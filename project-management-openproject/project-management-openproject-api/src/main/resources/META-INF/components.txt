@@ -18,6 +18,7 @@ com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjec
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkSearchResource
 com.xwiki.projectmanagement.openproject.internal.rest.OpenProjectAvatarResource
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
+com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectSpaceCreatingListener
 com.xwiki.projectmanagement.openproject.internal.listener.StyleSetupJobSchedulerListener
 com.xwiki.projectmanagement.openproject.internal.rest.connection.HandleConnections
 com.xwiki.projectmanagement.openproject.internal.rest.workPackages.HandleWorkPackages
