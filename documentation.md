@@ -656,13 +656,14 @@ PUT /openproject/documents
 
 **Responses:**
 
-| Status                        | Body                    | When                                                      |
-|-------------------------------|-------------------------|-----------------------------------------------------------|
-| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                   |
-| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                             |
-| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                 |
-| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.  |
-| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page. |
+| Status                        | Body                    | When                                                           |
+|-------------------------------|-------------------------|----------------------------------------------------------------|
+| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                        |
+| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                                  |
+| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                      |
+| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.       |
+| **409 Unauthorized**          | —                       | If the `create` param is used and the document already exists. |
+| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page.      |
 
 ---
 
