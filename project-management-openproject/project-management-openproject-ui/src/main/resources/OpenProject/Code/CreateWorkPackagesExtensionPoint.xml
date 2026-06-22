@@ -179,6 +179,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       $("#project-select-single-work-package").val("").empty();
       $("#project-select-single-work-package-container").addClass("hidden");
       $("#project-select-single-work-package").prop("disabled", false);
+      const parentSelect = $("#parent-select-single-work-package");
+      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
+        parentSelect[0].selectize.destroy();
+      }
+      parentSelect.empty();
+      $("#parent-select-single-work-package-container").addClass("hidden");
       $("#single-dynamic-fields-container").empty().addClass("hidden");
       $("#incorrect-token-single-work-package").addClass("hidden");
     }
@@ -190,6 +196,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       $('#connection-select-multiple-work-packages').val("");
       $("#project-select-multiple-work-packages").val("").empty();
       $("#project-select-multiple-work-packages").prop("disabled", false);
+      const parentSelect = $("#parent-select-multiple-work-packages");
+      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
+        parentSelect[0].selectize.destroy();
+      }
+      parentSelect.empty();
+      $("#parent-select-multiple-work-packages-container").addClass("hidden");
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
       $("#project-select-multiple-work-packages-container").addClass("hidden");
@@ -605,6 +617,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       }
 
       const payload = { ...createWpUtils.buildPayload(container), 'project': project };
+
+      const parent = $("#parent-select-single-work-package").val();
+      if (parent) {
+        payload.parent = parent;
+      }
+
       const connection = $("#connection-select-single-work-package").val();
 
       if (!connection) {
@@ -644,6 +662,8 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         return;
       }
 
+      const parent = $("#parent-select-multiple-work-packages").val();
+
       const tasks = [];
 
       $('.work-package-card').each(function (index) {
@@ -657,6 +677,10 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
         const payload = createWpUtils.buildPayload(card);
         payload.project = project;
+
+        if (parent) {
+          payload.parent = parent;
+        }
 
         const titleEl = card.find('.wp-subject-title');
         titleEl.removeClass('text-success text-danger');
@@ -731,6 +755,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         "#project-select-multiple-work-packages-container",
         "#incorrect-token-multiple-work-packages"
       );
+      createWpUtils.initParentPicker(
+        "#connection-select-multiple-work-packages",
+        "#parent-select-multiple-work-packages",
+        "#parent-select-multiple-work-packages-container"
+      );
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
       $("#multiple-work-packages-container").addClass("hidden");
@@ -743,6 +772,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         "#project-select-single-work-package",
         "#project-select-single-work-package-container",
         "#incorrect-token-single-work-package"
+      );
+      createWpUtils.initParentPicker(
+        "#connection-select-single-work-package",
+        "#parent-select-single-work-package",
+        "#parent-select-single-work-package-container"
       );
     });
 
@@ -1272,6 +1306,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       <content>{{velocity}}
 #if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest'))
   $xwiki.parseTemplate("create_work_package_helper_macros.vm")
+  #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
   #set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
   #set ($discard = $xwiki.ssx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
   {{html}}
@@ -1303,6 +1338,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
             #set ($connectionOptions = $services.openproject.getConnectionOptions())
             #connectionInput('connection-select-single-work-package' $connectionOptions)
             #incorrectToken('incorrect-token-single-work-package')
+            #parentInput('parent-select-single-work-package')
             #projectInput('project-select-single-work-package' $connectionOptions)
             &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
             &lt;/div&gt;
@@ -1322,6 +1358,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
             &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.multiple.description'))&lt;/p&gt;
             #connectionInput('connection-select-multiple-work-packages')
             #incorrectToken('incorrect-token-multiple-work-packages')
+            #parentInput('parent-select-multiple-work-packages')
             #projectInput('project-select-multiple-work-packages')
             &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
               &lt;div class="form-group row"&gt;

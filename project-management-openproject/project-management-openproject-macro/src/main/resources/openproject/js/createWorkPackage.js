@@ -54,6 +54,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         "#op-project-container",
         "#incorrect-token-create-work-package"
       );
+      createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container");
     }
   }
 
@@ -102,6 +103,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     }
 
     const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
+
+    const parent = $("#op-parent").val();
+    if (parent) {
+      payload.parent = parent;
+    }
+
     let ckeditorInstance = CKEDITOR && CKEDITOR.instances &&
       (CKEDITOR.instances.content || CKEDITOR.instances.xwikicontent);
     try {
@@ -173,6 +180,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       "#op-project-container",
       "#incorrect-token-create-work-package"
     );
+    createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container");
   });
 
   $(document).on("show.bs.modal", ".macro-editor-modal", function () {

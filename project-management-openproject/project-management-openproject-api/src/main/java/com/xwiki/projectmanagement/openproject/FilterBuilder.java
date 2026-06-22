@@ -19,6 +19,10 @@
  */
 package com.xwiki.projectmanagement.openproject;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang3.StringUtils;
 
 /**
@@ -29,9 +33,13 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class FilterBuilder
 {
-    private static final String FILTER_FORMAT = "{\"%s\":{\"operator\":\"%s\",\"values\":[\"%s\"]}}";
+    private static final String FILTER_FORMAT = "{\"%s\":{\"operator\":\"%s\",\"values\":[%s]}}";
 
-    private final StringBuilder sb;
+    private static final String VALUE_FORMAT = "\"%s\"";
+
+    private static final String DELIMITER = ",";
+
+    private final List<String> filters = new ArrayList<>();
 
     /**
      * Enumeration for storing the different types of OP operators.
@@ -50,7 +58,11 @@ public class FilterBuilder
         /**
          * Not equals operator. Used, generally, for matching ids.
          */
-        NOT_EQUAL("!=");
+        NOT_EQUAL("!="),
+        /**
+         * None of operator. Used, generally, for excluding a set of ids from a list type property. i.e. type.
+         */
+        NONE_OF("!");
 
         private final String value;
 
@@ -65,8 +77,6 @@ public class FilterBuilder
      */
     public FilterBuilder()
     {
-        sb = new StringBuilder();
-        sb.append("[");
     }
 
     /**
@@ -77,11 +87,21 @@ public class FilterBuilder
      */
     public FilterBuilder addFilter(String property, String operator, Object value)
     {
-        // TODO: Handle the different types of possible values. i.e. numbers, lists, booleans.
+        // TODO: Handle the different types of possible values. i.e. numbers, booleans.
+        if (value instanceof List) {
+            String joinedValues = ((List<?>) value).stream()
+                .map(element -> String.format(VALUE_FORMAT, element))
+                .collect(Collectors.joining(DELIMITER));
+            if (joinedValues.isEmpty()) {
+                return this;
+            }
+            filters.add(String.format(FILTER_FORMAT, property, operator, joinedValues));
+            return this;
+        }
         if (value == null || StringUtils.isEmpty(value.toString())) {
             return this;
         }
-        sb.append(String.format(FILTER_FORMAT, property, operator, value.toString()));
+        filters.add(String.format(FILTER_FORMAT, property, operator, String.format(VALUE_FORMAT, value)));
         return this;
     }
 
@@ -101,11 +121,6 @@ public class FilterBuilder
      */
     public String build()
     {
-        try {
-            sb.append("]");
-            return sb.toString();
-        } finally {
-            sb.setLength(0);
-        }
+        return "[" + String.join(DELIMITER, filters) + "]";
     }
 }
