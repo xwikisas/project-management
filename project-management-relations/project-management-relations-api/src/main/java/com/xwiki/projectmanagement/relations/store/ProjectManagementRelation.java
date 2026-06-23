@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -120,7 +121,7 @@ public class ProjectManagementRelation
      */
     public String getWorkItem()
     {
-        return this.xobject.getStringValue(FIELD_PROJECT);
+        return this.xobject.getStringValue(FIELD_WORK_ITEM);
     }
 
     /**
@@ -128,7 +129,7 @@ public class ProjectManagementRelation
      */
     public void setWorkItem(String workPackage)
     {
-        this.xobject.setStringValue(FIELD_PROJECT, workPackage);
+        this.xobject.setStringValue(FIELD_WORK_ITEM, workPackage);
     }
 
     /**
@@ -148,6 +149,14 @@ public class ProjectManagementRelation
     }
 
     /**
+     * @return the reference of the document that own this object.
+     */
+    public DocumentReference getDocumentReference()
+    {
+        return this.xobject.getDocumentReference();
+    }
+
+    /**
      * @return a map out of the client params.
      * @throws JsonProcessingException if the client params are serialized as a valid json.
      */
@@ -160,5 +169,19 @@ public class ProjectManagementRelation
         return objectMapper.readValue(params, new TypeReference<Map<String, String>>()
         {
         });
+    }
+
+    /**
+     * @return a model object that contains all the relevant data taken from this object.
+     */
+    public com.xwiki.projectmanagement.relations.model.ProjectManagementRelation toModel()
+    {
+        com.xwiki.projectmanagement.relations.model.ProjectManagementRelation model =
+            new com.xwiki.projectmanagement.relations.model.ProjectManagementRelation();
+        model.setClient(getClient());
+        model.setClientParams(getClientParams());
+        model.setProject(getProject());
+        model.setWorkItem(getWorkItem());
+        return model;
     }
 }

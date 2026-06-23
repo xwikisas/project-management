@@ -187,6 +187,12 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	    $(incorrectTokenId).addClass("hidden");
 	    $(projectContainerId).removeClass("hidden");
+      if (!window.openProjectEvents) {
+        return;
+      }
+      window.openProjectEvents.dispatchEvent(
+        new CustomEvent('projectsSelectDisplayed', { detail: { element: projectSelect } })
+      );
 	  } catch (err) {
 	    if (err.status === 409) {
 	      const link = $(`${incorrectTokenId} a`);
@@ -228,12 +234,20 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	  selectizeConfig.load = function (text, callback) {
 	    $.getJSON(searchUrl, { search: text })
-	      .then(function (results) {
+	      .done(function (results) {
 	        parent[0].selectize.clearOptions();
 	        callback(results);
 	      })
-	      .catch(function () {
+	      .fail(function () {
 	        callback([]);
+	      })
+	      .always(function () {
+          if (!window.openProjectEvents) {
+            return;
+          }
+          window.openProjectEvents.dispatchEvent(
+            new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
+          );
 	      });
 	  }
 
