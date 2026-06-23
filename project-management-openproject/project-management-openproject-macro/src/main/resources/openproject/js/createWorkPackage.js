@@ -56,6 +56,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       );
       createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container");
     }
+    if (!window.openProjectEvents) {
+      return;
+    }
+    window.openProjectEvents.dispatchEvent(
+      new CustomEvent('connectionSelectDisplayed', { detail: { element: conn } })
+    );
   }
 
   async function onProjectChange() {

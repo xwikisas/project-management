@@ -77,6 +77,7 @@
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
+        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -155,7 +156,6 @@ require.config({
       .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
   }
 });
-
 require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createworkpackage"], function ($, createWpUtils, l10n) {
 
   $(document).ready(function () {
@@ -436,6 +436,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         connectionSelect.prop("disabled", true);
         connectionSelect.trigger("change");
       }
+      window.openProjectEvents.dispatchEvent(
+        new CustomEvent('connectionSelectDisplayed', { detail: { element: connectionSelect } })
+      );
     }
 
     function handleTableHighlight() {
@@ -499,6 +502,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         $connectionSelect.prop("disabled", true);
         $connectionSelect.trigger("change");
       }
+      window.openProjectEvents.dispatchEvent(
+        new CustomEvent('connectionSelectDisplayed', { detail: { element: $connectionSelect } })
+      );
     }
 
     function findAndOpenFirstInvalid(container) {
@@ -635,7 +641,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         resetCreateSingleWorkPackageForm();
         $("#create-work-packages-modal").modal("hide");
         createWpUtils.notify(l10n.get("notify.single.success"), "done");
-        document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
+        window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
       } catch (err) {
         createWpUtils.notify(l10n.get("notify.single.error"), "error")
       }
@@ -688,7 +694,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         const p = createWpUtils.createWorkPackagesRequest(connection, payload)
           .then(resp =&gt; {
             titleEl.addClass('text-success');
-            document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
+            window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
             return { success: true, resp };
           })
           .catch(err =&gt; {
@@ -884,6 +890,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
+        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -962,7 +969,10 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       window.location.reload();
     }
   });
-  document.addEventListener('op-creation-success', function (event) {
+  if (!window.openProjectEvents) {
+    return;
+  }
+  window.openProjectEvents.addEventListener('op-creation-success', function (event) {
     let workPackage = event.detail.createdWp.id;
     let opInstance = event.detail.connection;
     let element = event.detail.element;
@@ -1026,6 +1036,176 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
   </object>
   <object>
     <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
+    <number>2</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>e93f4976-a5d5-48eb-aa30-e2baa397bb67</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>require(['jquery'], function ($) {
+  let pageRelation;
+  let getPageRelation = function () {
+    if (pageRelation != undefined) {
+      return pageRelation;
+    }
+    let url = XWiki.currentDocument.getRestURL('projectmanagement/relations/client/openproject', 'ancestors=true');
+    $.getJSON(url)
+      .done(function (response) {
+        pageRelation = response;
+        if (!pageRelation.clientParams || pageRelation.clientParams.trim() == '') {
+          console.warn('Client parameters are empty.');
+          return;
+        }
+        try {
+          pageRelation.clientParams = JSON.parse(pageRelation.clientParams);
+        } catch (e) {
+          console.warn("Failed to parse the client params: " + pageRelation.clientParams);
+        }
+      })
+      .fail(function () {
+        pageRelation = {};
+      });
+  };
+  getPageRelation();
+  if (!window.openProjectEvents) {
+    console.warn('Could not setup listener for autofilling work package properties.');
+    return;
+  }
+  window.openProjectEvents.addEventListener('connectionSelectDisplayed', function (event) {
+    if (!pageRelation) {
+      return;
+    }
+    if (!pageRelation.clientParams || !pageRelation.clientParams.instance) {
+      console.warn('There is no instance stored in the page relation.');
+      return;
+    }
+    if (event.detail.element.prop('disabled') {
+      return;
+    }
+    event.detail.element.val(pageRelation.clientParams.instance)
+    event.detail.element.trigger('change');
+  });
+  window.openProjectEvents.addEventListener('projectsSelectDisplayed', function (event) {
+    if (!pageRelation || !pageRelation.project) {
+      return;
+    }
+    if (event.detail.element.prop('disabled') {
+      return;
+    }
+    event.detail.element.val('/api/v3/projects/' + pageRelation.project);
+    event.detail.element.trigger('change');
+  });
+  window.openProjectEvents.addEventListener('parentSelectDisplayed', function (event) {
+    if (!pageRelation || !pageRelation.workItem) {
+      return;
+    }
+    var selectize = event.detail.element[0].selectize;
+    var value = '/api/v3/work_packages/' + pageRelation.workItem;
+
+    if (!selectize.options[value]) {
+        selectize.addOption({
+            value: value,
+            label: pageRelation.workItem
+        });
+    }
+
+    selectize.setValue(value);
+    event.detail.element.trigger('change');
+  });
+});</code>
+    </property>
+    <property>
+      <name>AutofillWorkPackageFields</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use/>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.CreateWorkPackagesExtensionPoint</name>
     <number>0</number>
     <className>XWiki.StyleSheetExtension</className>
     <guid>dd21a6c7-af9a-4bb8-95c9-8f398ea60aa2</guid>
@@ -1064,6 +1244,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
+        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -1239,6 +1420,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>content</name>
         <number>1</number>
         <prettyName>Executed Content</prettyName>
+        <restricted>0</restricted>
         <rows>25</rows>
         <size>120</size>
         <unmodifiable>0</unmodifiable>
@@ -1269,6 +1451,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         <name>parameters</name>
         <number>7</number>
         <prettyName>Extension Parameters</prettyName>
+        <restricted>0</restricted>
         <rows>10</rows>
         <size>40</size>
         <unmodifiable>0</unmodifiable>
