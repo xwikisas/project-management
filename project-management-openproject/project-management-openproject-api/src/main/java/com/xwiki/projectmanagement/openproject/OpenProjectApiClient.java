@@ -33,6 +33,7 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -69,6 +70,16 @@ public interface OpenProjectApiClient
      */
     PaginatedResult<WorkPackage> getProjectWorkPackages(String project, Integer offset, Integer pageSize,
         String filters, String sortBy)
+        throws ProjectManagementException;
+
+    /**
+     * @param offset the point where the result set begins relative to the whole set.
+     * @param pageSize the max number of entries returned.
+     * @param filters the OpenProject filters used to match against the existing page links.
+     * @return a list of page links that represent the wiki pages that are linked to work packages.
+     * @throws ProjectManagementException if something went wrong.
+     */
+    PaginatedResult<WikiPageLink> getPageLinks(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException;
 
     /**
@@ -225,5 +236,20 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Creating work packages is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves the identifier of the OpenProject instance. This is the {@code installation_uuid} exposed by the
+     * instance through its public {@code /.well-known/openproject-metadata} endpoint, so it can be retrieved with a
+     * client that uses no authentication.
+     *
+     * @return the identifier of the OpenProject instance.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the instance id.
+     * @since 1.2
+     */
+    default String getInstanceId() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving the instance id is not supported by this client implementation.");
     }
 }

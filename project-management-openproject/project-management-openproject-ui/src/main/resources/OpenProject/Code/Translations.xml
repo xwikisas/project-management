@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.6" reference="OpenProject.Code.Translations" locale="">
+<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="">
   <web>OpenProject.Code</web>
   <name>Translations</name>
   <language/>
@@ -136,7 +136,12 @@ openproject.extension.name=Open Project Integration (Pro)
 projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.project.name=Linked Project
 projectmanagement.relations.openproject.workItem.name=Linked Work Package
-projectmanagement.relations.clients.openproject=Open Project</content>
+projectmanagement.relations.clients.openproject=Open Project
+projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
+openproject.relations.mentions.noInstance=No OpenProject instance selected.
+openproject.relations.mentions.title=Mentioned on:
+
+openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

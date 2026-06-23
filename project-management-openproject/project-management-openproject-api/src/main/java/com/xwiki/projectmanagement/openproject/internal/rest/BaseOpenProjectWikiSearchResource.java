@@ -19,15 +19,23 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.solr.search.SolrQueryParser;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.Utils;
 import org.xwiki.rest.internal.resources.BaseSearchResult;
 import org.xwiki.rest.internal.resources.search.SearchSource;
 import org.xwiki.rest.model.jaxb.SearchResults;
 
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 /**
@@ -42,12 +50,23 @@ public class BaseOpenProjectWikiSearchResource extends BaseSearchResult
         "q={solrquery}(&number={number})(&start={start})(&orderField={fieldname}(&order={asc|desc}))(&distinct=1)"
             + "(&prettyNames={false|true})(&wikis={wikis})(&className={classname})";
 
+    private static final String ANY_MATCH = "*";
+
     @Inject
     @Named("solr")
     protected SearchSource solrSearch;
 
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
     protected SearchResults searchInternal(String query, Integer number, Integer start,
         String orderField, String order, Boolean withPrettyNames) throws XWikiRestException
+    {
+        return searchInternal(query, number, start, orderField, order, withPrettyNames, true);
+    }
+
+    protected SearchResults searchInternal(String query, Integer number, Integer start,
+        String orderField, String order, Boolean withPrettyNames, Boolean ignoreLocale) throws XWikiRestException
     {
         int limit = number;
 
@@ -56,9 +75,18 @@ public class BaseOpenProjectWikiSearchResource extends BaseSearchResult
             searchResults.setTemplate(String.format("%s?%s", uriInfo.getBaseUri().toString(),
                 MULTIWIKI_QUERY_TEMPLATE_INFO));
 
+            String upatedQuery = query;
+            if (ignoreLocale) {
+                if (StringUtils.isEmpty(upatedQuery)) {
+                    upatedQuery = "-doclocale:[\"\" TO *]";
+                } else {
+                    upatedQuery = upatedQuery + " AND -doclocale:[\"\" TO *]";
+                }
+            }
+
             searchResults.getSearchResults().addAll(
                 this.solrSearch.search(
-                    query,
+                    upatedQuery,
                     getXWikiContext().getWikiId(),
                     (String) null,
                     Utils.getXWiki(componentManager).getRightService().hasProgrammingRights(
@@ -71,12 +99,29 @@ public class BaseOpenProjectWikiSearchResource extends BaseSearchResult
         }
     }
 
-    protected void maybeAddInstanceFilter(StringBuilder query, String filterInstance)
+    protected void maybeAddInstanceFilter(StringBuilder query, String filterInstance, String className, String property)
     {
-        if (filterInstance == null || filterInstance.isEmpty()) {
+        if (StringUtils.isEmpty(filterInstance)) {
             return;
         }
-        // TODO: Maybe we should enforce the instance names to be alphanumeric only.
-        query.append(String.format(" and link.cliemtParams like '%%%s%%'", filterInstance));
+        List<String> matchingConnections = getMatchingConnections(filterInstance);
+        if (matchingConnections.isEmpty()) {
+            matchingConnections = List.of(filterInstance);
+        }
+
+        query.append(String.format(" AND property.%s.%s:(%s)", className, property,
+            matchingConnections.stream().map(c -> ANY_MATCH + SolrQueryParser.escape(c) + ANY_MATCH)
+                .collect(Collectors.joining(" "))));
+    }
+
+    protected List<String> getMatchingConnections(String filterInstance)
+    {
+        List<String> matchingConnections = openProjectConfiguration.getOpenProjectConnections().stream()
+            .filter(cfg -> filterInstance.equals(cfg.getInstanceId())).map(
+                OpenProjectConnection::getConnectionName).collect(Collectors.toList());
+        if (matchingConnections.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return matchingConnections;
     }
 }

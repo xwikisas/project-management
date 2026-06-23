@@ -51,6 +51,8 @@ public class CreateWorkPackage
 
     private String dueDate;
 
+    private String parent;
+
     /**
      * Default constructor.
      */
@@ -259,5 +261,27 @@ public class CreateWorkPackage
     public void setDueDate(String dueDate)
     {
         this.dueDate = dueDate;
+    }
+
+    /**
+     * Getter for the parent of the work package.
+     *
+     * @return the parent work package identifier.
+     * @since 1.2
+     */
+    public String getParent()
+    {
+        return parent;
+    }
+
+    /**
+     * Setter for the parent of the work package.
+     *
+     * @param parent see {@link #getParent()}.
+     * @since 1.2
+     */
+    public void setParent(String parent)
+    {
+        this.parent = parent;
     }
 }

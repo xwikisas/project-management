@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
@@ -55,6 +56,7 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static javax.ws.rs.HttpMethod.GET;
@@ -143,6 +145,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_SPRINTS = "/api/v3/sprints";
 
+    private static final String URL_INSTANCE_METADATA = "/.well-known/openproject-metadata";
+
+    private static final String OP_RESPONSE_INSTALLATION_UUID = "installation_uuid";
+
     private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
 
     private static final String OP_OFFSET = "offset";
@@ -154,21 +160,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final String token;
+    private final OpenProjectAuthenticator authenticator;
 
     private final String connectionUrl;
 
     /**
-     * Constructs a new {@code OpenProjectApiClient} with the given authentication token and connection URL.
+     * Constructs a new {@code OpenProjectApiClient} with the given authentication method and connection URL.
      *
      * @param connectionUrl the base URL of the OpenProject instance
-     * @param token the API authentication token used to access the OpenProject API
+     * @param authenticator the authentication method used to authenticate the requests sent to the OpenProject API
      * @param client the {@link HttpClient} instance used to perform HTTP requests to the OpenProject API
      */
-    public DefaultOpenProjectApiClient(String connectionUrl, String token, HttpClient client)
+    public DefaultOpenProjectApiClient(String connectionUrl, OpenProjectAuthenticator authenticator, HttpClient client)
     {
         this.connectionUrl = connectionUrl;
-        this.token = token;
+        this.authenticator = authenticator;
         this.client = client;
     }
 
@@ -329,6 +335,22 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<WikiPageLink> getPageLinks(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode mainNode = getOpenProjectResponse("/api/v3/wiki_page_links", offset, pageSize, filters, "", "");
+
+        JsonNode elements = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
+        List<WikiPageLink> pageLinks = new ArrayList<>();
+
+        for (JsonNode element : elements) {
+            WikiPageLink pageLink = new WikiPageLink(element);
+            pageLinks.add(pageLink);
+        }
+        return new PaginatedResult<>(pageLinks, offset, pageLinks.size(), getTotalNumberOfEntities(mainNode));
+    }
+
+    @Override
     public PaginatedResult<Version> getVersions() throws ProjectManagementException
     {
         JsonNode elements = getOpenProjectResponseEntities(API_URL_VERSIONS, null, null, "", "", "");
@@ -424,6 +446,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
         }
+    }
+
+    @Override
+    public String getInstanceId() throws ProjectManagementException
+    {
+        JsonNode mainNode = getOpenProjectResponse(URL_INSTANCE_METADATA, null, null, "", "", "");
+        return mainNode.path(OP_RESPONSE_INSTALLATION_UUID).asText();
     }
 
     private JsonNode getOpenProjectResponse(String urlPart, Integer offset, Integer pageSize, String filtersString,
@@ -620,8 +649,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
             .uri(uri)
-            .header("Accept", accept)
-            .header("Authorization", "Bearer " + token);
+            .header("Accept", accept);
+
+        authenticator.authenticate(builder);
 
         if (POST.equals(method) || PUT.equals(method)) {
             builder.header(CONTENT_TYPE, MediaType.APPLICATION_JSON);

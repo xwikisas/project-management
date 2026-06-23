@@ -35,6 +35,7 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -90,6 +91,13 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public PaginatedResult<WikiPageLink> getPageLinks(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        return this.client.getPageLinks(offset, pageSize, filters);
     }
 
     @Override
@@ -222,6 +230,12 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
         return client.createWorkPackage(url, jsonBody);
+    }
+
+    @Override
+    public String getInstanceId() throws ProjectManagementException
+    {
+        return client.getInstanceId();
     }
 
     private String getCacheKey(String entity, Integer offset, Integer pageSize, String filters, String sortBy)

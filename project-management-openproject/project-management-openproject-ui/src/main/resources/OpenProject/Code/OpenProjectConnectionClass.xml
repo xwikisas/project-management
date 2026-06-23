@@ -88,6 +88,20 @@
       <validationRegExp/>
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </connectionName>
+    <instanceId>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>instanceId</name>
+      <number>5</number>
+      <picker>1</picker>
+      <prettyName>Instance Id</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </instanceId>
     <serverURL>
       <customDisplay/>
       <disabled>0</disabled>

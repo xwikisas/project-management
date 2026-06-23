@@ -47,6 +47,9 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 
@@ -85,6 +88,15 @@ public class HandleConnectionsServiceTest
 
     @MockComponent
     private Query query;
+
+    @MockComponent
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
+
+    @Mock
+    private OpenProjectApiClientBuilder openProjectApiClientBuilder;
+
+    @Mock
+    private OpenProjectApiClient openProjectApiClient;
 
     @Mock
     private XWikiDocument doc;
@@ -126,7 +138,8 @@ public class HandleConnectionsServiceTest
         documentAuthors = new DefaultDocumentAuthors(doc);
         when(doc.getAuthors()).thenReturn(documentAuthors);
 
-        openProjectConnection = new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret");
+        openProjectConnection =
+            new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret", "instanceId");
     }
 
     @Test
@@ -160,6 +173,12 @@ public class HandleConnectionsServiceTest
         when(doc.getXObject(eq(oidcClassRef), eq(true), eq(xContext))).thenReturn(oidcObj);
         when(this.query.execute()).thenReturn(List.of());
 
+        when(this.openProjectApiClientFactory.builder()).thenReturn(this.openProjectApiClientBuilder);
+        when(this.openProjectApiClientBuilder.serverUrl(any())).thenReturn(this.openProjectApiClientBuilder);
+        when(this.openProjectApiClientBuilder.authentication(any())).thenReturn(this.openProjectApiClientBuilder);
+        when(this.openProjectApiClientBuilder.build()).thenReturn(this.openProjectApiClient);
+        when(this.openProjectApiClient.getInstanceId()).thenReturn("instanceId");
+
         handleConnectionsService.handleConnection(openProjectConnection, documentReference);
 
         assertEquals(userReference, documentAuthors.getCreator());
@@ -171,6 +190,7 @@ public class HandleConnectionsServiceTest
         assertEquals(openProjectConnection.getServerURL(), configObj.getStringValue("serverURL"));
         assertEquals(openProjectConnection.getClientId(), configObj.getStringValue("clientId"));
         assertEquals(openProjectConnection.getClientSecret(), configObj.getStringValue("clientSecret"));
+        assertEquals("instanceId", configObj.getStringValue("instanceId"));
 
         assertEquals(openProjectConnection.getConnectionName(), oidcObj.getStringValue("configurationName"));
         assertEquals(

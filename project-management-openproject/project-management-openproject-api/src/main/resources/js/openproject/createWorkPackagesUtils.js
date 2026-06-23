@@ -202,11 +202,50 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  }
 	}
 
+	let initParentPicker = function initParentPicker(connectionSelectId, parentSelectId, parentContainerId) {
+	  const connection = $(connectionSelectId).val();
+	  const parent = $(parentSelectId);
+
+	  if (!connection) {
+	    return;
+	  }
+
+	  $(parentContainerId).removeClass("hidden");
+
+	  if (parent[0] && parent[0].selectize) {
+	    parent[0].selectize.destroy();
+	  }
+
+	  parent.empty();
+
+	  const searchUrl = `${baseUrl}${connection}/suggest/parent`;
+
+	  let selectizeConfig = {
+	    create: false,
+	    maxItems: 1,
+	    inputClass: "selectize-input form-control",
+	  };
+
+	  selectizeConfig.load = function (text, callback) {
+	    $.getJSON(searchUrl, { search: text })
+	      .then(function (results) {
+	        parent[0].selectize.clearOptions();
+	        callback(results);
+	      })
+	      .catch(function () {
+	        callback([]);
+	      });
+	  }
+
+	  parent.xwikiSelectize(selectizeConfig);
+	}
+
 	let createWPUtils = {
 	  notify: notify,
 	  createInput: createInput,
 	  buildPayload: buildPayload,
 	  loadProjects: loadProjects,
+	  initParentPicker: initParentPicker,
 	  createWorkPackagesRequest: createWorkPackagesRequest
 	}
 

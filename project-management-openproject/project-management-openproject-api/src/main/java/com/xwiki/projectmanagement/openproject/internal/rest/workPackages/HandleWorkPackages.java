@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.openproject.internal.rest.workItems;
+package com.xwiki.projectmanagement.openproject.internal.rest.workPackages;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -65,10 +65,10 @@ import com.xwiki.projectmanagement.openproject.model.User;
  * @since 1.1
  */
 @Component
-@Named("com.xwiki.projectmanagement.openproject.internal.rest.workItems.HandleWorkItems")
+@Named("com.xwiki.projectmanagement.openproject.internal.rest.workPackages.HandleWorkPackages")
 @Singleton
 @Path("/wikis/{wikiName}/openproject/instance/{instance}/workPackages")
-public class HandleWorkItems extends XWikiResource
+public class HandleWorkPackages extends XWikiResource
 {
     private static final String HREF = "href";
 
@@ -85,6 +85,8 @@ public class HandleWorkItems extends XWikiResource
     private static final String PRIORITY = "priority";
 
     private static final String ASSIGNEE = "assignee";
+
+    private static final String PARENT = "parent";
 
     private static final String DESCRIPTION = "description";
 
@@ -395,6 +397,7 @@ public class HandleWorkItems extends XWikiResource
         linkMappings.put(TYPE, workPackage.getType());
         linkMappings.put(STATUS, workPackage.getStatus());
         linkMappings.put(PRIORITY, workPackage.getPriority());
+        linkMappings.put(PARENT, workPackage.getParent());
 
         for (Map.Entry<String, String> entry : linkMappings.entrySet()) {
             if (entry.getValue() != null) {

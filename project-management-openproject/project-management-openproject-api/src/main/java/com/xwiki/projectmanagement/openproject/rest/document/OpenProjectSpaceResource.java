@@ -43,6 +43,10 @@ public interface OpenProjectSpaceResource
      * @param documentReference the reference identifying where the template should be created.
      * @param withId if set to true, also creates and attaches to the created document unique identifiers. The
      *     returned documents will also contain the attached unique id.
+     * @param instance the OpenProject instance id that will be attached to the created pages.
+     * @param project the OpenProject project id that will be attached to the created pages.
+     * @param workPackage the OpenProject work package id that will be attached to the created pages.
+     * @param title the title of the new space.
      * @return 200 together with a list of {@link org.xwiki.rest.model.jaxb.Page}, representing the created pages. 401
      *     if the user does not have edit rights on the space. 403 if the page already exists. 406 if the requested wiki
      *     does not have the OpenProject integration UI installed.
@@ -51,6 +55,11 @@ public interface OpenProjectSpaceResource
     @POST
     Response createSpace(
         @QueryParam("docRef") String documentReference,
-        @QueryParam("withId") @DefaultValue("false") Boolean withId)
+        @QueryParam("withId") @DefaultValue("false") Boolean withId,
+        @QueryParam("instance") @DefaultValue("") String instance,
+        @QueryParam("project") Integer project,
+        @QueryParam("workPackage") Integer workPackage,
+        @QueryParam("title") @DefaultValue("Open Project Space") String title)
+
         throws XWikiRestException;
 }

@@ -101,7 +101,6 @@
         <name>jobDescription</name>
         <number>2</number>
         <prettyName>Job Description</prettyName>
-        <restricted>0</restricted>
         <rows>10</rows>
         <size>45</size>
         <unmodifiable>0</unmodifiable>
@@ -123,7 +122,6 @@
         <name>script</name>
         <number>6</number>
         <prettyName>Job Script</prettyName>
-        <restricted>0</restricted>
         <rows>10</rows>
         <size>60</size>
         <unmodifiable>0</unmodifiable>

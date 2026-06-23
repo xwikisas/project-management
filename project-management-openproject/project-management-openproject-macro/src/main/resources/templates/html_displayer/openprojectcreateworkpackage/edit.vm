@@ -17,12 +17,14 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+#set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.jsrx.use('openproject/js/createWorkPackage.js'))
 #template("create_work_package_helper_macros.vm")
 #set ($connectionOptions = $services.openproject.getConnectionOptions())
 <div class="withLock xform">
   #connectionInput('op-connection' $connectionOptions)
   #incorrectToken('incorrect-token-create-work-package')
+  #parentInput('op-parent')
   #projectInput('op-project' $connectionOptions)
   <div id="dynamic-fields-container" class="hidden">
   </div>

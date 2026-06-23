@@ -90,8 +90,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     {
         try {
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
-            result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
-
+            if (this.transformationContext.getCurrentMacroBlock() != null) {
+                result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
+            }
             return new CompositeBlock(result);
         } catch (MacroExecutionException e) {
             throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);

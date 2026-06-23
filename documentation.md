@@ -352,11 +352,11 @@ When creating or updating a page, you send a `Page` object in the request body. 
 }
 ```
 
-| Field         | Type     | Required | Description                                                                                                          |
-|---------------|----------|----------|----------------------------------------------------------------------------------------------------------------------|
-| `project`     | `String` | ❌        | The OpenProject project ID to link to.                                                                               |
-| `workPackage` | `String` | ❌        | The OpenProject work package ID to link to.                                                                          |
-| `instance`    | `String` | ❌        | The name of the OpenProject connection. Usually **auto-populated** from the bearer token when `filterInstance=true`. |
+| Field         | Type     | Required | Description                                 |
+|---------------|----------|----------|---------------------------------------------|
+| `project`     | `String` | ❌        | The OpenProject project ID to link to.      |
+| `workPackage` | `String` | ❌        | The OpenProject work package ID to link to. |
+| `instance`    | `String` | ❌        | The id of the OpenProject instance.         |
 
 ### `SearchResults` (Response)
 
@@ -644,6 +644,7 @@ PUT /openproject/documents
 |-----------------|----------|---------------|----------|---------|----------------------------------------------------------------------------------------------------------|
 | `docRef`        | query    | `String`      | ✅        | —       | The full page reference where the page should be created or updated (e.g. `Projects.MyProject.WebHome`). |
 | `minorRevision` | query    | `Boolean`     | ❌        | —       | If `true`, the edit is saved as a minor version (does not appear prominently in page history).           |
+| `create`        | query    | `Boolean`     | ❌        | false   | If `true`, the request will fail if the document already exists.                                         |
 | *(body)*        | body     | `Page` (JSON) | ✅        | —       | The page data (title, content, etc.). See the `Page` request model above.                                |
 
 **What happens:**
@@ -655,13 +656,14 @@ PUT /openproject/documents
 
 **Responses:**
 
-| Status                        | Body                    | When                                                      |
-|-------------------------------|-------------------------|-----------------------------------------------------------|
-| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                   |
-| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                             |
-| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                 |
-| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.  |
-| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page. |
+| Status                        | Body                    | When                                                           |
+|-------------------------------|-------------------------|----------------------------------------------------------------|
+| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                        |
+| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                                  |
+| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                      |
+| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.       |
+| **409 Unauthorized**          | —                       | If the `create` param is used and the document already exists. |
+| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page.      |
 
 ---
 
@@ -675,29 +677,27 @@ POST /openproject/documents/{id}/links
 
 **Parameters:**
 
-| Parameter        | Location | Type                     | Required | Default | Description                                                                                                               |
-|------------------|----------|--------------------------|----------|---------|---------------------------------------------------------------------------------------------------------------------------|
-| `id`             | path     | `String`                 | ✅        | —       | The short unique identifier of the page (obtained from endpoints 1 or 2).                                                 |
-| `filterInstance` | query    | `String`                 | ❌        | —       | The identifier of the OP instance that makes the request. It will be used o associate the link to the correct connection. |
-| `minorRevision`  | query    | `Boolean`                | ❌        | —       | If `true`, adding the link is saved as a minor version change.                                                            |
-| *(body)*         | body     | `WorkPackageLink` (JSON) | ✅        | —       | The link data. See the `WorkPackageLink` model above.                                                                     |
+| Parameter       | Location | Type                     | Required | Default | Description                                                               |
+|-----------------|----------|--------------------------|----------|---------|---------------------------------------------------------------------------|
+| `id`            | path     | `String`                 | ✅        | —       | The short unique identifier of the page (obtained from endpoints 1 or 2). |
+| `minorRevision` | query    | `Boolean`                | ❌        | —       | If `true`, adding the link is saved as a minor version change.            |
+| *(body)*        | body     | `WorkPackageLink` (JSON) | ✅        | —       | The link data. See the `WorkPackageLink` model above.                     |
 
 **What happens:**
 
 1. Looks up the page associated with the given `id`.
-2. If `filterInstance` is not empty, its value will be used to assign the correct OP connection to the link.
-3. A link object is created on the page with the provided project ID, work package ID, instance name, and primary flag.
-4. The link can later be searched for using the link search endpoints (endpoints 4 and 5).
+2. A link object is created on the page with the provided project ID, work package ID, instance name, and primary flag.
+3. The link can later be searched for using the link search endpoints (endpoints 4 and 5).
 
 **Responses:**
 
-| Status                        | Body                    | When                                                                                                                          |
-|-------------------------------|-------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| **201 Created**               | —                       | The link was created. The `Location` header contains the URL of the new link object.                                          |
-| **400 Bad Request**           | `"Missing link entity"` | The request body was empty/null.                                                                                              |
-| **401 Unauthorized**          | Error message           | The bearer token is missing, invalid, or doesn't match any configured OpenProject instance (only when `filterInstance=true`). |
-| **404 Not Found**             | —                       | No page exists with the given `id`.                                                                                           |
-| **500 Internal Server Error** | Error message           | An unexpected error occurred.                                                                                                 |
+| Status                        | Body                    | When                                                                                                     |
+|-------------------------------|-------------------------|----------------------------------------------------------------------------------------------------------|
+| **201 Created**               | —                       | The link was created. The `Location` header contains the URL of the new link object.                     |
+| **400 Bad Request**           | `"Missing link entity"` | The request body was empty/null OR if the instance id does not correspond to any configured OP instances |
+| **401 Unauthorized**          | Error message           | The bearer token is missing, invalid, or doesn't match any configured OpenProject instance.              |
+| **404 Not Found**             | —                       | No page exists with the given `id`.                                                                      |
+| **500 Internal Server Error** | Error message           | An unexpected error occurred.                                                                            |
 
 ---
 
@@ -711,20 +711,20 @@ GET /openproject/links/projects/{id}
 
 **Parameters:**
 
-| Parameter        | Location | Type      | Required | Default   | Description                                                           |
-|------------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
-| `id`             | path     | `String`  | ✅        | —         | The OpenProject **project ID** (must be a number).                    |
-| `filterInstance` | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
-| `number`         | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`          | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
-| `orderField`     | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
-| `order`          | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames`    | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
+| Parameter     | Location | Type      | Required | Default   | Description                                                           |
+|---------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —         | The OpenProject **project ID** (must be a number).                    |
+| `instance`    | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
+| `number`      | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
+| `start`       | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
+| `orderField`  | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
+| `order`       | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
+| `prettyNames` | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
 
 **What happens:**
 
 1. Searches all wiki pages that have a link object with a `project` value matching the given `id`.
-2. If `filterInstance` is not empty, results are further filtered to only include links belonging to the caller's
+2. If `instance` is not empty, results are further filtered to only include links belonging to the caller's
    OpenProject instance.
 3. Only pages the current user has permission to view are returned.
 
@@ -749,20 +749,20 @@ GET /openproject/links/workPackages/{id}
 
 **Parameters:**
 
-| Parameter        | Location | Type      | Required | Default | Description                                                           |
-|------------------|----------|-----------|----------|---------|-----------------------------------------------------------------------|
-| `id`             | path     | `String`  | ✅        | —       | The OpenProject **work package ID** (must be a number).               |
-| `filterInstance` | query    | `String`  | ❌        | —       | Matches the links based on the instance that was used to create them. |
-| `number`         | query    | `Integer` | ❌        | `0`     | Max results.                                                          |
-| `start`          | query    | `Integer` | ❌        | `0`     | Pagination offset.                                                    |
-| `orderField`     | query    | `String`  | ❌        | `""`    | Sort field.                                                           |
-| `order`          | query    | `String`  | ❌        | `asc`   | Sort direction.                                                       |
-| `prettyNames`    | query    | `Boolean` | ❌        | `false` | Human-readable names.                                                 |
+| Parameter     | Location | Type      | Required | Default | Description                                                           |
+|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —       | The OpenProject **work package ID** (must be a number).               |
+| `instance`    | query    | `String`  | ❌        | —       | Matches the links based on the instance that was used to create them. |
+| `number`      | query    | `Integer` | ❌        | `0`     | Max results.                                                          |
+| `start`       | query    | `Integer` | ❌        | `0`     | Pagination offset.                                                    |
+| `orderField`  | query    | `String`  | ❌        | `""`    | Sort field.                                                           |
+| `order`       | query    | `String`  | ❌        | `asc`   | Sort direction.                                                       |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | Human-readable names.                                                 |
 
 **What happens:**
 
 1. Searches all wiki pages that have a link object with a `workPackage` value matching the given `id`.
-2. If `filterInstance` is not empty, only links belonging to the caller's OpenProject instance are returned.
+2. If `instance` is not empty, only links belonging to the caller's OpenProject instance are returned.
 3. Only pages the current user can view are returned.
 
 **Responses:**
@@ -786,10 +786,14 @@ POST /openproject/spaces
 
 **Parameters:**
 
-| Parameter | Location | Type      | Required | Default | Description                                                                                                             |
-|-----------|----------|-----------|----------|---------|-------------------------------------------------------------------------------------------------------------------------|
-| `docRef`  | query    | `String`  | ✅        | —       | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`).                          |
-| `withId`  | query    | `Boolean` | ❌        | `false` | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3). |
+| Parameter     | Location | Type      | Required | Default              | Description                                                                                                             |
+|---------------|----------|-----------|----------|----------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `docRef`      | query    | `String`  | ✅        | —                    | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`).                          |
+| `withId`      | query    | `Boolean` | ❌        | `false`              | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3). |
+| `instance`    | query    | `String`  | ❌        | —                    | The OpenProject instance id. If set, the created space will contain a link object that will point to the OP instance.   |
+| `project`     | query    | `Int`     | ❌        | —                    | The id of a OP project. If set, the space will contain a link to the project.                                           |
+| `workPackage` | query    | `Int`     | ❌        | —                    | The if of a WorkPackage. If set, the space will contain a link to the work package.                                     |
+| `title`       | query    | `String`  | ❌        | `Open Project Space` | The title of the newly created space.                                                                                   |
 
 **Responses:**
 
@@ -835,15 +839,15 @@ GET /openproject/mentions
 
 **Parameters:**
 
-| Parameter        | Location | Type      | Required | Default   | Description                                                           |
-|------------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
-| `workPackage`    | query    | `Integer` | ❌        | —         | A work package id.                                                    |
-| `filterInstance` | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
-| `number`         | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`          | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
-| `orderField`     | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
-| `order`          | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames`    | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
+| Parameter     | Location | Type      | Required | Default   | Description                                                           |
+|---------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
+| `workPackage` | query    | `Integer` | ❌        | —         | A work package id.                                                    |
+| `instance`    | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
+| `number`      | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
+| `start`       | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
+| `orderField`  | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
+| `order`       | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
+| `prettyNames` | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
 
 **Responses:**
 
