@@ -156,7 +156,6 @@ require.config({
       .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
   }
 });
-window.openProjectEvents = window.openProjectEvents || new EventTarget();
 require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createworkpackage"], function ($, createWpUtils, l10n) {
 
   $(document).ready(function () {
@@ -642,7 +641,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         resetCreateSingleWorkPackageForm();
         $("#create-work-packages-modal").modal("hide");
         createWpUtils.notify(l10n.get("notify.single.success"), "done");
-        document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
+        window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
       } catch (err) {
         createWpUtils.notify(l10n.get("notify.single.error"), "error")
       }
@@ -695,7 +694,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         const p = createWpUtils.createWorkPackagesRequest(connection, payload)
           .then(resp =&gt; {
             titleEl.addClass('text-success');
-            document.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
+            window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
             return { success: true, resp };
           })
           .catch(err =&gt; {
@@ -970,7 +969,10 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       window.location.reload();
     }
   });
-  document.addEventListener('op-creation-success', function (event) {
+  if (!window.openProjectEvents) {
+    return;
+  }
+  window.openProjectEvents.addEventListener('op-creation-success', function (event) {
     let workPackage = event.detail.createdWp.id;
     let opInstance = event.detail.connection;
     let element = event.detail.element;
@@ -1144,7 +1146,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         pageRelation = {};
       });
   };
-  debugger;
   getPageRelation();
   if (!window.openProjectEvents) {
     console.warn('Could not setup listener for autofilling work package properties.');
@@ -1158,11 +1159,17 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       console.warn('There is no instance stored in the page relation.');
       return;
     }
+    if (event.detail.element.prop('disabled') {
+      return;
+    }
     event.detail.element.val(pageRelation.clientParams.instance)
     event.detail.element.trigger('change');
   });
   window.openProjectEvents.addEventListener('projectsSelectDisplayed', function (event) {
     if (!pageRelation || !pageRelation.project) {
+      return;
+    }
+    if (event.detail.element.prop('disabled') {
       return;
     }
     event.detail.element.val('/api/v3/projects/' + pageRelation.project);

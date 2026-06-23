@@ -17,6 +17,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+// Init global event bus.
+window.openProjectEvents = window.openProjectEvents || new EventTarget();
+
 define("openproject.createworkpackage.utils", {
   prefix: "openproject.createworkpackage.utils.",
   keys: [
