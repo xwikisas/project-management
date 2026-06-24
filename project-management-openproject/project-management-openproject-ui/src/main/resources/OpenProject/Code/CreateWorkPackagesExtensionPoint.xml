@@ -1159,7 +1159,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       console.warn('There is no instance stored in the page relation.');
       return;
     }
-    if (event.detail.element.prop('disabled') {
+    if (event.detail.element.prop('disabled')) {
       return;
     }
     event.detail.element.val(pageRelation.clientParams.instance)
@@ -1169,7 +1169,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     if (!pageRelation || !pageRelation.project) {
       return;
     }
-    if (event.detail.element.prop('disabled') {
+    if (event.detail.element.prop('disabled')) {
       return;
     }
     event.detail.element.val('/api/v3/projects/' + pageRelation.project);
