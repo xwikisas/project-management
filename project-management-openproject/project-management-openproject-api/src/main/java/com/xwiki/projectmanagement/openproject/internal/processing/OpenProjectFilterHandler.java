@@ -170,7 +170,7 @@ public final class OpenProjectFilterHandler
         return convertedFilters;
     }
 
-    private static List<String> convertToOpenProjectValue(String propertyName, String values)
+    private static List<String> convertToOpenProjectValue(String propertyName, String values, String initialOperator)
     {
         if (!PROPERTIES_DATE.contains(propertyName)) {
             return Collections.singletonList(values);
@@ -179,9 +179,13 @@ public final class OpenProjectFilterHandler
         String[] parts = values.split("/");
         if (parts.length > 1) {
             return Arrays.asList(parts[0], parts[1]);
-        } else {
-            return Collections.singletonList(values);
         }
+        if (initialOperator.equals("before")) {
+            return Arrays.asList("1970-01-01", values);
+        } else if (initialOperator.equals("after")) {
+            return Arrays.asList(values, "3000-01-01");
+        }
+        return Collections.singletonList(values);
     }
 
     private static List<LiveDataQuery.Constraint> getValidConstraints(LiveDataQuery.Filter filter)
@@ -209,7 +213,8 @@ public final class OpenProjectFilterHandler
         Map<String, List<String>> result = new HashMap<>();
         for (LiveDataQuery.Constraint constraint : filterConstraints) {
             String operatorValue = OpenProjectMapper.mapLivedataOperator(constraint.getOperator());
-            List<String> values = convertToOpenProjectValue(propertyName, (String) constraint.getValue());
+            List<String> values =
+                convertToOpenProjectValue(propertyName, (String) constraint.getValue(), constraint.getOperator());
             if (result.containsKey(operatorValue)) {
                 List<String> currentValues = result.get(operatorValue);
                 currentValues.addAll(values);

@@ -99,14 +99,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         };
         if (params.searchURL) {
           selectizeCfg.load = function (text, callback) {
-            let searchURL = params.searchURL;
-            // If the URL is absolute, we leave it as is. Else, we need to add the context path.
-            try {
-              new URL(searchURL);
-            } catch {
-              searchURL = XWiki.contextPath + searchURL;
-            }
-            searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
+            let searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
             $.getJSON(searchURL)
               .then(function (results) {
                 if (Array.isArray(results)) {
