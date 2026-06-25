@@ -31,6 +31,8 @@ import javax.inject.Singleton;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.environment.Environment;
+import org.xwiki.environment.internal.ServletEnvironment;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
@@ -62,6 +64,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
 
     @Inject
     private Provider<XWikiContext> xWikiContextProvider;
+
+    @Inject
+    private Environment environment;
 
     private String defaultConfigJSON;
 
@@ -107,6 +112,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             if (instance != null && !instance.isEmpty()) {
                 searchURL = searchURL.replace("{instance}", instance);
             }
+            searchURL = getContextPath() + searchURL;
             propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);
         }
     }
@@ -130,5 +136,13 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             return wiki;
         }
         return context.getWikiId() == null || context.getWikiId().isEmpty() ? wiki : context.getWikiId();
+    }
+
+    private String getContextPath()
+    {
+        if (this.environment instanceof ServletEnvironment) {
+            return ((ServletEnvironment) this.environment).getServletContext().getContextPath();
+        }
+        return "";
     }
 }

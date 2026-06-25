@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -29,14 +30,16 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
-import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -126,7 +129,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
-        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
-            Collections.singletonMap(CLASS, "open-project-macro")));
+        List<Block> result = super.execute(parameters, content, context);
+        Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
+        return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
+            : Collections.singletonList(new GroupBlock(result, params));
     }
 }

@@ -18,7 +18,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package com.xwiki.projectmanagement.openproject.internal.rest.workItems;
+package com.xwiki.projectmanagement.openproject.internal.rest.workPackages;
 
 import java.io.IOException;
 import java.util.List;
@@ -55,7 +55,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class HandleWorkItemsTest
+public class HandleWorkPackagesTest
 {
     @MockComponent
     private OpenProjectConfiguration openProjectConfiguration;
@@ -64,7 +64,7 @@ public class HandleWorkItemsTest
     private OpenProjectApiClient openProjectApiClient;
 
     @InjectMockComponents
-    private HandleWorkItems handleWorkItems;
+    private HandleWorkPackages handleWorkPackages;
 
     private static final Integer OFFSET = 1;
 
@@ -88,7 +88,7 @@ public class HandleWorkItemsTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
 
-        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
     }
 
@@ -107,7 +107,7 @@ public class HandleWorkItemsTest
         when(this.openProjectApiClient.getAvailableProjects(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
             paginatedProjects);
 
-        Response response = this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(projects, response.getEntity());
@@ -124,7 +124,7 @@ public class HandleWorkItemsTest
 
         assertThrows(
             ProjectManagementException.class,
-            () -> this.handleWorkItems.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE)
+            () -> this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE)
         );
     }
 
@@ -144,7 +144,7 @@ public class HandleWorkItemsTest
         when(openProjectApiClient.getAvailableUsers(anyString(), any(), any(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(user1, user2), OFFSET, PAGE_SIZE, 2));
 
-        Response response = handleWorkItems.createWorkPackage(WIKI, INSTANCE, createWorkPackage);
+        Response response = handleWorkPackages.createWorkPackage(WIKI, INSTANCE, createWorkPackage);
 
         ArgumentCaptor<String> requestCaptor = ArgumentCaptor.forClass(String.class);
         verify(openProjectApiClient).getWorkPackagesFormResponse(requestCaptor.capture());
@@ -176,7 +176,7 @@ public class HandleWorkItemsTest
             validationSuccessResponseNode);
         when(this.openProjectApiClient.createWorkPackage(anyString(), anyString())).thenReturn(any(JsonNode.class));
 
-        Response response = this.handleWorkItems.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage());
+        Response response = this.handleWorkPackages.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage());
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     }
@@ -196,7 +196,7 @@ public class HandleWorkItemsTest
 
         assertThrows(
             ProjectManagementException.class,
-            () -> this.handleWorkItems.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage())
+            () -> this.handleWorkPackages.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage())
         );
     }
 

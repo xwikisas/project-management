@@ -27,6 +27,8 @@ package com.xwiki.projectmanagement.relations.model;
  */
 public class ProjectManagementRelation
 {
+    private String owner;
+
     private String client;
 
     private String project;
@@ -97,5 +99,21 @@ public class ProjectManagementRelation
     public void setClientParams(String clientParams)
     {
         this.clientParams = clientParams;
+    }
+
+    /**
+     * @return the reference to the document that owns this object.
+     */
+    public String getOwner()
+    {
+        return owner;
+    }
+
+    /**
+     * @param owner see {@link #getOwner()}.
+     */
+    public void setOwner(String owner)
+    {
+        this.owner = owner;
     }
 }

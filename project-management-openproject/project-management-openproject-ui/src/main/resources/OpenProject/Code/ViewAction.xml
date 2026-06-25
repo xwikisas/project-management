@@ -77,7 +77,6 @@
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
-        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>
@@ -175,7 +174,7 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
     if (!id) {
       return;
     }
-    let restUrl = `/xwiki/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${openProjInstance}/workpackage/${id}?outputSyntax=plain`;
+    let restUrl = XWiki.contextPath + `/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${openProjInstance}/workpackage/${id}?outputSyntax=plain`;
     let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
     $.get(restUrl).done(function (response) {
       let modal = $('#openproject-item-view-modal');

@@ -20,7 +20,6 @@
 
 package com.xwiki.projectmanagement.openproject.internal.displayer;
 
-import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,9 +51,10 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
@@ -92,6 +92,9 @@ public class StylingSetupManager
 
     @Inject
     private OpenProjectConfiguration opConfiguration;
+
+    @Inject
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
 
     @Inject
     private DocumentReferenceResolver<EntityReference> documentReferenceResolver;
@@ -151,8 +154,10 @@ public class StylingSetupManager
                         openProjCfgName);
                     continue;
                 }
-                OpenProjectApiClient apiClient =
-                    new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken, HttpClient.newHttpClient());
+                OpenProjectApiClient apiClient = openProjectApiClientFactory.builder()
+                    .serverUrl(connection.getServerURL())
+                    .authentication(new BearerTokenAuthenticator(accessToken))
+                    .build();
 
                 StringBuilder stringBuilder = new StringBuilder();
 

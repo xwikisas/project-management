@@ -33,12 +33,25 @@ public class WorkItemRetrievalException extends WorkItemException
      */
     private static final long serialVersionUID = 1L;
 
+    private final Integer statusCode;
+
     /**
      * @param message the detail message for this exception.
      */
     public WorkItemRetrievalException(String message)
     {
+        this(message, -1);
+    }
+
+    /**
+     * @param message the detail message for this exception.
+     * @param statusCode the status code received from the request to the project management platform.
+     * @since 1.2.0
+     */
+    public WorkItemRetrievalException(String message, Integer statusCode)
+    {
         super(message);
+        this.statusCode = statusCode;
     }
 
     /**
@@ -47,6 +60,27 @@ public class WorkItemRetrievalException extends WorkItemException
      */
     public WorkItemRetrievalException(String message, Throwable throwable)
     {
+        this(message, throwable, -1);
+    }
+
+    /**
+     * @param message the detail message for this exception.
+     * @param throwable the cause for this exception or null if none exists.
+     * @param statusCode the status code received from the request to the project management platform.
+     * @since 1.2.0
+     */
+    public WorkItemRetrievalException(String message, Throwable throwable, Integer statusCode)
+    {
         super(message, throwable);
+        this.statusCode = statusCode;
+    }
+
+    /**
+     * @return the status code received from the request to the project management platform.
+     * @since 1.2.0
+     */
+    public Integer getStatusCode()
+    {
+        return statusCode;
     }
 }

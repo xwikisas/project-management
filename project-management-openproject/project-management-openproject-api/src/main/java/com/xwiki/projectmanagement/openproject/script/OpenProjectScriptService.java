@@ -30,17 +30,26 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 
 /**
  * @version $Id$
@@ -82,6 +91,12 @@ public class OpenProjectScriptService implements ScriptService
     @Inject
     private Provider<XWikiContext> xContextProvider;
 
+    @Inject
+    private MacroUtils macroUtils;
+
+    @Inject
+    private UserTokenChecker userTokenChecker;
+
     /**
      * Retrieves a list of available OpenProject connections.
      *
@@ -106,6 +121,20 @@ public class OpenProjectScriptService implements ScriptService
             options.add(option);
         }
         return options;
+    }
+
+    /**
+     * @param instance the configured OpenProject connection.
+     * @return the server url of the given OpenProject connection.
+     * @since 1.2.0
+     */
+    public String getConnectionUrl(String instance)
+    {
+        OpenProjectConnection openProjectConnection = openProjectConfiguration.getConnection(instance);
+        if (openProjectConnection == null) {
+            return null;
+        }
+        return openProjectConnection.getServerURL();
     }
 
     /**
@@ -163,5 +192,55 @@ public class OpenProjectScriptService implements ScriptService
         String currentPage = currentDoc.getDocumentReference().getName();
 
         return "OpenProject".equals(currentSpace) && "WebHome".equals(currentPage);
+    }
+
+    /**
+     *
+     * @param instance the configured OpenProject instance against which the user should be authenticated.
+     * @param syntax the syntax in which the message will be rendered.
+     * @return a warning message rendered in the given syntax.
+     * @throws ComponentLookupException if the syntax does not exist.
+     * @since 1.2.0
+     */
+    public String getNotAuthorizedMessage(String instance, Syntax syntax) throws ComponentLookupException
+    {
+        return macroUtils.renderMacroContent(userTokenChecker.getWarningBlock(instance), syntax);
+    }
+
+    /**
+     * @return a new instance of a filter builder that can be used to create OpenProject filters.
+     * @since 1.2.0
+     */
+    public FilterBuilder getFilterBuilder()
+    {
+        return new FilterBuilder();
+    }
+
+    /**
+     * @param instance the OP instance configuration that will be used.
+     * @param page the number of the page.
+     * @param pageSize the number of elements per page.
+     * @param filters the OP rest filters.
+     * @return a list of OpenProject wiki links - entities that represent wiki pages mentioned inside a work package.
+     * @throws ProjectManagementException if some exception is thrown.
+     * @since 1.2.0
+     */
+    public PaginatedResult<WikiPageLink> getMentioningWorkPackages(String instance, int page, int pageSize,
+        String filters) throws ProjectManagementException
+    {
+        OpenProjectApiClient openProjectApiClient =
+            openProjectConfiguration.getOpenProjectApiClient(instance);
+
+        try {
+            return openProjectApiClient.getPageLinks(page, pageSize, filters);
+        } catch (WorkItemRetrievalException e) {
+            // This means that the endpoint is not available. The UI should print a message informating the user
+            // about that.
+            if (e.getStatusCode() == 404) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
     }
 }

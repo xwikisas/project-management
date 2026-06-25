@@ -17,6 +17,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+// Init global event bus.
+window.openProjectEvents = window.openProjectEvents || new EventTarget();
+
 define("openproject.createworkpackage.utils", {
   prefix: "openproject.createworkpackage.utils.",
   keys: [
@@ -56,7 +59,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        text: option.name,
 	        selected:
 	          hasDefault &&
-	          fieldData.defaultValue.self.location === value
+	          fieldData.defaultValue === value
 	      })
 	    );
 	  });
@@ -67,6 +70,12 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	}
 
 	let createInput = function createInput(id, name, fieldClass, fieldData) {
+	  // Only build an input for actual field definitions. Response metadata (e.g. validationMessage,
+	  // which is a plain string) has no "type" and must not be rendered as an input.
+	  if (!fieldData || !fieldData.type) {
+	    return null;
+	  }
+
 	  let field;
 
 	  switch (fieldData.type) {
@@ -101,7 +110,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        class: fieldClass,
 	        required: fieldData.required,
 	        placeholder: l10n.get("inputPlaceholder", fieldData.label),
-	        value: fieldData.defaultValue?.id || ""
+	        value: fieldData.defaultValue || ""
 	      });
 	      break;
 	  }
@@ -187,6 +196,12 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	    $(incorrectTokenId).addClass("hidden");
 	    $(projectContainerId).removeClass("hidden");
+      if (!window.openProjectEvents) {
+        return;
+      }
+      window.openProjectEvents.dispatchEvent(
+        new CustomEvent('projectsSelectDisplayed', { detail: { element: projectSelect } })
+      );
 	  } catch (err) {
 	    if (err.status === 409) {
 	      const link = $(`${incorrectTokenId} a`);
@@ -202,11 +217,83 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  }
 	}
 
+	let applyPreselected = function applyPreselected(selectize, preselected) {
+	  if (!preselected?.value) {
+	    return;
+	  }
+	  if (!selectize.options[preselected.value]) {
+	    selectize.addOption(preselected);
+	  }
+	  selectize.setValue(preselected.value, true);
+	}
+
+	let initParentPicker = function initParentPicker(connectionSelectId, parentSelectId, parentContainerId,
+	preselected, baseUrl) {
+	  const connection = $(connectionSelectId).val();
+	  const parent = $(parentSelectId);
+
+	  if (!connection) {
+	    return;
+	  }
+
+	  $(parentContainerId).removeClass("hidden");
+
+	  if (parent[0] && parent[0].selectize) {
+	    parent[0].selectize.destroy();
+	  }
+
+	  parent.empty();
+
+	  let selectizeConfig = {
+	    create: false,
+	    maxItems: 1,
+	    inputClass: "selectize-input form-control",
+	  };
+
+	  selectizeConfig.load = function (text, callback) {
+	    const connection = $(connectionSelectId).val();
+	    if (!connection) {
+	      return callback([]);
+	    }
+	    const searchUrl = `${baseUrl}${connection}/suggest/parent`;
+	    const selectize = parent[0].selectize;
+	    $.getJSON(searchUrl, { search: text })
+	      .done(function (results) {
+	        // Add only options that are not already present, then refresh, to avoid the flicker of
+	        // clearing and rebuilding the whole option list on every search.
+	        results.forEach(function (result) {
+	          if (!selectize.options[result.value]) {
+	            selectize.addOption(result);
+	          }
+	        });
+	        selectize.refreshOptions(false);
+	        callback();
+	      })
+	      .fail(function (err) {
+	        console.error("Parent picker search failed:", err);
+	        callback([]);
+	      })
+	      .always(function () {
+	        if (!window.openProjectEvents) {
+	          return;
+	        }
+	        window.openProjectEvents.dispatchEvent(
+	          new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
+	        );
+	      });
+	  }
+
+	  parent.xwikiSelectize(selectizeConfig);
+
+	  applyPreselected(parent[0].selectize, preselected);
+	}
+
 	let createWPUtils = {
 	  notify: notify,
 	  createInput: createInput,
 	  buildPayload: buildPayload,
 	  loadProjects: loadProjects,
+	  initParentPicker: initParentPicker,
 	  createWorkPackagesRequest: createWorkPackagesRequest
 	}
 

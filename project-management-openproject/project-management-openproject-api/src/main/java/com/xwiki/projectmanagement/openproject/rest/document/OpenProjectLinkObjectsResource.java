@@ -20,7 +20,6 @@ package com.xwiki.projectmanagement.openproject.rest.document;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -48,7 +47,6 @@ public interface OpenProjectLinkObjectsResource
      *
      * @param id the unique identifier, created through {@link OpenProjectDocumentResource}, that uniquely
      *     identifies an xwiki page on the instance.
-     * @param instanceId the id of the OpenProject instance that should be taken into consideration when creating
      *     links.
      * @param minorRevision if set to true, the new page version will be a minor one.
      * @param link the {@link WorkPackageLink} model that will be used to create a link.
@@ -59,7 +57,6 @@ public interface OpenProjectLinkObjectsResource
     @PUT
     Response link(
         @PathParam("id") String id,
-        @QueryParam("instanceId") @DefaultValue("") String instanceId,
         @QueryParam("minorRevision") Boolean minorRevision,
         WorkPackageLink link
     ) throws XWikiRestException;

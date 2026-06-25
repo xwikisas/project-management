@@ -21,10 +21,11 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  */
 
 import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Singleton;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
@@ -46,6 +47,7 @@ import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
+import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 /**
@@ -57,7 +59,6 @@ import com.xwiki.urlshortener.URLShortenerManager;
  * @since 1.2.0-rc-1
  */
 @Component
-@Singleton
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectDocumentResource")
 public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     implements OpenProjectDocumentResource, Initializable
@@ -88,9 +89,10 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            String spaces = getRestSpaces(documentReference);
-            Page page = getPage(documentReference.getWikiReference().getName(), spaces, documentReference.getName(),
-                withPrettyNames, withObjects, withXClass, withAttachments);
+            Page page = getPage(documentReference.getWikiReference().getName(),
+                documentReference.getSpaceReferences().stream().map(EntityReference::getName)
+                    .collect(Collectors.toList()), documentReference.getName(), withPrettyNames, withObjects,
+                withXClass, withAttachments);
 
             page.setId(id);
 
@@ -101,7 +103,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     }
 
     @Override
-    public Response updateDocument(String documentReference, Boolean minorRevision, Page page)
+    public Response updateDocument(String documentReference, Boolean minorRevision, Boolean create, Page page)
         throws XWikiRestException
     {
         if (documentReference == null || documentReference.isEmpty()) {
@@ -114,13 +116,46 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
 
         try {
 
-            return putPageAndReturn(docRef, page, minorRevision);
+            return putPageAndReturn(docRef, page, minorRevision, create);
         } catch (XWikiException e) {
             return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
         }
     }
 
-    private Page getPage(String wikiName, String spaceName, String pageName, Boolean withPrettyNames,
+    @Override
+    public Response getDocumentUniqueId(String documentReference, Boolean withPrettyNames,
+        Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
+    {
+        if (documentReference == null || documentReference.isEmpty()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity("Missing `docRef` query parameter pointing to the document with an unique id.")
+                .build();
+        }
+        DocumentReference docRef =
+            resolver.resolve(documentReference, new WikiReference(wikiDescriptorManager.getMainWikiId()));
+
+        try {
+
+            Page page = getPage(docRef.getWikiReference().getName(),
+                docRef.getSpaceReferences().stream().map(EntityReference::getName)
+                    .collect(Collectors.toList()), docRef.getName(), withPrettyNames, withObjects,
+                withXClass, withAttachments);
+
+            String id = null;
+
+            id = urlShortenerManager.createShortenedURL(docRef);
+
+            page.setId(id);
+
+            return Response.ok(page).build();
+        } catch (URLShortenerException e) {
+            getLogger().error("Failed to create the shortened url for document [{}].", docRef, e);
+            return Response.serverError().entity(String.format("Could not create a unique id for the page. Cause [%s].",
+                ExceptionUtils.getRootCauseMessage(e))).build();
+        }
+    }
+
+    private Page getPage(String wikiName, List<String> spaceName, String pageName, Boolean withPrettyNames,
         Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
     {
         try {
@@ -135,20 +170,23 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                     withXClass, withAttachments);
 
             return page;
-        } catch (Exception e) {
+        } catch (XWikiException e) {
             throw new WebApplicationException(
                 Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
                     .build());
         }
     }
 
-    private Response putPageAndReturn(DocumentReference docRef, Page page, Boolean minorRevision)
+    private Response putPageAndReturn(DocumentReference docRef, Page page, Boolean minorRevision, Boolean create)
         throws XWikiRestException, XWikiException
     {
 
         String spaces = getRestSpaces(docRef);
         DocumentInfo documentInfo =
             getDocumentInfo(docRef.getWikiReference().getName(), spaces, docRef.getName(), null, null, false, false);
+        if (create && !documentInfo.getDocument().isNew()) {
+            throw new WebApplicationException(Response.status(Response.Status.CONFLICT).build());
+        }
         Response createResponse = putPage(documentInfo, page, minorRevision);
 
         // Attach id after making the request. Even if returns a 400 error code, we still want to try to attach the id.

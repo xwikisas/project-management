@@ -99,7 +99,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         };
         if (params.searchURL) {
           selectizeCfg.load = function (text, callback) {
-            const searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
+            let searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
             $.getJSON(searchURL)
               .then(function (results) {
                 if (Array.isArray(results)) {

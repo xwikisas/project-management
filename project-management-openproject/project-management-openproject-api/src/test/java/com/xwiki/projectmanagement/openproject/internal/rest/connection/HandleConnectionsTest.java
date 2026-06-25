@@ -71,7 +71,8 @@ public class HandleConnectionsTest
         "firstConnection",
         "firstConnectionURL",
         "firstConnectionClientId",
-        "firstConnectionClientSecret"
+        "firstConnectionClientSecret",
+        "firstConnectionInstanceId"
     );
 
     private static final String WIKI_NAME = "wiki";
