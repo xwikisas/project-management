@@ -17,6 +17,9 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+// Init global event bus.
+window.openProjectEvents = window.openProjectEvents || new EventTarget();
+
 define("openproject.createworkpackage.utils", {
   prefix: "openproject.createworkpackage.utils.",
   keys: [
@@ -193,6 +196,12 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	    $(incorrectTokenId).addClass("hidden");
 	    $(projectContainerId).removeClass("hidden");
+      if (!window.openProjectEvents) {
+        return;
+      }
+      window.openProjectEvents.dispatchEvent(
+        new CustomEvent('projectsSelectDisplayed', { detail: { element: projectSelect } })
+      );
 	  } catch (err) {
 	    if (err.status === 409) {
 	      const link = $(`${incorrectTokenId} a`);
@@ -249,7 +258,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    const searchUrl = `${baseUrl}${connection}/suggest/parent`;
 	    const selectize = parent[0].selectize;
 	    $.getJSON(searchUrl, { search: text })
-	      .then(function (results) {
+	      .done(function (results) {
 	        // Add only options that are not already present, then refresh, to avoid the flicker of
 	        // clearing and rebuilding the whole option list on every search.
 	        results.forEach(function (result) {
@@ -260,9 +269,17 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        selectize.refreshOptions(false);
 	        callback();
 	      })
-	      .catch(function (err) {
+	      .fail(function (err) {
 	        console.error("Parent picker search failed:", err);
 	        callback([]);
+	      })
+	      .always(function () {
+	        if (!window.openProjectEvents) {
+	          return;
+	        }
+	        window.openProjectEvents.dispatchEvent(
+	          new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
+	        );
 	      });
 	  }
 

@@ -191,7 +191,6 @@
         // observer.observe(valueContainer[0], { childList: true });
       });
       let initInput = function (propRoot, root) {
-        debugger;
           let input = propRoot.find(':input');
           if (input &lt;= 0 || input[0].selectize) {
             return;

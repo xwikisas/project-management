@@ -21,11 +21,9 @@ package com.xwiki.projectmanagement.openproject.internal.listener;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,16 +33,9 @@ import org.slf4j.Logger;
 import org.xwiki.bridge.event.DocumentCreatingEvent;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
-import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.LocalDocumentReference;
-import org.xwiki.model.reference.WikiReference;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
-import org.xwiki.query.Query;
-import org.xwiki.query.QueryException;
-import org.xwiki.query.QueryManager;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.macro.MacroExecutionException;
@@ -57,7 +48,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.commons.document.MacroBlockFinder;
 import com.xwiki.commons.document.MacroUtils;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.relations.RelationsManager;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 /**
@@ -82,16 +73,6 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
     private static final Set<String> UPDATABLE_MACROS = Set.of(OPENPROJECT, "openprojectchart");
 
     @Inject
-    @Named("local")
-    private EntityReferenceSerializer<String> serializer;
-
-    @Inject
-    private DocumentReferenceResolver<String> documentReferenceResolver;
-
-    @Inject
-    private QueryManager queryManager;
-
-    @Inject
     @Named("iterative")
     private MacroBlockFinder macroBlockFinder;
 
@@ -99,11 +80,10 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
     private MacroUtils macroUtils;
 
     @Inject
-    private Logger logger;
+    private RelationsManager relationsManager;
 
     @Inject
-    private OpenProjectConfiguration configuration;
-
+    private Logger logger;
     /**
      * Default constructor.
      */
@@ -123,13 +103,15 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
             return;
         }
         try {
-            String instance = getOPInstanceFromAncestorRelation(document, context);
+            ProjectManagementRelation relation =
+                relationsManager.getClientRelation(document.getDocumentReference(), OPENPROJECT, true);
+            String instance = relation.getClientParamsMap().get(INSTANCE);
             if (instance == null) {
                 return;
             }
             findAndUpdateOPMacros(document, instance);
             document.removeXObject(spaceMarker);
-        } catch (QueryException | XWikiException | JsonProcessingException | MacroExecutionException
+        } catch (XWikiException | JsonProcessingException | MacroExecutionException
                  | ComponentLookupException e) {
             logger.error("Failed to set the INSTANCE parameter of the OpenProject macros in [{}].",
                 document.getDocumentReference(), e);
@@ -162,37 +144,5 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
             }
         }
         document.setContent(documentXDOM);
-    }
-
-    private String getOPInstanceFromAncestorRelation(XWikiDocument document, XWikiContext context)
-        throws QueryException, XWikiException, JsonProcessingException
-    {
-        BaseObject relation = document.getXObject(ProjectManagementRelation.CLASS_REFERENCE);
-        if (relation == null) {
-            List<String> parents = document.getDocumentReference().getParent().getReversedReferenceChain().stream()
-                .filter(e -> !(e instanceof WikiReference)).map(serializer::serialize).collect(Collectors.toList());
-            // Get the closest ancestor that has a
-            List<String> result = queryManager.createQuery(
-                "from doc.object('ProjectManagement.Code.RelationClass') as obj "
-                    + "where obj.client = :client and doc.space in (:ancestorList) "
-                    + "order by length(doc.space) desc",
-                Query.XWQL).bindValue("ancestorList", parents).bindValue("client", OPENPROJECT).setLimit(1).execute();
-
-            if (result.isEmpty()) {
-                return null;
-            }
-
-            DocumentReference documentReference = documentReferenceResolver.resolve(result.get(0));
-
-            XWikiDocument xWikiDocument = context.getWiki().getDocument(documentReference, context);
-            relation = xWikiDocument.getXObject(ProjectManagementRelation.CLASS_REFERENCE);
-        }
-
-        if (relation == null) {
-            return null;
-        }
-        ProjectManagementRelation relationModel = new ProjectManagementRelation(relation);
-        Map<String, String> params = relationModel.getClientParamsMap();
-        return params.get(INSTANCE);
     }
 }
