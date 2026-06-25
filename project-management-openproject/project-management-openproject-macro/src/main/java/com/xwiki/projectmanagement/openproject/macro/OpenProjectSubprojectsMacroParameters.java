@@ -1,5 +1,3 @@
-package com.xwiki.projectmanagement.openproject.macro;
-
 /*
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,45 +17,37 @@ package com.xwiki.projectmanagement.openproject.macro;
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
-import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
-import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
-import com.xwiki.projectmanagement.openproject.OpenProjectSort;
+import com.xwiki.projectmanagement.openproject.OpenProjectProject;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
- * Open project macro params.
+ * Parameters for the OpenProject Subprojects macro.
  *
- * @version $Id$.
+ * @version $Id$
+ * @since 1.2
  */
-public class OpenProjectMacroParameters extends ProjectManagementMacroParameters implements OpenProjectInstanceHolder
+public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {
     private String instance;
 
-    /**
-     * Default constructor. Sets some default values specific to the Open Project implementation.
-     */
-    public OpenProjectMacroParameters()
-    {
-        setProperties("identifier,type,summary,description,startDate,assignees,_actions");
-    }
+    private String project;
 
-    /**
-     * @return the instance from where work items should be retrieved.
-     */
+    private int count = 25;
+
+    @Override
     public String getInstance()
     {
         return instance;
     }
 
-    /**
-     * @param instance see {@link #getInstance()}.
-     */
+    @Override
     @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
@@ -65,24 +55,37 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
         this.instance = instance;
     }
 
-    @PropertyDisplayType(OpenProjectFilter.class)
-    @Override
-    public void setFilters(String filters)
+    /**
+     * @return the identifier of the project whose subprojects will be displayed.
+     */
+    public String getProject()
     {
-        super.setFilters(filters);
+        return project;
     }
 
-    @PropertyDisplayType(OpenProjectProperties.class)
-    @Override
-    public void setProperties(String properties)
+    /**
+     * @param project see {@link #getProject()}.
+     */
+    @PropertyMandatory
+    @PropertyDisplayType(OpenProjectProject.class)
+    public void setProject(String project)
     {
-        super.setProperties(properties);
+        this.project = project;
     }
 
-    @PropertyDisplayType(OpenProjectSort.class)
-    @Override
-    public void setSort(String sort)
+    /**
+     * @return the maximum number of subprojects to display.
+     */
+    public int getCount()
     {
-        super.setSort(sort);
+        return count;
+    }
+
+    /**
+     * @param count see {@link #getCount()}.
+     */
+    public void setCount(int count)
+    {
+        this.count = count;
     }
 }

@@ -582,7 +582,7 @@ public class DefaultOpenProjectApiClientTest
         expected.put(
             "self",
             new Linkable(
-                "", url
+                name, url
             )
         );
 

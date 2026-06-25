@@ -46,7 +46,17 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     /**
      * The key identifying the open project object itself.
      */
-    private static final String SELF = "self";
+    private static final String KEY_SELF = "self";
+
+    /**
+     * The key identifying the title.
+     */
+    private static final String KEY_TITLE = "title";
+
+    /**
+     * The key identifying the links.
+     */
+    private static final String KEY_LINKS = "_links";
 
     /**
      * Default constructor.
@@ -65,7 +75,8 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     {
         this.setId(jsonNode.path(KEY_ID).asInt());
         this.setName(jsonNode.path(KEY_NAME).asText());
-        this.setSelf(new Linkable("", jsonNode.path("_links").path(SELF).path("href").asText()));
+        JsonNode selfNode = jsonNode.path(KEY_LINKS).path(KEY_SELF);
+        this.setSelf(new Linkable(selfNode.path(KEY_TITLE).asText(), selfNode.path("href").asText()));
     }
 
     /**
@@ -107,7 +118,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public Linkable getSelf()
     {
-        return (Linkable) get(SELF);
+        return (Linkable) get(KEY_SELF);
     }
 
     /**
@@ -117,7 +128,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public void setSelf(Linkable self)
     {
-        put(SELF, self);
+        put(KEY_SELF, self);
     }
 
     /**
@@ -146,6 +157,6 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public void initializeSelfWithPath(String connectionUrl, String resourcePath)
     {
-        this.setSelf(new Linkable("", String.format("%s%s", connectionUrl, resourcePath)));
+        this.getSelf().setLocation(String.format("%s%s", connectionUrl, resourcePath));
     }
 }

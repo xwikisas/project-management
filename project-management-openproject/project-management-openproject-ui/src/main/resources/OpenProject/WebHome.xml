@@ -36,5 +36,610 @@
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content/>
+  <content>{{velocity}}
+#set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
+#set ($configObj = $doc.getObject($configClass))
+#if($request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+  #set ($discard = $configObj.set('selectedConnection', $request.connection))
+  #set ($discard = $configObj.set('selectedProject', $request.project))
+  #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
+  #set ($discard = $doc.save('Updated project', true))
+  $response.sendRedirect($doc.getURL())
+  #stop
+#end
+#set ($connectionOptions = $services.openproject.getConnectionOptions())
+#set($discard = $connectionOptions.remove(0))
+#set ($selectedConnection = '')
+#if($configObj)
+  #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+#end
+#if ($connectionOptions.size() == 1)
+  #set ($singleConnectionName = $connectionOptions.get(0).name)
+  #if(!$selectedConnection || !$singleConnectionName.equals($selectedConnection))
+    #set ($discard = $configObj.set('selectedConnection', $singleConnectionName))
+    #set ($discard = $doc.save('Updated connection', true))
+    #set ($selectedConnection = $singleConnectionName)
+  #end
+#end
+#set ($selectedProject = '')
+#set ($selectedProjectLabel = '')
+#if($configObj)
+  #set ($selectedProject = $configObj.getValue('selectedProject'))
+  #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
+#end
+{{html clean="false"}}
+#if ($connectionOptions.size() == 0)
+  &lt;div class="box warningmessage"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+  &lt;/div&gt;
+#else
+&lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
+  &lt;div class="form-group"&gt;
+    &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
+    &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
+      #if($connectionOptions.size() == 1) disabled #end&gt;
+      #foreach ($option in $connectionOptions)
+      &lt;option value="$option.value" #if($selectedConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
+      #end
+    &lt;/select&gt;
+    #if($connectionOptions.size() == 1)
+    &lt;input type="hidden" name="connection" value="$!escapetool.xml($selectedConnection)"/&gt;
+    #end
+  &lt;/div&gt;
+  &lt;div class="form-group"&gt;
+    &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
+    &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
+      data-connection="$!escapetool.xml($selectedConnection)"
+      data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
+      #if("$!selectedProject" != '')
+      &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+      #end
+    &lt;/select&gt;
+    &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
+  &lt;/div&gt;
+  &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
+  &lt;input type="hidden" name="action" value="saveProject"/&gt;
+   &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/form&gt;
+#end
+{{/html}}
+#if ($connectionOptions.size() != 0)
+
+{{dashboard/}}
+#end
+{{/velocity}}</content>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>0</number>
+    <className>OpenProject.Code.DashboardConnectionConfigClass</className>
+    <guid>8a7928e8-71e7-4452-b47a-8844cf77b4f4</guid>
+    <class>
+      <name>OpenProject.Code.DashboardConnectionConfigClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <selectedConnection>
+        <customDisplay/>
+        <disabled>0</disabled>
+        <hint/>
+        <name>selectedConnection</name>
+        <number>1</number>
+        <picker>1</picker>
+        <prettyName>selectedConnection</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </selectedConnection>
+      <selectedProject>
+        <customDisplay/>
+        <disabled>0</disabled>
+        <hint/>
+        <name>selectedProject</name>
+        <number>2</number>
+        <picker>1</picker>
+        <prettyName>selectedProject</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </selectedProject>
+    </class>
+    <property>
+      <selectedConnection/>
+    </property>
+    <property>
+      <selectedProject/>
+    </property>
+    <property>
+      <selectedProjectLabel>Scrum project</selectedProjectLabel>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>0</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>c3dc190f-e3e7-4b0f-b0cb-2d4f7c37a449</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-project-members instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 1</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject-project-members.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>1</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>4c18e8bb-63d9-472b-b9fa-d3f85b16360e</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-project-details instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 2</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject-project-details.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>2</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>5307213e-8be0-4a8c-950f-255db99ee470</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-news instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 3</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject-news.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>3</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>6e052975-1ed9-4f01-a85e-462d6d1b2033</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-project-time-entries instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 4</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject-project-time-entries.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>4</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>41d2baf4-b339-4f50-bc9d-c1faa287000a</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-subprojects instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 5</position>
+    </property>
+    <property>
+      <title>$services.localization.render('rendering.macro.openproject-subprojects.name')</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>1</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>2f0a4d6e-3c1b-4d8a-9e2f-7b5c1a9d0e34</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>require(['jquery', 'xwiki-selectize'], function($) {
+  let select = $('#openproject-dashboard-project-select');
+  if (!select.length) {
+    return;
+  }
+
+  function getConnection() {
+    let connSelect = $('#openproject-dashboard-connection-select');
+    return connSelect.length ? connSelect.val() : select.attr('data-connection');
+  }
+
+  function initSelectize(connection) {
+    if (select[0].selectize) {
+      select[0].selectize.destroy();
+    }
+    let projectsREST = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki +
+        '/openproject/instance/' + encodeURIComponent(connection) + '/suggest/projects';
+    select.xwikiSelectize({
+      maxItems: 1,
+      create: false,
+      placeholder: select.attr('data-placeholder'),
+      load: function(text, callback) {
+        $.getJSON(projectsREST, { search: text })
+          .done(function(results) {
+          $('#openproject-dashboard-invalid-connection').addClass('hidden');
+          callback(results);
+        })
+          .fail(function(err) {
+          if (err &amp;&amp; err.status === 404) {
+            $('#openproject-dashboard-invalid-connection').removeClass('hidden');
+          }
+          callback([]);
+        });
+      }
+    });
+  }
+
+  let currentConnection = getConnection();
+  if (currentConnection) {
+    initSelectize(currentConnection);
+  }
+
+  $('#openproject-dashboard-connection-select').on('change', function() {
+    let newConnection = $(this).val();
+    if (!newConnection || newConnection === currentConnection) {
+      return;
+    }
+    currentConnection = newConnection;
+    initSelectize(newConnection);
+  });
+
+  select.on('change', function() {
+    let value = select.val();
+    if (!value) {
+      return;
+    }
+    let label = value;
+    let selectize = select[0].selectize;
+    if (selectize &amp;&amp; selectize.options[value]) {
+      label = selectize.options[value].label || selectize.options[value].text || value;
+    }
+    $('#openproject-dashboard-project-label-input').val(label);
+    $('#openproject-dashboard-project-form').submit();
+  });
+});</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
 </xwikidoc>

@@ -47,10 +47,12 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -151,6 +153,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String URL_INSTANCE_METADATA = "/.well-known/openproject-metadata";
 
     private static final String OP_RESPONSE_INSTALLATION_UUID = "installation_uuid";
+    private static final String API_URL_PROJECT = "/api/v3/projects/%s";
+
+    private static final String API_PROJECT_PLACEHOLDER = "/projects/%s";
+
+    private static final String API_URL_NEWS = "/api/v3/news";
+
+    private static final String API_URL_MEMBERSHIPS = "/api/v3/memberships";
+
+    private static final String API_URL_TIME_ENTRIES = "/api/v3/time_entries";
+
+    private static final String OP_RESPONSE_PRINCIPAL = "principal";
+
+    private static final String OP_RESPONSE_ROLES = "roles";
+
+    private static final String API_URL_SELECT_ELEMENTS_PARAM = "elements/id,elements/name";
 
     private static final String COMMUNICATING_ISSUE_MESSAGE = "There was an issue in communicating with [%s].";
 
@@ -246,7 +263,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         for (JsonNode element : elements) {
             Project project = new Project(element);
-            project.initializeSelfWithPath(connectionUrl, String.format("/projects/%s", project.getId()));
+            project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
             projects.add(project);
         }
 
@@ -386,6 +403,71 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_NEWS, offset, pageSize, filters, "", "");
+
+        List<News> newsList = new ArrayList<>();
+        for (JsonNode element : elements) {
+            News news = new News(element);
+            news.initializeSelfWithPath(connectionUrl, String.format("/news/%s", news.getId()));
+
+            news.setProjectLink(new Linkable(
+                element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_PROJECT).path(OP_RESPONSE_TITLE).asText(),
+                String.format("%s/%s", connectionUrl, String.format("projects/%s", news.getId()))
+            ));
+            newsList.add(news);
+        }
+
+        return new PaginatedResult<>(newsList, offset, pageSize, newsList.size());
+    }
+
+    @Override
+    public Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        String urlPart = String.format(API_URL_PROJECT, projectId);
+        JsonNode projectJson = getOpenProjectResponse(urlPart, null, null, "", "", "");
+        Project project = new Project(projectJson);
+        project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
+        return project;
+    }
+
+    @Override
+    public PaginatedResult<User> getMemberships(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode elements =
+            getOpenProjectResponseEntities(API_URL_MEMBERSHIPS, offset, pageSize, filters, "", "");
+
+        List<User> users = new ArrayList<>();
+        for (JsonNode element : elements) {
+            JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
+            JsonNode principalNode = linksNode.path(OP_RESPONSE_PRINCIPAL);
+
+            String principalTitle = principalNode.path(OP_RESPONSE_TITLE).asText();
+            String principalHref = principalNode.path(HREF).asText();
+            String principalUrl = connectionUrl + principalHref.replaceFirst(API_URL_PART, "");
+
+            List<Linkable> roles = new ArrayList<>();
+            for (JsonNode roleNode : linksNode.path(OP_RESPONSE_ROLES)) {
+                roles.add(new Linkable(
+                    roleNode.path(OP_RESPONSE_TITLE).asText(),
+                    connectionUrl + roleNode.path(HREF).asText().replaceFirst(API_URL_PART, "")
+                ));
+            }
+
+            User user = new User();
+            user.setName(principalTitle);
+            user.setSelf(new Linkable(principalTitle, principalUrl));
+            user.setRoles(roles);
+            users.add(user);
+        }
+
+        return new PaginatedResult<>(users, offset, pageSize, users.size());
+    }
+
+    @Override
     public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
     {
         String uriStr = connectionUrl + String.format("/api/v3/users/%s/avatar", userId);
@@ -427,6 +509,25 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
                 e);
         }
+    }
+
+    @Override
+    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        JsonNode elements = getOpenProjectResponseEntities(API_URL_TIME_ENTRIES, offset, pageSize, filters, "", "");
+
+        List<TimeEntry> entries = new ArrayList<>();
+        for (JsonNode element : elements) {
+            TimeEntry entry = new TimeEntry(element);
+            String wpHref = element.path(OP_RESPONSE_LINKS).path("workPackage").path(HREF).asText();
+            if (!wpHref.isBlank()) {
+                entry.getWorkPackage().setLocation(connectionUrl + wpHref.replaceFirst(API_URL_PART, ""));
+            }
+            entries.add(entry);
+        }
+
+        return new PaginatedResult<>(entries, offset, pageSize, entries.size());
     }
 
     @Override

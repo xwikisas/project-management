@@ -34,6 +34,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 
@@ -50,6 +51,9 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
 {
     @Inject
     private UserTokenChecker userTokenChecker;
+
+    @Inject
+    private OpenProjectMacroParameterResolver parameterResolver;
 
     /**
      * Default constructor.
@@ -69,13 +73,15 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(parameters.getInstance());
+        String instanceToUse = parameterResolver.resolveInstance(parameters);
+
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
         parameters.setClient("openproject");
         if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> clientContext = Map.of("instance", parameters.getInstance());
+            Map<String, Object> clientContext = Map.of("instance", instanceToUse);
             ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);
         }
         return super.execute(parameters, content, context);
