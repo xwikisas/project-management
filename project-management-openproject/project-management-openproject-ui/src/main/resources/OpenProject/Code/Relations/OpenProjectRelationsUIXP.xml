@@ -164,6 +164,9 @@
         }
         // Callback function to execute when mutations are observed
         const callback = (mutationList, observer) =&gt; {
+          if (valueContainer.find(':input').length &gt; 0) {
+            return;
+          }
           observer.disconnect();
           root.find('.openproj-relation-client-params-edit').addClass('hidden');
           valueContainer.addClass('loading');
