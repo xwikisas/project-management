@@ -1,0 +1,592 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="OpenProject.Code.EditWorkPackageExtensionPoint" locale="">
+  <web>OpenProject.Code</web>
+  <name>EditWorkPackageExtensionPoint</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>EditWorkPackageExtensionPoint</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content/>
+  <object>
+    <name>OpenProject.Code.EditWorkPackageExtensionPoint</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>a9ccbf9e-077c-4dd4-a265-561e1c1c6b39</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>define("openproject.editworkpackage", {
+  prefix: "openproject.editworkpackage.",
+  keys: [
+    "notify.loadError",
+    "notify.fillRequiredFields",
+    "notify.success",
+    "notify.error"
+  ]
+});
+
+require.config({
+  paths: {
+    'create-work-package-utils': new XWiki.Document(
+      new XWiki.Model.resolve(
+        'Main.WebHome',
+        XWiki.EntityType.DOCUMENT
+      )
+    )
+    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&amp;minify=false')
+  }
+});
+
+require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editworkpackage"], function ($, createWpUtils, l10n) {
+
+  $(document).ready(function () {
+    const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
+    let currentConnection = null;
+    let currentWorkPackageId = null;
+    let currentLockVersion = null;
+
+    function resetEditForm() {
+      const parentSelect = $("#parent-select-edit-work-package");
+      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
+        parentSelect[0].selectize.destroy();
+      }
+      parentSelect.empty();
+      $("#parent-select-edit-work-package-container").addClass("hidden");
+      $("#edit-dynamic-fields-container").empty().addClass("hidden");
+      currentLockVersion = null;
+    }
+
+    function buildInputs(options) {
+      const container = $("#edit-dynamic-fields-container");
+      container.empty().addClass("hidden");
+      Object.entries(options).forEach(([key, value]) =&gt; {
+        const input = createWpUtils.createInput("wp-" + key, key, "wp-" + key, value);
+        container.append(input);
+      });
+      container.removeClass("hidden");
+    }
+
+    function isFormValid() {
+      let valid = true;
+      $("#edit-dynamic-fields-container")
+        .find("input[required], select[required], textarea[required]")
+        .each(function () {
+        const value = $(this).val();
+        if (value === null || String(value).trim() === "") {
+          valid = false;
+        }
+      });
+      return valid;
+    }
+
+    function openEditModal(workPackageId, connection) {
+      resetEditForm();
+      currentConnection = connection;
+      currentWorkPackageId = workPackageId;
+      $("#edit-connection").val(connection);
+
+      const url = `${baseUrl}${connection}/workPackages/${workPackageId}/editForm`;
+      $.ajax({ method: "GET", contentType: "application/json", url: url })
+        .done(function (options) {
+        const { parent, lockVersion, ...formFields } = options;
+
+        currentLockVersion = lockVersion;
+
+        buildInputs(formFields);
+        createWpUtils.initParentPicker(
+          "#edit-connection",
+          "#parent-select-edit-work-package",
+          "#parent-select-edit-work-package-container",
+          parent,
+          baseUrl
+        );
+        $("#edit-work-package-modal").modal("show");
+      })
+        .fail(function () {
+        createWpUtils.notify(l10n.get("notify.loadError"), "error");
+      });
+    }
+
+    function submitEditForm() {
+      if (!isFormValid()) {
+        createWpUtils.notify(l10n.get("notify.fillRequiredFields"), "error");
+        return;
+      }
+
+      const payload = createWpUtils.buildPayload($("#edit-dynamic-fields-container"));
+      payload.lockVersion = currentLockVersion;
+
+      const parent = $("#parent-select-edit-work-package").val();
+      if (parent) {
+        payload.parent = parent;
+      }
+
+      const url = `${baseUrl}${currentConnection}/workPackages/${currentWorkPackageId}/update`;
+      $.ajax({ method: "POST", contentType: "application/json", url: url, data: JSON.stringify(payload) })
+        .done(function (response) {
+        createWpUtils.notify(l10n.get("notify.success"), "done");
+        $("#edit-work-package-modal").modal("hide");
+        document.dispatchEvent(new CustomEvent("op-edit-success", {
+          detail: { updatedWp: response, connection: currentConnection }
+        }));
+      })
+        .fail(function (err) {
+        if (err.status === 422 &amp;&amp; err.responseJSON) {
+          const { parent, lockVersion, validationMessage, ...formFields } = err.responseJSON;
+          if (lockVersion !== undefined) {
+            currentLockVersion = lockVersion;
+          }
+          buildInputs(formFields);
+          createWpUtils.notify(validationMessage || l10n.get("notify.error"), "error");
+          return;
+        }
+        createWpUtils.notify(l10n.get("notify.error"), "error");
+      });
+    }
+
+    document.addEventListener("op-edit-requested", function (event) {
+      const detail = event.detail || {};
+      if (!detail.workPackageId || !detail.connection) {
+        return;
+      }
+      openEditModal(detail.workPackageId, detail.connection);
+    });
+
+    $(document).on("submit", "#edit-work-package-form", function (e) {
+      e.preventDefault();
+      submitEditForm();
+    });
+
+    $(document).on("click", "#edit-work-package-cancel-button", function () {
+      resetEditForm();
+    });
+  });
+});</code>
+    </property>
+    <property>
+      <name>EditWorkPackageJs</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.EditWorkPackageExtensionPoint</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>369b0044-1a97-42fe-8591-9f8e1050962d</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>#edit-work-package-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}</code>
+    </property>
+    <property>
+      <contentType/>
+    </property>
+    <property>
+      <name>EditWorkPackageCss</name>
+    </property>
+    <property>
+      <parse/>
+    </property>
+    <property>
+      <use/>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.EditWorkPackageExtensionPoint</name>
+    <number>0</number>
+    <className>XWiki.UIExtensionClass</className>
+    <guid>ce5f58b9-d2b4-4f74-ba45-e8145b206865</guid>
+    <class>
+      <name>XWiki.UIExtensionClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <async_cached>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_cached</name>
+        <number>3</number>
+        <prettyName>Cached</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_cached>
+      <async_context>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>1</multiSelect>
+        <name>async_context</name>
+        <number>4</number>
+        <prettyName>Context elements</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>, </separator>
+        <separators>|, </separators>
+        <size>5</size>
+        <unmodifiable>0</unmodifiable>
+        <values>action=Action|doc.reference=Document|doc.revision|icon.theme=Icon theme|locale=Language|rendering.defaultsyntax=Default syntax|rendering.restricted=Restricted|rendering.targetsyntax=Target syntax|request.base=Request base URL|request.cookies|request.headers|request.parameters=Request parameters|request.remoteAddr|request.session|request.url=Request URL|request.wiki=Request wiki|sheet|user=User|wiki=Wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </async_context>
+      <async_enabled>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_enabled</name>
+        <number>2</number>
+        <prettyName>Asynchronous rendering</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_enabled>
+      <content>
+        <disabled>0</disabled>
+        <editor>Text</editor>
+        <name>content</name>
+        <number>1</number>
+        <prettyName>Executed Content</prettyName>
+        <restricted>0</restricted>
+        <rows>25</rows>
+        <size>120</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <extensionPointId>
+        <disabled>0</disabled>
+        <name>extensionPointId</name>
+        <number>5</number>
+        <prettyName>Extension Point ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </extensionPointId>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>6</number>
+        <prettyName>Extension ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parameters>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>parameters</name>
+        <number>7</number>
+        <prettyName>Extension Parameters</prettyName>
+        <restricted>0</restricted>
+        <rows>10</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </parameters>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>8</number>
+        <prettyName>Extension Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>wiki=Current Wiki|user=Current User|global=Global</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <async_cached>0</async_cached>
+    </property>
+    <property>
+      <async_context/>
+    </property>
+    <property>
+      <async_enabled>0</async_enabled>
+    </property>
+    <property>
+      <content>{{velocity}}
+#if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest'))
+  $xwiki.parseTemplate("create_work_package_helper_macros.vm")
+  #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
+  #set ($discard = $xwiki.jsx.use('OpenProject.Code.EditWorkPackageExtensionPoint'))
+  #set ($discard = $xwiki.ssx.use('OpenProject.Code.EditWorkPackageExtensionPoint'))
+  {{html}}
+  &lt;div class="modal" id="edit-work-package-modal" tabindex="-1" role="dialog"
+       aria-labelledby="edit-work-package-modal-label" data-backdrop="static" data-keyboard="false"&gt;
+    &lt;div class="modal-dialog" role="document"&gt;
+      &lt;div class="modal-content"&gt;
+        &lt;div class="modal-header"&gt;
+          &lt;button id="edit-close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+            &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
+          &lt;/button&gt;
+          &lt;div class="modal-title" id="edit-work-package-modal-title"&gt;
+            $escapetool.xml($services.localization.render('openproject.editworkpackage.modal.title'))
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;form id="edit-work-package-form" class="withLock xform" novalidate&gt;
+          &lt;div class="modal-body"&gt;
+            &lt;input type="hidden" id="edit-connection"/&gt;
+            #parentInput('parent-select-edit-work-package')
+            &lt;div id="edit-dynamic-fields-container" class="hidden"&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="modal-footer"&gt;
+            &lt;button id="edit-work-package-cancel-button" type="button" class="btn btn-default" data-dismiss="modal"&gt;
+              $escapetool.xml($services.localization.render('openproject.editworkpackage.modal.cancel'))
+            &lt;/button&gt;
+            &lt;button id="edit-work-package-form-button" type="submit" class="btn btn-primary"&gt;
+              $escapetool.xml($services.localization.render('openproject.editworkpackage.modal.save'))
+            &lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/form&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  {{/html}}
+#end
+{{/velocity}}</content>
+    </property>
+    <property>
+      <extensionPointId>org.xwiki.platform.template.header.after</extensionPointId>
+    </property>
+    <property>
+      <name>com.xwiki.projectmanagement.openproject.editworkpackage</name>
+    </property>
+    <property>
+      <parameters/>
+    </property>
+    <property>
+      <scope>global</scope>
+    </property>
+  </object>
+</xwikidoc>

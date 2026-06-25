@@ -59,7 +59,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        text: option.name,
 	        selected:
 	          hasDefault &&
-	          fieldData.defaultValue.self.location === value
+	          fieldData.defaultValue === value
 	      })
 	    );
 	  });
@@ -70,6 +70,12 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	}
 
 	let createInput = function createInput(id, name, fieldClass, fieldData) {
+	  // Only build an input for actual field definitions. Response metadata (e.g. validationMessage,
+	  // which is a plain string) has no "type" and must not be rendered as an input.
+	  if (!fieldData || !fieldData.type) {
+	    return null;
+	  }
+
 	  let field;
 
 	  switch (fieldData.type) {
@@ -104,7 +110,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	        class: fieldClass,
 	        required: fieldData.required,
 	        placeholder: l10n.get("inputPlaceholder", fieldData.label),
-	        value: fieldData.defaultValue?.id || ""
+	        value: fieldData.defaultValue || ""
 	      });
 	      break;
 	  }
@@ -211,7 +217,18 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  }
 	}
 
-	let initParentPicker = function initParentPicker(connectionSelectId, parentSelectId, parentContainerId) {
+	let applyPreselected = function applyPreselected(selectize, preselected) {
+	  if (!preselected?.value) {
+	    return;
+	  }
+	  if (!selectize.options[preselected.value]) {
+	    selectize.addOption(preselected);
+	  }
+	  selectize.setValue(preselected.value, true);
+	}
+
+	let initParentPicker = function initParentPicker(connectionSelectId, parentSelectId, parentContainerId,
+	preselected, baseUrl) {
 	  const connection = $(connectionSelectId).val();
 	  const parent = $(parentSelectId);
 
@@ -227,8 +244,6 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	  parent.empty();
 
-	  const searchUrl = `${baseUrl}${connection}/suggest/parent`;
-
 	  let selectizeConfig = {
 	    create: false,
 	    maxItems: 1,
@@ -236,25 +251,41 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  };
 
 	  selectizeConfig.load = function (text, callback) {
+	    const connection = $(connectionSelectId).val();
+	    if (!connection) {
+	      return callback([]);
+	    }
+	    const searchUrl = `${baseUrl}${connection}/suggest/parent`;
+	    const selectize = parent[0].selectize;
 	    $.getJSON(searchUrl, { search: text })
 	      .done(function (results) {
-	        parent[0].selectize.clearOptions();
-	        callback(results);
+	        // Add only options that are not already present, then refresh, to avoid the flicker of
+	        // clearing and rebuilding the whole option list on every search.
+	        results.forEach(function (result) {
+	          if (!selectize.options[result.value]) {
+	            selectize.addOption(result);
+	          }
+	        });
+	        selectize.refreshOptions(false);
+	        callback();
 	      })
-	      .fail(function () {
+	      .fail(function (err) {
+	        console.error("Parent picker search failed:", err);
 	        callback([]);
 	      })
 	      .always(function () {
-          if (!window.openProjectEvents) {
-            return;
-          }
-          window.openProjectEvents.dispatchEvent(
-            new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
-          );
+	        if (!window.openProjectEvents) {
+	          return;
+	        }
+	        window.openProjectEvents.dispatchEvent(
+	          new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
+	        );
 	      });
 	  }
 
 	  parent.xwikiSelectize(selectizeConfig);
+
+	  applyPreselected(parent[0].selectize, preselected);
 	}
 
 	let createWPUtils = {

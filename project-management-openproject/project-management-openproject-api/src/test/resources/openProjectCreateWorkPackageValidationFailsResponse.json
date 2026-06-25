@@ -17,22 +17,22 @@
     "allowedValues": [
       {
         "color": "#1A67A3",
+        "isMilestone": false,
         "name": "Task",
         "self": {
           "location": "/api/v3/types/1",
           "value": ""
         },
-        "isMilestone": false,
         "id": 1
       },
       {
         "color": "#35C53F",
+        "isMilestone": false,
         "name": "Milestone",
         "self": {
           "location": "/api/v3/types/2",
           "value": ""
         },
-        "isMilestone": false,
         "id": 2
       }
     ],
