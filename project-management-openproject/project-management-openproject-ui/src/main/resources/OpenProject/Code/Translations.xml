@@ -140,6 +140,7 @@ projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
 openproject.relations.mentions.noInstance=No OpenProject instance selected.
 openproject.relations.mentions.title=Mentioned on:
+openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
 
 openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package</content>
   <object>

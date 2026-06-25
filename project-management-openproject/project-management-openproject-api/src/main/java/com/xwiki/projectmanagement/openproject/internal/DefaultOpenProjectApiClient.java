@@ -47,7 +47,6 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
-import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
@@ -703,8 +702,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         int statusCode = response.statusCode();
 
         if (statusCode >= 400 && statusCode <= 499) {
-            throw new WorkPackageRetrievalBadRequestException(
-                String.format("The request to the OpenProject API was invalid. [%s]", response.body())
+            throw new WorkItemRetrievalException(
+                String.format("The request to the OpenProject API was invalid. [%s]", response.body()), statusCode
             );
         } else if (statusCode >= 500) {
             throw new ProjectManagementException(

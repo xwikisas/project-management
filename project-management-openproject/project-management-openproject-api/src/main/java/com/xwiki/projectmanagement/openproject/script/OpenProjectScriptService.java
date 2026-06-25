@@ -38,6 +38,7 @@ import org.xwiki.security.authorization.Right;
 import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -166,6 +167,16 @@ public class OpenProjectScriptService implements ScriptService
         OpenProjectApiClient openProjectApiClient =
             openProjectConfiguration.getOpenProjectApiClient(instance);
 
-        return openProjectApiClient.getPageLinks(page, pageSize, filters);
+        try {
+            return openProjectApiClient.getPageLinks(page, pageSize, filters);
+        } catch (WorkItemRetrievalException e) {
+            // This means that the endpoint is not available. The UI should print a message informating the user
+            // about that.
+            if (e.getStatusCode() == 404) {
+                return null;
+            } else {
+                throw e;
+            }
+        }
     }
 }
