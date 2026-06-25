@@ -25,6 +25,7 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProject;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
  * Parameters for the OpenProject Project Members macro.
@@ -32,7 +33,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectProjectMembersMacroParameters implements OpenProjectInstanceHolder
+public class OpenProjectProjectMembersMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {
     private String instance;
 

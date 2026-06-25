@@ -140,7 +140,7 @@
         let valueContainer = $(this);
 
         // Callback function to execute when mutations are observed
-        const callback = (mutationList, observer) => {
+        const callback = (mutationList, observer) =&gt; {
           debugger;
           observer.disconnect();
           let clientParams = root.data('params') &amp;&amp; root.data('params');
@@ -170,7 +170,7 @@
                 anchor = response.summary.value;
                 href = response.summary.location;
               }
-              valueContainer.html($('&lt;a/>').attr('href', href).text(anchor));
+              valueContainer.html($('&lt;a/&gt;').attr('href', href).text(anchor));
               console.log(response);
             })
             .fail(function (_jqxhr, textStatus, error) {
@@ -232,7 +232,7 @@
             let urlParams = { ...clientParams };
             debugger;
             if (cfg.query.filters.length &lt;= 0) {
-              if (input[0].selectize &amp;&amp; Object.keys(input[0].selectize.options).length > 1) {
+              if (input[0].selectize &amp;&amp; Object.keys(input[0].selectize.options).length &gt; 1) {
                 callback([]);
                 return;
               }
@@ -245,9 +245,9 @@
                 console.log(results);
                 let items = (results &amp;&amp; results.items) || [];
                 if (dataType == 'project') {
-                  items = items.map(item => { return { label: item.identifier.value, value: item.identifier.value, hint: item.name }});
+                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.name }});
                 } else {
-                  items = items.map(item => { return { label: item.identifier.value, value: item.identifier.value, hint: item.summary.value }});
+                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.summary.value }});
                 }
                 callback(items);
               })
@@ -484,7 +484,7 @@
       <name>com.xwiki.projectmanagement.relations.docextra</name>
     </property>
     <property>
-      <parameters>show=#set($show = false)#if($doc.getObjects('ProjectManagement.Code.RelationClass').size() > 0)#set($show = true)#end${show}
+      <parameters>show=#set($show = false)#if($doc.getObjects('ProjectManagement.Code.RelationClass').size() &gt; 0)#set($show = true)#end${show}
 title=$services.localization.render('projectmanagement.relations.docextra.title')
 itemnumber=$doc.getObjects('ProjectManagement.Code.RelationClass').size()</parameters>
     </property>

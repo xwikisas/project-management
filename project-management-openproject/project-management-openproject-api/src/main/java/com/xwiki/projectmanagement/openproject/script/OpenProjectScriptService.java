@@ -52,11 +52,19 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupMa
 public class OpenProjectScriptService implements ScriptService
 {
     /**
-     * Value indicating that the selected dashboard connection should be used.
+     * The value of the option representing the "use the dashboard-selected connection" choice.
      */
     public static final String USE_SELECTED_DASHBOARD_CONNECTION_VALUE = "use_selected_dashboard_connection";
 
+    /**
+     * The value of the option representing the "use the dashboard-selected project" choice.
+     *
+     */
+    public static final String USE_SELECTED_DASHBOARD_PROJECT_VALUE = "use_selected_dashboard_project";
+
     private static final String USE_SELECTED_DASHBOARD_CONNECTION_LABEL = "Use selected dashboard connection";
+
+    private static final String USE_SELECTED_DASHBOARD_PROJECT_LABEL = "Use selected dashboard project";
 
     private static final String NAME = "name";
 
@@ -84,7 +92,7 @@ public class OpenProjectScriptService implements ScriptService
         List<OpenProjectConnection> openProjectConnections = openProjectConfiguration.getOpenProjectConnections();
 
         List<Map<String, String>> options = new ArrayList<>();
-        if (shouldAddEmptyConnection()) {
+        if (isDashboardContext()) {
             Map<String, String> emptyOption = new HashMap<>();
             emptyOption.put(NAME, USE_SELECTED_DASHBOARD_CONNECTION_LABEL);
             emptyOption.put(VALUE, USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
@@ -112,6 +120,18 @@ public class OpenProjectScriptService implements ScriptService
     }
 
     /**
+     * @return the option representing the "use the dashboard-selected project" choice.
+     * @since 1.2
+     */
+    public Map<String, String> getUseSelectedDashboardProjectOption()
+    {
+        Map<String, String> option = new HashMap<>();
+        option.put(VALUE, USE_SELECTED_DASHBOARD_PROJECT_VALUE);
+        option.put(NAME, USE_SELECTED_DASHBOARD_PROJECT_LABEL);
+        return option;
+    }
+
+    /**
      * Generate the styling for the configured instances. Since this method will need to communicate with the configured
      * instances and make http requests, it should be run in a separate thread.
      */
@@ -125,13 +145,12 @@ public class OpenProjectScriptService implements ScriptService
     }
 
     /**
-     * Determines whether the current document is the OpenProject.WebHome page.
-     * When this method returns true, the system allows the connection parameter to remain empty. In that case, the
-     * connection will be inferred from the value selected in the OpenProject Dashboard input.
+     * Determines whether the current document is the OpenProject.WebHome dashboard page. When this returns true, macros
+     * may leave their connection and project parameters empty (or set to the inferred from the dashboard pickers).
      *
      * @return true if the current document is OpenProject.WebHome, false otherwise
      */
-    private boolean shouldAddEmptyConnection()
+    public boolean isDashboardContext()
     {
         XWikiContext xContext = xContextProvider.get();
         XWikiDocument currentDoc = xContext.getDoc();

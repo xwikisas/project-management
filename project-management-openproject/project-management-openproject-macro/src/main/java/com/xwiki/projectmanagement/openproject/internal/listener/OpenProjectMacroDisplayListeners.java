@@ -42,6 +42,7 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
+import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
 /**
  * Listener for OpenProject macro before execution event. Handles{@link BeforeOpenProjectMacroExecutionEvent} When the
@@ -60,6 +61,10 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     private static final String EFFECTIVE_INSTANCE_KEY = "effectiveInstance";
 
+    private static final String PROJECT_KEY = "project";
+
+    private static final String EFFECTIVE_PROJECT_KEY = "effectiveProject";
+
     private static final String OPEN_PROJECT = "OpenProject";
 
     private static final String DASHBOARD_PAGE_NAME = "WebHome";
@@ -69,6 +74,8 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
     private static final String DASHBOARD_CONFIG_CLASS_NAME = "DashboardConnectionConfigClass";
 
     private static final String SELECTED_CONNECTION_PROPERTY = "selectedConnection";
+
+    private static final String SELECTED_PROJECT_PROPERTY = "selectedProject";
 
     @Inject
     private Logger logger;
@@ -105,7 +112,6 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
         }
 
         Map<String, String> eventData = (Map<String, String>) data;
-        String instance = eventData.get(INSTANCE_KEY);
 
         DocumentReference classReference =
             new DocumentReference(
@@ -119,12 +125,36 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
             return;
         }
 
+        if (eventData.containsKey(INSTANCE_KEY)) {
+            resolveInstance(eventData, configObject);
+        }
+
+        if (eventData.containsKey(PROJECT_KEY)) {
+            resolveProject(eventData, configObject);
+        }
+    }
+
+    private void resolveInstance(Map<String, String> eventData, BaseObject configObject)
+    {
+        String instance = eventData.get(INSTANCE_KEY);
         String selectedConnection = configObject.getStringValue(SELECTED_CONNECTION_PROPERTY);
 
         if (StringUtils.isNotBlank(selectedConnection) && (USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(
             instance) || StringUtils.isBlank(instance)))
         {
             eventData.put(EFFECTIVE_INSTANCE_KEY, selectedConnection);
+        }
+    }
+
+    private void resolveProject(Map<String, String> eventData, BaseObject configObject)
+    {
+        String project = eventData.get(PROJECT_KEY);
+        String selectedProject = configObject.getStringValue(SELECTED_PROJECT_PROPERTY);
+
+        if (StringUtils.isNotBlank(selectedProject)
+            && (USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project) || StringUtils.isBlank(project)))
+        {
+            eventData.put(EFFECTIVE_PROJECT_KEY, selectedProject);
         }
     }
 

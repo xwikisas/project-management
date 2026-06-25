@@ -20,7 +20,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.6" reference="OpenProject.Code.DashboardConnectionConfigClass" locale="">
+<xwikidoc version="1.5" reference="OpenProject.Code.DashboardConnectionConfigClass" locale="">
   <web>OpenProject.Code</web>
   <name>DashboardConnectionConfigClass</name>
   <language/>
@@ -60,6 +60,20 @@
       <validationRegExp/>
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </selectedConnection>
+    <selectedProject>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>selectedProject</name>
+      <number>2</number>
+      <picker>1</picker>
+      <prettyName>selectedProject</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </selectedProject>
   </class>
   <object>
     <name>OpenProject.Code.DashboardConnectionConfigClass</name>

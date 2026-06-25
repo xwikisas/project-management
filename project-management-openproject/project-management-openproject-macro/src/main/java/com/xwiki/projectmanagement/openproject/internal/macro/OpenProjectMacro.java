@@ -35,7 +35,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
-import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
@@ -71,7 +71,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private StylingSetupManager stylingSetupManager;
 
     @Inject
-    private InstanceResolver instanceResolver;
+    private OpenProjectMacroParameterResolver parameterResolver;
 
     /**
      * Default constructor.
@@ -115,7 +115,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
             return licenseBlock;
         }
 
-        String instanceToUse = instanceResolver.resolve(parameters);
+        String instanceToUse = parameterResolver.resolveInstance(parameters);
 
         ssrx.use("openproject/css/propertyStyles.css");
         stylingSetupManager.useInstanceStyle(instanceToUse);

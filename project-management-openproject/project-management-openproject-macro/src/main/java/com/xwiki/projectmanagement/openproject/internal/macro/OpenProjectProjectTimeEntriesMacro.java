@@ -74,6 +74,10 @@ public class OpenProjectProjectTimeEntriesMacro
     private static final String PROJECT_AND_DATE_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}"
         + ",{\"created_at\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}]";
 
+    private static final String DATE_FILTER = "[{\"created_at\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}]";
+
+    private static final String EMPTY_FILTER = "";
+
     private static final String ACTIVITY_TABLE_HEADER = "ACTIVITY";
 
     private static final String LOGGED_FOR_TABLE_HEADER = "LOGGED FOR";
@@ -113,22 +117,35 @@ public class OpenProjectProjectTimeEntriesMacro
         }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
-        String dashboardUrl = String.format("%s/projects/%s", serverUrl, parameters.getProject());
+        boolean hasProject = isNotBlank(parameters.getProject());
+        String linkUrl = hasProject
+            ? String.format("%s/projects/%s", serverUrl, parameters.getProject())
+            : String.format("%s/time_entries", serverUrl);
+        String linkLabel = hasProject ? "View project dashboard" : "View time entries";
 
-        return Collections.singletonList(new GroupBlock(buildContent(entries, dashboardUrl), Collections.emptyMap()));
+        return Collections.singletonList(
+            new GroupBlock(buildContent(entries, linkLabel, linkUrl), Collections.emptyMap()));
     }
 
     private String buildFilters(String project, int days)
     {
+        boolean hasProject = isNotBlank(project);
         if (days > 0) {
             String endDate = LocalDate.now().plusDays(1).toString();
             String startDate = LocalDate.now().minusDays(days).toString();
-            return String.format(PROJECT_AND_DATE_FILTER, project, startDate, endDate);
+            return hasProject
+                ? String.format(PROJECT_AND_DATE_FILTER, project, startDate, endDate)
+                : String.format(DATE_FILTER, startDate, endDate);
         }
-        return String.format(PROJECT_FILTER, project);
+        return hasProject ? String.format(PROJECT_FILTER, project) : EMPTY_FILTER;
     }
 
-    private List<Block> buildContent(List<TimeEntry> entries, String dashboardUrl)
+    private static boolean isNotBlank(String value)
+    {
+        return value != null && !value.isBlank();
+    }
+
+    private List<Block> buildContent(List<TimeEntry> entries, String linkLabel, String linkUrl)
     {
         List<Block> blocks = new ArrayList<>();
 
@@ -144,7 +161,7 @@ public class OpenProjectProjectTimeEntriesMacro
         }
 
         blocks.add(
-            new ParagraphBlock(Collections.singletonList(buildLinkBlock("View project dashboard", dashboardUrl))));
+            new ParagraphBlock(Collections.singletonList(buildLinkBlock(linkLabel, linkUrl))));
 
         return blocks;
     }

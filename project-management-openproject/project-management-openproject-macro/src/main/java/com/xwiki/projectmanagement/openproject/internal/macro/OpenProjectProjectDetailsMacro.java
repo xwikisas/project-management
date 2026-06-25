@@ -115,7 +115,7 @@ public class OpenProjectProjectDetailsMacro
         addNameBlock(blocks, project);
         addStringBlock(blocks, IDENTIFIER, project.getIdentifier());
         addStringBlock(blocks, DESCRIPTION, project.getDescription());
-        addStringBlock(blocks, STATUS, project.getStatus().getValue());
+        addStringBlock(blocks, STATUS, project.getStatus() != null ? project.getStatus().getValue() : null);
         addCreatedBlock(blocks, project);
 
         return blocks;

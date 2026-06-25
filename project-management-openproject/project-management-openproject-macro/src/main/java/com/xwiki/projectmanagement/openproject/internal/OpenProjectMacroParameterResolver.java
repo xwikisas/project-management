@@ -31,25 +31,31 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.observation.ObservationManager;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
+import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
 /**
- * The resolver notifies the {@link com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent}
- * event, allowing listeners to provide an OpenProject instance. If the macro parameters already specify an instance,
- * that value takes precedence. Otherwise, the instance provided through the event is used and propagated back to the
- * macro parameters.
+ * Resolves macro parameters that can be driven by the OpenProject dashboard pickers. It notifies the
+ * {@link com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent} event, allowing listeners
+ * to provide a value. If the macro parameters already specify a value, that takes precedence. Otherwise, the value
+ * provided through the event is used and propagated back to the macro parameters.
  *
  * @version $Id$
  */
-@Component(roles = InstanceResolver.class)
+@Component(roles = OpenProjectMacroParameterResolver.class)
 @Singleton
-public class InstanceResolver
+public class OpenProjectMacroParameterResolver
 {
     private static final String INSTANCE_KEY = "instance";
 
     private static final String EFFECTIVE_INSTANCE_KEY = "effectiveInstance";
+
+    private static final String PROJECT_KEY = "project";
+
+    private static final String EFFECTIVE_PROJECT_KEY = "effectiveProject";
 
     @Inject
     private ObservationManager observationManager;
@@ -61,7 +67,7 @@ public class InstanceResolver
      * @param parameters the macro parameters
      * @return the resolved OpenProject instance
      */
-    public String resolve(OpenProjectInstanceHolder parameters)
+    public String resolveInstance(OpenProjectInstanceHolder parameters)
     {
         String currentInstance = parameters.getInstance();
         Map<String, String> eventData = new HashMap<>();
@@ -83,8 +89,35 @@ public class InstanceResolver
         return instanceToUse;
     }
 
+    /**
+     * Resolves the OpenProject project to use for the given macro parameters. If no project is specified in the
+     * parameters, listeners of {@link BeforeOpenProjectMacroExecutionEvent} can provide one.
+     *
+     * @param parameters the macro parameters
+     */
+    public void resolveProject(OpenProjectProjectHolder parameters)
+    {
+        String currentProject = parameters.getProject();
+        Map<String, String> eventData = new HashMap<>();
+        eventData.put(PROJECT_KEY, currentProject);
+
+        observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, eventData);
+
+        String projectFromEvent = eventData.get(EFFECTIVE_PROJECT_KEY);
+        boolean hasExplicitProject = isExplicitProject(currentProject);
+
+        if (!hasExplicitProject) {
+            parameters.setProject(projectFromEvent);
+        }
+    }
+
     private boolean isExplicitInstance(String instance)
     {
         return StringUtils.isNotBlank(instance) && !USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(instance);
+    }
+
+    private boolean isExplicitProject(String project)
+    {
+        return StringUtils.isNotBlank(project) && !USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project);
     }
 }

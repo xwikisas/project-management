@@ -144,7 +144,11 @@ openproject.dashboard.singleConnection.description=Only one connection is availa
 openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard.The dashboard data will update based on your selection.
 openproject.dashboard.selectConnection.placeholder=Please select a connection..
 openproject.dashboard.selectConnection.noConnections=No OpenProject connections are configured. Please contact your administrator to set up a connection.
-
+openproject.dashboard.selectProject.label=Select a project
+openproject.dashboard.selectProject.placeholder=Please select a project..
+openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
+penproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the
+    OpenProject instance first.
 openproject.extension.name=Open Project Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>

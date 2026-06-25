@@ -31,6 +31,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 
 /**
@@ -48,7 +49,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     private LicenseChecker licenseChecker;
 
     @Inject
-    private InstanceResolver instanceResolver;
+    private OpenProjectMacroParameterResolver parameterResolver;
 
     @Inject
     private UserTokenChecker userTokenChecker;
@@ -84,7 +85,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
             return licenseBlock;
         }
 
-        String instanceToUse = instanceResolver.resolve(parameters);
+        String instanceToUse = parameterResolver.resolveInstance(parameters);
 
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
         if (!warningBlock.isEmpty()) {
@@ -94,6 +95,10 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instanceToUse);
         if (apiClient == null) {
             return warningBlock;
+        }
+
+        if (parameters instanceof OpenProjectProjectHolder) {
+            parameterResolver.resolveProject((OpenProjectProjectHolder) parameters);
         }
 
         return executeInternal(parameters, content, context, apiClient, instanceToUse);

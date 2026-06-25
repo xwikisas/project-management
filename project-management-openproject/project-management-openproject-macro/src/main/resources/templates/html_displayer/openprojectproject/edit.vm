@@ -18,10 +18,22 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('openproject/js/projectSelect.js', {'minify': false}))
-<input type="text"
-  class="openproject-project-select"
-  value="$!escapetool.xml($!displayer.value)"
-  #foreach ($parameter in $displayer.parameters.entrySet())
-    $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
-  #end
-/>
+<div class="openproject-project-select-container">
+  <input type="text"
+    class="openproject-project-select"
+    value="$!escapetool.xml($!displayer.value)"
+#if ($services.openproject.isDashboardContext())
+    #set ($dashboardProjectOption = $services.openproject.useSelectedDashboardProjectOption)
+    data-dashboard-project-value="$escapetool.xml($dashboardProjectOption.value)"
+    data-dashboard-project-label="$escapetool.xml($dashboardProjectOption.name)"
+#end
+    #foreach ($parameter in $displayer.parameters.entrySet())
+      $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
+    #end
+  />
+  <div class="openproject-project-incorrect-token hidden">
+    <div class="box warningmessage">
+      <p>$escapetool.xml($services.localization.render('openproject.projectselect.incorrectTokenMessage'))</p>
+    </div>
+  </div>
+</div>

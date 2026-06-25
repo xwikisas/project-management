@@ -25,6 +25,7 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProject;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
  * Parameters for the OpenProject Project Time Entries macro.
@@ -32,7 +33,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectProjectTimeEntriesMacroParameters implements OpenProjectInstanceHolder
+public class OpenProjectProjectTimeEntriesMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {
     private String instance;
 
@@ -67,7 +68,6 @@ public class OpenProjectProjectTimeEntriesMacroParameters implements OpenProject
     /**
      * @param project see {@link #getProject()}.
      */
-    @PropertyMandatory
     @PropertyDisplayType(OpenProjectProject.class)
     public void setProject(String project)
     {

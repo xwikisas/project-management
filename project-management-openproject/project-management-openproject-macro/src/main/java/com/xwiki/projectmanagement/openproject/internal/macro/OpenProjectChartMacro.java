@@ -34,7 +34,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
-import com.xwiki.projectmanagement.openproject.internal.InstanceResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 
@@ -53,7 +53,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     private UserTokenChecker userTokenChecker;
 
     @Inject
-    private InstanceResolver instanceResolver;
+    private OpenProjectMacroParameterResolver parameterResolver;
 
     /**
      * Default constructor.
@@ -73,7 +73,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        String instanceToUse = instanceResolver.resolve(parameters);
+        String instanceToUse = parameterResolver.resolveInstance(parameters);
 
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
         if (!warningBlock.isEmpty()) {

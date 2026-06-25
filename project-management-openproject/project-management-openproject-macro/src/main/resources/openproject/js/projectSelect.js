@@ -18,40 +18,107 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 require(['jquery'], function ($) {
-  function initProjectSelect(input) {
-    if (input[0].selectize) {
-      return;
-    }
+  // Returns the warning shown when the OpenProject OAuth connection is not established for the instance.
+  function getTokenWarning(input) {
+    return input.closest('.openproject-project-select-container').find('.openproject-project-incorrect-token');
+  }
+
+  function showTokenWarning(input) {
+    getTokenWarning(input).removeClass('hidden');
+  }
+
+  function hideTokenWarning(input) {
+    getTokenWarning(input).addClass('hidden');
+  }
+
+  // Reads the currently selected OpenProject instance from the macro parameters.
+  function getSelectedInstance() {
     let instance = $('.macro-editor-modal :input[name="instance"]').val();
     if (instance === 'use_selected_dashboard_connection') {
       instance = $('#openproject-dashboard-connection-select').val();
     }
-    if (!instance) {
+    return instance;
+  }
+
+  // On the dashboard, the project picker offers a "use the dashboard-selected project" option, mirroring the
+  // dashboard connection option.
+  function getDashboardProjectOption(input) {
+    let value = input.attr('data-dashboard-project-value');
+    if (!value) {
+      return null;
+    }
+    return {value: value, label: input.attr('data-dashboard-project-label')};
+  }
+
+  function initProjectSelect(input) {
+    if (input[0].selectize) {
       return;
     }
-    let projectsREST = `${XWiki.contextPath}/rest/wikis/${XWiki
-    .currentWiki}/openproject/instance/${instance}/suggest/projects`;
+
+    let dashboardOption = getDashboardProjectOption(input);
 
     let selectizeCfg = {
       create: false,
       maxItems: 1,
+      preload: 'focus',
     };
 
     selectizeCfg.load = function (text, callback) {
+      let dashboardResults = dashboardOption ? [dashboardOption] : [];
+      let instance = getSelectedInstance();
+
+      if (!instance) {
+        callback(dashboardResults);
+        return;
+      }
+
+      let projectsREST = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/${instance}/suggest/projects`;
       $.getJSON(projectsREST, {search: text})
         .then(function (results) {
-        input[0].selectize.clearOptions();
-          callback(results);
+          hideTokenWarning(input);
+          callback(dashboardResults.concat(results));
         })
-        .catch(function () {
-          callback([]);
+        .catch(function (err) {
+          if (err && err.status === 404) {
+            showTokenWarning(input);
+          }
+          callback(dashboardResults);
         });
     };
 
     input.xwikiSelectize(selectizeCfg);
+
+    if (dashboardOption) {
+      input[0].selectize.addOption(dashboardOption);
+      if (input.val() === dashboardOption.value) {
+        input[0].selectize.setValue(dashboardOption.value, true);
+      }
+    }
   }
 
-  $(document).on('focus', '.macro-editor-modal .openproject-project-select', function () {
-    initProjectSelect($(this));
+  function resetForInstanceChange(input) {
+    let instance = getSelectedInstance();
+    if (input.data('openprojectInstance') === instance) {
+      return;
+    }
+    input.data('openprojectInstance', instance);
+    let selectize = input[0].selectize;
+    if (selectize) {
+      selectize.clear(true);
+      selectize.clearOptions();
+      selectize.loadedSearches = {};
+      hideTokenWarning(input);
+    }
+  }
+
+  $(document).on('focusin', '.macro-editor-modal .openproject-project-select-container', function () {
+    let input = $(this).find('.openproject-project-select').first();
+
+    if (!input.length) {
+      return;
+    }
+
+    initProjectSelect(input);
+    resetForInstanceChange(input);
   });
 });
