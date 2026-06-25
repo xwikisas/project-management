@@ -43,6 +43,8 @@ define("openproject.createworkpackage.macro", {
 });
 
 require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createworkpackage.macro"], function ($, createWpUtils, l10n) {
+  const baseUrl = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/`;
+
   async function initializeConnectionIfOnlyOneAvailable() {
     var conn = $("#op-connection");
 
@@ -54,7 +56,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         "#op-project-container",
         "#incorrect-token-create-work-package"
       );
-      createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container");
+      createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container", null, baseUrl);
     }
   }
 
@@ -180,7 +182,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       "#op-project-container",
       "#incorrect-token-create-work-package"
     );
-    createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container");
+    createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container", null, baseUrl);
   });
 
   $(document).on("show.bs.modal", ".macro-editor-modal", function () {

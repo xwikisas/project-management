@@ -239,6 +239,38 @@ public interface OpenProjectApiClient
     }
 
     /**
+     * Retrieves the form response for an existing work package. The response contains the schema (allowed values) as
+     * well as a payload pre-filled with the work package's current values.
+     *
+     * @param workPackageId the id of the work package for which to retrieve the form.
+     * @param jsonBody the json body containing the changes to validate against the work package.
+     * @return the json node representing the form response.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the form.
+     * @since 1.2
+     */
+    default JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving a work package form response is not supported by this client implementation.");
+    }
+
+    /**
+     * Updates an existing work package in OpenProject.
+     *
+     * @param url the URL to update the work package (the commit link of the form response).
+     * @param jsonBody the JSON body representing the work package changes to be committed.
+     * @return the updated work package.
+     * @throws ProjectManagementException if there was an issue during the update process.
+     * @since 1.2
+     */
+    default JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Updating work packages is not supported by this client implementation.");
+    }
+
+    /**
      * Retrieves the identifier of the OpenProject instance. This is the {@code installation_uuid} exposed by the
      * instance through its public {@code /.well-known/openproject-metadata} endpoint, so it can be retrieved with a
      * client that uses no authentication.

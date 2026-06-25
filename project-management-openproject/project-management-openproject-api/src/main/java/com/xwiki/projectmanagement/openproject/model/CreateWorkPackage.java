@@ -51,7 +51,11 @@ public class CreateWorkPackage
 
     private String dueDate;
 
+    private String date;
+
     private String parent;
+
+    private Integer lockVersion;
 
     /**
      * Default constructor.
@@ -264,6 +268,29 @@ public class CreateWorkPackage
     }
 
     /**
+     * Getter for the date of the work package. Used by Milestone work packages, which expose a single date
+     * instead of a start and due date.
+     *
+     * @return the date of the work package.
+     * @since 1.2
+     */
+    public String getDate()
+    {
+        return date;
+    }
+
+    /**
+     * Setter for the date of the work package.
+     *
+     * @param date see {@link #getDate()}.
+     * @since 1.2
+     */
+    public void setDate(String date)
+    {
+        this.date = date;
+    }
+
+    /**
      * Getter for the parent of the work package.
      *
      * @return the parent work package identifier.
@@ -283,5 +310,28 @@ public class CreateWorkPackage
     public void setParent(String parent)
     {
         this.parent = parent;
+    }
+
+    /**
+     * Getter for the lock version of the work package. Used by OpenProject for optimistic locking when updating an
+     * existing work package.
+     *
+     * @return the lock version of the work package.
+     * @since 1.2
+     */
+    public Integer getLockVersion()
+    {
+        return lockVersion;
+    }
+
+    /**
+     * Setter for the lock version of the work package.
+     *
+     * @param lockVersion see {@link #getLockVersion()}.
+     * @since 1.2
+     */
+    public void setLockVersion(Integer lockVersion)
+    {
+        this.lockVersion = lockVersion;
     }
 }

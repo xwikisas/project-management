@@ -233,6 +233,19 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody)
+        throws ProjectManagementException
+    {
+        return client.getWorkPackageFormResponse(workPackageId, jsonBody);
+    }
+
+    @Override
+    public JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        return client.updateWorkPackage(url, jsonBody);
+    }
+
+    @Override
     public String getInstanceId() throws ProjectManagementException
     {
         return client.getInstanceId();

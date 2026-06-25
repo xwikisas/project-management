@@ -131,6 +131,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_FORM_WORK_PACKAGES = "/api/v3/work_packages/form";
 
+    private static final String API_URL_FORM_EDIT_WORK_PACKAGE = "/api/v3/work_packages/%s/form";
+
+    private static final String PATCH = "PATCH";
+
     private static final String API_URL_TYPES = "/api/v3/types";
 
     private static final String API_URL_STATUSES = "/api/v3/statuses";
@@ -449,6 +453,51 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody) throws ProjectManagementException
+    {
+        String urlPart = String.format(API_URL_FORM_EDIT_WORK_PACKAGE, workPackageId);
+        String urlString = connectionUrl + urlPart;
+        try {
+            URI uri = new URI(urlString);
+            HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            handleOpenProjectWorkPackagesRequestExceptions(response);
+
+            String body = response.body();
+            return objectMapper.readTree(body);
+        } catch (URISyntaxException e) {
+            throw new ProjectManagementException(
+                String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, urlString), e);
+        } catch (IOException | InterruptedException e) {
+            throw new ProjectManagementException(
+                String.format(COMMUNICATING_ISSUE_MESSAGE, urlString), e);
+        }
+    }
+
+    @Override
+    public JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        String uriStr = connectionUrl + url;
+        try {
+            URI uri = new URI(uriStr);
+            HttpRequest request = createAuthorizedPatchRequest(uri, jsonBody);
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            handleOpenProjectWorkPackagesRequestExceptions(response);
+
+            String body = response.body();
+            return objectMapper.readTree(body);
+        } catch (URISyntaxException | JsonProcessingException e) {
+            throw new ProjectManagementException(
+                String.format("Failed to build the open project entity update url [%s].", uriStr), e);
+        } catch (IOException | InterruptedException | SecurityException e) {
+            throw new ProjectManagementException(
+                String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
+        }
+    }
+
+    @Override
     public String getInstanceId() throws ProjectManagementException
     {
         JsonNode mainNode = getOpenProjectResponse(URL_INSTANCE_METADATA, null, null, "", "", "");
@@ -653,7 +702,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         authenticator.authenticate(builder);
 
-        if (POST.equals(method) || PUT.equals(method)) {
+        if (POST.equals(method) || PUT.equals(method) || PATCH.equals(method)) {
             builder.header(CONTENT_TYPE, MediaType.APPLICATION_JSON);
         }
 
@@ -666,6 +715,9 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 break;
             case PUT:
                 builder.PUT(body);
+                break;
+            case PATCH:
+                builder.method(PATCH, body);
                 break;
             case "DELETE":
                 builder.DELETE();
@@ -692,6 +744,16 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return createAuthorizedRequest(
             uri,
             POST,
+            HttpRequest.BodyPublishers.ofString(jsonBody),
+            MediaType.APPLICATION_JSON
+        );
+    }
+
+    private HttpRequest createAuthorizedPatchRequest(URI uri, String jsonBody)
+    {
+        return createAuthorizedRequest(
+            uri,
+            PATCH,
             HttpRequest.BodyPublishers.ofString(jsonBody),
             MediaType.APPLICATION_JSON
         );

@@ -131,6 +131,15 @@ openproject.createworkpackage.macro.notify.inputs.error=An error occurred while 
 openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
 openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
 openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
+
+openproject.editworkpackage.modal.title=Edit Work Package
+openproject.editworkpackage.modal.save=Save
+openproject.editworkpackage.modal.cancel=Cancel
+openproject.editworkpackage.notify.loadError=An error occurred while trying to load the work package!
+openproject.editworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
+openproject.editworkpackage.notify.success=The work package was updated successfully!
+openproject.editworkpackage.notify.error=Failed to update the work package!
+
 openproject.extension.name=Open Project Integration (Pro)
 
 projectmanagement.relations.clients.openproject=Open Project
