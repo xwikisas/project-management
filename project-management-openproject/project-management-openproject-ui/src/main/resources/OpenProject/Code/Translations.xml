@@ -80,6 +80,7 @@ openproject.livedatalabels.serverURL=Server URL
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
+openproject.livedata.action.view.edit=Edit Work Package
 
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
@@ -131,6 +132,15 @@ openproject.createworkpackage.macro.notify.inputs.error=An error occurred while 
 openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
 openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
 openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
+
+openproject.editworkpackage.modal.title=Edit Work Package
+openproject.editworkpackage.modal.save=Save
+openproject.editworkpackage.modal.cancel=Cancel
+openproject.editworkpackage.notify.loadError=An error occurred while trying to load the work package!
+openproject.editworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
+openproject.editworkpackage.notify.success=The work package was updated successfully!
+openproject.editworkpackage.notify.error=Failed to update the work package!
+
 openproject.extension.name=Open Project Integration (Pro)
 
 projectmanagement.relations.clients.openproject=Open Project
@@ -140,8 +150,23 @@ projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
 openproject.relations.mentions.noInstance=No OpenProject instance selected.
 openproject.relations.mentions.title=Mentioned on:
+openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
 
-openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package</content>
+openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package
+projectmanagement.relations.clients.openproject=Open Project
+
+openproject.dashboard.selectConnection.label=Select a connection
+openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}
+openproject.dashboard.singleConnection.description=Only one connection is available, so it has been selected automatically for this dashboard.
+openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard.The dashboard data will update based on your selection.
+openproject.dashboard.selectConnection.placeholder=Please select a connection..
+openproject.dashboard.selectConnection.noConnections=No OpenProject connections are configured. Please contact your administrator to set up a connection.
+openproject.dashboard.selectProject.label=Select a project
+openproject.dashboard.selectProject.placeholder=Please select a project..
+openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
+penproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the
+    OpenProject instance first.
+openproject.extension.name=Open Project Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

@@ -7,7 +7,8 @@
         "name": "First project",
         "_links": {
           "self": {
-            "href": "/api/v3/projects/1"
+            "href": "/api/v3/projects/1",
+            "title": "First project"
           }
         }
       },
@@ -16,7 +17,8 @@
         "name": "Second project",
         "_links": {
           "self": {
-            "href": "/api/v3/projects/2"
+            "href": "/api/v3/projects/2",
+            "title": "Second project"
           }
         }
       },
@@ -25,7 +27,8 @@
         "name": "Third project",
         "_links": {
           "self": {
-            "href": "/api/v3/projects/3"
+            "href": "/api/v3/projects/3",
+            "title": "Third project"
           }
         }
       }

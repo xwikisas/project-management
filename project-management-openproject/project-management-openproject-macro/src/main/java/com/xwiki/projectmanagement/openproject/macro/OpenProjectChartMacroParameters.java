@@ -29,6 +29,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperty;
 
 /**
@@ -38,6 +39,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProperty;
  * @since 1.2.0-rc-1
  */
 public class OpenProjectChartMacroParameters extends ProjectManagementChartMacroParameters
+    implements OpenProjectInstanceHolder
 {
     private String instance;
 

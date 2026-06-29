@@ -764,7 +764,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       createWpUtils.initParentPicker(
         "#connection-select-multiple-work-packages",
         "#parent-select-multiple-work-packages",
-        "#parent-select-multiple-work-packages-container"
+        "#parent-select-multiple-work-packages-container",
+        null,
+        baseUrl
       );
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
@@ -782,7 +784,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       createWpUtils.initParentPicker(
         "#connection-select-single-work-package",
         "#parent-select-single-work-package",
-        "#parent-select-single-work-package-container"
+        "#parent-select-single-work-package-container",
+        null,
+        baseUrl
       );
     });
 

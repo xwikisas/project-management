@@ -27,10 +27,12 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -176,6 +178,38 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("news", offset, pageSize, filters, "");
+        PaginatedResult<News> result = (PaginatedResult<News>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getNews(offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        return client.getProject(projectId);
+    }
+
+    @Override
+    public PaginatedResult<User> getMemberships(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("memberships", offset, pageSize, filters, "");
+        PaginatedResult<User> result = (PaginatedResult<User>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getMemberships(offset, pageSize, filters);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
     public PaginatedResult<Version> getVersions() throws ProjectManagementException
     {
         String cacheKey = getCacheKey("versions", 1, Integer.MAX_VALUE, "", "");
@@ -227,9 +261,29 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
+    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        return client.getTimeEntries(offset, pageSize, filters);
+    }
+
+    @Override
     public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
         return client.createWorkPackage(url, jsonBody);
+    }
+
+    @Override
+    public JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody)
+        throws ProjectManagementException
+    {
+        return client.getWorkPackageFormResponse(workPackageId, jsonBody);
+    }
+
+    @Override
+    public JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        return client.updateWorkPackage(url, jsonBody);
     }
 
     @Override

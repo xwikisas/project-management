@@ -26,6 +26,7 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
 import com.xwiki.projectmanagement.openproject.OpenProjectSort;
 
@@ -34,7 +35,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectSort;
  *
  * @version $Id$.
  */
-public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
+public class OpenProjectMacroParameters extends ProjectManagementMacroParameters implements OpenProjectInstanceHolder
 {
     private String instance;
 

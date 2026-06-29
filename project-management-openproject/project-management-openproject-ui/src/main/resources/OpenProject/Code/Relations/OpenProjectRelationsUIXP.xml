@@ -164,6 +164,9 @@
         }
         // Callback function to execute when mutations are observed
         const callback = (mutationList, observer) =&gt; {
+          if (valueContainer.find(':input').length &gt; 0) {
+            return;
+          }
           observer.disconnect();
           root.find('.openproj-relation-client-params-edit').addClass('hidden');
           valueContainer.addClass('loading');
@@ -536,7 +539,7 @@
       },
       {
         "id": "summary.value",
-        "displayer": "text",
+        "displayer": "html",
         "filterable": false,
         "sortable": false
       }
@@ -545,8 +548,9 @@
 })
 #set ($sourceParams = {
   "translationPrefix": "openproject.property.",
-  "resultPage": "OpenProject.Code.OPMentionsResultPage",
-  "instance": $opInstance
+  "resultPage": "OpenProject.Code.Relations.OPMentionsResultPage",
+  "instance": $opInstance,
+  "docRef": $doc.getDocumentReference()
 })
 #set ($colSet = ['identifier.value', 'summary.value'])
 {{/html}}

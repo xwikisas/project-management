@@ -1,6 +1,15 @@
 com.xwiki.projectmanagement.openproject.internal.OpenProjectCalendarEventProvider
-com.xwiki.projectmanagement.openproject.internal.UserTokenChecker
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro
+com.xwiki.projectmanagement.openproject.internal.LicenseChecker
+com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver
+com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectMacroDisplayListeners
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectAssignedToMeMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCreateWorkPackageMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectNewsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectDetailsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSubprojectsMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectMembersMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectTimeEntriesMacro

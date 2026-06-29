@@ -45,7 +45,6 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
-import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -292,7 +291,7 @@ public class DefaultOpenProjectApiClientTest
     {
         when(response.statusCode()).thenReturn(404);
         when(this.response.body()).thenReturn("{}");
-        assertThrows(WorkPackageRetrievalBadRequestException.class, () -> {
+        assertThrows(WorkItemRetrievalException.class, () -> {
             openProjectApiClient.getWorkPackagesFormResponse("{}");
         });
     }
@@ -583,7 +582,7 @@ public class DefaultOpenProjectApiClientTest
         expected.put(
             "self",
             new Linkable(
-                "", url
+                name, url
             )
         );
 

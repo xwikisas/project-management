@@ -29,7 +29,7 @@
   </parent>
   <groupId>com.xwiki.projectmanagement</groupId>
   <artifactId>project-management</artifactId>
-  <version>1.2.0-rc-8-SNAPSHOT</version>
+  <version>1.2.0-rc-9-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
   <properties>
     <xwikipro.commons.version>1.4.0</xwikipro.commons.version>
