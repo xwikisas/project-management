@@ -80,6 +80,7 @@ openproject.livedatalabels.serverURL=Server URL
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
+openproject.livedata.action.view.edit=Edit Work Package
 
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
