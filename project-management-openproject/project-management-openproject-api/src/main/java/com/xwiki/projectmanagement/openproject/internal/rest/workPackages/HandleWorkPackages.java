@@ -145,7 +145,7 @@ public class HandleWorkPackages extends XWikiResource
      * This endpoint exposes the available projects for creating a work package.
      *
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where to search for work item suggestions.
+     * @param instance the OpenProject client where to search for work item suggestions.
      * @param offset the offset from which to start retrieving projects.
      * @param pageSize the maximum number of projects to return.
      * @return a list of projects that can be used for creating a work package.
@@ -193,7 +193,7 @@ public class HandleWorkPackages extends XWikiResource
      *
      * @param workPackage the work package that needs to be created.
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where to search for work item suggestions.
+     * @param instance the OpenProject client where to search for work item suggestions.
      * @return the form response containing the validation errors if the creation failed or the created work package if
      *     the creation succeeded.
      * @since 1.1
@@ -238,7 +238,7 @@ public class HandleWorkPackages extends XWikiResource
      * Exposes the editable options of an existing work package, pre-filled with its current values.
      *
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where the work package lives.
+     * @param instance the OpenProject client where the work package lives.
      * @param workPackageId the id of the work package to edit.
      * @return the options response describing the editable fields and their current values.
      * @since 1.2
@@ -279,7 +279,7 @@ public class HandleWorkPackages extends XWikiResource
      * Validates and, if valid, commits the changes to an existing work package.
      *
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where the work package lives.
+     * @param instance the OpenProject client where the work package lives.
      * @param workPackageId the id of the work package to update.
      * @param workPackage the changes to apply to the work package.
      * @return the options response containing the validation errors if the update failed or the updated work package if

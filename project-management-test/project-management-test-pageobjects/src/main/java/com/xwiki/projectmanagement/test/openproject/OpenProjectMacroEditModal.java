@@ -26,7 +26,7 @@ import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
 /**
- * Models the edit modal of the Open Project macro.
+ * Models the edit modal of the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4

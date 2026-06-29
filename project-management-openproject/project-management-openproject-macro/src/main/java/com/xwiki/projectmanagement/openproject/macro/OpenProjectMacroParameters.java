@@ -31,7 +31,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
 import com.xwiki.projectmanagement.openproject.OpenProjectSort;
 
 /**
- * Open project macro params.
+ * OpenProject macro params.
  *
  * @version $Id$.
  */
@@ -40,7 +40,7 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     private String instance;
 
     /**
-     * Default constructor. Sets some default values specific to the Open Project implementation.
+     * Default constructor. Sets some default values specific to the OpenProject implementation.
      */
     public OpenProjectMacroParameters()
     {

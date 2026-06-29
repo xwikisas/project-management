@@ -67,7 +67,7 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
      */
     public OpenProjectProjectsMacro()
     {
-        super("Open Project - Projects",
+        super("OpenProject - Projects",
             "List the 5 latest projects from a configured OpenProject instance, based on user's OpenProject instance "
                 + "rights.",
             OpenProjectProjectsMacroParameters.class);

@@ -46,7 +46,7 @@ openproject.config.clientSecret=Client Secret
 openproject.config.clientSecretDescription=In OpenProject Administration &gt; Wiki connection, copy the OpenProject OAuth Client Secret. Paste it below.
 openproject.config.connectionName=Connection Name
 openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
-openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various Open Project Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
+openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various OpenProject Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
 openproject.config.connectionsTitle=OpenProject Instance Connections
 openproject.config.save=Save
 openproject.config.save.saved=Connection {0} has been saved!
@@ -83,10 +83,10 @@ openproject.livedata.action.view.error=Failed to load Work Package
 
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
-openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in Open Project. You should be authorized to the Open Project instances before running this job.
+openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in OpenProject. You should be authorized to the OpenProject instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
 
-openproject.createworkpackage.highlight=Open Project
+openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Create work package
 openproject.createworkpackage.highlight.multiple=Create work packages from table
 openproject.createworkpackage.modal.cancel=Cancel
@@ -140,19 +140,19 @@ openproject.editworkpackage.notify.fillRequiredFields=Please fill the required f
 openproject.editworkpackage.notify.success=The work package was updated successfully!
 openproject.editworkpackage.notify.error=Failed to update the work package!
 
-openproject.extension.name=Open Project Integration (Pro)
+openproject.extension.name=OpenProject Integration (Pro)
 
-projectmanagement.relations.clients.openproject=Open Project
+projectmanagement.relations.clients.openproject=OpenProject
 projectmanagement.relations.openproject.project.name=Linked Project
 projectmanagement.relations.openproject.workItem.name=Linked Work Package
-projectmanagement.relations.clients.openproject=Open Project
+projectmanagement.relations.clients.openproject=OpenProject
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
 openproject.relations.mentions.noInstance=No OpenProject instance selected.
 openproject.relations.mentions.title=Mentioned on:
 openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
 
 openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package
-projectmanagement.relations.clients.openproject=Open Project
+projectmanagement.relations.clients.openproject=OpenProject
 
 openproject.dashboard.selectConnection.label=Select a connection
 openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}
@@ -165,7 +165,7 @@ openproject.dashboard.selectProject.placeholder=Please select a project..
 openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
 penproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the
     OpenProject instance first.
-openproject.extension.name=Open Project Integration (Pro)</content>
+openproject.extension.name=OpenProject Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

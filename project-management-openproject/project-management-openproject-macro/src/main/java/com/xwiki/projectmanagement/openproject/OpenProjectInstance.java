@@ -21,7 +21,7 @@ package com.xwiki.projectmanagement.openproject;
  */
 
 /**
- * Class representing the open project instances.
+ * Class representing the OpenProject instances.
  *
  * @version $Id$
  */

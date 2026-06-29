@@ -21,7 +21,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 /**
- * Class representing the Open Project create work package modal content.
+ * Class representing the OpenProject create work package modal content.
  *
  * @version $Id$
  */
