@@ -19,7 +19,7 @@
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
 #template("filter_builder.vm")
-#filterBuilder({})
+#filterBuilder({"client": "$!clientId"})
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })

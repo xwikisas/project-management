@@ -20,7 +20,7 @@
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
 #template("filter_builder.vm")
 <div class="project-management-filters">
-#filterBuilder({"client": "openproject", "title": "Dataset 1", "removable": true})
+#filterBuilder({"client": "$!clientId", "title": "Dataset 1", "removable": true})
 </div>
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
