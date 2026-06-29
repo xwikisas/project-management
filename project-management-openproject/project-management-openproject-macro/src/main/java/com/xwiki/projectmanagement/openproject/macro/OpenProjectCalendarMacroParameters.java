@@ -21,23 +21,33 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
-import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
+import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
+import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
+import java.awt.*;
+import java.util.List;
+
 public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
 {
     private String instance;
-    // TYPE
-    // sprint version
+
+    private List<OpenProjectEventType> types = List.of(OpenProjectEventType.WORK_PACKAGE);
+
+    private String sprintColor;
+
+    private String versionColor;
+
     /**
      * Default constructor. Sets the default values for the parameters.
      */
     public OpenProjectCalendarMacroParameters()
     {
-        setLimit(100);
+        setLimit(25);
     }
 
     /**
@@ -52,13 +62,33 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * @param instance see {@link #getInstance()}.
      */
     @PropertyMandatory
+    @PropertyDescription("The OpenProject instance where the events are located.")
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
         this.instance = instance;
     }
 
-    @PropertyDisplayType(OpenProjectFilters.class)
+    /**
+     * @return the types of work packages to include in the calendar, as a comma-separated list of enum names.
+     */
+    public List<OpenProjectEventType> getTypes()
+    {
+        return this.types;
+    }
+
+    /**
+     * @param types see {@link #getTypes()}.
+     */
+    @PropertyDescription("Select the types of work packages to display in the calendar.")
+    @PropertyDisplayType(OpenProjectEventType.class)
+    public void setTypes(List<OpenProjectEventType> types)
+    {
+        this.types = types;
+    }
+
+    @PropertyDisplayType(OpenProjectFilter.class)
+    @PropertyDescription("The filters that will be applied to the work packages retrieved from the configured OpenProject instance.")
     @Override
     public void setFilters(String filters)
     {
@@ -70,5 +100,29 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
     public void setClient(String client)
     {
         super.setClient(client);
+    }
+
+    public String getVersionColor()
+    {
+        return this.versionColor;
+    }
+
+    @PropertyDescription("Select the types of versions to display in the calendar.")
+    @PropertyDisplayType(Color.class)
+    public void setVersionColor(String versionColor)
+    {
+        this.versionColor = versionColor;
+    }
+
+    public String getSprintColor()
+    {
+        return this.sprintColor;
+    }
+
+    @PropertyDescription("Select the color of sprints to display in the calendar.")
+    @PropertyDisplayType(Color.class)
+    public void setSprintColor(String sprintColor)
+    {
+        this.sprintColor = sprintColor;
     }
 }

@@ -21,16 +21,22 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManagementCalendarMacro;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
+import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -48,12 +54,23 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     @Inject
     private UserTokenChecker userTokenChecker;
 
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsrx;
+
+    @Inject
+    @Named("jsx")
+    private SkinExtension jsx;
+
+    @Inject
+    private StylingSetupManager stylingSetupManager;
+
     /**
      * Default constructor.
      */
     public OpenProjectCalendarMacro()
     {
-        super("Open Project Calendar", "A macro to display the Open Project calendar",
+        super("OpenProject Calendar", "Display OpenProject events as a calendar",
             OpenProjectCalendarMacroParameters.class);
     }
 
@@ -65,12 +82,38 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
+        this.stylingSetupManager.setupInstanceStyles();
+        this.stylingSetupManager.useInstanceStyle(parameters.getInstance());
         // insert extra params for context
         parameters.setClient("openproject");
         if (this.macroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> clientContext = Map.of("instance", parameters.getInstance());
+            Map<String, Object> clientContext = populateContext(parameters);
             ((DefaultProjectManagementClientExecutionContext) this.macroContext).setContext(clientContext);
         }
-        return super.execute(parameters, content, context);
+        this.jsrx.use("openproject/js/calendarEvent.js");
+        this.jsx.use("OpenProject.Code.ViewAction");
+        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
+            Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance())));
     }
+
+    @Override
+    protected void updateUrl(URIBuilder sb, OpenProjectCalendarMacroParameters parameters)
+    {
+        boolean hasWorkPackage = parameters.getTypes().contains(OpenProjectEventType.WORK_PACKAGE);
+        if (!hasWorkPackage) {
+            excludeWorkItems(sb);
+        }
+    }
+
+    private Map<String, Object> populateContext(OpenProjectCalendarMacroParameters parameters)
+    {
+        List<OpenProjectEventType> types = parameters.getTypes();
+        boolean hasSprint = types.contains(OpenProjectEventType.SPRINT);
+        boolean hasVersion = types.contains(OpenProjectEventType.VERSION);
+        String versionColor = parameters.getVersionColor() == null ? "" : parameters.getVersionColor();
+        String sprintColor = parameters.getSprintColor() == null ? "" : parameters.getSprintColor();
+        return Map.of("instance", parameters.getInstance(), "sprint", hasSprint, "version", hasVersion, "versionColor",
+            versionColor, "sprintColor", sprintColor);
+    }
+
 }

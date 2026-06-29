@@ -17,16 +17,29 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.calendar;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import org.xwiki.component.annotation.Role;
-import org.xwiki.fullcalendar.model.CalendarEvent;
+package com.xwiki.projectmanagement.openproject;
 
-import java.util.List;
-
-@Role
-public interface CalendarEventProvider
+/**
+ * Represents the types of work packages that can be displayed in the OpenProject calendar.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-1
+ */
+public enum OpenProjectEventType
 {
-    List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
+    /**
+     * Work packages of type "Work package".
+     */
+    WORK_PACKAGE,
+
+    /**
+     * Work packages of type "Sprint".
+     */
+    SPRINT,
+
+    /**
+     * Work packages of type "Version".
+     */
+    VERSION
 }

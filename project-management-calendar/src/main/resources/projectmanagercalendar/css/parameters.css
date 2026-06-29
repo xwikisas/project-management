@@ -17,16 +17,15 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.calendar;
+.time-interval-inputs {
+    display: flex;
+    align-items: center;
+}
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import org.xwiki.component.annotation.Role;
-import org.xwiki.fullcalendar.model.CalendarEvent;
+.time-interval-min {
+    margin-right: 1.5rem;
+}
 
-import java.util.List;
-
-@Role
-public interface CalendarEventProvider
-{
-    List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
+.time-interval-max {
+    margin-left: 1.5rem;
 }

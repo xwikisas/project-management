@@ -19,18 +19,24 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.model.Sprint;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.fullcalendar.model.CalendarEvent;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 
 @Singleton
 @Component
@@ -38,32 +44,102 @@ import java.util.List;
 public class OpenProjectCalendarEventProvider implements CalendarEventProvider
 {
 
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
+
     @Override
-    public CalendarEvent getMoreEvents(List<String> params)
+    public List<CalendarEvent> getMoreEvents() throws ProjectManagementException
     {
-        return null;
+        boolean getSprints = Boolean.parseBoolean((String) this.executionContext.get("sprint"));
+        boolean getVersion = Boolean.parseBoolean((String) this.executionContext.get("version"));
+        OpenProjectApiClient apiClient = getOpenProjectApiClient();
+        List<CalendarEvent> calendarEvents = new ArrayList<>();
+        if (getSprints) {
+            PaginatedResult<Sprint> sprints =
+                apiClient.getSprints(1, Integer.parseInt((String) this.executionContext.get("limit")), "");
+            calendarEvents.addAll(convertSprintsToCalendarEvents(sprints));
+        }
+        if (getVersion) {
+            PaginatedResult<Version> versions = apiClient.getVersions();
+            calendarEvents.addAll(convertVersionsToCalendarEvents(versions));
+        }
+
+        return calendarEvents;
     }
 
-    @Override
-    public String applyDateIntervalFilter(String filter, String startDate, String endDate) throws JsonProcessingException
+    private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
     {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(filter);
+        String connectionName = (String) this.executionContext.get("instance");
+        OpenProjectApiClient openProjectApiClient =
+            this.openProjectConfiguration.getOpenProjectApiClient(connectionName);
 
-        ArrayNode filters = (ArrayNode) root.path("query").path("filters");
+        if (openProjectApiClient == null) {
+            throw new WorkItemRetrievalException(
+                String.format("No configuration for instance [%s] was found.", connectionName));
+        }
+        return openProjectApiClient;
+    }
 
-        ObjectNode newFilter = mapper.createObjectNode();
-        newFilter.put("property", "dates_interval");
+    private List<CalendarEvent> convertSprintsToCalendarEvents(PaginatedResult<Sprint> sprints)
+    {
+        List<CalendarEvent> events = new ArrayList<>();
+        for (Sprint sprint : sprints.getItems()) {
+            Date startDate = parseDate(sprint.getStartDate());
+            Date endDate = parseDate(sprint.getFinishDate());
+            if (startDate != null) {
+                CalendarEvent event = new CalendarEvent();
+                event.setStart(startDate);
+                // Default to one day after start date.
+                event.setEnd(
+                    Objects.requireNonNullElseGet(endDate, () -> new Date(startDate.getTime() + 24 * 60 * 60 * 1000)));
+                event.setId("sprint-" + sprint.getId());
+                event.setTitle(sprint.getName());
+                event.setAllDay(true);
+                event.setColor((String) this.executionContext.get("sprintColor"));
+                event.setMeta(Map.of("op-id", sprint.getId(), "entity-type", "sprint"));
+                events.add(event);
+            }
+        }
+        return events;
+    }
 
-        ArrayNode constraints = mapper.createArrayNode();
-        ObjectNode constraint = mapper.createObjectNode();
-        constraint.put("operator", "<>d");
-        constraint.put("value", String.format("%s/%s", startDate, endDate));
+    private List<CalendarEvent> convertVersionsToCalendarEvents(PaginatedResult<Version> versions)
+    {
+        List<CalendarEvent> events = new ArrayList<>();
+        for (Version version : versions.getItems()) {
+            Date startDate = parseDate(version.getStartDate());
+            Date endDate = parseDate(version.getEndDate());
+            if (startDate != null) {
+                CalendarEvent event = new CalendarEvent();
+                event.setStart(startDate);
+                // Default to one day after start date.
+                event.setEnd(
+                    Objects.requireNonNullElseGet(endDate, () -> new Date(startDate.getTime() + 24 * 60 * 60 * 1000)));
+                event.setId("version-" + version.getId());
+                event.setTitle(version.getName());
+                event.setColor((String) this.executionContext.get("versionColor"));
+                event.setDescription(version.getDescription());
+                event.setStatus(version.getStatus());
+                event.setAllDay(true);
+                event.setMeta(Map.of("op-id", version.getId(),"entity-type", "version"));
+                events.add(event);
+            }
+        }
+        return events;
+    }
 
-        constraints.add(constraint);
-        newFilter.set("constraints", constraints);
-        filters.add(newFilter);
-
-        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+    private Date parseDate(String dateStr)
+    {
+        if (dateStr == null || dateStr.isBlank()) {
+            return null;
+        }
+        try {
+            return java.sql.Date.valueOf(LocalDate.parse(dateStr));
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 }

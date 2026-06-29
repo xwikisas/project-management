@@ -62,6 +62,7 @@ public interface CalendarResource extends XWikiRestComponent
         @QueryParam("start") String start,
         @QueryParam("end") String end,
         @QueryParam("limit") int limit,
-        @QueryParam("offset") Long offset
+        @QueryParam("offset") int offset,
+        @QueryParam("excludeWorkItems") boolean excludeWorkItems
     );
 }

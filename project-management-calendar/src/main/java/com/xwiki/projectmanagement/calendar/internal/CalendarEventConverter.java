@@ -20,10 +20,7 @@
 
 package com.xwiki.projectmanagement.calendar.internal;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 import javax.inject.Singleton;
 
@@ -68,11 +65,13 @@ public class CalendarEventConverter
         event.setDescription(stripHtml(workItem.getDescription()));
         event.setStatus(workItem.getStatus());
         event.setAllDay(false);
-
-        if (workItem.getProject() != null) {
-            event.setGroupId(workItem.getProject().getValue());
-        }
-
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("type", workItem.getType());
+        meta.put("asignees", workItem.getAssignees());
+        meta.put("creator", workItem.getCreator());
+        meta.put("priority", workItem.getPriority());
+        meta.put("entity-type", "workItem");
+        event.setMeta(meta);
         return event;
     }
 

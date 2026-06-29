@@ -19,14 +19,25 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import org.xwiki.component.annotation.Role;
-import org.xwiki.fullcalendar.model.CalendarEvent;
-
-import java.util.List;
-
-@Role
-public interface CalendarEventProvider
+public enum WeekDays
 {
-    List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
+    SUNDAY(0),
+    MONDAY(1),
+    TUESDAY(2),
+    WEDNESDAY(3),
+    THURSDAY(4),
+    FRIDAY(5),
+    SATURDAY(6);
+
+    private final int dayValue;
+
+    private WeekDays(int dayValue)
+    {
+        this.dayValue = dayValue;
+    }
+
+    public int getDayValue()
+    {
+        return this.dayValue;
+    }
 }

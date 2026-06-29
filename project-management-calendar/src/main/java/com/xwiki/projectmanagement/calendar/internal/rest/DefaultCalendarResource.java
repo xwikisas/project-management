@@ -20,11 +20,11 @@
 
 package com.xwiki.projectmanagement.calendar.internal.rest;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.AbstractProjectManagementResource;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -34,11 +34,13 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.fullcalendar.model.CalendarEvent;
 import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataQuery;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import javax.ws.rs.core.Response;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -58,7 +60,7 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
 
     @Override
     public Response getCalendarEvents(String wiki, String projectManagementHint, String filters, String start,
-        String end, int limit, Long offset)
+        String end, int limit, int offset, boolean excludeWorkItems)
     {
         prepareClientContext();
         try {
@@ -66,14 +68,19 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
                 this.componentManager.getInstance(ProjectManagementClient.class, projectManagementHint);
             CalendarEventProvider calendarEventProvider =
                 this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
-            int pageSize = limit != 0 ? limit : 50;
-            String intervalFilters = calendarEventProvider.applyDateIntervalFilter(filters, start, end);
-            PaginatedResult<WorkItem> workItems =
-                client.getWorkItems(1, pageSize, getFilters(intervalFilters), Collections.emptyList());
-            List<CalendarEvent> events = this.calendarEventConverter.convertAll(workItems.getItems());
-            // TODO: calendarEventProvider.maybeGetMoreitems(start, end, etc) send extra params via the context populated in
-            //  prepareClientContext and to return List<CalendarEvent> append to list
-            return Response.ok(events).build();
+            int pageSize = limit != 0 ? limit : 25;
+            int pageOffset = offset == 0 ? 1 : offset;
+            List<LiveDataQuery.Filter> queryFilters = getFilters(filters);
+            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_START_DATE, "before", end));
+            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DUE_DATE, "after", start));
+            List<CalendarEvent> calendarEvents = new ArrayList<>();
+            if (!excludeWorkItems) {
+                PaginatedResult<WorkItem> workItems =
+                    client.getWorkItems(pageOffset, pageSize, queryFilters, Collections.emptyList());
+                calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
+            }
+            calendarEvents.addAll(calendarEventProvider.getMoreEvents());
+            return Response.ok(calendarEvents).build();
         } catch (ComponentLookupException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                 .entity(String.format("No project management client with id [%s].", projectManagementHint)).build();
@@ -82,7 +89,7 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
         } catch (WorkItemRetrievalException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
                 .build();
-        } catch (JsonProcessingException e) {
+        } catch (ProjectManagementException e) {
             throw new RuntimeException(e);
         }
     }

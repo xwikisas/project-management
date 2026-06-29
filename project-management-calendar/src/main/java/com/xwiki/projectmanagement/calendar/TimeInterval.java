@@ -19,14 +19,13 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import org.xwiki.component.annotation.Role;
-import org.xwiki.fullcalendar.model.CalendarEvent;
-
-import java.util.List;
-
-@Role
-public interface CalendarEventProvider
+/**
+ * Marker class used to indicate that a property should be displayed as a time interval (min-max), with two time input
+ * boxes separated by a dash.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-61
+ */
+public interface TimeInterval
 {
-    List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
 }

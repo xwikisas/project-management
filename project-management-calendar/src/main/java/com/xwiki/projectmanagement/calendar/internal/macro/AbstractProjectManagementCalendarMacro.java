@@ -23,15 +23,16 @@ package com.xwiki.projectmanagement.calendar.internal.macro;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
+import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Provider;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,10 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
+    @Inject
+    @Named("ssrx")
+    private SkinExtension ssrx;
+
     /**
      * Constructor.
      *
@@ -63,27 +68,6 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     public AbstractProjectManagementCalendarMacro(String name, String description, Class<?> clazz)
     {
         super(name, description, clazz);
-    }
-
-    private static <T extends CalendarMacroParameters> MacroBlock getMacroBlock(T parameters, StringBuilder urlBuilder)
-    {
-        String jsonURL = urlBuilder.toString();
-
-        // Build the parameters to pass to the {{calendar}} wiki macro.
-        Map<String, String> calendarParams = new HashMap<>();
-        calendarParams.put("json", jsonURL);
-        if (parameters.getDefaultView() != null) {
-            calendarParams.put("defaultView", parameters.getDefaultView().name());
-        }
-        if (parameters.getMinTime() != null) {
-            calendarParams.put("minTime", parameters.getMinTime());
-        }
-        if (parameters.getMaxTime() != null) {
-            calendarParams.put("maxTime", parameters.getMaxTime());
-        }
-        calendarParams.put("editable", "true");
-        calendarParams.put("firstDay", String.valueOf(parameters.getFirstDay()));
-        return new MacroBlock("calendar", calendarParams, null, false);
     }
 
     @Override
@@ -97,44 +81,75 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         throws MacroExecutionException
     {
         try {
-            XWikiContext wikiContext = this.xcontextProvider.get();
-            String contextPath = wikiContext.getRequest().getContextPath();
-            String wikiId = wikiContext.getWikiId();
-            String clientId = parameters.getClient();
-
-            // Build the base REST URL.
-            StringBuilder urlBuilder = new StringBuilder();
-            urlBuilder.append(contextPath).append("/rest/wikis/").append(wikiId).append("/projectmanagement/")
-                .append(clientId).append("/calendar");
-
-            // Append query parameters.
-            boolean hasParams = false;
-
-            String filters = parameters.getFilters();
-            if (filters != null && !filters.isEmpty()) {
-                urlBuilder.append("?filters=").append(URLEncoder.encode(filters, StandardCharsets.UTF_8));
-                hasParams = true;
-            }
-
-            // Append client context parameters (e.g. "instance" for OpenProject).
-            Map<String, Object> ctx = this.macroContext.getContext();
-            if (ctx != null && !ctx.isEmpty()) {
-                for (Map.Entry<String, Object> entry : ctx.entrySet()) {
-                    String key = entry.getKey();
-                    if (KEY_CLIENT.equals(key)) {
-                        continue;
-                    }
-                    String value = entry.getValue() != null ? entry.getValue().toString() : "";
-                    urlBuilder.append(hasParams ? '&' : '?').append(URLEncoder.encode(key, StandardCharsets.UTF_8))
-                        .append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
-                    hasParams = true;
-                }
-            }
-            urlBuilder.append(hasParams ? '&' : '?').append("limit=").append(parameters.getLimit());
-
-            return Collections.singletonList(getMacroBlock(parameters, urlBuilder));
+            this.ssrx.use("projectmanagercalendar/css/parameters.css");
+            URIBuilder uriBuilder = getUriBuilder(parameters);
+            updateUrl(uriBuilder, parameters);
+            return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);
+        }
+    }
+
+    private URIBuilder getUriBuilder(T parameters)
+    {
+        XWikiContext wikiContext = this.xcontextProvider.get();
+        String contextPath = wikiContext.getRequest().getContextPath();
+        String clientId = parameters.getClient();
+        String wikiId = wikiContext.getWikiId();
+        // Build the base REST URL.
+        URIBuilder uriBuilder = new URIBuilder();
+        uriBuilder.setPath(contextPath + "/rest/wikis/" + wikiId + "/projectmanagement/" + clientId + "/calendar");
+        String filters = parameters.getFilters();
+        if (filters != null && !filters.isEmpty()) {
+            uriBuilder.addParameter("filters", filters);
+        }
+        // Append client context parameters (e.g. "instance" for OpenProject).
+        Map<String, Object> ctx = this.macroContext.getContext();
+        ctx.forEach((key, value) -> uriBuilder.addParameter(key, value != null ? value.toString() : ""));
+        uriBuilder.addParameter("limit", parameters.getLimit().toString());
+        return uriBuilder;
+    }
+
+    protected void updateUrl(URIBuilder ub, T parameters)
+    {
+        // To be overwritten.
+    }
+
+    protected void excludeWorkItems(URIBuilder ub)
+    {
+        ub.addParameter("excludeWorkItems", "true");
+    }
+
+    private MacroBlock getMacroBlock(T parameters, URIBuilder uriBuilder)
+    {
+        String jsonURL = uriBuilder.toString();
+
+        // Build the parameters to pass to the {{calendar}} wiki macro.
+        Map<String, String> calendarParams = new HashMap<>();
+        calendarParams.put("json", jsonURL);
+        if (parameters.getDefaultView() != null) {
+            calendarParams.put("defaultView", parameters.getDefaultView().name());
+        }
+        setTimeIntervals(parameters.getTimeInterval(), calendarParams);
+        calendarParams.put("editable", "false");
+        calendarParams.put("firstDay", String.valueOf(parameters.getFirstDay().getDayValue()));
+        return new MacroBlock("calendar", calendarParams, null, false);
+    }
+
+    private void setTimeIntervals(String timeInterval, Map<String, String> calendarParams)
+    {
+        if (timeInterval != null && !timeInterval.isEmpty()) {
+            String[] parts = timeInterval.split("-", 2);
+            if (parts.length == 2) {
+                String minTime = parts[0].trim();
+                String maxTime = parts[1].trim();
+                if (!minTime.isEmpty()) {
+                    calendarParams.put("minTime", minTime);
+                }
+                if (!maxTime.isEmpty()) {
+                    calendarParams.put("maxTime", maxTime);
+                }
+            }
         }
     }
 }

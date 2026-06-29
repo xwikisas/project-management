@@ -20,13 +20,14 @@
 
 package com.xwiki.projectmanagement.calendar.macro;
 
-import com.xwiki.projectmanagement.ProjectManagementFilters;
+import com.xwiki.projectmanagement.ProjectManagementFilter;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
+import com.xwiki.projectmanagement.calendar.TimeInterval;
+import com.xwiki.projectmanagement.calendar.WeekDays;
+import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.stability.Unstable;
-
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 /**
  * Parameters for the project management calendar macro. Extends {@link ProjectManagementMacroParameters} with
@@ -40,19 +41,15 @@ public class CalendarMacroParameters
 {
     private CalendarViews defaultView = CalendarViews.month;
 
-    private int firstDay = 1;
+    private WeekDays firstDay = WeekDays.SUNDAY;
 
-    private String minTime;
-
-    private String maxTime;
-
-    private String timeFormat;
+    private String timeInterval;
 
     private String client;
 
     private String filters;
 
-    private int limit = 50;
+    private int limit = 25;
 
     /**
      * @return the client id (e.g., "openproject").
@@ -82,7 +79,7 @@ public class CalendarMacroParameters
     /**
      * @param defaultView see {@link #getDefaultView()}.
      */
-    @PropertyDescription("The initial view of the calendar (month, agendaWeek, agendaDay).")
+    @PropertyDescription("The initial layout of the calendar on load.")
     public void setDefaultView(CalendarViews defaultView)
     {
         this.defaultView = defaultView;
@@ -91,7 +88,7 @@ public class CalendarMacroParameters
     /**
      * @return the first day of the week (0 = Sunday, 1 = Monday, etc.).
      */
-    public int getFirstDay()
+    public WeekDays getFirstDay()
     {
         return this.firstDay;
     }
@@ -99,61 +96,29 @@ public class CalendarMacroParameters
     /**
      * @param firstDay see {@link #getFirstDay()}.
      */
-    @PropertyDescription("The first day of the week (0 = Sunday, 1 = Monday, etc.).")
-    public void setFirstDay(int firstDay)
+    @PropertyDescription("The first day of the week.")
+    public void setFirstDay(WeekDays firstDay)
     {
         this.firstDay = firstDay;
     }
 
     /**
-     * @return the minimum time displayed in the agenda views (e.g., {@code 06:00}).
+     * @return the time interval displayed in the agenda views, formatted as {@code min-max} (e.g.,
+     *     {@code 06:00-20:00}).
      */
-    public String getMinTime()
+    public String getTimeInterval()
     {
-        return this.minTime;
+        return this.timeInterval;
     }
 
     /**
-     * @param minTime see {@link #getMinTime()}.
+     * @param timeInterval see {@link #getTimeInterval()}.
      */
-    @PropertyDescription("The minimum time displayed in the agenda views (e.g., 06:00).")
-    public void setMinTime(String minTime)
+    @PropertyDescription("The time interval displayed in the agenda views (e.g., 06:00-20:00).")
+    @PropertyDisplayType(TimeInterval.class)
+    public void setTimeInterval(String timeInterval)
     {
-        this.minTime = minTime;
-    }
-
-    /**
-     * @return the maximum time displayed in the agenda views (e.g., {@code 20:00}).
-     */
-    public String getMaxTime()
-    {
-        return this.maxTime;
-    }
-
-    /**
-     * @param maxTime see {@link #getMaxTime()}.
-     */
-    @PropertyDescription("The maximum time displayed in the agenda views (e.g., 20:00).")
-    public void setMaxTime(String maxTime)
-    {
-        this.maxTime = maxTime;
-    }
-
-    /**
-     * @return the time format string (e.g., {@code H:mm}).
-     */
-    public String getTimeFormat()
-    {
-        return this.timeFormat;
-    }
-
-    /**
-     * @param timeFormat see {@link #getTimeFormat()}.
-     */
-    @PropertyDescription("The time format string (e.g., H:mm).")
-    public void setTimeFormat(String timeFormat)
-    {
-        this.timeFormat = timeFormat;
+        this.timeInterval = timeInterval;
     }
 
     /**
@@ -168,7 +133,7 @@ public class CalendarMacroParameters
     /**
      * @param filters see {@link #getFilters()}.
      */
-    @PropertyDisplayType(ProjectManagementFilters.class)
+    @PropertyDisplayType(ProjectManagementFilter.class)
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -185,6 +150,7 @@ public class CalendarMacroParameters
     /**
      * @param limit see {@link #getLimit()}.
      */
+    @PropertyDescription("How many events should be pulled from OpenProject. Default is 25.")
     public void setLimit(Integer limit)
     {
         this.limit = limit;
