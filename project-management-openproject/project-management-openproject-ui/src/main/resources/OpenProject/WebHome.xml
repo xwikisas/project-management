@@ -406,13 +406,13 @@
       </title>
     </class>
     <property>
-      <content>{{openproject-project-time-entries instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+      <content>{{openproject-spent-time instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
     </property>
     <property>
       <position>1, 4</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openproject-project-time-entries.name')</title>
+      <title>$services.localization.render('rendering.macro.openproject-spent-time.name')</title>
     </property>
   </object>
   <object>
