@@ -108,7 +108,7 @@ public class Suggest extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("suggest") @DefaultValue("") String suggest,
         @QueryParam("search") @DefaultValue("") String search,
-        @QueryParam("pageSize") @DefaultValue("10") int pageSize)
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize)
     {
         OpenProjectApiClient openProjectApiClient;
 
