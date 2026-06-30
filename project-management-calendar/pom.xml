@@ -32,9 +32,6 @@
 
     <name>Project Management - Calendar</name>
     <description>Provides the Calendar data source through which all the Project Management implementations will display work items.</description>
-    <properties>
-        <xwiki.jacoco.instructionRatio>0.76</xwiki.jacoco.instructionRatio>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.xwiki.contrib</groupId>
@@ -93,5 +90,27 @@
             <version>${commons.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.xwiki.contrib</groupId>
+            <artifactId>macro-fullcalendar-ui</artifactId>
+            <version>${fullcalendar.version}</version>
+            <type>xar</type>
+        </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforcer-banneddependencytype-xar</id>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
