@@ -144,8 +144,8 @@ openproject.editworkpackage.notify.error=Failed to update the work package!
 openproject.extension.name=Open Project Integration (Pro)
 
 projectmanagement.relations.clients.openproject=Open Project
-projectmanagement.relations.openproject.project.name=Linked Project
-projectmanagement.relations.openproject.workItem.name=Linked Work Package
+projectmanagement.relations.openproject.project.name=Parent Project
+projectmanagement.relations.openproject.workItem.name=Parent Work Package
 projectmanagement.relations.clients.openproject=Open Project
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
 openproject.relations.mentions.noInstance=No OpenProject instance selected.

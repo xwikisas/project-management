@@ -222,7 +222,7 @@
             }
           };
           if (dataType == 'project') {
-            cfg.query.filters = [];
+            cfg.query.filters[0].property = 'name';
           }
           selectizeCfg.load = function (text, callback) {
             let urlParams = { ...clientParams };
@@ -239,9 +239,9 @@
               .then(function (results) {
                 let items = (results &amp;&amp; results.items) || [];
                 if (dataType == 'project') {
-                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.name }});
+                  items = items.map(item =&gt; { return { label: item.name, value: item.identifier.value, hint: item.identifier.value }});
                 } else {
-                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.summary.value }});
+                  items = items.map(item =&gt; { return { label: item.summary.value, value: item.identifier.value, hint: item.project.value }});
                 }
                 callback(items);
               })
