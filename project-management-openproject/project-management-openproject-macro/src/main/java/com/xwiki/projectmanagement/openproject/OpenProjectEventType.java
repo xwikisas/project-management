@@ -21,25 +21,25 @@
 package com.xwiki.projectmanagement.openproject;
 
 /**
- * Represents the types of work packages that can be displayed in the OpenProject calendar.
+ * Represents the types of events that can be displayed in the OpenProject calendar.
  *
  * @version $Id$
- * @since 1.2.0-rc-1
+ * @since 1.2.0-rc-9
  */
 public enum OpenProjectEventType
 {
     /**
-     * Work packages of type "Work package".
+     * Work package event type.
      */
     WORK_PACKAGE,
 
     /**
-     * Work packages of type "Sprint".
+     * Sprint event type.
      */
     SPRINT,
 
     /**
-     * Work packages of type "Version".
+     * Version event type.
      */
     VERSION
 }

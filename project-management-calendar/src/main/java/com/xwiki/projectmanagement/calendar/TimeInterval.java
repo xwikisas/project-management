@@ -24,7 +24,7 @@ package com.xwiki.projectmanagement.calendar;
  * boxes separated by a dash.
  *
  * @version $Id$
- * @since 1.2.0-rc-61
+ * @since 1.2.0-rc-9
  */
 public interface TimeInterval
 {

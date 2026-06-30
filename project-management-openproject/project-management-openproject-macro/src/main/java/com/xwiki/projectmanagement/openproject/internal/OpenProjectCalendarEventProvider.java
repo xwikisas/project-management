@@ -36,13 +36,31 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
+/**
+ * Provides calendar events from OpenProject by fetching sprints and versions and converting them into
+ * {@link CalendarEvent} instances.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-9
+ */
 @Singleton
 @Component
 @Named("openproject")
 public class OpenProjectCalendarEventProvider implements CalendarEventProvider
 {
+    private static final String OP_ID = "op-id";
+
+    private static final String ENTITY_TYPE = "entity-type";
+
+    private static final String SPRINT = "sprint";
+
+    private static final String VERSION = "version";
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
@@ -53,8 +71,8 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     @Override
     public List<CalendarEvent> getMoreEvents() throws ProjectManagementException
     {
-        boolean getSprints = Boolean.parseBoolean((String) this.executionContext.get("sprint"));
-        boolean getVersion = Boolean.parseBoolean((String) this.executionContext.get("version"));
+        boolean getSprints = Boolean.parseBoolean((String) this.executionContext.get(SPRINT));
+        boolean getVersion = Boolean.parseBoolean((String) this.executionContext.get(VERSION));
         OpenProjectApiClient apiClient = getOpenProjectApiClient();
         List<CalendarEvent> calendarEvents = new ArrayList<>();
         if (getSprints) {
@@ -99,7 +117,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
                 event.setTitle(sprint.getName());
                 event.setAllDay(true);
                 event.setColor((String) this.executionContext.get("sprintColor"));
-                event.setMeta(Map.of("op-id", sprint.getId(), "entity-type", "sprint"));
+                event.setMeta(Map.of(OP_ID, sprint.getId(), ENTITY_TYPE, SPRINT));
                 events.add(event);
             }
         }
@@ -124,7 +142,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
                 event.setDescription(version.getDescription());
                 event.setStatus(version.getStatus());
                 event.setAllDay(true);
-                event.setMeta(Map.of("op-id", version.getId(),"entity-type", "version"));
+                event.setMeta(Map.of(OP_ID, version.getId(), ENTITY_TYPE, VERSION));
                 events.add(event);
             }
         }

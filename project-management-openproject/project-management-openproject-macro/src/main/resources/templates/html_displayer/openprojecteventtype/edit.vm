@@ -24,15 +24,15 @@
 <div class="openproject-calendar-types-checkboxes">
   <label style="display:block;">
     <input type="checkbox" class="openproject-calendar-type" value="WORK_PACKAGE"/>
-    Work Package
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.workPackage'))
   </label>
   <label style="display:block;">
     <input type="checkbox" class="openproject-calendar-type" value="SPRINT"/>
-    Sprint
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.sprint'))
   </label>
   <label style="display:block;">
     <input type="checkbox" class="openproject-calendar-type" value="VERSION"/>
-    Version
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.version'))
   </label>
 </div>
 <script>

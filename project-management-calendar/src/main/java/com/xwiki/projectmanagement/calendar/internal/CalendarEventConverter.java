@@ -20,7 +20,12 @@
 
 package com.xwiki.projectmanagement.calendar.internal;
 
-import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Singleton;
 
@@ -35,7 +40,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * FullCalendar macro.
  *
  * @version $Id$
- * @since 1.2.0-rc-7
+ * @since 1.2.0-rc-9
  */
 @Component(roles = CalendarEventConverter.class)
 @Singleton

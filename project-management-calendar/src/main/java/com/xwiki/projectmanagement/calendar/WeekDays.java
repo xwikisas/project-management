@@ -19,23 +19,60 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
+/**
+ * Days of the week mapped to their numeric value (0 for Sunday, 1 for Monday, etc.). Used to configure the first day of
+ * the week in the calendar view.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-9
+ */
 public enum WeekDays
 {
+    /**
+     * Sunday, has value 0.
+     */
     SUNDAY(0),
+
+    /**
+     * Monday, has value 1.
+     */
     MONDAY(1),
+
+    /**
+     * Tuesday, has value 2.
+     */
     TUESDAY(2),
+
+    /**
+     * Wednesday, has value 3.
+     */
     WEDNESDAY(3),
+
+    /**
+     * Thursday, has value 4.
+     */
     THURSDAY(4),
+
+    /**
+     * Friday, has value 5.
+     */
     FRIDAY(5),
+
+    /**
+     * Saturday, has value 6.
+     */
     SATURDAY(6);
 
     private final int dayValue;
 
-    private WeekDays(int dayValue)
+    WeekDays(int dayValue)
     {
         this.dayValue = dayValue;
     }
 
+    /**
+     * @return the numeric representation of the day (0-6, where 0 is Sunday).
+     */
     public int getDayValue()
     {
         return this.dayValue;

@@ -19,11 +19,36 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
+/**
+ * Supported view modes for the FullCalendar component. Each constant corresponds to a FullCalendar view option.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-9
+ */
 public enum CalendarViews
 {
+    /**
+     * Display a full month grid.
+     */
     month,
+
+    /**
+     * Display a week view with agenda (time slots).
+     */
     agendaWeek,
+
+    /**
+     * Display a single day with agenda (time slots).
+     */
     agendaDay,
+
+    /**
+     * Display a week view.
+     */
     basicWeek,
+
+    /**
+     * Display a single day.
+     */
     basicDay;
 }

@@ -25,8 +25,22 @@ import org.xwiki.fullcalendar.model.CalendarEvent;
 
 import java.util.List;
 
+/**
+ * Provides additional calendar events beyond those obtained from the default work item retrieval. Implementations of
+ * this interface can supply extra events that are not represented as standard work items in the project management
+ * platform.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-9
+ */
 @Role
 public interface CalendarEventProvider
 {
+    /**
+     * Retrieve additional calendar events.
+     *
+     * @return a list of calendar events that supplement the work item events.
+     * @throws ProjectManagementException if retrieving the events fails.
+     */
     List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
 }

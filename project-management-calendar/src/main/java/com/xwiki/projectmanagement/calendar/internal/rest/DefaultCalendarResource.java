@@ -25,7 +25,6 @@ import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.AbstractProjectManagementResource;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -48,7 +47,7 @@ import java.util.List;
  * Default implementation of {@link CalendarResource}.
  *
  * @version $Id$
- * @since 1.2.0-rc-7
+ * @since 1.2.0-rc-9
  */
 @Component
 @Singleton
@@ -60,7 +59,7 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
 
     @Override
     public Response getCalendarEvents(String wiki, String projectManagementHint, String filters, String start,
-        String end, int limit, int offset, boolean excludeWorkItems)
+        String end, int limit, boolean excludeWorkItems)
     {
         prepareClientContext();
         try {
@@ -69,28 +68,27 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
             CalendarEventProvider calendarEventProvider =
                 this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
             int pageSize = limit != 0 ? limit : 25;
-            int pageOffset = offset == 0 ? 1 : offset;
             List<LiveDataQuery.Filter> queryFilters = getFilters(filters);
+            // Filter work items whose date range overlaps with the requested calendar window.
             queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_START_DATE, "before", end));
             queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DUE_DATE, "after", start));
             List<CalendarEvent> calendarEvents = new ArrayList<>();
+            // Fetch standard work item events unless the caller explicitly requests only provider events.
             if (!excludeWorkItems) {
                 PaginatedResult<WorkItem> workItems =
-                    client.getWorkItems(pageOffset, pageSize, queryFilters, Collections.emptyList());
+                    client.getWorkItems(1, pageSize, queryFilters, Collections.emptyList());
                 calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
             }
+            // Add additional events from the calendar event provider.
             calendarEvents.addAll(calendarEventProvider.getMoreEvents());
             return Response.ok(calendarEvents).build();
         } catch (ComponentLookupException e) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(String.format("No project management client with id [%s].", projectManagementHint)).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity(ExceptionUtils.getStackTrace(e)).build();
         } catch (LiveDataException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
-        } catch (WorkItemRetrievalException e) {
+        } catch (ProjectManagementException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
                 .build();
-        } catch (ProjectManagementException e) {
-            throw new RuntimeException(e);
         }
     }
 }

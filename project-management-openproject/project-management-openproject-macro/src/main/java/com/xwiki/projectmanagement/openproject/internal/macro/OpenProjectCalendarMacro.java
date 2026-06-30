@@ -44,7 +44,7 @@ import java.util.Map;
  * Display data retrieved from OpenProject in calendars.
  *
  * @version $Id$
- * @since 1.2.0-rc-1
+ * @since 1.2.0-rc-9
  */
 @Singleton
 @Component
@@ -84,7 +84,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         }
         this.stylingSetupManager.setupInstanceStyles();
         this.stylingSetupManager.useInstanceStyle(parameters.getInstance());
-        // insert extra params for context
+        // insert extra params for context.
         parameters.setClient("openproject");
         if (this.macroContext instanceof DefaultProjectManagementClientExecutionContext) {
             Map<String, Object> clientContext = populateContext(parameters);

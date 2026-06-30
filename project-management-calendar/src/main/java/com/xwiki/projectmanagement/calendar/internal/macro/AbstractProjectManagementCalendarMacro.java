@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.calendar.internal.macro;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
+import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
 import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.rendering.block.Block;
@@ -40,11 +41,11 @@ import java.util.Map;
 
 /**
  * Abstract calendar macro meant to be implemented by project management implementers. It constructs a REST URL pointing
- * to the {@code CalendarResource} endpoint and delegates rendering to the {@code {{calendar}}} wiki macro.
+ * to the {@link CalendarResource} endpoint and delegates rendering to the {@code {{calendar}}} wiki macro.
  *
  * @param <T> the macro parameter type, must extend {@link CalendarMacroParameters}.
  * @version $Id$
- * @since 1.2.0-rc-7
+ * @since 1.2.0-rc-9
  */
 public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarMacroParameters>
     extends AbstractWorkItemsMacro<T>
@@ -82,6 +83,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     {
         try {
             this.ssrx.use("projectmanagercalendar/css/parameters.css");
+            // We build the REST URL to the CalendarResource endpoint, then add it to the rendering of the calendar
+            // macro.
             URIBuilder uriBuilder = getUriBuilder(parameters);
             updateUrl(uriBuilder, parameters);
             return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
@@ -110,11 +113,23 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         return uriBuilder;
     }
 
+    /**
+     * Add additional query parameters to the REST URL passed to the calendar macro.
+     *
+     * @param ub the URI builder for the calendar REST endpoint.
+     * @param parameters the macro parameters.
+     */
     protected void updateUrl(URIBuilder ub, T parameters)
     {
-        // To be overwritten.
+        // Subclasses may override this method to append extra query parameters.
     }
 
+    /**
+     * Method to add the {@code excludeWorkItems} query parameter to the REST URL. When this parameter is
+     * present, the calendar resource will skip the retrieval of standard work item events.
+     *
+     * @param ub the URI builder for the calendar REST endpoint.
+     */
     protected void excludeWorkItems(URIBuilder ub)
     {
         ub.addParameter("excludeWorkItems", "true");

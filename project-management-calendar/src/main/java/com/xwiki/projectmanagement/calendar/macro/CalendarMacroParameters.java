@@ -25,7 +25,6 @@ import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.TimeInterval;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
-import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.stability.Unstable;
 
@@ -34,7 +33,7 @@ import org.xwiki.stability.Unstable;
  * calendar-specific view settings.
  *
  * @version $Id$
- * @since 1.2.0-rc-7
+ * @since 1.2.0-rc-9
  */
 @Unstable
 public class CalendarMacroParameters
@@ -62,7 +61,6 @@ public class CalendarMacroParameters
     /**
      * @param client see {@link #getClient()}.
      */
-    @PropertyDescription("The project management client implementation hint.")
     public void setClient(String client)
     {
         this.client = client;
@@ -79,7 +77,6 @@ public class CalendarMacroParameters
     /**
      * @param defaultView see {@link #getDefaultView()}.
      */
-    @PropertyDescription("The initial layout of the calendar on load.")
     public void setDefaultView(CalendarViews defaultView)
     {
         this.defaultView = defaultView;
@@ -96,7 +93,6 @@ public class CalendarMacroParameters
     /**
      * @param firstDay see {@link #getFirstDay()}.
      */
-    @PropertyDescription("The first day of the week.")
     public void setFirstDay(WeekDays firstDay)
     {
         this.firstDay = firstDay;
@@ -114,7 +110,6 @@ public class CalendarMacroParameters
     /**
      * @param timeInterval see {@link #getTimeInterval()}.
      */
-    @PropertyDescription("The time interval displayed in the agenda views (e.g., 06:00-20:00).")
     @PropertyDisplayType(TimeInterval.class)
     public void setTimeInterval(String timeInterval)
     {
@@ -150,7 +145,6 @@ public class CalendarMacroParameters
     /**
      * @param limit see {@link #getLimit()}.
      */
-    @PropertyDescription("How many events should be pulled from OpenProject. Default is 25.")
     public void setLimit(Integer limit)
     {
         this.limit = limit;

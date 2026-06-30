@@ -24,14 +24,19 @@ import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
-import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
-import java.awt.*;
+import java.awt.Color;
 import java.util.List;
 
+/**
+ * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro}.
+ *
+ * @version $Id$
+ * @since 1.2.0-rc-9
+ */
 public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
 {
     private String instance;
@@ -62,7 +67,6 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * @param instance see {@link #getInstance()}.
      */
     @PropertyMandatory
-    @PropertyDescription("The OpenProject instance where the events are located.")
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
@@ -80,15 +84,19 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
     /**
      * @param types see {@link #getTypes()}.
      */
-    @PropertyDescription("Select the types of work packages to display in the calendar.")
     @PropertyDisplayType(OpenProjectEventType.class)
     public void setTypes(List<OpenProjectEventType> types)
     {
         this.types = types;
     }
 
+    /**
+     * Overrides the filters from the parent class to provide a more specific description and display type for
+     * OpenProject filters.
+     *
+     * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject instance
+     */
     @PropertyDisplayType(OpenProjectFilter.class)
-    @PropertyDescription("The filters that will be applied to the work packages retrieved from the configured OpenProject instance.")
     @Override
     public void setFilters(String filters)
     {
@@ -102,24 +110,38 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
         super.setClient(client);
     }
 
+    /**
+     * Get the color scheme that should be used when rendering OpenProject versions.
+     *
+     * @return the color to be used by the OpenProject versions
+     */
     public String getVersionColor()
     {
         return this.versionColor;
     }
 
-    @PropertyDescription("Select the types of versions to display in the calendar.")
+    /**
+     * @param versionColor see {@link #getVersionColor()}.
+     */
     @PropertyDisplayType(Color.class)
     public void setVersionColor(String versionColor)
     {
         this.versionColor = versionColor;
     }
 
+    /**
+     * Get the color scheme that should be used when rendering OpenProject sprints.
+     *
+     * @return the color to be used by the OpenProject sprints
+     */
     public String getSprintColor()
     {
         return this.sprintColor;
     }
 
-    @PropertyDescription("Select the color of sprints to display in the calendar.")
+    /**
+     * @param sprintColor see {@link #getSprintColor()}.
+     */
     @PropertyDisplayType(Color.class)
     public void setSprintColor(String sprintColor)
     {
