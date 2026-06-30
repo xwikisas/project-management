@@ -43,6 +43,11 @@
     </dependency>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-calendar</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-openproject-api</artifactId>
       <version>${project.version}</version>
     </dependency>
