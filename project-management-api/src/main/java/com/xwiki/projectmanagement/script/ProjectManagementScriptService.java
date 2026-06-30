@@ -32,6 +32,7 @@ import org.xwiki.component.descriptor.ComponentRole;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.script.service.ScriptService;
+import org.xwiki.script.service.ScriptServiceManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
@@ -49,10 +50,15 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * @since 1.2.0
  */
 @Component
-@Named("projectmanagement")
+@Named(ProjectManagementScriptService.ROLE_HINT)
 @Singleton
 public class ProjectManagementScriptService implements ScriptService
 {
+    /**
+     * The hint of this component.
+     */
+    public static final String ROLE_HINT = "projectmanagement";
+
     @Inject
     private ComponentManager componentManager;
 
@@ -63,6 +69,18 @@ public class ProjectManagementScriptService implements ScriptService
     private ProjectManagementClientExecutionContext clientExecutionContext;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Inject
+    private ScriptServiceManager scriptServiceManager;
+
+    /**
+     * @param serviceName name of a script service related to project management.
+     * @return the ScriptService with the given name.
+     */
+    public ScriptService get(String serviceName)
+    {
+        return scriptServiceManager.get(ROLE_HINT + '.' + serviceName);
+    }
 
     /**
      * @return a list of existing {@link ProjectManagementClient} implementer hints.

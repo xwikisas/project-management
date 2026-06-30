@@ -38,7 +38,7 @@
   ## i.e. macroname/xwiki/2.1
   #set ($clientId = $clientId.split('/')[0])
 #end
-#set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($clientId))
+#set ($clientCfg = $services.projectmanagement.livedata.getLivedataConfiguration($clientId))
 #if ("$!clientCfg" != '')
   #set ($propertiesJson = $clientCfg.meta.propertyDescriptors)
   #set ($filterableProperties = [])

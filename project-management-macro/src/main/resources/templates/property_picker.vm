@@ -27,7 +27,7 @@
  *#
 #macro (propertyPicker $params $clientHint $isSinglePick)
   #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js', {'minify': false}))
-  #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
+  #set ($config = $services.projectmanagement.livedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
   #set ($options = [])
   #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
