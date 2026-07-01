@@ -973,9 +973,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       window.location.reload();
     }
   });
-  if (!window.openProjectEvents) {
-    return;
-  }
+  window.openProjectEvents = window.openProjectEvents || new EventTarget();
   window.openProjectEvents.addEventListener('op-creation-success', function (event) {
     let workPackage = event.detail.createdWp.id;
     let opInstance = event.detail.connection;
@@ -1151,10 +1149,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       });
   };
   getPageRelation();
-  if (!window.openProjectEvents) {
-    console.warn('Could not setup listener for autofilling work package properties.');
-    return;
-  }
+  window.openProjectEvents = window.openProjectEvents || new EventTarget();
   window.openProjectEvents.addEventListener('connectionSelectDisplayed', function (event) {
     if (!pageRelation) {
       return;
@@ -1187,10 +1182,10 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     var value = '/api/v3/work_packages/' + pageRelation.workItem;
 
     if (!selectize.options[value]) {
-        selectize.addOption({
-            value: value,
-            label: pageRelation.workItem
-        });
+      selectize.addOption({
+        value: value,
+        label: pageRelation.workItem
+      });
     }
 
     selectize.setValue(value);

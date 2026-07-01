@@ -86,7 +86,7 @@ public class DefaultRelationsManager implements RelationsManager
                     client, false);
             if (relation == null && ancestorLookup) {
 
-                XWikiDocument ancestorDoc = getAncestorWithRelation(document, context, " and obj.client = :client",
+                XWikiDocument ancestorDoc = getAncestorWithRelation(document, context, " and obj.client = :client ",
                     query -> query.bindValue("client", client));
                 if (ancestorDoc == null) {
                     return null;
