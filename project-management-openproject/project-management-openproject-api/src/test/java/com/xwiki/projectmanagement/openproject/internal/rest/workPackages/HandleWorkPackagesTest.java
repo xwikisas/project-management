@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.workPackages;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -42,7 +43,6 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Project;
-import com.xwiki.projectmanagement.openproject.model.User;
 
 import utils.OpenProjectTestUtils;
 
@@ -88,7 +88,7 @@ public class HandleWorkPackagesTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
 
-        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
     }
 
@@ -107,10 +107,14 @@ public class HandleWorkPackagesTest
         when(this.openProjectApiClient.getAvailableProjects(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
             paginatedProjects);
 
-        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(projects, response.getEntity());
+        List<Map<String, String>> expected = List.of(
+            Map.of("value", "/api/v3/projects/1", "label", "Project 1"),
+            Map.of("value", "/api/v3/projects/2", "label", "Project 2")
+        );
+        assertEquals(expected, response.getEntity());
     }
 
     @Test
@@ -124,7 +128,7 @@ public class HandleWorkPackagesTest
 
         assertThrows(
             ProjectManagementException.class,
-            () -> this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, OFFSET, PAGE_SIZE)
+            () -> this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE)
         );
     }
 
@@ -132,17 +136,12 @@ public class HandleWorkPackagesTest
     public void createWorkPackageValidationTest() throws ProjectManagementException, IOException
     {
         CreateWorkPackage createWorkPackage = generateCreateWorkPackage();
-        User user1 = generateUser(1, "User 1");
-        User user2 = generateUser(2, "User 2");
 
         JsonNode workPackagesNode = mapper.readTree(
             OpenProjectTestUtils.getCreateWorkPackageValidationFailsApiResponse()
         );
         when(openProjectApiClient.getWorkPackagesFormResponse(anyString()))
             .thenReturn(workPackagesNode);
-
-        when(openProjectApiClient.getAvailableUsers(anyString(), any(), any(), anyString()))
-            .thenReturn(new PaginatedResult<>(List.of(user1, user2), OFFSET, PAGE_SIZE, 2));
 
         Response response = handleWorkPackages.createWorkPackage(WIKI, INSTANCE, createWorkPackage);
 
@@ -204,8 +203,12 @@ public class HandleWorkPackagesTest
     {
         Project firstProject = new Project();
         firstProject.setId(1);
+        firstProject.setName("Project 1");
+        firstProject.setSelf(new Linkable("Project 1", "/api/v3/projects/1"));
         Project secondProject = new Project();
         secondProject.setId(2);
+        secondProject.setName("Project 2");
+        secondProject.setSelf(new Linkable("Project 2", "/api/v3/projects/2"));
         return List.of(firstProject, secondProject);
     }
 
@@ -221,12 +224,4 @@ public class HandleWorkPackagesTest
         return createWorkPackage;
     }
 
-    private User generateUser(Integer id, String name)
-    {
-        User user = new User();
-        user.setId(id);
-        user.setName(name);
-        user.setSelf(new Linkable(name, String.format("/api/v3/users/%s", id)));
-        return user;
-    }
 }

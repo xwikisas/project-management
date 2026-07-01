@@ -46,8 +46,10 @@ import org.xwiki.rest.XWikiResource;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
@@ -104,6 +106,21 @@ public class HandleWorkPackages extends XWikiResource
 
     private static final String SELECT = "select";
 
+    private static final String SELECTIZE = "selectize";
+
+    private static final String ENDPOINT = "endpoint";
+
+    private static final String DEFAULT_LABEL = "defaultLabel";
+
+    private static final String AVAILABLE_ASSIGNEES_ENDPOINT = "workPackages/availableAssignees";
+
+    private static final String PARENT_SUGGEST_ENDPOINT = "suggest/parent";
+
+    private static final String AVAILABLE_ASSIGNEES_PATH = "/available_assignees";
+
+    private static final String NO_AUTHENTICATION_ERROR_MESSAGE =
+        "You must authenticate to the OpenProject instance from XWiki before creating or editing a work package.";
+
     private static final String DATE = "date";
 
     private static final String TEXT = "text";
@@ -134,6 +151,8 @@ public class HandleWorkPackages extends XWikiResource
 
     private static final String LOCK_VERSION = "lockVersion";
 
+    private static final String PROJECT_HREF = "projectHref";
+
     private static final int UNPROCESSABLE_ENTITY = 422;
 
     @Inject
@@ -146,28 +165,27 @@ public class HandleWorkPackages extends XWikiResource
      *
      * @param wiki the wiki that contains the configured client.
      * @param instance the OpenProject client where to search for work item suggestions.
+     * @param search the string that should match the project name.
      * @param offset the offset from which to start retrieving projects.
      * @param pageSize the maximum number of projects to return.
      * @return a list of projects that can be used for creating a work package.
      * @since 1.1
      */
     @GET
-    @Consumes({ MediaType.APPLICATION_JSON })
     @Produces({ MediaType.APPLICATION_JSON })
     @Path("/availableProjects")
     public Response getAvailableProjects(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance,
+        @QueryParam("search") @DefaultValue("") String search,
         @QueryParam("offset") @DefaultValue("0") int offset,
-        @QueryParam("pageSize") @DefaultValue("20") int pageSize) throws ProjectManagementException
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
         if (apiClient == null) {
             return Response
                 .status(Response.Status.CONFLICT)
-                .entity(
-                    "You must authenticate to the OpenProject instance from XWiki before"
-                        + " being able to retrieve the available projects for creating a work package.")
+                .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
                 .build();
         }
 
@@ -179,10 +197,56 @@ public class HandleWorkPackages extends XWikiResource
 
             JsonNode schemaNode = getSchemaNode(response);
             List<Project> projects = getAvailableProjects(apiClient, schemaNode,
-                offset, pageSize);
-            return Response.ok(projects).build();
+                offset, pageSize, buildNameFilter(search));
+            return Response.ok(mapToValueLabel(projects)).build();
         } catch (ProjectManagementException e) {
             throw new ProjectManagementException("Failed to retrieve available projects for creating a work package",
+                e);
+        }
+    }
+
+    /**
+     * Exposes the assignees that can be set on a work package created in the given project, filtered by a search term.
+     *
+     * @param wiki the wiki that contains the configured client.
+     * @param instance the OpenProject client where to search for assignees.
+     * @param project the href of the project whose assignable users should be retrieved.
+     * @param search the string that should match the assignee name.
+     * @param pageSize the maximum number of assignees to return.
+     * @return a list of objects with the {@code value} (the user href) and {@code label} (the user name) properties.
+     * @since 1.2
+     */
+    @GET
+    @Produces({ MediaType.APPLICATION_JSON })
+    @Path("/availableAssignees")
+    public Response getAvailableAssignees(@PathParam("wikiName") String wiki,
+        @PathParam("instance") String instance,
+        @QueryParam("project") @DefaultValue("") String project,
+        @QueryParam("search") @DefaultValue("") String search,
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize) throws ProjectManagementException
+    {
+        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+
+        if (apiClient == null) {
+            return Response
+                .status(Response.Status.CONFLICT)
+                .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
+                .build();
+        }
+
+        if (project == null || project.isEmpty()) {
+            return Response.ok(new ArrayList<>()).build();
+        }
+
+        try {
+            // The project-scoped assignable users are exposed by OpenProject at
+            // /api/v3/projects/{id}/available_assignees, which is reachable straight from the project href.
+            String assigneeUrl = project + AVAILABLE_ASSIGNEES_PATH;
+            PaginatedResult<User> assignees =
+                apiClient.getAvailableUsers(assigneeUrl, 0, pageSize, buildNameFilter(search));
+            return Response.ok(mapToValueLabel(assignees.getItems())).build();
+        } catch (ProjectManagementException e) {
+            throw new ProjectManagementException("Failed to retrieve available assignees for creating a work package",
                 e);
         }
     }
@@ -219,12 +283,13 @@ public class HandleWorkPackages extends XWikiResource
             if (!validationErrors.isEmpty()) {
                 JsonNode schemaNode = getSchemaNode(response);
                 Map<String, Object> optionsResponse = convertFormResponseToOptionsResponse(schemaNode,
-                    objectMapper.createObjectNode(), apiClient);
+                    objectMapper.createObjectNode());
                 return Response.status(Response.Status.OK).entity(optionsResponse).build();
             }
 
             String commitLink = response.path(LINKS).path(COMMIT).path(HREF).asText();
             JsonNode payload = response.path(EMBEDDED).path(PAYLOAD);
+            removeNullLinks(payload);
 
             JsonNode createWorkPackageResponse = apiClient.createWorkPackage(commitLink,
                 objectMapper.writeValueAsString(payload));
@@ -256,8 +321,7 @@ public class HandleWorkPackages extends XWikiResource
         if (apiClient == null) {
             return Response
                 .status(Response.Status.CONFLICT)
-                .entity("You must authenticate to the OpenProject instance from XWiki before being able to edit a"
-                    + " work package.")
+                .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
                 .build();
         }
 
@@ -268,7 +332,7 @@ public class HandleWorkPackages extends XWikiResource
 
             JsonNode schemaNode = getSchemaNode(response);
             JsonNode payloadNode = response.path(EMBEDDED).path(PAYLOAD);
-            return Response.ok(convertFormResponseToOptionsResponse(schemaNode, payloadNode, apiClient)).build();
+            return Response.ok(convertFormResponseToOptionsResponse(schemaNode, payloadNode)).build();
         } catch (ProjectManagementException e) {
             throw new ProjectManagementException(
                 String.format("Failed to retrieve the edit form for work package [%s]", workPackageId), e);
@@ -311,13 +375,14 @@ public class HandleWorkPackages extends XWikiResource
                 JsonNode payloadNode = response.path(EMBEDDED).path(PAYLOAD);
 
                 Map<String, Object> optionsResponse =
-                    convertFormResponseToOptionsResponse(schemaNode, payloadNode, apiClient);
+                    convertFormResponseToOptionsResponse(schemaNode, payloadNode);
                 optionsResponse.put(VALIDATION_MESSAGE, extractFirstValidationMessage(validationErrors));
                 return Response.status(UNPROCESSABLE_ENTITY).entity(optionsResponse).build();
             }
 
             String commitLink = response.path(LINKS).path(COMMIT).path(HREF).asText();
             JsonNode payload = response.path(EMBEDDED).path(PAYLOAD);
+            removeNullLinks(payload);
 
             JsonNode updateWorkPackageResponse = apiClient.updateWorkPackage(commitLink,
                 objectMapper.writeValueAsString(payload));
@@ -352,17 +417,17 @@ public class HandleWorkPackages extends XWikiResource
         return null;
     }
 
-    private Map<String, Object> convertFormResponseToOptionsResponse(JsonNode schemaNode, JsonNode payloadNode,
-        OpenProjectApiClient apiClient)
+    private Map<String, Object> convertFormResponseToOptionsResponse(JsonNode schemaNode, JsonNode payloadNode)
     {
         Map<String, Object> optionsResponse = new LinkedHashMap<>();
 
+        putParentField(optionsResponse, schemaNode, payloadNode);
         putTextField(optionsResponse, schemaNode, SUBJECT, getTextDefault(payloadNode, SUBJECT));
         putTextField(optionsResponse, schemaNode, DESCRIPTION, getDescriptionDefault(payloadNode));
         putSelectField(optionsResponse, schemaNode, payloadNode, TYPE, buildTypes(schemaNode));
         putSelectField(optionsResponse, schemaNode, payloadNode, PRIORITY, buildPriorities(schemaNode));
         putSelectField(optionsResponse, schemaNode, payloadNode, STATUS, buildStatuses(schemaNode));
-        setAssigneeOptions(schemaNode, payloadNode, apiClient, optionsResponse);
+        setAssigneeOptions(schemaNode, payloadNode, optionsResponse);
         putDateFields(optionsResponse, schemaNode, payloadNode);
 
         addCurrentValueMetadata(payloadNode, optionsResponse);
@@ -471,8 +536,21 @@ public class HandleWorkPackages extends XWikiResource
 
     private void addCurrentValueMetadata(JsonNode payloadNode, Map<String, Object> optionsResponse)
     {
-        addParentOption(payloadNode, optionsResponse);
+        addProjectHref(payloadNode, optionsResponse);
         addLockVersion(payloadNode, optionsResponse);
+    }
+
+    private void addProjectHref(JsonNode payloadNode, Map<String, Object> optionsResponse)
+    {
+        String href = textOrEmpty(payloadNode.path(LINKS).path(PROJECT).path(HREF));
+        if (!href.isEmpty()) {
+            optionsResponse.put(PROJECT_HREF, href);
+        }
+    }
+
+    private String textOrEmpty(JsonNode node)
+    {
+        return node.isTextual() ? node.asText() : "";
     }
 
     private boolean getRequiredOptionForField(JsonNode schemaNode, String fieldName)
@@ -485,35 +563,22 @@ public class HandleWorkPackages extends XWikiResource
         return schemaNode.path(fieldName).path(NAME).asText();
     }
 
-    private void setAssigneeOptions(JsonNode schemaNode, JsonNode payloadNode, OpenProjectApiClient apiClient,
-        Map<String, Object> optionsResponse)
+    private void setAssigneeOptions(JsonNode schemaNode, JsonNode payloadNode, Map<String, Object> optionsResponse)
     {
-        String assigneeUrl = schemaNode.path(ASSIGNEE).path(LINKS).path(ALLOWED_VALUES).path(
-            HREF).asText();
+        JsonNode assigneeLink = payloadNode.path(LINKS).path(ASSIGNEE);
+        String href = textOrEmpty(assigneeLink.path(HREF));
+        String title = textOrEmpty(assigneeLink.path(TITLE));
 
-        try {
-            List<User> assignees;
-
-            if (assigneeUrl != null && !assigneeUrl.isEmpty()) {
-                PaginatedResult<User> usersPaginatedResult = apiClient.getAvailableUsers(assigneeUrl, null, null, "");
-                assignees = usersPaginatedResult.getItems();
-            } else {
-                assignees = new ArrayList<>();
-            }
-
-            optionsResponse.put(
-                ASSIGNEE,
-                createInputOptions(
-                    getRequiredOptionForField(schemaNode, ASSIGNEE),
-                    SELECT,
-                    getLabelOptionForField(schemaNode, ASSIGNEE),
-                    assignees,
-                    getSelectDefault(payloadNode, ASSIGNEE, assignees, null)
-                )
-            );
-        } catch (ProjectManagementException e) {
-            throw new RuntimeException(e);
-        }
+        optionsResponse.put(
+            ASSIGNEE,
+            createSelectizeOptions(
+                getRequiredOptionForField(schemaNode, ASSIGNEE),
+                getLabelOptionForField(schemaNode, ASSIGNEE),
+                AVAILABLE_ASSIGNEES_ENDPOINT,
+                href,
+                title
+            )
+        );
     }
 
     private String getTextDefault(JsonNode payloadNode, String fieldName)
@@ -557,19 +622,26 @@ public class HandleWorkPackages extends XWikiResource
         return null;
     }
 
-    private void addParentOption(JsonNode payloadNode, Map<String, Object> optionsResponse)
+    private void putParentField(Map<String, Object> optionsResponse, JsonNode schemaNode, JsonNode payloadNode)
     {
         JsonNode parentLink = payloadNode.path(LINKS).path(PARENT);
-        String href = parentLink.path(HREF).asText();
-        if (href == null || href.isEmpty()) {
-            return;
+        String defaultValue = textOrEmpty(parentLink.path(HREF));
+        String defaultLabel = "";
+        if (!defaultValue.isEmpty()) {
+            String parentId = defaultValue.substring(defaultValue.lastIndexOf('/') + 1);
+            defaultLabel = String.format("#%s: %s", parentId, textOrEmpty(parentLink.path(TITLE)));
         }
-        String title = parentLink.path(TITLE).asText();
-        String parentId = href.substring(href.lastIndexOf('/') + 1);
-        Map<String, String> parentSeed = new HashMap<>();
-        parentSeed.put(VALUE, href);
-        parentSeed.put(LABEL, String.format("#%s: %s", parentId, title));
-        optionsResponse.put(PARENT, parentSeed);
+
+        optionsResponse.put(
+            PARENT,
+            createSelectizeOptions(
+                getRequiredOptionForField(schemaNode, PARENT),
+                getLabelOptionForField(schemaNode, PARENT),
+                PARENT_SUGGEST_ENDPOINT,
+                defaultValue,
+                defaultLabel
+            )
+        );
     }
 
     private void addLockVersion(JsonNode payloadNode, Map<String, Object> optionsResponse)
@@ -592,6 +664,32 @@ public class HandleWorkPackages extends XWikiResource
         return fieldOptions;
     }
 
+    private Map<String, Object> createSelectizeOptions(boolean required, String label, String endpoint,
+        String defaultValue, String defaultLabel)
+    {
+        Map<String, Object> fieldOptions = new HashMap<>();
+        fieldOptions.put(REQUIRED, required);
+        fieldOptions.put(TYPE, SELECTIZE);
+        fieldOptions.put(LABEL, label);
+        fieldOptions.put(ENDPOINT, endpoint);
+        fieldOptions.put(DEFAULT_VALUE, defaultValue);
+        fieldOptions.put(DEFAULT_LABEL, defaultLabel);
+        return fieldOptions;
+    }
+
+    private List<Map<String, String>> mapToValueLabel(List<? extends BaseOpenProjectObject> items)
+    {
+        List<Map<String, String>> result = new ArrayList<>();
+        for (BaseOpenProjectObject item : items) {
+            String location = item.getSelf() != null ? item.getSelf().getLocation() : "";
+            result.add(Map.of(
+                VALUE, location != null ? location : "",
+                LABEL, item.getName() != null ? item.getName() : ""
+            ));
+        }
+        return result;
+    }
+
     private Map<String, Object> createRequestForOpenProjectFormRequest(CreateWorkPackage workPackage)
     {
         Map<String, Object> formRequest = new HashMap<>();
@@ -607,7 +705,7 @@ public class HandleWorkPackages extends XWikiResource
         linkMappings.put(PARENT, workPackage.getParent());
 
         for (Map.Entry<String, String> entry : linkMappings.entrySet()) {
-            if (entry.getValue() != null) {
+            if (entry.getValue() != null && !entry.getValue().isEmpty()) {
                 links.put(entry.getKey(), Map.of(HREF, entry.getValue()));
             }
         }
@@ -637,8 +735,29 @@ public class HandleWorkPackages extends XWikiResource
         return formRequest;
     }
 
+    private void removeNullLinks(JsonNode payload)
+    {
+
+        JsonNode links = payload.path(LINKS);
+        if (!links.isObject()) {
+            return;
+        }
+        ObjectNode linksNode = (ObjectNode) links;
+        List<String> emptyLinks = new ArrayList<>();
+        linksNode.fields().forEachRemaining(entry -> {
+            JsonNode link = entry.getValue();
+            if (link.isObject() && link.has(HREF)) {
+                JsonNode href = link.path(HREF);
+                if (href.isNull() || href.asText().isEmpty()) {
+                    emptyLinks.add(entry.getKey());
+                }
+            }
+        });
+        emptyLinks.forEach(linksNode::remove);
+    }
+
     private List<Project> getAvailableProjects(OpenProjectApiClient apiClient, JsonNode schemaNode,
-        Integer offset, Integer pageSize)
+        Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
         String projectsUrl = schemaNode.path(PROJECT).path(LINKS).path(ALLOWED_VALUES).path(
@@ -646,10 +765,18 @@ public class HandleWorkPackages extends XWikiResource
 
         if (projectsUrl != null && !projectsUrl.isEmpty()) {
             PaginatedResult<Project> projectsPaginatedResult =
-                apiClient.getAvailableProjects(projectsUrl, offset, pageSize, "");
+                apiClient.getAvailableProjects(projectsUrl, offset, pageSize, filters);
             return projectsPaginatedResult.getItems();
         } else {
             return new ArrayList<>();
         }
+    }
+
+    private String buildNameFilter(String search)
+    {
+        if (search == null || search.isEmpty()) {
+            return "";
+        }
+        return new FilterBuilder().addFilter(NAME, FilterBuilder.Operator.CONTAINS, search).build();
     }
 }

@@ -24,7 +24,6 @@
 <div class="withLock xform">
   #connectionInput('op-connection' $connectionOptions)
   #incorrectToken('incorrect-token-create-work-package')
-  #parentInput('op-parent')
   #projectInput('op-project' $connectionOptions)
   <div id="dynamic-fields-container" class="hidden">
   </div>
