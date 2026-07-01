@@ -40,6 +40,13 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
             console.warn('The OpenProject calendar is missing an id. Click events wont be registered.')
             return;
         }
+        document.addEventListener('op-edit-success', function(event) {
+          const detail = event.detail || {};
+          if (instance != detail.connection) {
+            return;
+          }
+          $('#' + calendarId).fullCalendar('refetchEvents');
+        });
         const eventName = 'xwiki:fullcalendar:' + calendarId + ':eventrendering';
         $(document).on(eventName, function(e, data) {
             let element = data.eventElement;
