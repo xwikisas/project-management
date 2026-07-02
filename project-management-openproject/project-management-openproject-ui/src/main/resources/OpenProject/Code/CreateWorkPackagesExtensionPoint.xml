@@ -1178,18 +1178,14 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     if (!pageRelation || !pageRelation.workItem) {
       return;
     }
-    var selectize = event.detail.element[0].selectize;
+    let $el = event.detail.element;
     var value = '/api/v3/work_packages/' + pageRelation.workItem;
-
-    if (!selectize.options[value]) {
-      selectize.addOption({
-        value: value,
-        label: pageRelation.workItem
-      });
+    if ($el.is('select') &amp;&amp; !$el.find('option[value="' + value + '"]').length) {
+      $el.append($('&lt;option&gt;', { value: value, text: pageRelation.workItem }));
     }
 
-    selectize.setValue(value);
-    event.detail.element.trigger('change');
+    $el.val(value);
+    //$el.trigger('change');
   });
 });</code>
     </property>

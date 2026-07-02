@@ -249,7 +249,9 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    maxItems: 1,
 	    inputClass: "selectize-input form-control",
 	  };
-
+    window.openProjectEvents.dispatchEvent(
+      new CustomEvent('parentSelectDisplayed', { detail: { element: parent } })
+    );
 	  selectizeConfig.load = function (text, callback) {
 	    const connection = $(connectionSelectId).val();
 	    if (!connection) {
@@ -257,13 +259,15 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    }
 	    const searchUrl = `${baseUrl}${connection}/suggest/parent`;
 	    const selectize = parent[0].selectize;
-	    $.getJSON(searchUrl, { search: text })
+	    $.getJSON(searchUrl, { search: text, selectedItem: parent.val().split('/').pop() })
 	      .done(function (results) {
 	        // Add only options that are not already present, then refresh, to avoid the flicker of
 	        // clearing and rebuilding the whole option list on every search.
 	        results.forEach(function (result) {
 	          if (!selectize.options[result.value]) {
 	            selectize.addOption(result);
+	          } else if (selectize.options[result.value].label != result.label) {
+	            selectize.updateOption(result.value, result);
 	          }
 	        });
 	        selectize.refreshOptions(false);
