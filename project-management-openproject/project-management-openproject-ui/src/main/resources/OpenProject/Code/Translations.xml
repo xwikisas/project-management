@@ -163,8 +163,10 @@ openproject.dashboard.selectConnection.noConnections=No OpenProject connections 
 openproject.dashboard.selectProject.label=Select a project
 openproject.dashboard.selectProject.placeholder=Please select a project..
 openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
-penproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the
-    OpenProject instance first.
+openproject.dashboard.guest=You must be logged in to view this dashboard.
+openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
+openproject.dashboard.noProject=No project is available for the selected connection.
+openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {} first.
 openproject.extension.name=OpenProject Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>

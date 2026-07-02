@@ -37,77 +37,106 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
-#set ($configObj = $doc.getObject($configClass))
-#if($request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
-  #set ($discard = $configObj.set('selectedConnection', $request.connection))
-  #set ($discard = $configObj.set('selectedProject', $request.project))
-  #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
-  #set ($discard = $doc.save('Updated project', true))
-  $response.sendRedirect($doc.getURL())
-  #stop
-#end
-#set ($connectionOptions = $services.openproject.getConnectionOptions())
-#set($discard = $connectionOptions.remove(0))
-#set ($selectedConnection = '')
-#if($configObj)
-  #set ($selectedConnection = $configObj.getValue('selectedConnection'))
-#end
-#if ($connectionOptions.size() == 1)
-  #set ($singleConnectionName = $connectionOptions.get(0).name)
-  #if(!$selectedConnection || !$singleConnectionName.equals($selectedConnection))
-    #set ($discard = $configObj.set('selectedConnection', $singleConnectionName))
-    #set ($discard = $doc.save('Updated connection', true))
-    #set ($selectedConnection = $singleConnectionName)
-  #end
-#end
-#set ($selectedProject = '')
-#set ($selectedProjectLabel = '')
-#if($configObj)
-  #set ($selectedProject = $configObj.getValue('selectedProject'))
-  #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
-#end
-{{html clean="false"}}
-#if ($connectionOptions.size() == 0)
+#set ($currentUser = $xcontext.user)
+#if ($currentUser == 'XWiki.XWikiGuest')
+  {{html}}
   &lt;div class="box warningmessage"&gt;
-    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.guest'))&lt;/p&gt;
   &lt;/div&gt;
+  {{/html}}
 #else
-&lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
-  &lt;div class="form-group"&gt;
-    &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
-    &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
-      #if($connectionOptions.size() == 1) disabled #end&gt;
-      #foreach ($option in $connectionOptions)
-      &lt;option value="$option.value" #if($selectedConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
-      #end
-    &lt;/select&gt;
-    #if($connectionOptions.size() == 1)
-    &lt;input type="hidden" name="connection" value="$!escapetool.xml($selectedConnection)"/&gt;
+  #set ($hasEdit = $services.security.authorization.hasAccess('edit'))
+  #set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
+  #set ($configObj = $doc.getObject($configClass))
+  #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+    #set ($discard = $configObj.set('selectedConnection', $request.connection))
+    #set ($discard = $configObj.set('selectedProject', $request.project))
+    #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
+    #set ($discard = $doc.save('Updated project', true))
+    $response.sendRedirect($doc.getURL())
+    #stop
+  #end
+  #set ($connectionOptions = $services.openproject.getConnectionOptions())
+  #set ($discard = $connectionOptions.remove(0))
+  #set ($selectedConnection = '')
+  #set ($selectedProject = '')
+  #set ($selectedProjectLabel = '')
+  #if ($configObj)
+    #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+    #set ($selectedProject = $configObj.getValue('selectedProject'))
+    #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
+  #end
+  #set ($effectiveConnection = $selectedConnection)
+  #if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
+    #set ($effectiveConnection = $connectionOptions.get(0).value)
+  #end
+  #set ($tokenValid = false)
+  #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.isUserAuthorized($effectiveConnection))
+    #set ($tokenValid = true)
+  #end
+  {{html clean="false"}}
+  #if ($connectionOptions.size() == 0)
+    &lt;div class="box warningmessage"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+    &lt;/div&gt;
+  #else
+    #if ($hasEdit)
+      &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
+        &lt;div class="form-group"&gt;
+          &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
+          &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
+            #if($connectionOptions.size() == 1) disabled #end&gt;
+            #foreach ($option in $connectionOptions)
+            &lt;option value="$option.value" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
+            #end
+          &lt;/select&gt;
+          #if ($connectionOptions.size() == 1)
+          &lt;input type="hidden" name="connection" value="$!escapetool.xml($effectiveConnection)"/&gt;
+          #end
+        &lt;/div&gt;
+        ## The project picker is only useful once the connection is authorized.
+        #if ($tokenValid)
+        &lt;div class="form-group"&gt;
+          &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
+          &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
+            data-connection="$!escapetool.xml($effectiveConnection)"
+            data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
+            #if ("$!selectedProject" != '')
+            &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+            #end
+          &lt;/select&gt;
+          &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
+        &lt;/div&gt;
+        #end
+        &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
+        &lt;input type="hidden" name="action" value="saveProject"/&gt;
+      &lt;/form&gt;
     #end
-  &lt;/div&gt;
-  &lt;div class="form-group"&gt;
-    &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
-    &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
-      data-connection="$!escapetool.xml($selectedConnection)"
-      data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
-      #if("$!selectedProject" != '')
-      &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+    ## Carries the effective connection to the JS for users without pickers (no connection select).
+    &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
+    ## The current user has no token for this connection: show the (per-user) authorize warning.
+    #if (!$tokenValid)
+      #set ($notAuthorized = $services.openproject.getNotAuthorizedMessage($effectiveConnection, 'html/5.0'))
+      #if ("$!notAuthorized" != '')
+        $notAuthorized
       #end
-    &lt;/select&gt;
-    &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
-  &lt;/div&gt;
-  &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
-  &lt;input type="hidden" name="action" value="saveProject"/&gt;
-   &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
-    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
-  &lt;/div&gt;
-&lt;/form&gt;
-#end
-{{/html}}
-#if ($connectionOptions.size() != 0)
-
-{{dashboard/}}
+    #end
+    ## Warnings revealed by the JS (invalid/expired connection, or connection without any projects).
+    &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div id="openproject-dashboard-no-project" class="box warningmessage hidden"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.noProject'))&lt;/p&gt;
+    &lt;/div&gt;
+  #end
+  {{/html}}
+  ## Render the macros (hidden) only when the current user is authorized for the connection; the project
+  ## is defaulted transiently by the listener. The JS reveals them once it confirms the connection works.
+  #if ("$!effectiveConnection" != '' &amp;&amp; $tokenValid)
+  (% id="openproject-dashboard-gadgets" class="hidden" %)(((
+  {{dashboard/}}
+  )))
+  #end
 #end
 {{/velocity}}</content>
   <object>
@@ -154,20 +183,17 @@
       </selectedProject>
     </class>
     <property>
-      <selectedConnection/>
+      <selectedConnection>opdev</selectedConnection>
     </property>
     <property>
-      <selectedProject/>
-    </property>
-    <property>
-      <selectedProjectLabel>Scrum project</selectedProjectLabel>
+      <selectedProject>11</selectedProject>
     </property>
   </object>
   <object>
     <name>OpenProject.WebHome</name>
     <number>0</number>
     <className>XWiki.GadgetClass</className>
-    <guid>c3dc190f-e3e7-4b0f-b0cb-2d4f7c37a449</guid>
+    <guid>d56f2180-a933-4a66-9ff3-8bfc306989a9</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -230,7 +256,7 @@
     <name>OpenProject.WebHome</name>
     <number>1</number>
     <className>XWiki.GadgetClass</className>
-    <guid>4c18e8bb-63d9-472b-b9fa-d3f85b16360e</guid>
+    <guid>7a481921-44b3-49d4-98ca-97d319f1b615</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -567,17 +593,31 @@
     </property>
     <property>
       <code>require(['jquery', 'xwiki-selectize'], function($) {
+  let gadgets = $('#openproject-dashboard-gadgets');
   let select = $('#openproject-dashboard-project-select');
-  if (!select.length) {
-    return;
-  }
 
   function getConnection() {
     let connSelect = $('#openproject-dashboard-connection-select');
-    return connSelect.length ? connSelect.val() : select.attr('data-connection');
+    if (connSelect.length) {
+      return connSelect.val();
+    }
+    return $('#openproject-dashboard-data').attr('data-connection');
+  }
+
+  function setProjectPickerVisible(visible) {
+    if (select.length) {
+      select.closest('.form-group').toggleClass('hidden', !visible);
+    }
+  }
+
+  function setMacrosVisible(visible) {
+    gadgets.toggleClass('hidden', !visible);
   }
 
   function initSelectize(connection) {
+    if (!select.length) {
+      return;
+    }
     if (select[0].selectize) {
       select[0].selectize.destroy();
     }
@@ -603,9 +643,32 @@
     });
   }
 
+  function refreshDashboardState(connection) {
+    let projectsREST = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki +
+        '/openproject/instance/' + encodeURIComponent(connection) + '/suggest/projects';
+    $.getJSON(projectsREST, { search: '' })
+      .done(function(results) {
+        $('#openproject-dashboard-invalid-connection').addClass('hidden');
+        setProjectPickerVisible(true);
+        if (results &amp;&amp; results.length) {
+          setMacrosVisible(true);
+        } else {
+          $('#openproject-dashboard-no-project').removeClass('hidden');
+          setMacrosVisible(false);
+        }
+      })
+      .fail(function() {
+        $('#openproject-dashboard-invalid-connection').removeClass('hidden');
+        setProjectPickerVisible(false);
+        setMacrosVisible(false);
+      });
+  }
+
   let currentConnection = getConnection();
-  if (currentConnection) {
+
+  if (currentConnection &amp;&amp; gadgets.length) {
     initSelectize(currentConnection);
+    refreshDashboardState(currentConnection);
   }
 
   $('#openproject-dashboard-connection-select').on('change', function() {
@@ -615,21 +678,24 @@
     }
     currentConnection = newConnection;
     initSelectize(newConnection);
+    refreshDashboardState(newConnection);
   });
 
-  select.on('change', function() {
-    let value = select.val();
-    if (!value) {
-      return;
-    }
-    let label = value;
-    let selectize = select[0].selectize;
-    if (selectize &amp;&amp; selectize.options[value]) {
-      label = selectize.options[value].label || selectize.options[value].text || value;
-    }
-    $('#openproject-dashboard-project-label-input').val(label);
-    $('#openproject-dashboard-project-form').submit();
-  });
+  if (select.length) {
+    select.on('change', function() {
+      let value = select.val();
+      if (!value) {
+        return;
+      }
+      let label = value;
+      let selectize = select[0].selectize;
+      if (selectize &amp;&amp; selectize.options[value]) {
+        label = selectize.options[value].label || selectize.options[value].text || value;
+      }
+      $('#openproject-dashboard-project-label-input').val(label);
+      $('#openproject-dashboard-project-form').submit();
+    });
+  }
 });</code>
     </property>
     <property>
