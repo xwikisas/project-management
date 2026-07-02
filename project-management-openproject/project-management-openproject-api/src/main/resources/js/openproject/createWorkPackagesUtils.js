@@ -306,6 +306,8 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	          results.forEach(function (result) {
 	            if (!selectize.options[result.value]) {
 	              selectize.addOption(result);
+	            } else if (selectize.options[result.value].label != result.label) {
+	              selectize.updateOption(result.value, result);
 	            }
 	          });
 	          selectize.refreshOptions(false);

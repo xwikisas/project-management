@@ -628,7 +628,7 @@
       create: false,
       placeholder: select.attr('data-placeholder'),
       load: function(text, callback) {
-        $.getJSON(projectsREST, { search: text })
+        $.getJSON(projectsREST, { search: text, selectedItem: select.val() })
           .done(function(results) {
           $('#openproject-dashboard-invalid-connection').addClass('hidden');
           callback(results);
