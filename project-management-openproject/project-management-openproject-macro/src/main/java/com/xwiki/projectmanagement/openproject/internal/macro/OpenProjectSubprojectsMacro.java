@@ -43,6 +43,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSubprojectsMacroParameters;
@@ -61,8 +62,7 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
 {
     private static final String CLASS = "class";
 
-    private static final String OPENPROJECT_SUBPROJECTS_FILTER = "[{\"parent_id\":{\"operator\":\"=\","
-        + "\"values\":[\"%s\"]}}]";
+    private static final String ANCESTOR = "ancestor";
 
     /**
      * Default constructor.
@@ -82,7 +82,9 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
         Integer projectId = Integer.valueOf(parameters.getProject());
         try {
             Project parentProject = apiClient.getProject(projectId);
-            String filters = String.format(OPENPROJECT_SUBPROJECTS_FILTER, projectId);
+            String filters = new FilterBuilder()
+                .addFilter(ANCESTOR, FilterBuilder.Operator.EQUALS, projectId)
+                .build();
             List<Project> subprojects = apiClient.getProjects(null, parameters.getCount(), filters).getItems();
 
             return Collections.singletonList(
