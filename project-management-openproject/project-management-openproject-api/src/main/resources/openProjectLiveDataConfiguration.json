@@ -46,7 +46,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/types"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/types?search={encodedQuery}"
         }
       },
       {
@@ -287,7 +287,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}"
         }
       },
       {
@@ -315,7 +315,7 @@
               "name": "Not set"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}"
         }
       },
       {
@@ -334,7 +334,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/priorities"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/priorities?search={encodedQuery}"
         }
       },
       {
@@ -356,7 +356,7 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects?search={encodedQuery}"
         }
       },
       {
@@ -388,7 +388,7 @@
               "name": "not empty"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses?search={encodedQuery}"
         }
       },
       {

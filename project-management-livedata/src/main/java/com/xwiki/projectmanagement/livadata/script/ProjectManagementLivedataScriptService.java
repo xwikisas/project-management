@@ -31,6 +31,8 @@ import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.script.service.ScriptService;
 
+import com.xwiki.projectmanagement.script.ProjectManagementScriptService;
+
 /**
  * Project management livedata script service. Offers useful methods with regards to the project management livedata
  * configuration and implementation.
@@ -38,10 +40,15 @@ import org.xwiki.script.service.ScriptService;
  * @version $Id$
  */
 @Component
-@Named("projectmanagementlivedata")
+@Named(ProjectManagementScriptService.ROLE_HINT + "." + ProjectManagementLivedataScriptService.ROLE_HINT)
 @Singleton
 public class ProjectManagementLivedataScriptService implements ScriptService
 {
+    /**
+     * The role hint of this component.
+     */
+    public static final String ROLE_HINT = "livedata";
+
     @Inject
     @Named("projectmanagement")
     private LiveDataConfigurationResolver<LiveDataConfiguration> resolver;

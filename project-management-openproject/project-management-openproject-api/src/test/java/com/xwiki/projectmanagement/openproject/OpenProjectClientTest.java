@@ -171,12 +171,11 @@ public class OpenProjectClientTest
     }
 
     @Test
-    public void handleNullOpenProjectApiClientTest()
+    public void handleNullOpenProjectApiClientTest() throws WorkItemRetrievalException
     {
         when(openProjectConfiguration.getOpenProjectApiClient(anyString())).thenReturn(null);
 
-        assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+        assertEquals(0, openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
     }
 
     private void getWorkItemsTest(String identifier, int expectedWorkPackagesCalls,

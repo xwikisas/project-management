@@ -1,0 +1,71 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+## Time interval displayer: renders two time inputs (min and max) separated by a dash,
+## backed by a hidden input storing the combined value as "HH:mm-HH:mm".
+## Note: $displayer.value is null for class-based displayers, so the hidden field value
+## is set via JavaScript sync from the time inputs instead.
+## ---------------------------------------------------------------------------
+## Hidden input stores the combined value for the macro parameter.
+<input type="hidden" name="$escapetool.xml($displayer.parameters.name)"
+  id="$!escapetool.xml($displayer.parameters.id)" class="time-interval-hidden"/>
+<div class="time-interval-inputs">
+  <input type="time" class="time-interval-min" title="$escapetool.xml(
+    $services.localization.render('calendar.timeinterval.min.title'))" placeholder="06:00"/>
+  <span class="time-interval-separator">–</span>
+  <input type="time" class="time-interval-max" title="$escapetool.xml(
+    $services.localization.render('calendar.timeinterval.max.title'))" placeholder="20:00"/>
+</div>
+<script>
+  (function() {
+    var hiddenInput = document.querySelector('.time-interval-hidden');
+    var minInput = document.querySelector('.time-interval-min');
+    var maxInput = document.querySelector('.time-interval-max');
+
+    // On page load, if the hidden field already has a value, populate the time inputs from it.
+    function loadFromHidden() {
+      var val = hiddenInput.value || '';
+      if (val !== '') {
+        var parts = val.split('-', 2);
+        minInput.value = parts[0] || '';
+        maxInput.value = parts.length > 1 ? (parts[1] || '') : '';
+      }
+    }
+
+    // Sync the hidden field value from the time inputs only when valid.
+    function syncHidden() {
+      var minVal = minInput.value || '';
+      var maxVal = maxInput.value || '';
+      if (minVal === '' && maxVal === '') {
+        hiddenInput.value = '';
+      } else {
+        hiddenInput.value = minVal + '-' + maxVal;
+      }
+    }
+
+    // Initial load: populate time inputs from whatever the hidden field holds.
+    loadFromHidden();
+
+    // Sync on every relevant event.
+    minInput.addEventListener('change', syncHidden);
+    maxInput.addEventListener('change', syncHidden);
+    minInput.addEventListener('blur', syncHidden);
+    maxInput.addEventListener('blur', syncHidden);
+  })();
+</script>

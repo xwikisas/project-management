@@ -29,12 +29,13 @@
   </parent>
   <groupId>com.xwiki.projectmanagement</groupId>
   <artifactId>project-management</artifactId>
-  <version>1.2.0-rc-9-SNAPSHOT</version>
+  <version>1.2.0-rc-10-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
   <properties>
     <xwikipro.commons.version>1.4.0</xwikipro.commons.version>
     <licensing.version>1.32.3</licensing.version>
     <urlshortener.version>1.3.4</urlshortener.version>
+    <fullcalendar.version>2.5.4</fullcalendar.version>
   </properties>
   <packaging>pom</packaging>
   <issueManagement>
@@ -53,6 +54,7 @@
     <module>project-management-macro</module>
     <module>project-management-openproject</module>
     <module>project-management-relations</module>
+    <module>project-management-calendar</module>
   </modules>
   <profiles>
     <profile>

@@ -143,10 +143,42 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
         &lt;/button&gt;
       &lt;/div&gt;
       &lt;div class="modal-body"&gt;&lt;/div&gt;
+      &lt;div class="modal-footer"&gt;&lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 `;
+  let showAsyncWorkItemModal = function (workPackageId, instance, resolve, reject) {
+    let restUrl = XWiki.contextPath + `/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${instance}/workpackage/${workPackageId}?outputSyntax=plain`;
+    let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
+    $.get(restUrl).done(function (response) {
+      let modal = $('#openproject-item-view-modal');
+      if (modal.length &lt;= 0) {
+        $('#body').append(modalStucture);
+        modal = $('#openproject-item-view-modal');
+      }
+      modal.modal({show: true});
+      modal.show();
+      modal.find('.modal-body').empty().append(response);
+      if (resolve) {
+        resolve();
+      }
+      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('done'), "done"));
+    }).fail(function (error) {
+      if (reject) {
+        reject();
+      }
+      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('error'), "error"));
+      console.error(error);
+    });
+  };
+  document.addEventListener("op-view-requested", function (event) {
+    const detail = event.detail || {};
+    if (!detail.workPackageId || !detail.connection) {
+      return;
+    }
+    showAsyncWorkItemModal(detail.workPackageId, detail.connection, detail.resolve, detail.reject);
+  });
   const itemIdRegex = /work_packages\/([^/]+)\//g;
   $(document).on('click', '.action_view', function(e) {
     let pressedButton = $(e.currentTarget);
@@ -174,22 +206,9 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
     if (!id) {
       return;
     }
-    let restUrl = XWiki.contextPath + `/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${openProjInstance}/workpackage/${id}?outputSyntax=plain`;
-    let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
-    $.get(restUrl).done(function (response) {
-      let modal = $('#openproject-item-view-modal');
-      if (modal.length &lt;= 0) {
-        $('#body').append(modalStucture);
-        modal = $('#openproject-item-view-modal');
-      }
-      modal.modal({show: true});
-      modal.show();
-      modal.find('.modal-body').empty().append(response);
-      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('done'), "done"));
-    }).fail(function (error) {
-      notification = notification.replace(new XWiki.widgets.Notification(l10n.get('error'), "error"));
-      console.error(error);
-    });
+    document.dispatchEvent(new CustomEvent('op-view-requested', {
+      detail: { workPackageId: id, connection: openProjInstance }
+    }));
   });
 });</code>
     </property>

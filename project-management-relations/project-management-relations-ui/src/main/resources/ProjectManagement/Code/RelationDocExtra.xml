@@ -222,7 +222,7 @@
             }
           };
           if (dataType == 'project') {
-            cfg.query.filters = [];
+            cfg.query.filters[0].property = 'name';
           }
           selectizeCfg.load = function (text, callback) {
             let urlParams = { ...clientParams };
@@ -239,9 +239,9 @@
               .then(function (results) {
                 let items = (results &amp;&amp; results.items) || [];
                 if (dataType == 'project') {
-                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.name }});
+                  items = items.map(item =&gt; { return { label: item.name, value: item.identifier.value, hint: item.identifier.value }});
                 } else {
-                  items = items.map(item =&gt; { return { label: item.identifier.value, value: item.identifier.value, hint: item.summary.value }});
+                  items = items.map(item =&gt; { return { label: item.summary.value, value: item.identifier.value, hint: item.project.value }});
                 }
                 callback(items);
               })
@@ -401,12 +401,15 @@
     <property>
       <content>{{velocity output=false}}
 #template('display_macros.vm')
-#macro (getTranslation $client $value)
+#macro (getTranslation $client $value $params)
   #set ($key = "projectmanagement.relations.$!{client}.${value}")
-  #set ($translation = "$!services.localization.render($key)")
+  #if (!$params)
+    #set ($params = [])
+  #end
+  #set ($translation = "$!services.localization.render($key, $params)")
   #if ($translation == $key)
     #set ($key = "projectmanagement.relations.${value}")
-    #set ($translation = $services.localization.render($key))
+    #set ($translation = $services.localization.render($key, $params))
   #end
   #if ($translation == $key)
     #set ($translation = $value)
@@ -419,7 +422,7 @@
 {{velocity}}
 ## Display the sections.
 {{html clean=false}}
-#set ($objects = $doc.getObjects('ProjectManagement.Code.RelationClass'))
+#set ($objects = $services.projectmanagement.relations.getRelations($doc.documentReference, true))
 #set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationDocExtra'))
 #set ($discard = $xwiki.jsfx.use('uicomponents/edit/editableProperty.js', {
   'forceSkinAction': true,
@@ -427,26 +430,35 @@
 }))
 &lt;div class="proj-manag-relations"&gt;
   #foreach($relationObj in $objects)
-    #set ($discard = $doc.use($relationObj))
-    #set ($client = ${relationObj.getValue('client')})
-    &lt;div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})"&gt;
+    #set ($isOwner = $doc.documentReference.equals($relationObj.documentReference))
+    #set ($relationOwnerDoc = $doc)
+    #set ($client = ${relationObj.getClient()})
+    #if (!$isOwner)
+      #set($relationOwnerDoc = $xwiki.getDocument($relationObj.documentReference))
+      #set ($message = "#getTranslation($client, 'notowner', ['%1%', '%2%', '%3%'])")
+      #set ($message = $message.replace('%1%', "&lt;a href='$escapetool.xml($relationOwnerDoc.getURL('view', 'viewer=projectmanagementrelations'))'&gt;$services.model.serialize($relationOwnerDoc.documentReference)&lt;/a&gt;"))
+      #set ($message = $message.replace('%2%', "&lt;a href='$doc.getURL('view', 'viewer=projectmanagementrelations')'&gt;").replace('%3%', "&lt;/a&gt;"))
+      &lt;div class="box infomessage"&gt;$message&lt;/div&gt;
+    #end
+    #set ($discard = $relationOwnerDoc.use($relationObj.getXobject()))
+    &lt;div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getClientParams()})"&gt;
       &lt;h2&gt;#getTranslation('clients', $client)&lt;/h2&gt;
       &lt;div id="proj-manag-relation-left" class="col-xs-12 col-sm-6"&gt;
         &lt;dl&gt;
           &lt;div class="proj-manag-relation-project proj-manag-relation-property"&gt;
-            &lt;dt#if ($hasEdit) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.number}].project" data-property-type="object"&gt;
+            &lt;dt#if ($hasEdit &amp;&amp; $isOwner) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.getXobject().number}].project" data-property-type="object"&gt;
               &lt;label&gt;#getTranslation($client, 'project.name')&lt;/label&gt;
             &lt;/dt&gt;
             &lt;dd data-prop="project"&gt;
-              $doc.display('project')
+              $relationOwnerDoc.display('project')
             &lt;/dd&gt;
           &lt;/div&gt;
           &lt;div class= "proj-manag-relation-workitem proj-manag-relation-property"&gt;
-            &lt;dt#if ($hasEdit) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.number}].workItem" data-property-type="object"&gt;
+            &lt;dt#if ($hasEdit &amp;&amp; $isOwner) class="editableProperty"#end data-property="ProjectManagement.Code.RelationClass[${relationObj.getXobject().number}].workItem" data-property-type="object"&gt;
               &lt;label&gt;#getTranslation($client, 'workItem.name')&lt;/label&gt;
             &lt;/dt&gt;
             &lt;dd data-prop="workItem"&gt;
-              $doc.display('workItem')
+              $relationOwnerDoc.display('workItem')
             &lt;/dd&gt;
           &lt;/div&gt;
           #if ($client)
@@ -484,9 +496,9 @@
       <name>com.xwiki.projectmanagement.relations.docextra</name>
     </property>
     <property>
-      <parameters>show=#set($show = false)#if($doc.getObjects('ProjectManagement.Code.RelationClass').size() &gt; 0)#set($show = true)#end${show}
+      <parameters>show=#if($xcontext.get('proj-manag-relations').size() &gt; 0)true#else false#end
 title=$services.localization.render('projectmanagement.relations.docextra.title')
-itemnumber=$doc.getObjects('ProjectManagement.Code.RelationClass').size()</parameters>
+itemnumber=#set($discard = $xcontext.put('proj-manag-relations', $services.projectmanagement.relations.getRelations($doc.documentReference, true)))$xcontext.get('proj-manag-relations').size()</parameters>
     </property>
     <property>
       <scope>wiki</scope>

@@ -172,6 +172,14 @@ public class ProjectManagementRelation
     }
 
     /**
+     * @return the xobject of the relation.
+     */
+    public BaseObject getXobject()
+    {
+        return xobject;
+    }
+
+    /**
      * @return a model object that contains all the relevant data taken from this object.
      */
     public com.xwiki.projectmanagement.relations.model.ProjectManagementRelation toModel()

@@ -140,7 +140,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 workPackagesPaginatedResult,
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
-        } catch (WorkPackageRetrievalBadRequestException e) {
+        } catch (WorkItemRetrievalException e) {
             return handleWorkPackageRetrievalException(e);
         } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
@@ -216,7 +216,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
         if (openProjectApiClient == null) {
             throw new WorkItemRetrievalException(
-                String.format("No configuration for instance [%s] was found.", connectionName));
+                String.format("No configuration for instance [%s] was found.", connectionName), 407);
         }
         return openProjectApiClient;
     }

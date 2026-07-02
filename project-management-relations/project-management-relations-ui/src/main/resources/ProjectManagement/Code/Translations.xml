@@ -49,7 +49,9 @@ projectmanagement.relations.client.params.name=Client Specific Parameters
 projectmanagement.relations.project.name=Linked Project
 projectmanagement.relations.workItem.name=Linked Work Item
 
-projectmanagement.relations.viewer.title=Project Management Relation of {0}</content>
+projectmanagement.relations.viewer.title=Project Management Relation of {0}
+
+projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.</content>
   <object>
     <name>ProjectManagement.Code.Translations</name>
     <number>0</number>

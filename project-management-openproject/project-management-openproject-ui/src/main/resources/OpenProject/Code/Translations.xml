@@ -80,6 +80,7 @@ openproject.livedatalabels.serverURL=Server URL
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
+openproject.livedata.action.view.edit=Edit Work Package
 
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
@@ -143,10 +144,12 @@ openproject.editworkpackage.notify.error=Failed to update the work package!
 openproject.extension.name=OpenProject Integration (Pro)
 
 projectmanagement.relations.clients.openproject=OpenProject
-projectmanagement.relations.openproject.project.name=Linked Project
-projectmanagement.relations.openproject.workItem.name=Linked Work Package
+projectmanagement.relations.openproject.project.name=Parent Project
+projectmanagement.relations.openproject.workItem.name=Parent Work Package
 projectmanagement.relations.clients.openproject=OpenProject
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
+
+projectmanagement.relations.openproject.notowner=These parent links are passed down from {0}. You can set new links through the {1}relations section{2}.
 openproject.relations.mentions.noInstance=No OpenProject instance selected.
 openproject.relations.mentions.title=Mentioned on:
 openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.

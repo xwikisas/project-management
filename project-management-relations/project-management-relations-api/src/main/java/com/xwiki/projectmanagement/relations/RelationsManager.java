@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.relations;
 
+import java.util.List;
+
 import org.xwiki.component.annotation.Role;
 import org.xwiki.model.reference.DocumentReference;
 
@@ -45,4 +47,15 @@ public interface RelationsManager
     ProjectManagementRelation getClientRelation(
         DocumentReference documentReference, String client,
         Boolean ancestorLookup);
+
+    /**
+     * Retrieve all the relation objects attached to a document or to one of its ancestors.
+     *
+     * @param documentReference the document reference that might or might not contain relation objects.
+     * @param ancestorLookup whether relation objects should be fetched from the closest ancestor (if self does not
+     *     have any objects attached).
+     * @return a list of all the relation objects attached to the passed document reference or to the first ancestor
+     *     that contains said objects.
+     */
+    List<ProjectManagementRelation> getRelations(DocumentReference documentReference, Boolean ancestorLookup);
 }

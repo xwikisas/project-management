@@ -503,7 +503,7 @@
     </property>
     <property>
       <content>{{velocity}}
-#set ($clientParams = $doc.getObject('ProjectManagement.Code.RelationClass').getValue('clientParams'))
+#set ($clientParams = $relationOwnerDoc.getObject('ProjectManagement.Code.RelationClass').getValue('clientParams'))
 #set ($opInstance = $jsontool.fromString($clientParams).instance)
 
 {{html}}

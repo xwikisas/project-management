@@ -197,7 +197,19 @@ public class StylingSetupManager
             stringBuilder.append(type.getColor());
             stringBuilder.append(';');
             stringBuilder.append(BRACKET_END);
+            composeTypeColorStyle(type, stringBuilder);
         }
+    }
+
+    private void composeTypeColorStyle(Type type, StringBuilder stringBuilder)
+    {
+        stringBuilder.append("a.fc-event.openproject-color-type-");
+        stringBuilder.append(type.getName().replaceAll("\\s+", ""));
+        stringBuilder.append(BRACKET_START);
+        stringBuilder.append("\tbackground-color: ");
+        stringBuilder.append(type.getColor());
+        stringBuilder.append(';');
+        stringBuilder.append(BRACKET_END);
     }
 
     private void composeStatusStyles(String openProjCfgName, OpenProjectApiClient apiClient,

@@ -196,7 +196,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         event.preventDefault();
         let selectedVal = $(this).val();
         $(this).val('');
-        $(this).find(`option[value='${selectedVal}']`).remove();
+        $(this).find(`option[value='${selectedVal}']`).each(function () {
+          $(this)[0].hidden = true;
+        });
         addFilter({ property: selectedVal });
       });
       builder.constraintBuilder.find('.proj-manag-remove-filter').on('click', function() {
@@ -231,6 +233,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     let existingBuilder = window.FilterBuilder.instances.values().next().value.element;
     let cloned = existingBuilder.clone();
     cloned.find('.proj-manag-constraints').empty();
+    cloned.find('.proj-manag-add-filter option').each(function () {
+      $(this)[0].hidden = false;
+    });
     existingBuilder.parent().append(cloned);
     window.FilterBuilder.inializeBuilder(cloned);
     return window.FilterBuilder.instances[cloned[0]];
