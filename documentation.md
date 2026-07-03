@@ -886,6 +886,42 @@ GET /openproject/documents
 
 ---
 
+### 9. Get Document by ID
+
+Retrieves a wiki page using its short unique identifier.
+
+```
+GET /xwiki/rest/openproject/documents/{id}/ancestors
+```
+
+**Parameters:**
+
+| Parameter     | Location | Type      | Required | Default | Description                                                                                                           |
+|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —       | The short unique identifier of the page.                                                                              |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are added to the response as human-readable display names instead of technical references. |
+| `objects`     | query    | `Boolean` | ❌        | `false` | If `true`, the response includes all structured data objects attached to the page.                                    |
+| `class`       | query    | `Boolean` | ❌        | `false` | If `true`, the response includes class definition metadata.                                                           |
+| `attachments` | query    | `Boolean` | ❌        | `false` | If `true`, the response includes the list of files attached to the page.                                              |
+
+**What happens:**
+
+1. Looks up the page associated with the given short `id`.
+2. If found, look for its ancestors that are also non-terminal pages.
+3. Attach unique ids to each page found.
+4. Return a list of all the pages in ascending order.
+
+**Responses:**
+
+| Status                        | Body                       | When                                                                                                                 |
+|-------------------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
+| **200 OK**                    | `List<Page>` (JSON or XML) | The page and its ancestors were found, their unique <br/>ids were initialized and the list was returned successully. |
+| **400 Bad Request**           | `"Missing page id."`       | The `id` parameter was empty or not provided.                                                                        |
+| **404 Not Found**             | —                          | No page exists with the given identifier.                                                                            |
+| **500 Internal Server Error** | —                          | An unexpected error occurred. I.e. unique id initialization failed; database issues.                                 |
+
+---
+
 ## Quick Reference
 
 | # | Method | Path                                   | Description                                          |

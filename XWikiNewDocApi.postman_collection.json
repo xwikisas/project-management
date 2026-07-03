@@ -47,7 +47,7 @@
           }
         },
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=test:Main.Test7.WebHome",
+          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=Main.Test8.WebHome&create=true",
           "host": [
             "{{host}}"
           ],
@@ -60,7 +60,11 @@
           "query": [
             {
               "key": "docRef",
-              "value": "test:Main.Test7.WebHome"
+              "value": "Main.Test8.WebHome"
+            },
+            {
+              "key": "create",
+              "value": "true"
             }
           ]
         }
@@ -79,7 +83,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc",
+          "raw": "{{host}}/xwiki/rest/openproject/documents/26d9e",
           "host": [
             "{{host}}"
           ],
@@ -88,7 +92,35 @@
             "rest",
             "openproject",
             "documents",
-            "a59bc"
+            "26d9e"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get document ancestors by unique identifier",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{host}}/xwiki/rest/openproject/documents/26d9e/ancestors",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "xwiki",
+            "rest",
+            "openproject",
+            "documents",
+            "26d9e",
+            "ancestors"
           ]
         }
       },
@@ -106,7 +138,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=Main.WebHome",
+          "raw": "{{host}}/xwiki/rest/openproject/documents?docRef=Main.Test9.WebHome",
           "host": [
             "{{host}}"
           ],
@@ -119,7 +151,7 @@
           "query": [
             {
               "key": "docRef",
-              "value": "Main.WebHome"
+              "value": "Main.Test9.WebHome"
             }
           ]
         }
@@ -138,7 +170,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/links/projects/2",
+          "raw": "{{host}}/xwiki/rest/openproject/links/workPackages/13?instance=3c07dc01-66c3-49b3-8101-61fde125be81",
           "host": [
             "{{host}}"
           ],
@@ -147,8 +179,14 @@
             "rest",
             "openproject",
             "links",
-            "projects",
-            "2"
+            "workPackages",
+            "13"
+          ],
+          "query": [
+            {
+              "key": "instance",
+              "value": "3c07dc01-66c3-49b3-8101-61fde125be81"
+            }
           ]
         }
       },
@@ -177,7 +215,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"project\": \"2\",\n    \"workPackage\": \"13\"\n}",
+          "raw": "{\n    \"instance\": \"3c07dc01-66c3-49b3-8101-61fde125be81\",\n    \"project\": \"2\",\n    \"workPackage\": \"13\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -185,23 +223,16 @@
           }
         },
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc/links?withInstance=0",
+          "raw": "{{host}}/rest/openproject/documents/26d9e/links",
           "host": [
             "{{host}}"
           ],
           "path": [
-            "xwiki",
             "rest",
             "openproject",
             "documents",
-            "a59bc",
+            "26d9e",
             "links"
-          ],
-          "query": [
-            {
-              "key": "withInstance",
-              "value": "0"
-            }
           ]
         }
       },
@@ -239,7 +270,7 @@
           }
         },
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/documents/a59bc/links?withInstance=0",
+          "raw": "{{host}}/xwiki/rest/openproject/documents/26d9e/links",
           "host": [
             "{{host}}"
           ],
@@ -248,14 +279,8 @@
             "rest",
             "openproject",
             "documents",
-            "a59bc",
+            "26d9e",
             "links"
-          ],
-          "query": [
-            {
-              "key": "withInstance",
-              "value": "0"
-            }
           ]
         }
       },
@@ -342,7 +367,7 @@
           }
         ],
         "url": {
-          "raw": "{{host}}/xwiki/rest/openproject/mentions?workPackage=1",
+          "raw": "{{host}}/xwiki/rest/openproject/mentions?workPackage=1&instance=3c07dc01-66c3-49b3-8101-61fde125be81",
           "host": [
             "{{host}}"
           ],
@@ -356,6 +381,10 @@
             {
               "key": "workPackage",
               "value": "1"
+            },
+            {
+              "key": "instance",
+              "value": "3c07dc01-66c3-49b3-8101-61fde125be81"
             }
           ]
         }
