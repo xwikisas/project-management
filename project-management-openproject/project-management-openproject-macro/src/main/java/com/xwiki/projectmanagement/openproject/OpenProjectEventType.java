@@ -20,12 +20,15 @@
 
 package com.xwiki.projectmanagement.openproject;
 
+import org.xwiki.stability.Unstable;
+
 /**
  * Represents the types of events that can be displayed in the OpenProject calendar.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 public enum OpenProjectEventType
 {
     /**

@@ -19,12 +19,15 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
+import org.xwiki.stability.Unstable;
+
 /**
  * Supported view modes for the FullCalendar component. Each constant corresponds to a FullCalendar view option.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 public enum CalendarViews
 {
     /**

@@ -47,7 +47,7 @@ import java.util.List;
  * Default implementation of {@link CalendarResource}.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Component
 @Singleton

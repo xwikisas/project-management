@@ -21,6 +21,7 @@
 package com.xwiki.projectmanagement.calendar.rest;
 
 import org.xwiki.rest.XWikiRestComponent;
+import org.xwiki.stability.Unstable;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -34,8 +35,9 @@ import javax.ws.rs.core.Response;
  * REST resource that returns project management work items as FullCalendar-compatible JSON events.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 @Path("/wikis/{wikiName}/projectmanagement/{hint}/calendar")
 public interface CalendarResource extends XWikiRestComponent
 {

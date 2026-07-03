@@ -33,7 +33,7 @@ import org.xwiki.stability.Unstable;
  * calendar-specific view settings.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Unstable
 public class CalendarMacroParameters
