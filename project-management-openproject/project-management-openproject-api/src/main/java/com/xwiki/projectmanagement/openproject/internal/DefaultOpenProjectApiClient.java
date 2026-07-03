@@ -148,7 +148,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_VERSIONS = "/api/v3/versions";
 
+    private static final String API_URL_PROJECT_VERSIONS = "/api/v3/workspaces/%d/versions";
+
+    private static final String API_URL_VERSIONS_GET = "/versions/%s";
+
     private static final String API_URL_SPRINTS = "/api/v3/sprints";
+
+    private static final String API_URL_PROJECT_SPRINTS = "/api/v3/projects/%d/sprints";
+
+    private static final String API_URL_SPRINTS_GET = "/sprints/%s";
 
     private static final String URL_INSTANCE_METADATA = "/.well-known/openproject-metadata";
 
@@ -378,7 +386,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         for (JsonNode element : elements) {
             Version version = new Version(element);
-            version.initializeSelfWithPath(connectionUrl, String.format("/versions/%s", version.getId()));
+            version.initializeSelfWithPath(connectionUrl, String.format(API_URL_VERSIONS_GET, version.getId()));
+            versions.add(version);
+        }
+
+        return new PaginatedResult<>(versions, 0, versions.size(), versions.size());
+    }
+
+    @Override
+    public PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
+    {
+        JsonNode elements = getOpenProjectResponseEntities(String.format(API_URL_PROJECT_VERSIONS, projectId), null,
+            null, "", "", "");
+        List<Version> versions = new ArrayList<>();
+
+        for (JsonNode element : elements) {
+            Version version = new Version(element);
+            version.initializeSelfWithPath(connectionUrl, String.format(API_URL_VERSIONS_GET, version.getId()));
             versions.add(version);
         }
 
@@ -395,7 +419,25 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<Sprint> sprints = new ArrayList<>();
         for (JsonNode element : elements) {
             Sprint sprint = new Sprint(element);
-            sprint.initializeSelfWithPath(connectionUrl, String.format("/sprints/%s", sprint.getId()));
+            sprint.initializeSelfWithPath(connectionUrl, String.format(API_URL_SPRINTS_GET, sprint.getId()));
+            sprints.add(sprint);
+        }
+
+        return new PaginatedResult<>(sprints, offset, pageSize, getTotalNumberOfEntities(mainNode));
+    }
+
+    @Override
+    public PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
+        throws ProjectManagementException
+    {
+        JsonNode mainNode = getOpenProjectResponse(String.format(API_URL_PROJECT_SPRINTS, projectId), offset,
+            pageSize, filters, "", "");
+        JsonNode elements = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
+
+        List<Sprint> sprints = new ArrayList<>();
+        for (JsonNode element : elements) {
+            Sprint sprint = new Sprint(element);
+            sprint.initializeSelfWithPath(connectionUrl, String.format(API_URL_SPRINTS_GET, sprint.getId()));
             sprints.add(sprint);
         }
 

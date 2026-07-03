@@ -28,8 +28,10 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Version;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.fullcalendar.model.CalendarEvent;
+import org.xwiki.livedata.LiveDataQuery;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -47,7 +49,7 @@ import java.util.Objects;
  * {@link CalendarEvent} instances.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Singleton
 @Component
@@ -68,24 +70,70 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
 
+    @Inject
+    private Logger logger;
+
     @Override
-    public List<CalendarEvent> getMoreEvents() throws ProjectManagementException
+    public List<CalendarEvent> getMoreEvents(List<LiveDataQuery.Filter> filters) throws ProjectManagementException
     {
         boolean getSprints = Boolean.parseBoolean((String) this.executionContext.get(SPRINT));
         boolean getVersion = Boolean.parseBoolean((String) this.executionContext.get(VERSION));
         OpenProjectApiClient apiClient = getOpenProjectApiClient();
         List<CalendarEvent> calendarEvents = new ArrayList<>();
+        int projectId = getProjectVersion(filters);
         if (getSprints) {
-            PaginatedResult<Sprint> sprints =
-                apiClient.getSprints(1, Integer.parseInt((String) this.executionContext.get("limit")), "");
-            calendarEvents.addAll(convertSprintsToCalendarEvents(sprints));
+            calendarEvents.addAll(getSprintsCalendarEvents(projectId, apiClient));
         }
         if (getVersion) {
-            PaginatedResult<Version> versions = apiClient.getVersions();
-            calendarEvents.addAll(convertVersionsToCalendarEvents(versions));
+            calendarEvents.addAll(getVersionsCalendarEvents(projectId, apiClient));
         }
 
         return calendarEvents;
+    }
+
+    private List<CalendarEvent> getVersionsCalendarEvents(int projectId, OpenProjectApiClient apiClient)
+        throws ProjectManagementException
+    {
+        PaginatedResult<Version> versions;
+        if (projectId != -1) {
+            versions = apiClient.getProjectVersions(projectId);
+        } else {
+            versions = apiClient.getVersions();
+        }
+        return convertVersionsToCalendarEvents(versions);
+    }
+
+    private List<CalendarEvent> getSprintsCalendarEvents(int projectId, OpenProjectApiClient apiClient)
+        throws ProjectManagementException
+    {
+        PaginatedResult<Sprint> sprints = new PaginatedResult<>();
+        int limit = Integer.parseInt((String) this.executionContext.get("limit"));
+        if (projectId != -1) {
+            try {
+                sprints = apiClient.getProjectSprints(1, limit, "", projectId);
+            } catch (WorkItemRetrievalException e) {
+                // If the project doesn't have backlogs enabled, it will return a 403 error message.
+                if (e.getStatusCode().equals(403)) {
+                    this.logger.debug("Sprints are not available for the project with ID {}.", projectId);
+                } else {
+                    throw e;
+                }
+            }
+        } else {
+            sprints = apiClient.getSprints(1, limit, "");
+        }
+        return convertSprintsToCalendarEvents(sprints);
+    }
+
+    private int getProjectVersion(List<LiveDataQuery.Filter> filters)
+    {
+        for (LiveDataQuery.Filter filter : filters) {
+            if (filter.getProperty().equals("project")) {
+                LiveDataQuery.Constraint constraint = filter.getConstraints().get(0);
+                return  Integer.parseInt((String) constraint.getValue());
+            }
+        }
+        return -1;
     }
 
     private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
