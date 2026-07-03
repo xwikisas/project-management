@@ -35,7 +35,7 @@ import java.util.List;
  * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro}.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
 {

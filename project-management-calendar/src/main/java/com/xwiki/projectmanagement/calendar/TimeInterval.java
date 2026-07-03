@@ -19,13 +19,16 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
+import org.xwiki.stability.Unstable;
+
 /**
  * Marker class used to indicate that a property should be displayed as a time interval (min-max), with two time input
  * boxes separated by a dash.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 public interface TimeInterval
 {
 }

@@ -185,6 +185,20 @@ public interface OpenProjectApiClient
     }
 
     /**
+     * Retrieves a paginated list of versions available within the configured OpenProject project.
+     *
+     * @param projectId the id of the project for which we want to retrieve the versions.
+     * @return a {@link PaginatedResult} containing the list of {@link Version}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the versions.
+     * @since 1.2
+     */
+    default PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving versions from project is not supported by this client implementation.");
+    }
+
+    /**
      * Retrieves a paginated list of available sprints from the current OpenProject configuration.
      *
      * @param offset the offset from which to start retrieving sprints.
@@ -199,6 +213,24 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Retrieving sprints is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of sprints available within the configured OpenProject project.
+     *
+     * @param offset the offset from which to start retrieving sprints.
+     * @param pageSize the number of sprints to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @param projectId the id of the project for which we want to retrieve the sprints.
+     * @return a {@link PaginatedResult} containing the list of {@link Sprint}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the sprints.
+     * @since 1.2
+     */
+    default PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving sprints from project is not supported by this client implementation.");
     }
 
     /**

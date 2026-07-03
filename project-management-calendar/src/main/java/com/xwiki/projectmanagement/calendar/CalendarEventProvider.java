@@ -22,6 +22,8 @@ package com.xwiki.projectmanagement.calendar;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import org.xwiki.component.annotation.Role;
 import org.xwiki.fullcalendar.model.CalendarEvent;
+import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.stability.Unstable;
 
 import java.util.List;
 
@@ -31,16 +33,18 @@ import java.util.List;
  * platform.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 @Role
 public interface CalendarEventProvider
 {
     /**
      * Retrieve additional calendar events.
      *
+     * @param filters the list of filters to apply when retrieving the events.
      * @return a list of calendar events that supplement the work item events.
      * @throws ProjectManagementException if retrieving the events fails.
      */
-    List<CalendarEvent> getMoreEvents() throws ProjectManagementException;
+    List<CalendarEvent> getMoreEvents(List<LiveDataQuery.Filter> filters) throws ProjectManagementException;
 }

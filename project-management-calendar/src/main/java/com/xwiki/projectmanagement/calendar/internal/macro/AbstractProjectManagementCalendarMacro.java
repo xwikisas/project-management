@@ -45,7 +45,7 @@ import java.util.Map;
  *
  * @param <T> the macro parameter type, must extend {@link CalendarMacroParameters}.
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarMacroParameters>
     extends AbstractWorkItemsMacro<T>

@@ -47,7 +47,7 @@ import java.util.List;
  * Default implementation of {@link CalendarResource}.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Component
 @Singleton
@@ -80,7 +80,7 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
                 calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
             }
             // Add additional events from the calendar event provider.
-            calendarEvents.addAll(calendarEventProvider.getMoreEvents());
+            calendarEvents.addAll(calendarEventProvider.getMoreEvents(queryFilters));
             return Response.ok(calendarEvents).build();
         } catch (ComponentLookupException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity(ExceptionUtils.getStackTrace(e)).build();

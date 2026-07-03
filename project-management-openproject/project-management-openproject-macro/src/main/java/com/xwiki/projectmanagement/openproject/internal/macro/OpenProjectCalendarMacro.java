@@ -44,7 +44,7 @@ import java.util.Map;
  * Display data retrieved from OpenProject in calendars.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Singleton
 @Component
