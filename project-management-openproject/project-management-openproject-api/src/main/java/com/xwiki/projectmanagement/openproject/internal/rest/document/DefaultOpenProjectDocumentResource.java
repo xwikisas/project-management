@@ -21,7 +21,9 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  */
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -35,8 +37,11 @@ import org.xwiki.component.phase.Initializable;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
+import org.xwiki.query.Query;
+import org.xwiki.query.QueryException;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.resources.pages.ModifiablePageResource;
 import org.xwiki.rest.model.jaxb.Page;
@@ -44,6 +49,7 @@ import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
@@ -63,6 +69,8 @@ import com.xwiki.urlshortener.URLShortenerManager;
 public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     implements OpenProjectDocumentResource, Initializable
 {
+    private static final String MISSING_PAGE_ID = "Missing page id.";
+
     @Inject
     private DocumentReferenceResolver<String> resolver;
 
@@ -75,13 +83,17 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
     @Inject
     private WikiDescriptorManager wikiDescriptorManager;
 
+    @Inject
+    @Named("local")
+    private EntityReferenceSerializer<String> serializer;
+
     @Override
     public Response getDocument(String id, Boolean withPrettyNames,
         Boolean withObjects, Boolean withXClass, Boolean withAttachments) throws XWikiRestException
     {
         try {
             if (id == null || id.isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST).entity("Missing page id.").build();
+                return Response.status(Response.Status.BAD_REQUEST).entity(MISSING_PAGE_ID).build();
             }
             DocumentReference documentReference = urlShortenerManager.getDocumentReference(null, id);
 
@@ -97,6 +109,8 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
             page.setId(id);
 
             return Response.ok(page).build();
+        } catch (WebApplicationException e) {
+            throw e;
         } catch (Exception e) {
             throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
         }
@@ -152,6 +166,77 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
             getLogger().error("Failed to create the shortened url for document [{}].", docRef, e);
             return Response.serverError().entity(String.format("Could not create a unique id for the page. Cause [%s].",
                 ExceptionUtils.getRootCauseMessage(e))).build();
+        }
+    }
+
+    @Override
+    public Response getAncestors(String id, Boolean withPrettyNames,
+        Boolean withObjects, Boolean withXClass, Boolean withAttachments)
+    {
+        try {
+            if (id == null || id.isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST).entity(MISSING_PAGE_ID).build();
+            }
+            DocumentReference documentReference = urlShortenerManager.getDocumentReference(null, id);
+
+            if (documentReference == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            List<DocumentReference> ancestorReferences = findAncestors(documentReference);
+            List<Page> ancestors = ancestorReferences.stream().map(ancestor -> {
+                try {
+                    Page page = getPage(ancestor.getWikiReference().getName(),
+                        ancestor.getSpaceReferences().stream().map(EntityReference::getName)
+                            .collect(Collectors.toList()), ancestor.getName(), withPrettyNames, withObjects,
+                        withXClass, withAttachments);
+                    String pageId = urlShortenerManager.createShortenedURL(ancestor);
+                    page.setId(pageId);
+                    return page;
+                } catch (XWikiRestException | URLShortenerException e) {
+                    throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+                }
+            }).collect(Collectors.toList());
+            return Response.ok(ancestors).build();
+        } catch (WebApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new WebApplicationException(Response.Status.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private List<DocumentReference> findAncestors(DocumentReference documentReference) throws QueryException
+    {
+        List<String> parents = documentReference.getParent().getReversedReferenceChain().stream()
+            .filter(e -> !(e instanceof WikiReference)).map(serializer::serialize).collect(Collectors.toList());
+        // Get the closest ancestor that has a relation obj.
+        List<String> result = queryManager.createQuery(String.format(
+                    "where doc.space in (:ancestorList) "
+                        + "and doc.name='WebHome' "
+                        + "and (doc.language is null or doc.language = '' or doc.language = '%s') "
+                        + "order by length(doc.space) asc", getCurrentLanguage()),
+                Query.XWQL).bindValue("ancestorList", parents).setWiki(documentReference.getWikiReference().getName())
+            .execute();
+
+        if (result.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<DocumentReference> ancestors =
+            result.stream().map(item -> resolver.resolve(item, documentReference)).collect(Collectors.toList());
+        if (!"WebHome".equals(documentReference.getName())) {
+            ancestors.add(documentReference);
+        }
+        return ancestors;
+    }
+
+    private Locale getCurrentLanguage()
+    {
+        try {
+            XWikiContext context = getXWikiContext();
+            return context.getWiki().getDefaultLocale(context);
+        } catch (Exception e) {
+            return Locale.ENGLISH;
         }
     }
 

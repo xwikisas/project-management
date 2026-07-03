@@ -104,4 +104,27 @@ public interface OpenProjectDocumentResource
         @QueryParam("class") @DefaultValue("false") Boolean withClass,
         @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments)
         throws XWikiRestException;
+
+    /**
+     * Retrieve the ancestors of a given page and initializes their unique id if not present.
+     *
+     * @param id the unique identifier associated to a xwiki document.
+     * @param withPrettyNames whether the properties that support pretty names should be displayed as such. i.e.
+     *     users.
+     * @param withObjects whether the objects attached to the page should also be returned.
+     * @param withClass not sure, actually.
+     * @param withAttachments whether the attachments of the page should also be listed.
+     * @return 200 and the reference of the xwiki document that can be used for the rest api. 404 if the id was not
+     *     found.
+     * @throws XWikiRestException if something went wrong during the retrieval of the ancestors or if the
+     *     initialization of unique ids failed.
+     */
+    @GET
+    @Path("/{id}/ancestors")
+    Response getAncestors(
+        @PathParam("id") String id,
+        @QueryParam("prettyNames") @DefaultValue("false") Boolean withPrettyNames,
+        @QueryParam("objects") @DefaultValue("false") Boolean withObjects,
+        @QueryParam("class") @DefaultValue("false") Boolean withClass,
+        @QueryParam("attachments") @DefaultValue("false") Boolean withAttachments) throws XWikiRestException;
 }
