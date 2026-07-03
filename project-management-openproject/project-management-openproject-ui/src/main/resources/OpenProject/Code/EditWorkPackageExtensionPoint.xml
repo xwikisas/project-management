@@ -156,12 +156,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
     let currentLockVersion = null;
 
     function resetEditForm() {
-      const parentSelect = $("#parent-select-edit-work-package");
-      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
-        parentSelect[0].selectize.destroy();
-      }
-      parentSelect.empty();
-      $("#parent-select-edit-work-package-container").addClass("hidden");
       $("#edit-dynamic-fields-container").empty().addClass("hidden");
       currentLockVersion = null;
     }
@@ -200,16 +194,15 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       const url = `${baseUrl}${connection}/workPackages/${workPackageId}/editForm`;
       $.ajax({ method: "GET", contentType: "application/json", url: url })
         .done(function (options) {
-        const { parent, lockVersion, ...formFields } = options;
+        const { lockVersion, projectHref, ...formFields } = options;
 
         currentLockVersion = lockVersion;
 
         buildInputs(formFields);
-        createWpUtils.initParentPicker(
+        createWpUtils.initDynamicSelectizeFields(
+          "#edit-dynamic-fields-container",
           "#edit-connection",
-          "#parent-select-edit-work-package",
-          "#parent-select-edit-work-package-container",
-          parent,
+          projectHref,
           baseUrl
         );
         $("#edit-work-package-modal").modal("show");
@@ -228,11 +221,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       const payload = createWpUtils.buildPayload($("#edit-dynamic-fields-container"));
       payload.lockVersion = currentLockVersion;
 
-      const parent = $("#parent-select-edit-work-package").val();
-      if (parent) {
-        payload.parent = parent;
-      }
-
       const url = `${baseUrl}${currentConnection}/workPackages/${currentWorkPackageId}/update`;
       $.ajax({ method: "POST", contentType: "application/json", url: url, data: JSON.stringify(payload) })
         .done(function (response) {
@@ -244,11 +232,17 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       })
         .fail(function (err) {
         if (err.status === 422 &amp;&amp; err.responseJSON) {
-          const { parent, lockVersion, validationMessage, ...formFields } = err.responseJSON;
+          const { lockVersion, projectHref, validationMessage, ...formFields } = err.responseJSON;
           if (lockVersion !== undefined) {
             currentLockVersion = lockVersion;
           }
           buildInputs(formFields);
+          createWpUtils.initDynamicSelectizeFields(
+            "#edit-dynamic-fields-container",
+            "#edit-connection",
+            projectHref,
+            baseUrl
+          );
           createWpUtils.notify(validationMessage || l10n.get("notify.error"), "error");
           return;
         }
@@ -558,7 +552,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
         &lt;form id="edit-work-package-form" class="withLock xform" novalidate&gt;
           &lt;div class="modal-body"&gt;
             &lt;input type="hidden" id="edit-connection"/&gt;
-            #parentInput('parent-select-edit-work-package')
             &lt;div id="edit-dynamic-fields-container" class="hidden"&gt;
             &lt;/div&gt;
           &lt;/div&gt;

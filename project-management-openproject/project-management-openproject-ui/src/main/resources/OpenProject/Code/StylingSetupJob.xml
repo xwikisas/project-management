@@ -153,10 +153,10 @@
       <jobClass>com.xpn.xwiki.plugin.scheduler.GroovyJob</jobClass>
     </property>
     <property>
-      <jobDescription>Sync the styles used for various work package properties (i.e. status, type) with the configured Open Project instances.</jobDescription>
+      <jobDescription>Sync the styles used for various work package properties (i.e. status, type) with the configured OpenProject instances.</jobDescription>
     </property>
     <property>
-      <jobName>Open Project Styling Updater</jobName>
+      <jobName>OpenProject Styling Updater</jobName>
     </property>
     <property>
       <script>services.openproject.generateStyling()</script>

@@ -45,7 +45,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 
 /**
- * Resource for the avatar of an Open Project user.
+ * Resource for the avatar of an OpenProject user.
  *
  * @version $Id$
  * @since 1.0-rc-5
@@ -63,10 +63,10 @@ public class OpenProjectAvatarResource extends XWikiResource
     private SkinAccessBridge skinAccessBridge;
 
     /**
-     * @param wiki the wiki where the OPen Project configuration is located
-     * @param instance the id that identifies the configured Open Project instance.
+     * @param wiki the wiki where the OpenProject configuration is located
+     * @param instance the id that identifies the configured OpenProject instance.
      * @param userId the id of the user that is present on the specified instance.
-     * @return the stream for the avatar image. 401 if the user is not authenticated to Open Project. 500 if anything
+     * @return the stream for the avatar image. 401 if the user is not authenticated to OpenProject. 500 if anything
      *     else went wrong.
      */
     @GET
@@ -89,7 +89,7 @@ public class OpenProjectAvatarResource extends XWikiResource
         } catch (WorkItemNotFoundException ignored) {
             // If the user doesn't have an avatar set the API returns 404 when trying to retrieve it.
         } catch (WorkItemRetrievalException e) {
-            getLogger().warn("Failed to retrive the avatar for user [{}] with the following open project error: [{}].",
+            getLogger().warn("Failed to retrive the avatar for user [{}] with the following OpenProject error: [{}].",
                 userId, ExceptionUtils.getRootCauseMessage(e));
         } catch (ProjectManagementException e) {
             getLogger().error("Failed to retrive the avatar for user [{}] due to network or server issues.", userId, e);

@@ -141,6 +141,14 @@
         input.focus();
       });
     };
+    if (root.find('dd').text().trim() == '') {
+      root.closest('.proj-manag-relation').find('.proj-manag-relation-property').addClass('hidden');
+      root.on('click', '.editableProperty-save', function () {
+        if (root.find('dd :input').val()) {
+          root.closest('.proj-manag-relation').find('.proj-manag-relation-property').removeClass('hidden');
+        }
+      });
+    }
     root.find('.openproj-relation-client-params-edit :input').on('change', updateParamsInput);
     root.on('click', '.editableProperty-cancel', function () {
       root.find('.openproj-relation-client-params-edit').addClass('hidden');
@@ -184,7 +192,7 @@
               displayValue += `&lt;p&gt;&lt;b&gt;${param[0]}&lt;/b&gt;: ${param[1]}&lt;/p&gt;`;
             });
             valueContainer.html(displayValue);
-            $('.proj-manag-relation').data('params', clientParams);
+            root.closest('.proj-manag-relation').data('params', clientParams);
           } catch (e) {
             new XWiki.widgets.Notification('Client params are not a valid JSON.', 'error');
           }

@@ -28,7 +28,7 @@ import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.ui.po.ViewPage;
 
 /**
- * Models the administration page of the Open Project integration.
+ * Models the administration page of the OpenProject integration.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -49,7 +49,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
-     * Go to the Administration page to the Open Project section.
+     * Go to the Administration page to the OpenProject section.
      *
      * @return the view model of the admin page.
      */
@@ -124,7 +124,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
-     * Trigger the Open Project style sync.
+     * Trigger the OpenProject style sync.
      *
      * @return the view page of the Job Scheduler.
      */

@@ -30,7 +30,7 @@ import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
- * Models the filter parameter of the Open Project macro.
+ * Models the filter parameter of the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4
