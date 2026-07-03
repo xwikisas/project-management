@@ -19,9 +19,14 @@
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
 
+#set ($connectionOptions = $services.openproject.getConnectionOptions())
 #set ($parameters = {
-  'options': $services.openproject.getConnectionOptions(),
+  'options': $connectionOptions,
   'prefix': ' '
 })
 #set ($discard = $parameters.putAll($displayer.parameters))
+## When a single connection is available and nothing was selected yet, select it by default.
+#if ("$!parameters.value" == '' && $connectionOptions.size() == 1)
+  #set ($discard = $parameters.put('value', $connectionOptions.get(0).get('value')))
+#end
 #staticSelectPicker($parameters)
