@@ -41,7 +41,7 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import com.xpn.xwiki.XWikiContext;
 
 /**
- * Retrieves the open project livedata configuration and resolves additional information based on the input
+ * Retrieves the OpenProject livedata configuration and resolves additional information based on the input
  * configuration.
  *
  * @version $Id$
@@ -88,7 +88,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             maybeUpdateSearchURL(configuration, input);
             return configuration;
         } catch (IOException | LiveDataException e) {
-            logger.error("Could not read the livedata configuration of the Open Project client.", e);
+            logger.error("Could not read the livedata configuration of the OpenProject client.", e);
             return null;
         }
     }

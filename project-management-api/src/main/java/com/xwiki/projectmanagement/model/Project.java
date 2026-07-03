@@ -52,7 +52,7 @@ public class Project extends HashMap<String, Object>
     public static final String KEY_DESCRIPTION = "description";
 
     /**
-     * @return the identifier for this project together with a link to its location. For example, Open project and
+     * @return the identifier for this project together with a link to its location. For example, OpenProject and
      *     GitHub identify work packages numerically: '1001', Jira using a key: 'XWIKI-1001'.
      */
     @JsonProperty(KEY_IDENTIFIER)

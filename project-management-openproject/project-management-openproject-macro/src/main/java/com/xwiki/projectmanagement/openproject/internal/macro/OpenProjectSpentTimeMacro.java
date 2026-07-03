@@ -54,7 +54,7 @@ import com.xwiki.projectmanagement.internal.utility.TableBuilder;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
-import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectTimeEntriesMacroParameters;
+import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
 /**
@@ -65,9 +65,9 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
  */
 @Component
 @Singleton
-@Named("openproject-project-time-entries")
-public class OpenProjectProjectTimeEntriesMacro
-    extends AbstractOpenProjectDirectMacro<OpenProjectProjectTimeEntriesMacroParameters>
+@Named("openproject-spent-time")
+public class OpenProjectSpentTimeMacro
+    extends AbstractOpenProjectDirectMacro<OpenProjectSpentTimeMacroParameters>
 {
     private static final String PROJECT_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
 
@@ -95,15 +95,15 @@ public class OpenProjectProjectTimeEntriesMacro
     /**
      * Default constructor.
      */
-    public OpenProjectProjectTimeEntriesMacro()
+    public OpenProjectSpentTimeMacro()
     {
-        super("OpenProject - Project Time Entries",
-            "Displays the time entries logged for a specific project on a configured OpenProject instance.",
-            OpenProjectProjectTimeEntriesMacroParameters.class);
+        super("OpenProject - Spent Time",
+            "Displays the time spent on a specific project on a configured OpenProject instance.",
+            OpenProjectSpentTimeMacroParameters.class);
     }
 
     @Override
-    protected List<Block> executeInternal(OpenProjectProjectTimeEntriesMacroParameters parameters, String content,
+    protected List<Block> executeInternal(OpenProjectSpentTimeMacroParameters parameters, String content,
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {

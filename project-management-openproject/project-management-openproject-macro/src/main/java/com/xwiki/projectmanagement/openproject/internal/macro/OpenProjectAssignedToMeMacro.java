@@ -29,7 +29,7 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacr
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
- * Open Project macro that displays only work packages assigned to the current user. The "assigned to me" filter is
+ * OpenProject macro that displays only work packages assigned to the current user. The "assigned to me" filter is
  * always enforced and cannot be overridden.
  *
  * @version $Id$
@@ -48,7 +48,7 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
      */
     public OpenProjectAssignedToMeMacro()
     {
-        super("Open Project Assigned to Me",
+        super("OpenProject Assigned to Me",
             "Retrieve work packages from OpenProject assigned to the current user.",
             OpenProjectAssignedToMeMacroParameters.class);
     }

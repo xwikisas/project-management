@@ -57,7 +57,7 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.property.UserP
 public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerManager, Initializable
 {
     /**
-     * The parameters key for the open project instance entry.
+     * The parameters key for the OpenProject instance entry.
      */
     public static final String KEY_INSTANCE = "instance";
 

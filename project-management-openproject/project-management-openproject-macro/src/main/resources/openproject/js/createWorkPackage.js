@@ -50,13 +50,14 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     if (conn.find("option").length === 1) {
       conn.prop("selectedIndex", 0).prop("disabled", true);
-      createWpUtils.loadProjects(
+      createWpUtils.initProjectPicker(
         "#op-connection",
         "#op-project",
         "#op-project-container",
-        "#incorrect-token-create-work-package"
+        "#incorrect-token-create-work-package",
+        null,
+        baseUrl
       );
-      createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container", null, baseUrl);
     }
     if (!window.openProjectEvents) {
       return;
@@ -68,11 +69,18 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
   async function onProjectChange() {
     const connection = $("#op-connection").val();
-    const requestBody = { project: $("#op-project").val() };
+    const project = $("#op-project").val();
+    const container = $("#dynamic-fields-container");
+
+    if (!project) {
+      container.empty().addClass("hidden");
+      return;
+    }
+
+    const requestBody = { project: project };
 
     try {
       const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
-      const container = $("#dynamic-fields-container");
       container.empty().addClass("hidden");
 
       Object.entries(response).forEach(([key, value]) => {
@@ -81,6 +89,8 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         const input = createWpUtils.createInput(id, key, inputClass, value);
         container.append(input);
       });
+
+      createWpUtils.initDynamicSelectizeFields("#dynamic-fields-container", "#op-connection", $("#op-project").val(), baseUrl);
 
       container.removeClass("hidden");
     } catch (err) {
@@ -112,11 +122,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     const payload = {...createWpUtils.buildPayload($("#dynamic-fields-container")), 'project': project};
 
-    const parent = $("#op-parent").val();
-    if (parent) {
-      payload.parent = parent;
-    }
-
     let ckeditorInstance = CKEDITOR && CKEDITOR.instances &&
       (CKEDITOR.instances.content || CKEDITOR.instances.xwikicontent);
     try {
@@ -127,6 +132,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       return;
     }
 
+    createWpUtils.destroySelectize(modal);
     modal.modal('hide');
 
     ckeditorInstance.execCommand('xwiki-macro-insert', {
@@ -182,13 +188,14 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
   $(document).on("change", "#op-connection", function () {
     $("#dynamic-fields-container").empty().addClass("hidden");
-    createWpUtils.loadProjects(
+    createWpUtils.initProjectPicker(
       "#op-connection",
       "#op-project",
       "#op-project-container",
-      "#incorrect-token-create-work-package"
+      "#incorrect-token-create-work-package",
+      null,
+      baseUrl
     );
-    createWpUtils.initParentPicker("#op-connection", "#op-parent", "#op-parent-container", null, baseUrl);
   });
 
   $(document).on("show.bs.modal", ".macro-editor-modal", function () {

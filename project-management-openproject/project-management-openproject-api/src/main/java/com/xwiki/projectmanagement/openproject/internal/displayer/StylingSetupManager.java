@@ -129,9 +129,9 @@ public class StylingSetupManager
     }
 
     /**
-     * Inject the styling generated for a given Open Project instance.
+     * Inject the styling generated for a given OpenProject instance.
      *
-     * @param instance the name of a configured Open Project instance.
+     * @param instance the name of a configured OpenProject instance.
      */
     public void useInstanceStyle(String instance)
     {
@@ -173,7 +173,7 @@ public class StylingSetupManager
 
                 updateStylePage(context, stylesDocRef, stringBuilder, userRefResolver);
             } catch (XWikiException | ProjectManagementException e) {
-                LOGGER.warn("Failed to update the styling for the configured open project instance [{}]. Cause: [{}].",
+                LOGGER.warn("Failed to update the styling for the configured OpenProject instance [{}]. Cause: [{}].",
                     openProjCfgName, ExceptionUtils.getRootCauseMessage(e));
             }
         }

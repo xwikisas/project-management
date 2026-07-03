@@ -96,7 +96,7 @@ public class Suggest extends XWikiResource
 
     /**
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where to search for work item suggestions.
+     * @param instance the OpenProject client where to search for work item suggestions.
      * @param suggest the type of suggestions to retrieve
      * @param search the string that should match the work item summary (or maybe other props as well).
      * @param pageSize the number of elements that should be returned.
@@ -110,7 +110,7 @@ public class Suggest extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("suggest") @DefaultValue("") String suggest,
         @QueryParam("search") @DefaultValue("") String search,
-        @QueryParam("pageSize") @DefaultValue("10") int pageSize,
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selectedItem
     )
     {

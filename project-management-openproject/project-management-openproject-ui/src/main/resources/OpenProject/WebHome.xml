@@ -37,77 +37,106 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
-#set ($configObj = $doc.getObject($configClass))
-#if($request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
-  #set ($discard = $configObj.set('selectedConnection', $request.connection))
-  #set ($discard = $configObj.set('selectedProject', $request.project))
-  #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
-  #set ($discard = $doc.save('Updated project', true))
-  $response.sendRedirect($doc.getURL())
-  #stop
-#end
-#set ($connectionOptions = $services.openproject.getConnectionOptions())
-#set($discard = $connectionOptions.remove(0))
-#set ($selectedConnection = '')
-#if($configObj)
-  #set ($selectedConnection = $configObj.getValue('selectedConnection'))
-#end
-#if ($connectionOptions.size() == 1)
-  #set ($singleConnectionName = $connectionOptions.get(0).name)
-  #if(!$selectedConnection || !$singleConnectionName.equals($selectedConnection))
-    #set ($discard = $configObj.set('selectedConnection', $singleConnectionName))
-    #set ($discard = $doc.save('Updated connection', true))
-    #set ($selectedConnection = $singleConnectionName)
-  #end
-#end
-#set ($selectedProject = '')
-#set ($selectedProjectLabel = '')
-#if($configObj)
-  #set ($selectedProject = $configObj.getValue('selectedProject'))
-  #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
-#end
-{{html clean="false"}}
-#if ($connectionOptions.size() == 0)
+#set ($currentUser = $xcontext.user)
+#if ($currentUser == 'XWiki.XWikiGuest')
+  {{html}}
   &lt;div class="box warningmessage"&gt;
-    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.guest'))&lt;/p&gt;
   &lt;/div&gt;
+  {{/html}}
 #else
-&lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
-  &lt;div class="form-group"&gt;
-    &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
-    &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
-      #if($connectionOptions.size() == 1) disabled #end&gt;
-      #foreach ($option in $connectionOptions)
-      &lt;option value="$option.value" #if($selectedConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
-      #end
-    &lt;/select&gt;
-    #if($connectionOptions.size() == 1)
-    &lt;input type="hidden" name="connection" value="$!escapetool.xml($selectedConnection)"/&gt;
+  #set ($hasEdit = $services.security.authorization.hasAccess('edit'))
+  #set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
+  #set ($configObj = $doc.getObject($configClass))
+  #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+    #set ($discard = $configObj.set('selectedConnection', $request.connection))
+    #set ($discard = $configObj.set('selectedProject', $request.project))
+    #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
+    #set ($discard = $doc.save('Updated project', true))
+    $response.sendRedirect($doc.getURL())
+    #stop
+  #end
+  #set ($connectionOptions = $services.openproject.getConnectionOptions())
+  #set ($discard = $connectionOptions.remove(0))
+  #set ($selectedConnection = '')
+  #set ($selectedProject = '')
+  #set ($selectedProjectLabel = '')
+  #if ($configObj)
+    #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+    #set ($selectedProject = $configObj.getValue('selectedProject'))
+    #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
+  #end
+  #set ($effectiveConnection = $selectedConnection)
+  #if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
+    #set ($effectiveConnection = $connectionOptions.get(0).value)
+  #end
+  #set ($tokenValid = false)
+  #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.isUserAuthorized($effectiveConnection))
+    #set ($tokenValid = true)
+  #end
+  {{html clean="false"}}
+  #if ($connectionOptions.size() == 0)
+    &lt;div class="box warningmessage"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+    &lt;/div&gt;
+  #else
+    #if ($hasEdit)
+      &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
+        &lt;div class="form-group"&gt;
+          &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
+          &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
+            #if($connectionOptions.size() == 1) disabled #end&gt;
+            #foreach ($option in $connectionOptions)
+            &lt;option value="$option.value" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
+            #end
+          &lt;/select&gt;
+          #if ($connectionOptions.size() == 1)
+          &lt;input type="hidden" name="connection" value="$!escapetool.xml($effectiveConnection)"/&gt;
+          #end
+        &lt;/div&gt;
+        ## The project picker is only useful once the connection is authorized.
+        #if ($tokenValid)
+        &lt;div class="form-group"&gt;
+          &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
+          &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
+            data-connection="$!escapetool.xml($effectiveConnection)"
+            data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
+            #if ("$!selectedProject" != '')
+            &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+            #end
+          &lt;/select&gt;
+          &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
+        &lt;/div&gt;
+        #end
+        &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
+        &lt;input type="hidden" name="action" value="saveProject"/&gt;
+      &lt;/form&gt;
     #end
-  &lt;/div&gt;
-  &lt;div class="form-group"&gt;
-    &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
-    &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
-      data-connection="$!escapetool.xml($selectedConnection)"
-      data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
-      #if("$!selectedProject" != '')
-      &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+    ## Carries the effective connection to the JS for users without pickers (no connection select).
+    &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
+    ## The current user has no token for this connection: show the (per-user) authorize warning.
+    #if (!$tokenValid)
+      #set ($notAuthorized = $services.openproject.getNotAuthorizedMessage($effectiveConnection, 'html/5.0'))
+      #if ("$!notAuthorized" != '')
+        $notAuthorized
       #end
-    &lt;/select&gt;
-    &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
-  &lt;/div&gt;
-  &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
-  &lt;input type="hidden" name="action" value="saveProject"/&gt;
-   &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
-    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
-  &lt;/div&gt;
-&lt;/form&gt;
-#end
-{{/html}}
-#if ($connectionOptions.size() != 0)
-
-{{dashboard/}}
+    #end
+    ## Warnings revealed by the JS (invalid/expired connection, or connection without any projects).
+    &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
+    &lt;/div&gt;
+    &lt;div id="openproject-dashboard-no-project" class="box warningmessage hidden"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.noProject'))&lt;/p&gt;
+    &lt;/div&gt;
+  #end
+  {{/html}}
+  ## Render the macros (hidden) only when the current user is authorized for the connection; the project
+  ## is defaulted transiently by the listener. The JS reveals them once it confirms the connection works.
+  #if ("$!effectiveConnection" != '' &amp;&amp; $tokenValid)
+  (% id="openproject-dashboard-gadgets" class="hidden" %)(((
+  {{dashboard/}}
+  )))
+  #end
 #end
 {{/velocity}}</content>
   <object>
@@ -154,20 +183,17 @@
       </selectedProject>
     </class>
     <property>
-      <selectedConnection/>
+      <selectedConnection></selectedConnection>
     </property>
     <property>
-      <selectedProject/>
-    </property>
-    <property>
-      <selectedProjectLabel>Scrum project</selectedProjectLabel>
+      <selectedProject></selectedProject>
     </property>
   </object>
   <object>
     <name>OpenProject.WebHome</name>
     <number>0</number>
     <className>XWiki.GadgetClass</className>
-    <guid>c3dc190f-e3e7-4b0f-b0cb-2d4f7c37a449</guid>
+    <guid>07e27282-94c6-4f27-be5b-cf8f1844e430</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -217,20 +243,20 @@
       </title>
     </class>
     <property>
-      <content>{{openproject-project-members instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+      <content>{{openprojectchart instance="use_selected_dashboard_connection" datasetsLabels="[~"OpenWorkPackages~",~"ClosedWorkPackages~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~}]" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}</content>
     </property>
     <property>
       <position>1, 1</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openproject-project-members.name')</title>
+      <title>$services.localization.render('rendering.macro.openprojectchart.name')</title>
     </property>
   </object>
   <object>
     <name>OpenProject.WebHome</name>
     <number>1</number>
     <className>XWiki.GadgetClass</className>
-    <guid>4c18e8bb-63d9-472b-b9fa-d3f85b16360e</guid>
+    <guid>baf531ce-8375-4d01-9442-c0e6342ee28b</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -283,7 +309,7 @@
       <content>{{openproject-project-details instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
     </property>
     <property>
-      <position>1, 2</position>
+      <position>2, 1</position>
     </property>
     <property>
       <title>$services.localization.render('rendering.macro.openproject-project-details.name')</title>
@@ -293,7 +319,7 @@
     <name>OpenProject.WebHome</name>
     <number>2</number>
     <className>XWiki.GadgetClass</className>
-    <guid>5307213e-8be0-4a8c-950f-255db99ee470</guid>
+    <guid>f5f81e2c-537a-40cb-bae5-87b2f39c3937</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -343,20 +369,20 @@
       </title>
     </class>
     <property>
-      <content>{{openproject-news instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+      <content>{{openprojectchart instance="use_selected_dashboard_connection" type="pie"/}}</content>
     </property>
     <property>
-      <position>1, 3</position>
+      <position>1, 2</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openproject-news.name')</title>
+      <title>Ticket types</title>
     </property>
   </object>
   <object>
     <name>OpenProject.WebHome</name>
     <number>3</number>
     <className>XWiki.GadgetClass</className>
-    <guid>6e052975-1ed9-4f01-a85e-462d6d1b2033</guid>
+    <guid>9b5f3859-f664-4d77-88d6-339168ec3f8a</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -406,20 +432,209 @@
       </title>
     </class>
     <property>
-      <content>{{openproject-project-time-entries instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+      <content>{{openproject-project-members instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
     </property>
     <property>
-      <position>1, 4</position>
+      <position>2, 2</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openproject-project-time-entries.name')</title>
+      <title>Project members</title>
     </property>
   </object>
   <object>
     <name>OpenProject.WebHome</name>
     <number>4</number>
     <className>XWiki.GadgetClass</className>
-    <guid>41d2baf4-b339-4f50-bc9d-c1faa287000a</guid>
+    <guid>3904e357-76d3-4360-85ca-8cdadc077c50</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openprojectchart instance="use_selected_dashboard_connection" datasetsLabels="[~"OpenTickets~",~"ClosedTickets~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" property="type"/}}</content>
+    </property>
+    <property>
+      <position>1, 3</position>
+    </property>
+    <property>
+      <title>Open vs Closed Per Type</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>5</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>3ba1064f-f277-4fc0-a9e3-a775bdacd9d3</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-spent-time instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>2, 3</position>
+    </property>
+    <property>
+      <title>Spent time last 7 days</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>6</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>141eb86d-6de1-47a1-8b9d-b4699bc283c5</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject-news instance="use_selected_dashboard_connection" count="10" project="use_selected_dashboard_project"/}}</content>
+    </property>
+    <property>
+      <position>1, 4</position>
+    </property>
+    <property>
+      <title>Project News</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>7</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>7ddbf563-205b-4945-ba2a-e002499d2fe8</guid>
     <class>
       <name>XWiki.GadgetClass</name>
       <customClass/>
@@ -472,10 +687,73 @@
       <content>{{openproject-subprojects instance="use_selected_dashboard_connection" project="use_selected_dashboard_project"/}}</content>
     </property>
     <property>
-      <position>1, 5</position>
+      <position>2, 5</position>
     </property>
     <property>
-      <title>$services.localization.render('rendering.macro.openproject-subprojects.name')</title>
+      <title>SubProjects</title>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.WebHome</name>
+    <number>8</number>
+    <className>XWiki.GadgetClass</className>
+    <guid>dc7254fe-1bf3-426d-a33a-9b8ccac5aa52</guid>
+    <class>
+      <name>XWiki.GadgetClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <content>
+        <disabled>0</disabled>
+        <editor>---</editor>
+        <name>content</name>
+        <number>2</number>
+        <picker>0</picker>
+        <prettyName>content</prettyName>
+        <rows>5</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <position>
+        <disabled>0</disabled>
+        <name>position</name>
+        <number>3</number>
+        <picker>0</picker>
+        <prettyName>position</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </position>
+      <title>
+        <disabled>0</disabled>
+        <name>title</name>
+        <number>1</number>
+        <picker>0</picker>
+        <prettyName>title</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <validationMessage/>
+        <validationRegExp/>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </title>
+    </class>
+    <property>
+      <content>{{openproject instance="use_selected_dashboard_connection" limit="10"/}}</content>
+    </property>
+    <property>
+      <position>2, 4</position>
+    </property>
+    <property>
+      <title>All Work Packages</title>
     </property>
   </object>
   <object>
@@ -567,17 +845,31 @@
     </property>
     <property>
       <code>require(['jquery', 'xwiki-selectize'], function($) {
+  let gadgets = $('#openproject-dashboard-gadgets');
   let select = $('#openproject-dashboard-project-select');
-  if (!select.length) {
-    return;
-  }
 
   function getConnection() {
     let connSelect = $('#openproject-dashboard-connection-select');
-    return connSelect.length ? connSelect.val() : select.attr('data-connection');
+    if (connSelect.length) {
+      return connSelect.val();
+    }
+    return $('#openproject-dashboard-data').attr('data-connection');
+  }
+
+  function setProjectPickerVisible(visible) {
+    if (select.length) {
+      select.closest('.form-group').toggleClass('hidden', !visible);
+    }
+  }
+
+  function setMacrosVisible(visible) {
+    gadgets.toggleClass('hidden', !visible);
   }
 
   function initSelectize(connection) {
+    if (!select.length) {
+      return;
+    }
     if (select[0].selectize) {
       select[0].selectize.destroy();
     }
@@ -603,9 +895,38 @@
     });
   }
 
+  function refreshDashboardState(connection) {
+    let projectsREST = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki +
+        '/openproject/instance/' + encodeURIComponent(connection) + '/suggest/projects';
+    $.getJSON(projectsREST, { search: '' })
+      .done(function(results) {
+        $('#openproject-dashboard-invalid-connection').addClass('hidden');
+        setProjectPickerVisible(true);
+        if (results &amp;&amp; results.length) {
+          setMacrosVisible(true);
+          
+          let selectize = select.length ? select[0].selectize : null;
+          if (selectize &amp;&amp; !select.val()) {
+            selectize.addOption(results[0]);
+            selectize.setValue(results[0].value, true);
+          }
+        } else {
+          $('#openproject-dashboard-no-project').removeClass('hidden');
+          setMacrosVisible(false);
+        }
+      })
+      .fail(function() {
+        $('#openproject-dashboard-invalid-connection').removeClass('hidden');
+        setProjectPickerVisible(false);
+        setMacrosVisible(false);
+      });
+  }
+
   let currentConnection = getConnection();
-  if (currentConnection) {
+
+  if (currentConnection &amp;&amp; gadgets.length) {
     initSelectize(currentConnection);
+    refreshDashboardState(currentConnection);
   }
 
   $('#openproject-dashboard-connection-select').on('change', function() {
@@ -615,21 +936,24 @@
     }
     currentConnection = newConnection;
     initSelectize(newConnection);
+    refreshDashboardState(newConnection);
   });
 
-  select.on('change', function() {
-    let value = select.val();
-    if (!value) {
-      return;
-    }
-    let label = value;
-    let selectize = select[0].selectize;
-    if (selectize &amp;&amp; selectize.options[value]) {
-      label = selectize.options[value].label || selectize.options[value].text || value;
-    }
-    $('#openproject-dashboard-project-label-input').val(label);
-    $('#openproject-dashboard-project-form').submit();
-  });
+  if (select.length) {
+    select.on('change', function() {
+      let value = select.val();
+      if (!value) {
+        return;
+      }
+      let label = value;
+      let selectize = select[0].selectize;
+      if (selectize &amp;&amp; selectize.options[value]) {
+        label = selectize.options[value].label || selectize.options[value].text || value;
+      }
+      $('#openproject-dashboard-project-label-input').val(label);
+      $('#openproject-dashboard-project-form').submit();
+    });
+  }
 });</code>
     </property>
     <property>

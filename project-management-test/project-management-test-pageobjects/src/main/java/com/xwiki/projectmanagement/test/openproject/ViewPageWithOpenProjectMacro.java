@@ -26,7 +26,7 @@ import org.openqa.selenium.By;
 import org.xwiki.test.ui.po.ViewPage;
 
 /**
- * Models a page containing one or more open project macros.
+ * Models a page containing one or more OpenProject macros.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -34,7 +34,7 @@ import org.xwiki.test.ui.po.ViewPage;
 public class ViewPageWithOpenProjectMacro extends ViewPage
 {
     /**
-     * @return a list of open project macros present in the page.
+     * @return a list of OpenProject macros present in the page.
      */
     public List<OpenProjectMacroElement> getOpenProjectMacros()
     {

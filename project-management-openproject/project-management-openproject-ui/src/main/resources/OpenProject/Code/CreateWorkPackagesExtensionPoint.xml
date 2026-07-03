@@ -179,12 +179,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       $("#project-select-single-work-package").val("").empty();
       $("#project-select-single-work-package-container").addClass("hidden");
       $("#project-select-single-work-package").prop("disabled", false);
-      const parentSelect = $("#parent-select-single-work-package");
-      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
-        parentSelect[0].selectize.destroy();
-      }
-      parentSelect.empty();
-      $("#parent-select-single-work-package-container").addClass("hidden");
       $("#single-dynamic-fields-container").empty().addClass("hidden");
       $("#incorrect-token-single-work-package").addClass("hidden");
     }
@@ -196,12 +190,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       $('#connection-select-multiple-work-packages').val("");
       $("#project-select-multiple-work-packages").val("").empty();
       $("#project-select-multiple-work-packages").prop("disabled", false);
-      const parentSelect = $("#parent-select-multiple-work-packages");
-      if (parentSelect[0] &amp;&amp; parentSelect[0].selectize) {
-        parentSelect[0].selectize.destroy();
-      }
-      parentSelect.empty();
-      $("#parent-select-multiple-work-packages-container").addClass("hidden");
       $("#mappings-container").empty();
       $("#work-packages-table-mapping-container").addClass("hidden");
       $("#project-select-multiple-work-packages-container").addClass("hidden");
@@ -249,6 +237,13 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         const input = createWpUtils.createInput(id, key, inputClass, value);
         collapseOptions.append(input);
       });
+
+      createWpUtils.initDynamicSelectizeFields(
+        collapseOptions,
+        "#connection-select-multiple-work-packages",
+        $("#project-select-multiple-work-packages").val(),
+        baseUrl
+      );
 
       const subjectInput = card.find(".wp-subject");
       const defaultText = "Work package " + (index + 1);
@@ -553,15 +548,21 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     async function onSingleWorkPackageProjectSelect(element) {
       const connection = getConnection(true);
+      const project = $(element).val();
+      const container = $("#single-dynamic-fields-container");
+
+      if (!project) {
+        container.empty().addClass("hidden");
+        return;
+      }
+
       const requestBody = {
-        project: $(element).val(),
+        project: project,
       };
 
       try {
         const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
 
-        const template = $("#work-package-card-template");
-        const container = $("#single-dynamic-fields-container");
         container.empty().addClass("hidden");
 
         Object.entries(response).forEach(([key, value]) =&gt; {
@@ -570,6 +571,13 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
           const input = createWpUtils.createInput(id, key, inputClass, value);
           container.append(input);
         });
+
+        createWpUtils.initDynamicSelectizeFields(
+          "#single-dynamic-fields-container",
+          "#connection-select-single-work-package",
+          $("#project-select-single-work-package").val(),
+          baseUrl
+        );
 
         if (selectedText &amp;&amp; String(selectedText).trim() !== "") {
           const subjectInputs = container.find("input[name='subject']");
@@ -586,8 +594,16 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     async function onMultipleWorkPackagesProjectSelect(element) {
       const connection = getConnection(false);
+      const project = element.val();
+
+      if (!project) {
+        $("#work-packages-container").empty();
+        $("#multiple-work-packages-container").addClass("hidden");
+        return;
+      }
+
       const requestBody = {
-        project: element.val(),
+        project: project,
       };
 
       try {
@@ -623,11 +639,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       }
 
       const payload = { ...createWpUtils.buildPayload(container), 'project': project };
-
-      const parent = $("#parent-select-single-work-package").val();
-      if (parent) {
-        payload.parent = parent;
-      }
 
       const connection = $("#connection-select-single-work-package").val();
 
@@ -668,8 +679,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         return;
       }
 
-      const parent = $("#parent-select-multiple-work-packages").val();
-
       const tasks = [];
 
       $('.work-package-card').each(function (index) {
@@ -683,10 +692,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
         const payload = createWpUtils.buildPayload(card);
         payload.project = project;
-
-        if (parent) {
-          payload.parent = parent;
-        }
 
         const titleEl = card.find('.wp-subject-title');
         titleEl.removeClass('text-success text-danger');
@@ -755,16 +760,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     });
 
     $("#connection-select-multiple-work-packages").on("change", function () {
-      createWpUtils.loadProjects(
+      createWpUtils.initProjectPicker(
         "#connection-select-multiple-work-packages",
         "#project-select-multiple-work-packages",
         "#project-select-multiple-work-packages-container",
-        "#incorrect-token-multiple-work-packages"
-      );
-      createWpUtils.initParentPicker(
-        "#connection-select-multiple-work-packages",
-        "#parent-select-multiple-work-packages",
-        "#parent-select-multiple-work-packages-container",
+        "#incorrect-token-multiple-work-packages",
         null,
         baseUrl
       );
@@ -775,16 +775,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     $("#connection-select-single-work-package").on("change", function () {
       $("#single-dynamic-fields-container").empty().addClass("hidden");
-      createWpUtils.loadProjects(
+      createWpUtils.initProjectPicker(
         "#connection-select-single-work-package",
         "#project-select-single-work-package",
         "#project-select-single-work-package-container",
-        "#incorrect-token-single-work-package"
-      );
-      createWpUtils.initParentPicker(
-        "#connection-select-single-work-package",
-        "#parent-select-single-work-package",
-        "#parent-select-single-work-package-container",
+        "#incorrect-token-single-work-package",
         null,
         baseUrl
       );
@@ -1171,11 +1166,16 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     if (event.detail.element.prop('disabled')) {
       return;
     }
-    event.detail.element.val('/api/v3/projects/' + pageRelation.project);
+    var selectize = event.detail.element[0].selectize;
+    var value = '/api/v3/projects/' + pageRelation.project;
+    if (!selectize.options[value]) {
+      selectize.addOption({ value: value, label: pageRelation.project });
+    }
+    selectize.setValue(value);
     event.detail.element.trigger('change');
   });
-  window.openProjectEvents.addEventListener('parentSelectDisplayed', function (event) {
-    if (!pageRelation || !pageRelation.workItem) {
+  window.openProjectEvents.addEventListener('dynamicSelectizeFieldDisplayed', function (event) {
+    if (event.detail.name !== 'parent' || !pageRelation || !pageRelation.workItem) {
       return;
     }
     let $el = event.detail.element;
@@ -1516,7 +1516,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
             #set ($connectionOptions = $services.openproject.getConnectionOptions())
             #connectionInput('connection-select-single-work-package' $connectionOptions)
             #incorrectToken('incorrect-token-single-work-package')
-            #parentInput('parent-select-single-work-package')
             #projectInput('project-select-single-work-package' $connectionOptions)
             &lt;div id="single-dynamic-fields-container" class="hidden"&gt;
             &lt;/div&gt;
@@ -1536,7 +1535,6 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
             &lt;p class="text-muted"&gt;$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.multiple.description'))&lt;/p&gt;
             #connectionInput('connection-select-multiple-work-packages')
             #incorrectToken('incorrect-token-multiple-work-packages')
-            #parentInput('parent-select-multiple-work-packages')
             #projectInput('project-select-multiple-work-packages')
             &lt;div id="work-packages-table-mapping-container" class="form-group hidden"&gt;
               &lt;div class="form-group row"&gt;

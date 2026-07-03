@@ -19,62 +19,50 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import org.xwiki.properties.annotation.PropertyDisplayHidden;
+import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyMandatory;
+
+import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 
 /**
  * Parameters for the OpenProject Projects macro.
  *
  * @version $Id$
  */
-public class OpenProjectProjectsMacroParameters extends OpenProjectMacroParameters
+public class OpenProjectProjectsMacroParameters implements OpenProjectInstanceHolder
 {
+    private String instance;
 
-    @PropertyDisplayHidden
+    private int count = 5;
+
     @Override
-    public void setProperties(String properties)
+    public String getInstance()
     {
-        super.setProperties(properties);
+        return instance;
     }
 
-    @PropertyDisplayHidden
     @Override
-    public void setFilters(String filters)
+    @PropertyMandatory
+    @PropertyDisplayType(OpenProjectInstance.class)
+    public void setInstance(String instance)
     {
-        super.setFilters(filters);
+        this.instance = instance;
     }
 
-    @PropertyDisplayHidden
-    @Override
-    public void setSort(String sort)
+    /**
+     * @return the maximum number of projects to display.
+     */
+    public int getCount()
     {
-        super.setSort(sort);
+        return count;
     }
 
-    @PropertyDisplayHidden
-    @Override
-    public void setWorkItemsDisplayer(com.xwiki.projectmanagement.internal.WorkItemsDisplayer workItemsDisplayer)
+    /**
+     * @param count see {@link #getCount()}.
+     */
+    public void setCount(int count)
     {
-        super.setWorkItemsDisplayer(workItemsDisplayer);
-    }
-
-    @PropertyDisplayHidden
-    @Override
-    public void setLimit(Integer limit)
-    {
-        super.setLimit(limit);
-    }
-
-    @PropertyDisplayHidden
-    @Override
-    public void setOffset(Long offset)
-    {
-        super.setOffset(offset);
-    }
-
-    @PropertyDisplayHidden
-    @Override
-    public void setPageSizes(String pageSizes)
-    {
-        super.setPageSizes(pageSizes);
+        this.count = count;
     }
 }

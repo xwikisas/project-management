@@ -39,7 +39,7 @@ import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.openproject.internal.displayer.IdGenerator;
 
 /**
- * Display the status property in a similar way to Open Project.
+ * Display the status property in a similar way to OpenProject.
  *
  * @version $Id$
  */

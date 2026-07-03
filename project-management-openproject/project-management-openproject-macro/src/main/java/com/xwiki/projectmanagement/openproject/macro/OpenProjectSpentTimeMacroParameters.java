@@ -28,12 +28,12 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
 import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
- * Parameters for the OpenProject Project Time Entries macro.
+ * Parameters for the OpenProject Spent Time macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectProjectTimeEntriesMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
+public class OpenProjectSpentTimeMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {
     private String instance;
 

@@ -24,7 +24,7 @@ import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
- * The model of the single page displayer of the open project macro.
+ * The model of the single page displayer of the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -34,7 +34,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
     private final WebElement parent;
 
     /**
-     * @param parent the wrapper of the open project macro.
+     * @param parent the wrapper of the OpenProject macro.
      */
     public OpenProjectSingleDisplayer(WebElement parent)
     {

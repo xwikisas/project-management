@@ -67,7 +67,7 @@ public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassIn
      */
     public OpenProjectMentionClassInitializer()
     {
-        super(REFERENCE, "Open Project Work Package Mention");
+        super(REFERENCE, "OpenProject Work Package Mention");
     }
 
     @Override
