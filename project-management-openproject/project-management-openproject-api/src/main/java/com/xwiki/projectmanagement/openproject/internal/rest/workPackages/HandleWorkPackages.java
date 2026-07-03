@@ -136,6 +136,8 @@ public class HandleWorkPackages extends XWikiResource
 
     private static final int UNPROCESSABLE_ENTITY = 422;
 
+    private static final String WRITABLE = "writable";
+
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
@@ -380,7 +382,8 @@ public class HandleWorkPackages extends XWikiResource
                 TEXT,
                 getLabelOptionForField(schemaNode, fieldName),
                 null,
-                defaultValue
+                defaultValue,
+                getWritableOptionForField(schemaNode, fieldName)
             )
         );
     }
@@ -397,7 +400,8 @@ public class HandleWorkPackages extends XWikiResource
                 allowedValues,
                 getSelectDefault(payloadNode, fieldName, allowedValues,
                     findSchemaDefault(schemaNode, fieldName, allowedValues)
-                )
+                ),
+                getWritableOptionForField(schemaNode, fieldName)
             )
         );
     }
@@ -464,7 +468,8 @@ public class HandleWorkPackages extends XWikiResource
                 DATE,
                 getLabelOptionForField(schemaNode, fieldName),
                 null,
-                getTextDefault(payloadNode, fieldName)
+                getTextDefault(payloadNode, fieldName),
+                getWritableOptionForField(schemaNode, fieldName)
             )
         );
     }
@@ -478,6 +483,11 @@ public class HandleWorkPackages extends XWikiResource
     private boolean getRequiredOptionForField(JsonNode schemaNode, String fieldName)
     {
         return schemaNode.path(fieldName).path(REQUIRED).booleanValue();
+    }
+
+    private boolean getWritableOptionForField(JsonNode schemaNode, String fieldName)
+    {
+        return schemaNode.path(fieldName).path(WRITABLE).booleanValue();
     }
 
     private String getLabelOptionForField(JsonNode schemaNode, String fieldName)
@@ -508,7 +518,8 @@ public class HandleWorkPackages extends XWikiResource
                     SELECT,
                     getLabelOptionForField(schemaNode, ASSIGNEE),
                     assignees,
-                    getSelectDefault(payloadNode, ASSIGNEE, assignees, null)
+                    getSelectDefault(payloadNode, ASSIGNEE, assignees, null),
+                    getWritableOptionForField(schemaNode, ASSIGNEE)
                 )
             );
         } catch (ProjectManagementException e) {
@@ -581,7 +592,7 @@ public class HandleWorkPackages extends XWikiResource
     }
 
     private Map<String, Object> createInputOptions(boolean required, String type, String label,
-        List<? extends BaseOpenProjectObject> allowedValues, String defaultValue)
+        List<? extends BaseOpenProjectObject> allowedValues, String defaultValue, boolean isWritable)
     {
         Map<String, Object> fieldOptions = new HashMap<>();
         fieldOptions.put(REQUIRED, required);
@@ -589,6 +600,7 @@ public class HandleWorkPackages extends XWikiResource
         fieldOptions.put(LABEL, label);
         fieldOptions.put(ALLOWED_VALUES, allowedValues);
         fieldOptions.put(DEFAULT_VALUE, defaultValue);
+        fieldOptions.put(WRITABLE, isWritable);
         return fieldOptions;
     }
 
