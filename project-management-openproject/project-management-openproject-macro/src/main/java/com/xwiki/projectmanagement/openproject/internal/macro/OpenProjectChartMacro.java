@@ -60,7 +60,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
      */
     public OpenProjectChartMacro()
     {
-        super("Open Project Chart Macro", "desc", OpenProjectChartMacroParameters.class);
+        super("OpenProject Chart Macro", "desc", OpenProjectChartMacroParameters.class);
     }
 
     @Override

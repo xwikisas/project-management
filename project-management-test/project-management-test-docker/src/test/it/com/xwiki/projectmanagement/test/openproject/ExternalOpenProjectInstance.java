@@ -24,7 +24,7 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.XWikiWebDriver;
 
 /**
- * Similar to {@link OpenProjectInstance} but the open project instance is external (managed externally by the
+ * Similar to {@link OpenProjectInstance} but the OpenProject instance is external (managed externally by the
  * dev/environment).
  *
  * @version $Id$

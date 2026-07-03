@@ -21,7 +21,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 /**
- * Class representing the Open Project filters.
+ * Class representing the OpenProject filters.
  *
  * @version $Id$
  */

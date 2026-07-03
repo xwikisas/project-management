@@ -25,7 +25,7 @@ import org.xwiki.test.ui.po.Select;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
 /**
- * Models a constraint from a filter from the filter parameter from the open project macro.
+ * Models a constraint from a filter from the filter parameter from the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4

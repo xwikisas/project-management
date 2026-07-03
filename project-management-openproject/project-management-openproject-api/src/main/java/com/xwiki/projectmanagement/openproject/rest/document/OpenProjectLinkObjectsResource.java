@@ -33,7 +33,7 @@ import org.xwiki.rest.model.jaxb.Object;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 
 /**
- * Resource for creating the link to an Open Project entity.
+ * Resource for creating the link to an OpenProject entity.
  *
  * @version $Id$
  * @since 1.2.0-rc-1

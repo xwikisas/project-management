@@ -66,7 +66,7 @@ import static javax.ws.rs.HttpMethod.PUT;
 import static javax.ws.rs.core.HttpHeaders.CONTENT_TYPE;
 
 /**
- * Default Open project get items client helper.
+ * Default OpenProject get items client helper.
  *
  * @version $Id$
  */
@@ -173,7 +173,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_OFFSET = "offset";
 
-    private static final String PROJECT_MANAGEMENT_EXCEPTION_MESSAGE = "Failed to build the open project entity "
+    private static final String PROJECT_MANAGEMENT_EXCEPTION_MESSAGE = "Failed to build the OpenProject entity "
         + "retrieval url [%s].";
 
     private final HttpClient client;
@@ -545,7 +545,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             return objectMapper.readTree(body);
         } catch (URISyntaxException | JsonProcessingException e) {
             throw new ProjectManagementException(
-                String.format("Failed to build the open project entity creation url [%s].", uriStr), e);
+                String.format("Failed to build the OpenProject entity creation url [%s].", uriStr), e);
         } catch (IOException | InterruptedException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
@@ -590,7 +590,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             return objectMapper.readTree(body);
         } catch (URISyntaxException | JsonProcessingException e) {
             throw new ProjectManagementException(
-                String.format("Failed to build the open project entity update url [%s].", uriStr), e);
+                String.format("Failed to build the OpenProject entity update url [%s].", uriStr), e);
         } catch (IOException | InterruptedException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
@@ -639,7 +639,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, uri), e);
         } catch (JsonProcessingException e) {
             throw new ProjectManagementException(
-                String.format("Error trying to read the open project response from [%s].", uri), e);
+                String.format("Error trying to read the OpenProject response from [%s].", uri), e);
         } catch (IOException | InterruptedException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uri), e);
@@ -870,7 +870,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             );
         } else if (statusCode >= 500) {
             throw new ProjectManagementException(
-                String.format("Failed to retrieve the open project entities. [%s].", response.body())
+                String.format("Failed to retrieve the OpenProject entities. [%s].", response.body())
             );
         }
     }

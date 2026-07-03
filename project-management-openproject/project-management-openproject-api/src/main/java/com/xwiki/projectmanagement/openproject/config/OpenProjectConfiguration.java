@@ -63,7 +63,7 @@ public interface OpenProjectConfiguration
      *
      * @param connectionName the name of the connection to use for creating the OAuth token
      * @param redirectUrl the URL to which the OAuth provider will redirect after authorization
-     * @throws AuthenticationException when the OAuth2 protocol between xwiki and the configured Open Project
+     * @throws AuthenticationException when the OAuth2 protocol between xwiki and the configured OpenProject
      *     instance failed.
      */
     void createNewToken(String connectionName, String redirectUrl) throws AuthenticationException;
@@ -77,7 +77,7 @@ public interface OpenProjectConfiguration
     OpenProjectApiClient getOpenProjectApiClient(String connectionName);
 
     /**
-     * Clean the various caches used by the application, such as the entities retrieved from the configured Open Project
+     * Clean the various caches used by the application, such as the entities retrieved from the configured OpenProject
      * instances.
      */
     void cleanCache();

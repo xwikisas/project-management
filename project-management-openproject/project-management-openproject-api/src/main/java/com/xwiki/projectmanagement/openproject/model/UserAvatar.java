@@ -23,7 +23,7 @@ package com.xwiki.projectmanagement.openproject.model;
 import javax.ws.rs.core.StreamingOutput;
 
 /**
- * Models the response of a UserAvatar coming from Open Project.
+ * Models the response of a UserAvatar coming from OpenProject.
  *
  * @version $Id$
  * @since 1.0-rc-5

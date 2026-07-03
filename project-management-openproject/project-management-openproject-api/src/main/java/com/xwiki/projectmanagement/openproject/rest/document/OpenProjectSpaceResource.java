@@ -59,7 +59,7 @@ public interface OpenProjectSpaceResource
         @QueryParam("instance") @DefaultValue("") String instance,
         @QueryParam("project") Integer project,
         @QueryParam("workPackage") Integer workPackage,
-        @QueryParam("title") @DefaultValue("Open Project Space") String title)
+        @QueryParam("title") @DefaultValue("OpenProject Space") String title)
 
         throws XWikiRestException;
 }

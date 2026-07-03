@@ -37,6 +37,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
@@ -95,10 +96,11 @@ public class Suggest extends XWikiResource
 
     /**
      * @param wiki the wiki that contains the configured client.
-     * @param instance the open project client where to search for work item suggestions.
+     * @param instance the OpenProject client where to search for work item suggestions.
      * @param suggest the type of suggestions to retrieve
      * @param search the string that should match the work item summary (or maybe other props as well).
      * @param pageSize the number of elements that should be returned.
+     * @param selectedItem the id of the item that is already selected. The result will contain its information.
      * @return a list of objects with the following properties: value, label, icon, url, hint.
      */
     @GET
@@ -108,7 +110,9 @@ public class Suggest extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("suggest") @DefaultValue("") String suggest,
         @QueryParam("search") @DefaultValue("") String search,
-        @QueryParam("pageSize") @DefaultValue("10") int pageSize)
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize,
+        @QueryParam("selectedItem") Integer selectedItem
+    )
     {
         OpenProjectApiClient openProjectApiClient;
 
@@ -125,7 +129,7 @@ public class Suggest extends XWikiResource
         try {
             switch (suggest) {
                 case ID:
-                    response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
                     break;
                 case PRIORITIES:
                     response = getPrioritiesSuggestions(openProjectApiClient);
@@ -134,16 +138,16 @@ public class Suggest extends XWikiResource
                     response = getStatusesSuggestions(openProjectApiClient);
                     break;
                 case PROJECTS:
-                    response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
                     break;
                 case TYPES:
                     response = getTypesSuggestions(openProjectApiClient);
                     break;
                 case PARENT:
-                    response = getParentsSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    response = getParentsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
                     break;
                 case USERS:
-                    response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                    response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
                     break;
                 default:
                     response = Collections.emptyList();
@@ -157,9 +161,12 @@ public class Suggest extends XWikiResource
 
     private List<Map<String, String>> getIdentifiersSuggestions(OpenProjectApiClient openProjectApiClient,
         String searchString,
-        int pageSize) throws ProjectManagementException
+        int pageSize, Integer selectedItem) throws ProjectManagementException
     {
-        String filter = buildFilter(WORK_PACKAGE_SUBJECT_PROPERTY, searchString);
+        String filter = getSelectedIdFilter(selectedItem, searchString);
+        if (StringUtils.isEmpty(filter)) {
+            filter = buildFilter(WORK_PACKAGE_SUBJECT_PROPERTY, searchString);
+        }
         return openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems()
             .stream()
             .map(
@@ -186,9 +193,12 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getProjectsSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize) throws ProjectManagementException
+        String searchString, int pageSize, Integer selectedItem) throws ProjectManagementException
     {
-        String filter = buildFilter(NAME, searchString);
+        String filter = getSelectedIdFilter(selectedItem, searchString);
+        if (StringUtils.isEmpty(filter)) {
+            filter = buildFilter(NAME, searchString);
+        }
         return getSuggestions(openProjectApiClient.getProjects(1, pageSize, filter).getItems());
     }
 
@@ -199,22 +209,25 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getParentsSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize) throws ProjectManagementException
+        String searchString, int pageSize, Integer selectedItem) throws ProjectManagementException
     {
-        // A milestone work package can't be a parent of another work package, so we only suggest work packages whose
-        // type is not a milestone.
-        List<String> nonMilestoneTypeIds = openProjectApiClient.getTypes().getItems().stream()
-            .filter(type -> !type.isMilestone())
-            .map(type -> String.valueOf(type.getId()))
-            .collect(Collectors.toList());
+        String filter = getSelectedIdFilter(selectedItem, searchString);
+        if (StringUtils.isEmpty(filter)) {
+            // A milestone work package can't be a parent of another work package, so we only suggest work packages
+            // whose type is not a milestone.
+            List<String> nonMilestoneTypeIds = openProjectApiClient.getTypes().getItems().stream()
+                .filter(type -> !type.isMilestone())
+                .map(type -> String.valueOf(type.getId()))
+                .collect(Collectors.toList());
 
-        FilterBuilder filterBuilder = new FilterBuilder()
-            .addFilter(WORK_PACKAGE_TYPE_PROPERTY, FilterBuilder.Operator.EQUALS, nonMilestoneTypeIds)
-            .addFilter(WORK_PACKAGE_SUBJECT_PROPERTY, FilterBuilder.Operator.CONTAINS, searchString);
+            FilterBuilder filterBuilder = new FilterBuilder()
+                .addFilter(WORK_PACKAGE_TYPE_PROPERTY, FilterBuilder.Operator.EQUALS, nonMilestoneTypeIds)
+                .addFilter(WORK_PACKAGE_SUBJECT_PROPERTY, FilterBuilder.Operator.CONTAINS, searchString);
 
-        String filters = filterBuilder.build();
+            filter = filterBuilder.build();
+        }
 
-        return openProjectApiClient.getWorkPackages(1, pageSize, filters, "")
+        return openProjectApiClient.getWorkPackages(1, pageSize, filter, "")
             .getItems()
             .stream()
             .map(
@@ -229,9 +242,12 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getUsersSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize) throws ProjectManagementException
+        String searchString, int pageSize, Integer selectedItem) throws ProjectManagementException
     {
-        String filter = buildFilter(NAME, searchString);
+        String filter = getSelectedIdFilter(selectedItem, searchString);
+        if (StringUtils.isEmpty(filter)) {
+            filter = buildFilter(NAME, searchString);
+        }
         return getSuggestions(openProjectApiClient.getUsers(1, pageSize, filter).getItems());
     }
 
@@ -250,9 +266,22 @@ public class Suggest extends XWikiResource
             .collect(Collectors.toList());
     }
 
+    private String getSelectedIdFilter(Integer selectedId, String searchString)
+    {
+        if (selectedId != null && StringUtils.isNotEmpty(searchString)) {
+            return buildFilter(ID, FilterBuilder.Operator.EQUALS, String.valueOf(selectedId));
+        }
+        return null;
+    }
+
+    private String buildFilter(String fieldName, FilterBuilder.Operator operator, String searchValue)
+    {
+        return new FilterBuilder().addFilter(fieldName, operator, searchValue).build();
+    }
+
     private String buildFilter(String fieldName, String searchValue)
     {
-        return new FilterBuilder().addFilter(fieldName, FilterBuilder.Operator.CONTAINS, searchValue).build();
+        return buildFilter(fieldName, FilterBuilder.Operator.CONTAINS, searchValue);
     }
 
     private Map<String, String> createSuggestion(String value, String label, String url)

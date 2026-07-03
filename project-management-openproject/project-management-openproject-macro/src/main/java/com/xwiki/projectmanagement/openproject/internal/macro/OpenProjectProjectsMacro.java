@@ -58,8 +58,6 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 @Named("openproject-projects")
 public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<OpenProjectProjectsMacroParameters>
 {
-    private static final Integer MAX_PROJECTS = 5;
-
     private static final String CLASS = "class";
 
     /**
@@ -67,7 +65,7 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
      */
     public OpenProjectProjectsMacro()
     {
-        super("Open Project - Projects",
+        super("OpenProject - Projects",
             "List the 5 latest projects from a configured OpenProject instance, based on user's OpenProject instance "
                 + "rights.",
             OpenProjectProjectsMacroParameters.class);
@@ -80,7 +78,7 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
     {
         List<Project> projects;
         try {
-            projects = apiClient.getProjects(null, MAX_PROJECTS, "").getItems();
+            projects = apiClient.getProjects(null, parameters.getCount(), "").getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve projects from OpenProject.", e);
         }

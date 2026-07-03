@@ -20,7 +20,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 /**
- * Class representing the Open Project filters.
+ * Class representing the OpenProject filters.
  *
  * @version $Id$
  * @since 1.2.0-rc-1

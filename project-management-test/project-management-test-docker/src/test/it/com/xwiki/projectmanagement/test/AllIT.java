@@ -38,7 +38,7 @@ public class AllIT
 {
     @Nested
     @Order(1)
-    @DisplayName("Overall Open Project UI test")
+    @DisplayName("Overall OpenProject UI test")
     class NestedOpenProjectIT extends OpenProjectIT
     {
     }

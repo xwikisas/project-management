@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * Test the overall functionality of the Open Project integration.
+ * Test the overall functionality of the OpenProject integration.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -198,7 +198,7 @@ public class OpenProjectIT
         schedulerPage.waitUntilPageIsReady();
         setup.getDriver()
             .findElement(By.xpath(
-                "//div[contains(@class, 'infomessage')]/p[text() = 'Job Open Project Styling Updater triggered']"));
+                "//div[contains(@class, 'infomessage')]/p[text() = 'Job OpenProject Styling Updater triggered']"));
         // Workaround to make the scheduler job work during tests.
         setup.gotoPage(List.of("StartStylingJob"), "WebHome", "edit",
             Collections.singletonMap("force", 1));
@@ -213,7 +213,7 @@ public class OpenProjectIT
         vp.waitUntilPageIsReady();
         List<OpenProjectMacroElement> macros = vp.getOpenProjectMacros();
         assertEquals(1, macros.size());
-        // Get one rendered type property with value "type" and compare it with a known open project color.
+        // Get one rendered type property with value "type" and compare it with a known OpenProject color.
         String taskStatusColor =
             setup.getDriver().findElement(By.className("openproject-property-type-Task-test")).getCssValue("color");
         assertEquals("rgb(26, 103, 163)", taskStatusColor);
@@ -444,7 +444,7 @@ public class OpenProjectIT
         MacroDialogSelectModal modal = openMacrosModal(setup);
         if (!setup.getDriver().hasElement(By.cssSelector(".macro-editor-modal .macro-name"))) {
             modal.waitUntilReady();
-            modal.filterByText("Open Project", 3);
+            modal.filterByText("OpenProject", 3);
 //        modal.clickSelect().waitUntilReady();
             setup.getDriver().findElement(By.cssSelector(".macro-selector-modal .modal-footer .btn-primary")).click();
         }

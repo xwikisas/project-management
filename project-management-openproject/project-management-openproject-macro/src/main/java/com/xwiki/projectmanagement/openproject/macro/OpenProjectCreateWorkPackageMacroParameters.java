@@ -26,7 +26,7 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.openproject.OpenProjectCreateWorkPackage;
 
 /**
- * Open Project Create Work Package macro parameters.
+ * OpenProject Create Work Package macro parameters.
  *
  * @version $Id$
  */
