@@ -113,7 +113,8 @@
     "defaultLabel": "",
     "label": "",
     "type": "selectize",
-    "required": false
+    "required": false,
+    "writable": false
   },
   "startDate": {
     "allowedValues": null,

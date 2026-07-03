@@ -650,7 +650,8 @@ public class HandleWorkPackages extends XWikiResource
                 getLabelOptionForField(schemaNode, PARENT),
                 PARENT_SUGGEST_ENDPOINT,
                 defaultValue,
-                defaultLabel
+                defaultLabel,
+                getWritableOptionForField(schemaNode, PARENT)
             )
         );
     }
