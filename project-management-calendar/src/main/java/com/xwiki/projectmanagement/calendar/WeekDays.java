@@ -19,13 +19,16 @@
  */
 package com.xwiki.projectmanagement.calendar;
 
+import org.xwiki.stability.Unstable;
+
 /**
  * Days of the week mapped to their numeric value (0 for Sunday, 1 for Monday, etc.). Used to configure the first day of
  * the week in the calendar view.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
+@Unstable
 public enum WeekDays
 {
     /**

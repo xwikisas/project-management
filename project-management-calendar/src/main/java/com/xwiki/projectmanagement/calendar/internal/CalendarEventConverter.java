@@ -40,7 +40,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * FullCalendar macro.
  *
  * @version $Id$
- * @since 1.2.0-rc-9
+ * @since 1.2.0
  */
 @Component(roles = CalendarEventConverter.class)
 @Singleton
