@@ -394,7 +394,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Version> getVersions(int projectId) throws ProjectManagementException
+    public PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
     {
         JsonNode elements = getOpenProjectResponseEntities(String.format(API_URL_PROJECT_VERSIONS, projectId), null,
             null, "", "", "");
@@ -427,7 +427,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters, int projectId)
+    public PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
         throws ProjectManagementException
     {
         JsonNode mainNode = getOpenProjectResponse(String.format(API_URL_PROJECT_SPRINTS, projectId), offset,

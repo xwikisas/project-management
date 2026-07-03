@@ -192,7 +192,7 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the versions.
      * @since 1.2
      */
-    default PaginatedResult<Version> getVersions(int projectId) throws ProjectManagementException
+    default PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
     {
         throw new UnsupportedOperationException(
             "Retrieving versions from project is not supported by this client implementation.");
@@ -226,7 +226,7 @@ public interface OpenProjectApiClient
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the sprints.
      * @since 1.2
      */
-    default PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters, int projectId)
+    default PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
         throws ProjectManagementException
     {
         throw new UnsupportedOperationException(

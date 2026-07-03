@@ -222,12 +222,12 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Version> getVersions(int projectId) throws ProjectManagementException
+    public PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
     {
         String cacheKey = getCacheKey("projectVersions", 1, Integer.MAX_VALUE, String.valueOf(projectId), "");
         PaginatedResult<Version> result = (PaginatedResult<Version>) cache.get(cacheKey);
         if (result == null) {
-            result = client.getVersions(projectId);
+            result = client.getProjectVersions(projectId);
             cache.set(cacheKey, result);
         }
         return result;
@@ -247,14 +247,14 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters, int projectId)
+    public PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
         throws ProjectManagementException
     {
         String filtersWithProject = filters + String.format("project_id=%d", projectId);
         String cacheKey = getCacheKey("projectSprints", offset, pageSize, filtersWithProject, "");
         PaginatedResult<Sprint> result = (PaginatedResult<Sprint>) cache.get(cacheKey);
         if (result == null) {
-            result = client.getSprints(offset, pageSize, filters, projectId);
+            result = client.getProjectSprints(offset, pageSize, filters, projectId);
             cache.set(cacheKey, result);
         }
         return result;
