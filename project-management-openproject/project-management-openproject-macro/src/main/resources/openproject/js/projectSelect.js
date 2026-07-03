@@ -50,7 +50,13 @@ require(['jquery'], function ($) {
     return {value: value, label: input.attr('data-dashboard-project-label')};
   }
 
-  function initProjectSelect(input) {
+  function initProjectSelect() {
+    let input = $('.openproject-project-select');
+
+    if (!input.length) {
+      return;
+    }
+
     if (input[0].selectize) {
       return;
     }
@@ -105,23 +111,46 @@ require(['jquery'], function ($) {
     input.data('openprojectInstance', instance);
     let selectize = input[0].selectize;
     if (selectize) {
-      if (inputInstance) {
-        selectize.clear(true);
-        selectize.clearOptions();
-        selectize.loadedSearches = {};
-      }
+      selectize.clear(true);
+      selectize.clearOptions();
+      selectize.loadedSearches = {};
       hideTokenWarning(input);
     }
   }
-
   $(document).on('focusin', '.macro-editor-modal .openproject-project-select-container', function () {
     let input = $(this).find('.openproject-project-select').first();
 
     if (!input.length) {
       return;
     }
-
-    initProjectSelect(input);
+    initProjectSelect();
     resetForInstanceChange(input);
+  });
+  initProjectSelect();
+  $(document).on('shown.bs.modal', '.modal', function () {
+    let modal = $(this);
+    setTimeout(function () {
+      const content = modal.find('.macro-editor');
+      if (!content || content.length <= 0) {
+        console.log('Modal content not found');
+        return;
+      }
+      if (!content[0].classList.contains('loading')) {
+        initProjectSelect();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          initProjectSelect();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
   });
 });
