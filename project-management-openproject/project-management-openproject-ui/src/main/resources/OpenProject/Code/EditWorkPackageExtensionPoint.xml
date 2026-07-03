@@ -164,8 +164,10 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       const container = $("#edit-dynamic-fields-container");
       container.empty().addClass("hidden");
       Object.entries(options).forEach(([key, value]) =&gt; {
-        const input = createWpUtils.createInput("wp-" + key, key, "wp-" + key, value);
-        container.append(input);
+        if (value.writable) {
+          const input = createWpUtils.createInput("wp-" + key, key, "wp-" + key, value);
+          container.append(input);
+        }
       });
       container.removeClass("hidden");
     }

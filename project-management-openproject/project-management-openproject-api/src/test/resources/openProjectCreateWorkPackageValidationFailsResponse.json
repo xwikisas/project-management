@@ -4,14 +4,16 @@
     "defaultValue" : null,
     "label": "Subject",
     "type": "text",
-    "required": true
+    "required": true,
+    "writable": false
   },
   "description": {
     "allowedValues": null,
     "defaultValue" : null,
     "label": "Description",
     "type": "text",
-    "required": false
+    "required": false,
+    "writable": false
   },
   "type": {
     "allowedValues": [
@@ -39,7 +41,8 @@
     "defaultValue" : null,
     "label": "Type",
     "type": "select",
-    "required": true
+    "required": true,
+    "writable": false
   },
   "priority": {
     "allowedValues": [
@@ -65,7 +68,8 @@
     "defaultValue" : null,
     "label": "Priority",
     "type": "select",
-    "required": true
+    "required": true,
+    "writable": false
   },
   "status": {
     "allowedValues": [
@@ -91,7 +95,8 @@
     "defaultValue" : null,
     "label": "Status",
     "type": "select",
-    "required": true
+    "required": true,
+    "writable": false
   },
   "assignee": {
     "endpoint": "workPackages/availableAssignees",
@@ -99,7 +104,8 @@
     "defaultLabel": "",
     "label": "Assignee",
     "type": "selectize",
-    "required": false
+    "required": false,
+    "writable": false
   },
   "parent": {
     "endpoint": "suggest/parent",
@@ -107,20 +113,23 @@
     "defaultLabel": "",
     "label": "",
     "type": "selectize",
-    "required": false
+    "required": false,
+    "writable": false
   },
   "startDate": {
     "allowedValues": null,
     "defaultValue" : null,
     "label": "Start date",
     "type": "date",
-    "required": false
+    "required": false,
+    "writable": false
   },
   "dueDate": {
     "allowedValues": null,
     "defaultValue" : null,
     "label": "Finish date",
     "type": "date",
-    "required": false
+    "required": false,
+    "writable": false
   }
 }
