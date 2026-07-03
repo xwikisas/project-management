@@ -60,7 +60,7 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSo
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
- * Open project client.
+ * OpenProject client.
  *
  * @version $Id$
  */

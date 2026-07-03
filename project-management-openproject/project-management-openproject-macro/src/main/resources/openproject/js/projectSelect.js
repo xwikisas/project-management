@@ -73,7 +73,7 @@ require(['jquery'], function ($) {
       }
 
       let projectsREST = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/${instance}/suggest/projects`;
-      $.getJSON(projectsREST, {search: text})
+      $.getJSON(projectsREST, {search: text, selectedItem: input.val()})
         .then(function (results) {
           hideTokenWarning(input);
           callback(dashboardResults.concat(results));
@@ -98,15 +98,18 @@ require(['jquery'], function ($) {
 
   function resetForInstanceChange(input) {
     let instance = getSelectedInstance();
-    if (input.data('openprojectInstance') === instance) {
+    let inputInstance = input.data('openprojectInstance');
+    if (inputInstance === instance) {
       return;
     }
     input.data('openprojectInstance', instance);
     let selectize = input[0].selectize;
     if (selectize) {
-      selectize.clear(true);
-      selectize.clearOptions();
-      selectize.loadedSearches = {};
+      if (inputInstance) {
+        selectize.clear(true);
+        selectize.clearOptions();
+        selectize.loadedSearches = {};
+      }
       hideTokenWarning(input);
     }
   }

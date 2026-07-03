@@ -51,7 +51,7 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupMa
 
 /**
  * Event listener that watches changes on OpenProject configuration documents and schedules the
- * {@link StylingSetupManager} with the context user equal to the one that created the Open Project configuration. This
+ * {@link StylingSetupManager} with the context user equal to the one that created the OpenProject configuration. This
  * assures us that the job will execute with a user that is active in the wiki and has logged in with OpenProject
  *
  * @version $Id$

@@ -45,7 +45,7 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupMa
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
- * Open project macro.
+ * OpenProject macro.
  *
  * @version $Id$
  */
@@ -81,7 +81,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
      */
     public OpenProjectMacro()
     {
-        super("Open Project", "Retrieve work items from open project.", null, OpenProjectMacroParameters.class);
+        super("OpenProject", "Retrieve work items from OpenProject.", null, OpenProjectMacroParameters.class);
     }
 
     /**

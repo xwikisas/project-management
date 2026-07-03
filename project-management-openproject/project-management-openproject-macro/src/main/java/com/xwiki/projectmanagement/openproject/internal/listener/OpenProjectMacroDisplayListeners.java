@@ -39,7 +39,13 @@ import org.xwiki.observation.event.Event;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
@@ -82,6 +88,9 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     @Inject
     private Provider<XWikiContext> xContextProvider;
+
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
 
     /**
      * Default constructor.
@@ -137,25 +146,68 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
     private void resolveInstance(Map<String, String> eventData, BaseObject configObject)
     {
         String instance = eventData.get(INSTANCE_KEY);
-        String selectedConnection = configObject.getStringValue(SELECTED_CONNECTION_PROPERTY);
+        if (!(USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(instance) || StringUtils.isBlank(instance))) {
+            return;
+        }
 
-        if (StringUtils.isNotBlank(selectedConnection) && (USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(
-            instance) || StringUtils.isBlank(instance)))
-        {
-            eventData.put(EFFECTIVE_INSTANCE_KEY, selectedConnection);
+        String effectiveConnection = getEffectiveConnection(configObject);
+        if (StringUtils.isNotBlank(effectiveConnection)) {
+            eventData.put(EFFECTIVE_INSTANCE_KEY, effectiveConnection);
         }
     }
 
     private void resolveProject(Map<String, String> eventData, BaseObject configObject)
     {
         String project = eventData.get(PROJECT_KEY);
-        String selectedProject = configObject.getStringValue(SELECTED_PROJECT_PROPERTY);
-
-        if (StringUtils.isNotBlank(selectedProject)
-            && (USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project) || StringUtils.isBlank(project)))
-        {
-            eventData.put(EFFECTIVE_PROJECT_KEY, selectedProject);
+        if (!(USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project) || StringUtils.isBlank(project))) {
+            return;
         }
+
+        String selectedProject = configObject.getStringValue(SELECTED_PROJECT_PROPERTY);
+        if (StringUtils.isNotBlank(selectedProject)) {
+            eventData.put(EFFECTIVE_PROJECT_KEY, selectedProject);
+            return;
+        }
+
+        String firstProject = getFirstProjectId(getEffectiveConnection(configObject));
+        if (StringUtils.isNotBlank(firstProject)) {
+            eventData.put(EFFECTIVE_PROJECT_KEY, firstProject);
+        }
+    }
+
+    private String getEffectiveConnection(BaseObject configObject)
+    {
+        String selectedConnection = configObject.getStringValue(SELECTED_CONNECTION_PROPERTY);
+        if (StringUtils.isNotBlank(selectedConnection)) {
+            return selectedConnection;
+        }
+
+        List<OpenProjectConnection> connections = openProjectConfiguration.getOpenProjectConnections();
+        if (connections != null && !connections.isEmpty()) {
+            return connections.get(0).getConnectionName();
+        }
+        return "";
+    }
+
+    private String getFirstProjectId(String connection)
+    {
+        if (StringUtils.isBlank(connection)) {
+            return "";
+        }
+        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(connection);
+        if (apiClient == null) {
+            return "";
+        }
+        try {
+            PaginatedResult<Project> projects = apiClient.getProjects(1, 1, "");
+            if (!projects.getItems().isEmpty()) {
+                return String.valueOf(projects.getItems().get(0).getId());
+            }
+        } catch (ProjectManagementException e) {
+            logger.debug("Could not resolve the default project for connection [{}]: [{}]", connection,
+                e.getMessage());
+        }
+        return "";
     }
 
     private boolean isDashboardPage(XWikiDocument document)

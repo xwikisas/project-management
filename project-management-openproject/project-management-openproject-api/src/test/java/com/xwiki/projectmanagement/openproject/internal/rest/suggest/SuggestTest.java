@@ -96,7 +96,7 @@ public class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
             .thenReturn(workPackagePaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, 10, null);
 
         verify(openProjectApiClient).getWorkPackages(
             1,
@@ -132,7 +132,7 @@ public class SuggestTest
 
         when(this.openProjectApiClient.getPriorities()).thenReturn(priorityPaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "priorities", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "priorities", SEARCH_STRING, 10, null);
 
         verify(openProjectApiClient).getPriorities();
 
@@ -153,7 +153,7 @@ public class SuggestTest
 
         when(this.openProjectApiClient.getStatuses()).thenReturn(statusesPaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "statuses", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "statuses", SEARCH_STRING, 10, null);
 
         verify(openProjectApiClient).getStatuses();
 
@@ -175,7 +175,7 @@ public class SuggestTest
         when(this.openProjectApiClient.getProjects(anyInt(), anyInt(), anyString())).thenReturn(
             projectPaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", SEARCH_STRING, 10, null);
 
         verify(openProjectApiClient).getProjects(
             OFFSET,
@@ -200,7 +200,7 @@ public class SuggestTest
 
         when(this.openProjectApiClient.getTypes()).thenReturn(typesPaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null);
         verify(openProjectApiClient).getTypes();
         verifySuccessResponse(response, typesPaginatedResult.getItems());
     }
@@ -219,7 +219,7 @@ public class SuggestTest
 
         when(this.openProjectApiClient.getUsers(anyInt(), anyInt(), anyString())).thenReturn(usersPaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, 10, null);
 
         verify(openProjectApiClient).getUsers(
             OFFSET,
@@ -233,7 +233,7 @@ public class SuggestTest
     @Test
     public void getSuggestionsForUnknownTest()
     {
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "unknown", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "unknown", SEARCH_STRING, 10, null);
 
         verifySuccessResponse(response, List.of());
     }
@@ -243,7 +243,7 @@ public class SuggestTest
     {
         when(this.openProjectApiClient.getTypes()).thenThrow(ProjectManagementException.class);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
 
@@ -255,7 +255,7 @@ public class SuggestTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10, null);
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }

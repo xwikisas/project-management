@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
 
 /**
- * Describes the base object for Open Project objects.
+ * Describes the base object for OpenProject objects.
  *
  * @version $Id$
  * @since 1.0
@@ -34,17 +34,17 @@ import com.xwiki.projectmanagement.model.Linkable;
 public class BaseOpenProjectObject extends HashMap<String, Object>
 {
     /**
-     * The key identifying the id property of the open project object.
+     * The key identifying the id property of the OpenProject object.
      */
     public static final String KEY_ID = "id";
 
     /**
-     * The key identifying the name property of the open project object.
+     * The key identifying the name property of the OpenProject object.
      */
     public static final String KEY_NAME = "name";
 
     /**
-     * The key identifying the open project object itself.
+     * The key identifying the OpenProject object itself.
      */
     private static final String KEY_SELF = "self";
 
@@ -69,7 +69,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     /**
      * Create a BaseOpenProjectObject from a JsonNode.
      *
-     * @param jsonNode the JsonNode containing the base open project object information.
+     * @param jsonNode the JsonNode containing the base OpenProject object information.
      */
     public BaseOpenProjectObject(JsonNode jsonNode)
     {
@@ -151,7 +151,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     /**
      * Initializes the self link of the object from a connection URL and a resource path.
      *
-     * @param connectionUrl the connection URL to the Open Project instance.
+     * @param connectionUrl the connection URL to the OpenProject instance.
      * @param resourcePath the resource path of the resource.
      * @since 1.1
      */

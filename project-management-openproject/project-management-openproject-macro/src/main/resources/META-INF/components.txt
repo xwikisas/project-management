@@ -12,4 +12,4 @@ com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectNewsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectDetailsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSubprojectsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectMembersMacro
-com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectTimeEntriesMacro
+com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSpentTimeMacro

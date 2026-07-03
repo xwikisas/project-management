@@ -32,7 +32,7 @@ import org.xwiki.rest.model.jaxb.SearchResults;
 import com.xwiki.projectmanagement.relations.model.ProjectManagementRelation;
 
 /**
- * Resource for retrieving pages containing {@link ProjectManagementRelation} to an Open Project entity.
+ * Resource for retrieving pages containing {@link ProjectManagementRelation} to an OpenProject entity.
  *
  * @version $Id$
  * @since 1.2.0-rc-1

@@ -165,7 +165,7 @@ public class WorkItem extends HashMap<String, Object>
     }
 
     /**
-     * @return the identifier for this work item together with a link to its location. For example, Open project and
+     * @return the identifier for this work item together with a link to its location. For example, OpenProject and
      *     GitHub identify work packages numerically: '1001', Jira using a key: 'XWIKI-1001'.
      */
     @JsonProperty(KEY_IDENTIFIER)

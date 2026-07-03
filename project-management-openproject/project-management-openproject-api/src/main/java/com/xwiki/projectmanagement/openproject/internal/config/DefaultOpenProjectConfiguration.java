@@ -107,7 +107,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
             if (this.cache != null) {
                 this.cache.dispose();
             }
-            throw new InitializationException("Failed to create the Open Project client cache.", e);
+            throw new InitializationException("Failed to create the OpenProject client cache.", e);
         }
     }
 
