@@ -171,7 +171,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         return openProjectApiClientFactory.builder()
             .serverUrl(connection.getServerURL())
             .authentication(new BearerTokenAuthenticator(accessToken))
-            .caching(cache, connection.getClientId())
+//            .caching(cache, connection.getClientId())
             .build();
     }
 

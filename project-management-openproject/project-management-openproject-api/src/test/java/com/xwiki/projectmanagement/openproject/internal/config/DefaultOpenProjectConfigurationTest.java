@@ -246,7 +246,7 @@ public class DefaultOpenProjectConfigurationTest
         assertSame(apiClient, client);
 
         verify(builder).serverUrl(opConnection.getServerURL());
-        verify(builder).caching(any(), eq(opConnection.getClientId()));
+//        verify(builder).caching(any(), eq(opConnection.getClientId()));
 
         ArgumentCaptor<OpenProjectAuthenticator> authCaptor = ArgumentCaptor.forClass(OpenProjectAuthenticator.class);
         verify(builder).authentication(authCaptor.capture());
