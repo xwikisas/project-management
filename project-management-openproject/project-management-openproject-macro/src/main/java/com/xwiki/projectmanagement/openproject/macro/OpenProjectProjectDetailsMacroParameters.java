@@ -19,55 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import org.xwiki.properties.annotation.PropertyMandatory;
-import org.xwiki.properties.annotation.PropertyDisplayType;
-
-import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
-import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
-import com.xwiki.projectmanagement.openproject.OpenProjectProject;
-import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
-
 /**
  * Parameters for the OpenProject Project Details macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectProjectDetailsMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
+public class OpenProjectProjectDetailsMacroParameters extends BaseDirectOpenProjectMacroParameters
 {
-    private String instance;
-
-    private String project;
-
-    @Override
-    public String getInstance()
-    {
-        return instance;
-    }
-
-    @Override
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectInstance.class)
-    public void setInstance(String instance)
-    {
-        this.instance = instance;
-    }
-
-    /**
-     * @return the identifier of the project within the OpenProject instance.
-     */
-    public String getProject()
-    {
-        return project;
-    }
-
-    /**
-     * @param project see {@link #getProject()}.
-     */
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectProject.class)
-    public void setProject(String project)
-    {
-        this.project = project;
-    }
 }

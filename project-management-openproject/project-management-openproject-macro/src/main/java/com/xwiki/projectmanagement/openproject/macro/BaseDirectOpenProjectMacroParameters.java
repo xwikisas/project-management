@@ -29,19 +29,17 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
 import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
- * Parameters for the OpenProject Subprojects macro.
+ * Sdsadas.
  *
  * @version $Id$
- * @since 1.2
+ * @since 1.2.0
  */
-public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder,
+public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder,
     ProjectManagementAsyncMacroParams
 {
     private String instance;
 
     private String project;
-
-    private int count = 25;
 
     @Override
     public String getInstance()
@@ -58,7 +56,7 @@ public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanc
     }
 
     /**
-     * @return the identifier of the project whose subprojects will be displayed.
+     * @return the identifier of the project within the OpenProject instance.
      */
     public String getProject()
     {
@@ -68,26 +66,9 @@ public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanc
     /**
      * @param project see {@link #getProject()}.
      */
-    @PropertyMandatory
     @PropertyDisplayType(OpenProjectProject.class)
     public void setProject(String project)
     {
         this.project = project;
-    }
-
-    /**
-     * @return the maximum number of subprojects to display.
-     */
-    public int getCount()
-    {
-        return count;
-    }
-
-    /**
-     * @param count see {@link #getCount()}.
-     */
-    public void setCount(int count)
-    {
-        this.count = count;
     }
 }

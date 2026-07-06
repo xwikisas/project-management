@@ -19,59 +19,15 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyMandatory;
-
-import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
-import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
-import com.xwiki.projectmanagement.openproject.OpenProjectProject;
-import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
-
 /**
  * Parameters for the OpenProject Project Members macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectProjectMembersMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
+public class OpenProjectProjectMembersMacroParameters extends BaseDirectOpenProjectMacroParameters
 {
-    private String instance;
-
-    private String project;
-
     private int count = 25;
-
-    @Override
-    public String getInstance()
-    {
-        return instance;
-    }
-
-    @Override
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectInstance.class)
-    public void setInstance(String instance)
-    {
-        this.instance = instance;
-    }
-
-    /**
-     * @return the identifier of the project whose members will be displayed.
-     */
-    public String getProject()
-    {
-        return project;
-    }
-
-    /**
-     * @param project see {@link #getProject()}.
-     */
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectProject.class)
-    public void setProject(String project)
-    {
-        this.project = project;
-    }
 
     /**
      * @return the maximum number of members to retrieve.

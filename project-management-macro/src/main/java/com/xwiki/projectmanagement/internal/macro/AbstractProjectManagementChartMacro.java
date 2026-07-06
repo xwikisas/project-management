@@ -24,11 +24,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.job.JobException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
@@ -38,6 +43,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -55,6 +61,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private static final String JSON_EMPTY_ARRAY = "[]";
 
     protected final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Inject
+    private ProjectManagementAsyncExecutor asyncExecutor;
 
     /**
      * constructor.
@@ -80,9 +89,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     public List<Block> execute(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
-        List<List<LiveDataQuery.Filter>> filters = null;
         try {
-            filters = getFiltersList(parameters.getFilters());
+            List<List<LiveDataQuery.Filter>> filters = getFiltersList(parameters.getFilters());
             ChartTypeDisplayer chartTypeDisplayer = componentManager.getInstance(ChartTypeDisplayer.class,
                 parameters.getType());
 
@@ -91,37 +99,60 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 objectMapper.readValue(typeParamsJSON,
                     chartTypeDisplayer.getParameterTypeTemplate().getClass());
 
-            List<PaginatedResult<WorkItem>> workItemsList = new ArrayList<>();
-
-            for (List<LiveDataQuery.Filter> filter : filters) {
-                workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
-                    Math.toIntExact(parameters.getOffset()),
-                    parameters.getLimit(), filter, Collections.emptyList()));
-            }
-
             String labelsJSON = StringUtils.isEmpty(parameters.getDatasetsLabels()) ? JSON_EMPTY_ARRAY
                 : parameters.getDatasetsLabels();
             List<String> labels = objectMapper.readValue(labelsJSON, new TypeReference<List<String>>()
             {
             });
 
-            if (workItemsList.isEmpty()) {
-                workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
-                    Math.toIntExact(parameters.getOffset()), parameters.getLimit(), Collections.emptyList(),
-                    Collections.emptyList()));
-            }
+            return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
+            {
+                @Override
+                public boolean supportsInlineMode()
+                {
+                    return false;
+                }
 
-            return chartTypeDisplayer.execute(workItemsList, parameters.getProperty(), labels, context,
-                typeDisplayerParams);
+                @Override
+                public List<Block> execute(ProjectManagementAsyncMacroParams ignored, String content,
+                    MacroTransformationContext context) throws MacroExecutionException
+                {
+                    try {
+                        return chartTypeDisplayer.execute(getDatasets(filters, parameters), parameters.getProperty(),
+                            labels, context, typeDisplayerParams);
+                    } catch (WorkItemException e) {
+                        throw new MacroExecutionException("Failed to retrieve the work packages.", e);
+                    }
+                }
+            }, parameters, content, context);
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
-        } catch (WorkItemException e) {
-            throw new MacroExecutionException("Failed to retrieve the work packages.", e);
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException("Failed to find the chart type.", e);
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to process the parameters of the chart type.");
+        } catch (JobException | RenderingException e) {
+            throw new MacroExecutionException("The execution of the displayer failed.", e);
         }
+    }
+
+    private List<PaginatedResult<WorkItem>> getDatasets(List<List<LiveDataQuery.Filter>> filters, T parameters)
+        throws WorkItemException
+    {
+        List<PaginatedResult<WorkItem>> workItemsList = new ArrayList<>();
+
+        for (List<LiveDataQuery.Filter> filter : filters) {
+            workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
+                Math.toIntExact(parameters.getOffset()),
+                parameters.getLimit(), filter, Collections.emptyList()));
+        }
+
+        if (workItemsList.isEmpty()) {
+            workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
+                Math.toIntExact(parameters.getOffset()), parameters.getLimit(), Collections.emptyList(),
+                Collections.emptyList()));
+        }
+        return workItemsList;
     }
 
     private List<List<LiveDataQuery.Filter>> getFiltersList(String filters)

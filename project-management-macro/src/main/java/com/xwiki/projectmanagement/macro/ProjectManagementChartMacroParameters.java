@@ -22,10 +22,10 @@ package com.xwiki.projectmanagement.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
 
-import com.xwiki.projectmanagement.ProjectManagementLabels;
 import com.xwiki.projectmanagement.ProjectManagementChartType;
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
 import com.xwiki.projectmanagement.ProjectManagementFilters;
+import com.xwiki.projectmanagement.ProjectManagementLabels;
 import com.xwiki.projectmanagement.ProjectManagementProperty;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.chart.displayer.PieChartDisplayer;
@@ -37,7 +37,7 @@ import com.xwiki.projectmanagement.internal.chart.displayer.PieChartDisplayer;
  * @version $Id$
  * @since 1.2.0-rc-1
  */
-public class ProjectManagementChartMacroParameters
+public class ProjectManagementChartMacroParameters implements ProjectManagementAsyncMacroParams
 {
     private String client;
 
@@ -157,9 +157,8 @@ public class ProjectManagementChartMacroParameters
     }
 
     /**
-     * @return a JSON representation of the chart type implementor configuration object. A
-     *     {@link ChartTypeDisplayer} will return the configuration type by
-     *     calling {@link ChartTypeDisplayer#getParameterTypeTemplate()} ()}.
+     * @return a JSON representation of the chart type implementor configuration object. A {@link ChartTypeDisplayer}
+     *     will return the configuration type by calling {@link ChartTypeDisplayer#getParameterTypeTemplate()} ()}.
      */
     public String getTypeParams()
     {

@@ -22,9 +22,7 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -32,18 +30,15 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
 import org.xwiki.rendering.RenderingException;
-import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
-import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.block.CompositeBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
-import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 /**
@@ -59,7 +54,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     private ComponentManager componentManager;
 
     @Inject
-    private BlockAsyncRendererExecutor executor;
+    private ProjectManagementAsyncExecutor asyncExecutor;
 
     /**
      * @param name smth
@@ -107,19 +102,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 parameters.setLayouts("cards,table");
                 displayerId = WorkItemsDisplayer.liveData.name();
             }
-            Macro<ProjectManagementMacroParameters> displayerMacro =
+            Macro<ProjectManagementAsyncMacroParams> displayerMacro =
                 componentManager.getInstance(Macro.class, displayerId);
             if (!WorkItemsDisplayer.liveData.equals(displayer) && !WorkItemsDisplayer.liveDataCards.equals(displayer)) {
-                AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
-                ProjectManagementAsyncRenderer asyncRenderer =
-                    componentManager.getInstance(ProjectManagementAsyncRenderer.class);
-                // Pass some properties that might be of interest to a potential displayer macro.
-                configuration.setContextEntries(
-                    Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
-                        XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
-                asyncRenderer.initialize(displayerMacro, parameters, newContent, context);
-                Block result = executor.execute(asyncRenderer, configuration);
-                return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+                return asyncExecutor.execute(displayerMacro, parameters, newContent, context);
             }
 
             return displayerMacro.execute(parameters, newContent, context);

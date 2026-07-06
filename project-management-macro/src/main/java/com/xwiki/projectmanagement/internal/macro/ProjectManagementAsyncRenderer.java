@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.RenderingException;
@@ -33,7 +34,7 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
-import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 
 /**
  * Async renderer for the {@link com.xwiki.projectmanagement.internal.WorkItemsDisplayer} available except for the
@@ -44,9 +45,9 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 @Component(roles = ProjectManagementAsyncRenderer.class)
 public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 {
-    private Macro<ProjectManagementMacroParameters> workItemsDisplayer;
+    private Macro<ProjectManagementAsyncMacroParams> workItemsDisplayer;
 
-    private ProjectManagementMacroParameters parameters;
+    private ProjectManagementAsyncMacroParams parameters;
 
     private String content;
 
@@ -68,8 +69,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
      * @param content the content passed to the displayer macro.
      * @param context the macro transformation context that will be taken in consideration by the executed macro.
      */
-    public void initialize(Macro<ProjectManagementMacroParameters> displayer,
-        ProjectManagementMacroParameters parameters, String content, MacroTransformationContext context)
+    public void initialize(Macro<ProjectManagementAsyncMacroParams> displayer,
+        ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context)
     {
         workItemsDisplayer = displayer;
         this.parameters = parameters;
@@ -78,11 +79,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         this.inline = this.transformationContext.isInline();
         this.targetSyntax = context.getTransformationContext().getTargetSyntax();
 
-        // TODO: Maybe come up with a better way to generating an id.
-        StringBuilder sb = new StringBuilder();
-        sb.append(parameters.getId()).append(parameters.getProperties()).append(parameters.getFilters())
-            .append(parameters.getSourceParameters());
-        id = createId("rendering", "macro", "projectmanagement", String.valueOf(sb.toString().hashCode()));
+        // I'm assuming that the id should be deterministic only if we are interested in caching the result. Since we
+        // shouldn't cache the results coming from OpenProject, we can generate a random uuid.
+        id = createId("rendering", "macro", "projectmanagement", UUID.randomUUID().toString());
     }
 
     @Override
