@@ -18,10 +18,25 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
-
 #set ($parameters = {
   'options': $services.openproject.getConnectionOptions(),
-  'prefix': ' '
+  'prefix': ' ',
+  'class': 'op-instance-select'         
 })
+<script>
+  (function() {
+    let select = document.getElementsByClassName('op-instance-select');
+    if (select.length <= 0) {
+      return;
+    }
+    select = select[0];
+    const validOptions = [...select.options].filter(
+      option => !option.disabled && option.value !== ""
+    );
+    if (validOptions.length === 1) {
+      select.value = validOptions[0].value;
+    }
+  })();
+</script>
 #set ($discard = $parameters.putAll($displayer.parameters))
 #staticSelectPicker($parameters)
