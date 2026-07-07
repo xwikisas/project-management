@@ -30,7 +30,7 @@ import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
- * Models the filter parameter of the Open Project macro.
+ * Models the filter parameter of the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -53,7 +53,7 @@ public class FilterBuilderParameter extends BaseElement
      */
     public FilterBuilderFilter addFilter(String filterProperty)
     {
-        Select select = new Select(getDriver().findElement(By.id("proj-manag-add-constraint")));
+        Select select = new Select(getDriver().findElement(By.className("proj-manag-add-filter")));
 
         try {
             select.selectByValue(filterProperty);

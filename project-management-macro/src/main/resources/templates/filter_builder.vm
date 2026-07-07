@@ -21,7 +21,8 @@
  * Generate the html structure for a filter builder.
  *
  * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
- *   retrieve the filterable livedata properties.
+ *   retrieve the filterable livedata properties. The 'title' property will be used to set the title of the builder. The
+ *   'removable' property will denote whether the builder can be removed or not.
  *#
 #macro (filterBuilder $parameters)
 #picker_import
@@ -37,7 +38,7 @@
   ## i.e. macroname/xwiki/2.1
   #set ($clientId = $clientId.split('/')[0])
 #end
-#set ($clientCfg = $services.projectmanagementlivedata.getLivedataConfiguration($clientId))
+#set ($clientCfg = $services.projectmanagement.livedata.getLivedataConfiguration($clientId))
 #if ("$!clientCfg" != '')
   #set ($propertiesJson = $clientCfg.meta.propertyDescriptors)
   #set ($filterableProperties = [])
@@ -49,9 +50,17 @@
   #if ($filterableProperties.isEmpty())
     <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
   #else
-    <div class="proj-manag-constraint-builder" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+    <div class="proj-manag-constraint-builder proj-manag-macro-param" data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))">
+      <div class="proj-manag-header">
+      #if ($parameters.title)
+        <span class="proj-manag-header-title">$escapetool.xml($parameters.title)</span>
+      #end
+      #if ($parameters.removable)
+        <a class="proj-manag-remove-filter">$services.icon.renderHTML('trash')</a>
+      #end
+      </div>
       <div>
-        <select id="proj-manag-add-constraint" class="btn btn-default">
+        <select class="btn btn-default proj-manag-add-filter">
           <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
           #foreach ($prop in $filterableProperties)
             <option value="$prop.id">#if($prop.name)$prop.name#else$prop.id#end</option>

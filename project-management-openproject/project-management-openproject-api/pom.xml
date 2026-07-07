@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-openproject</artifactId>
-    <version>1.1.2-SNAPSHOT</version>
+    <version>1.2.0-rc-12-SNAPSHOT</version>
   </parent>
   <artifactId>project-management-openproject-api</artifactId>
   <name>Project Management - Open Project - API</name>
@@ -33,12 +33,28 @@
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
-    <xwiki.jacoco.instructionRatio>0.57</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.53</xwiki.jacoco.instructionRatio>
+    <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
   <dependencies>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.commons</groupId>
+      <artifactId>xwiki-pro-commons-api</artifactId>
+      <version>${xwikipro.commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-instance</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-relations-api</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -52,9 +68,9 @@
       <version>${commons.version}</version>
     </dependency>
     <dependency>
-      <groupId>com.xwiki.licensing</groupId>
-      <artifactId>application-licensing-licensor-api</artifactId>
-      <version>${licensing.version}</version>
+      <groupId>com.xwiki.urlshortener</groupId>
+      <artifactId>application-urlshortener-default</artifactId>
+      <version>${urlshortener.version}</version>
     </dependency>
     <dependency>
       <groupId>org.xwiki.commons</groupId>

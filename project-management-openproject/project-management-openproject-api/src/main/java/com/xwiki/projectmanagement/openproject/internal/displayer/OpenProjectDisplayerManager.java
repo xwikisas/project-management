@@ -32,6 +32,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
+import org.xwiki.environment.Environment;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.parser.Parser;
 
@@ -56,7 +57,7 @@ import com.xwiki.projectmanagement.openproject.internal.displayer.property.UserP
 public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerManager, Initializable
 {
     /**
-     * The parameters key for the open project instance entry.
+     * The parameters key for the OpenProject instance entry.
      */
     public static final String KEY_INSTANCE = "instance";
 
@@ -80,6 +81,9 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
     private Parser htmlParser;
 
     @Inject
+    private Environment environment;
+
+    @Inject
     private Provider<XWikiContext> contextProvider;
 
     private final Map<String, WorkItemPropertyDisplayer> registeredDisplayers = new HashMap<>();
@@ -90,7 +94,7 @@ public class OpenProjectDisplayerManager implements WorkItemPropertyDisplayerMan
         registeredDisplayers.put(WorkItem.KEY_TYPE, new TypePropertyDisplayer(plainTextParser));
         registeredDisplayers.put(WorkItem.KEY_STATUS, new StatusPropertyDisplayer(plainTextParser));
         registeredDisplayers.put(WorkItem.KEY_DESCRIPTION, new StringPropertyDisplayer(htmlParser));
-        UserPropertyDisplayer userPropertyDisplayer = new UserPropertyDisplayer(this);
+        UserPropertyDisplayer userPropertyDisplayer = new UserPropertyDisplayer(this, environment);
         registeredDisplayers.put(WorkItem.KEY_REPORTER, userPropertyDisplayer);
         registeredDisplayers.put(WorkItem.KEY_ASSIGNEES, userPropertyDisplayer);
         registeredDisplayers.put(WorkItem.KEY_CREATOR, userPropertyDisplayer);

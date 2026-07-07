@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.internal.macro;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.xwiki.component.annotation.Component;
@@ -57,6 +56,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private List<String> id;
 
+    private boolean inline;
+
     /**
      * Initialize the async renderer with the required parameters for a project management displayer to function
      * properly.
@@ -73,7 +74,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         workItemsDisplayer = displayer;
         this.parameters = parameters;
         this.content = content;
-        this.transformationContext = context;
+        this.transformationContext = context.clone();
+        this.inline = this.transformationContext.isInline();
         this.targetSyntax = context.getTransformationContext().getTargetSyntax();
 
         // TODO: Maybe come up with a better way to generating an id.
@@ -88,17 +90,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     {
         try {
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
-            MacroBlock currentMacro = transformationContext.getCurrentMacroBlock();
-            if (currentMacro != null) {
-                result = Collections.singletonList(
-                    new MacroMarkerBlock(
-                        currentMacro.getId(),
-                        currentMacro.getParameters(),
-                        currentMacro.getContent(),
-                        result,
-                        currentMacro.isInline()
-                    )
-                );
+            if (this.transformationContext.getCurrentMacroBlock() != null) {
+                result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
             }
             return new CompositeBlock(result);
         } catch (MacroExecutionException e) {
@@ -109,7 +102,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     @Override
     public boolean isInline()
     {
-        return false;
+        return this.inline;
     }
 
     @Override
@@ -136,5 +129,11 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     public boolean isCacheAllowed()
     {
         return false;
+    }
+
+    private Block wrapInMacroMarker(MacroBlock macroBlockToWrap, List<Block> newBlocks)
+    {
+        return new MacroMarkerBlock(macroBlockToWrap.getId(), macroBlockToWrap.getParameters(),
+            macroBlockToWrap.getContent(), newBlocks, macroBlockToWrap.isInline());
     }
 }

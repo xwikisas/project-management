@@ -20,7 +20,6 @@
 
 package com.xwiki.projectmanagement.openproject.internal.displayer;
 
-import java.net.http.HttpClient;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -52,9 +51,10 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
@@ -94,6 +94,9 @@ public class StylingSetupManager
     private OpenProjectConfiguration opConfiguration;
 
     @Inject
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
+
+    @Inject
     private DocumentReferenceResolver<EntityReference> documentReferenceResolver;
 
     @Inject
@@ -126,9 +129,9 @@ public class StylingSetupManager
     }
 
     /**
-     * Inject the styling generated for a given Open Project instance.
+     * Inject the styling generated for a given OpenProject instance.
      *
-     * @param instance the name of a configured Open Project instance.
+     * @param instance the name of a configured OpenProject instance.
      */
     public void useInstanceStyle(String instance)
     {
@@ -151,8 +154,10 @@ public class StylingSetupManager
                         openProjCfgName);
                     continue;
                 }
-                OpenProjectApiClient apiClient =
-                    new DefaultOpenProjectApiClient(connection.getServerURL(), accessToken, HttpClient.newHttpClient());
+                OpenProjectApiClient apiClient = openProjectApiClientFactory.builder()
+                    .serverUrl(connection.getServerURL())
+                    .authentication(new BearerTokenAuthenticator(accessToken))
+                    .build();
 
                 StringBuilder stringBuilder = new StringBuilder();
 
@@ -168,7 +173,7 @@ public class StylingSetupManager
 
                 updateStylePage(context, stylesDocRef, stringBuilder, userRefResolver);
             } catch (XWikiException | ProjectManagementException e) {
-                LOGGER.warn("Failed to update the styling for the configured open project instance [{}]. Cause: [{}].",
+                LOGGER.warn("Failed to update the styling for the configured OpenProject instance [{}]. Cause: [{}].",
                     openProjCfgName, ExceptionUtils.getRootCauseMessage(e));
             }
         }
@@ -192,7 +197,19 @@ public class StylingSetupManager
             stringBuilder.append(type.getColor());
             stringBuilder.append(';');
             stringBuilder.append(BRACKET_END);
+            composeTypeColorStyle(type, stringBuilder);
         }
+    }
+
+    private void composeTypeColorStyle(Type type, StringBuilder stringBuilder)
+    {
+        stringBuilder.append("a.fc-event.openproject-color-type-");
+        stringBuilder.append(type.getName().replaceAll("\\s+", ""));
+        stringBuilder.append(BRACKET_START);
+        stringBuilder.append("\tbackground-color: ");
+        stringBuilder.append(type.getColor());
+        stringBuilder.append(';');
+        stringBuilder.append(BRACKET_END);
     }
 
     private void composeStatusStyles(String openProjCfgName, OpenProjectApiClient apiClient,

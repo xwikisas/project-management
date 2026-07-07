@@ -22,10 +22,11 @@ package com.xwiki.projectmanagement.openproject.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
 
 /**
- * Describes the base object for Open Project objects.
+ * Describes the base object for OpenProject objects.
  *
  * @version $Id$
  * @since 1.0
@@ -33,19 +34,50 @@ import com.xwiki.projectmanagement.model.Linkable;
 public class BaseOpenProjectObject extends HashMap<String, Object>
 {
     /**
-     * The key identifying the id property of the open project object.
+     * The key identifying the id property of the OpenProject object.
      */
     public static final String KEY_ID = "id";
 
     /**
-     * The key identifying the name property of the open project object.
+     * The key identifying the name property of the OpenProject object.
      */
     public static final String KEY_NAME = "name";
 
     /**
-     * The key identifying the open project object itself.
+     * The key identifying the OpenProject object itself.
      */
-    private static final String SELF = "self";
+    private static final String KEY_SELF = "self";
+
+    /**
+     * The key identifying the title.
+     */
+    private static final String KEY_TITLE = "title";
+
+    /**
+     * The key identifying the links.
+     */
+    private static final String KEY_LINKS = "_links";
+
+    /**
+     * Default constructor.
+     */
+    public BaseOpenProjectObject()
+    {
+
+    }
+
+    /**
+     * Create a BaseOpenProjectObject from a JsonNode.
+     *
+     * @param jsonNode the JsonNode containing the base OpenProject object information.
+     */
+    public BaseOpenProjectObject(JsonNode jsonNode)
+    {
+        this.setId(jsonNode.path(KEY_ID).asInt());
+        this.setName(jsonNode.path(KEY_NAME).asText());
+        JsonNode selfNode = jsonNode.path(KEY_LINKS).path(KEY_SELF);
+        this.setSelf(new Linkable(selfNode.path(KEY_TITLE).asText(), selfNode.path("href").asText()));
+    }
 
     /**
      * @return the id of the work item project.
@@ -86,7 +118,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public Linkable getSelf()
     {
-        return (Linkable) get(SELF);
+        return (Linkable) get(KEY_SELF);
     }
 
     /**
@@ -96,7 +128,7 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
      */
     public void setSelf(Linkable self)
     {
-        put(SELF, self);
+        put(KEY_SELF, self);
     }
 
     /**
@@ -114,5 +146,17 @@ public class BaseOpenProjectObject extends HashMap<String, Object>
     public void putEntry(String key, Object value)
     {
         this.put(key, value);
+    }
+
+    /**
+     * Initializes the self link of the object from a connection URL and a resource path.
+     *
+     * @param connectionUrl the connection URL to the OpenProject instance.
+     * @param resourcePath the resource path of the resource.
+     * @since 1.1
+     */
+    public void initializeSelfWithPath(String connectionUrl, String resourcePath)
+    {
+        this.getSelf().setLocation(String.format("%s%s", connectionUrl, resourcePath));
     }
 }

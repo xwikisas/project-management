@@ -109,6 +109,7 @@ public class AbstractProjectManagementMacroTest
             displayerMacro);
         TransformationContext transformationContext = mock(TransformationContext.class);
         when(macroTransformationContext.getTransformationContext()).thenReturn(transformationContext);
+        when(macroTransformationContext.clone()).thenReturn(macroTransformationContext);
         when(transformationContext.getTargetSyntax()).thenReturn(Syntax.XWIKI_2_1);
         when(displayerMacro.execute(params, "", macroTransformationContext)).thenReturn(
             Collections.singletonList(mock(Block.class)));

@@ -26,7 +26,7 @@
  *   configuration defined by that client.
  *#
 #macro (sortPicker $params $clientHint)
-  #set ($config = $services.projectmanagementlivedata.getLivedataConfiguration($clientHint))
+  #set ($config = $services.projectmanagement.livedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
   #set ($ascTranslation = $services.localization.render("projectmanagement.macro.sort.asc"))
   #set ($descTranslation = $services.localization.render("projectmanagement.macro.sort.desc"))

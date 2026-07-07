@@ -73,6 +73,7 @@ public interface WorkItemsResource
      * @param projectManagementHint the hint of the project management implementation.
      * @param page the page number that is being requested.
      * @param pageSize the maximum number of elements that can be returned by this query.
+     * @param filter the filter that should match the returned work items.
      * @return a paginated result of work items specific to the page number. HTTP 200: successful retrieval. HTTP 401:
      *     the user is not logged in. HTTP 403: the user does not have the rights to retrieve the work items.
      */
@@ -82,7 +83,8 @@ public interface WorkItemsResource
         @PathParam("wikiName") String wiki,
         @PathParam("hint") String projectManagementHint,
         @QueryParam("page") @DefaultValue("1") int page,
-        @QueryParam("pageSize") @DefaultValue("10") int pageSize
+        @QueryParam("pageSize") @DefaultValue("10") int pageSize,
+        @QueryParam("filter") @DefaultValue("{}") String filter
     );
 
     /**

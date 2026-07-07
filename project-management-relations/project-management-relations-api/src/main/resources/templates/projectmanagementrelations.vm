@@ -1,0 +1,57 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#set($titleToDisplay = $services.localization.render('projectmanagement.relations.viewer.title', ["<a href='$doc.getURL()'>$escapetool.xml($doc.plainTitle)</a>"]))
+#template('contentheader.vm')
+#template('projectmanagementrelationscommon.vm')
+## Display the sections.
+<div class="proj-manag-relations">
+  #foreach($relationObj in $doc.getObjects($className))
+    #displayRelationObject($relationObj)
+  #end
+  <h2>
+   #getTranslation('', 'relation.add.title')
+  </h2>
+  <form  method="post"  action="$doc.getURL('objectadd')" class="xform proj-manag-relation-creation">
+    <input type="hidden" name="classname" value="$escapetool.xml($className)" />
+    <input type="hidden" name="form_token" value="$!{services.csrf.getToken()}" />
+    <input type='hidden' name='xredirect' value="$escapetool.xml($doc.getURL('view', 'viewer=projectmanagementrelations'))" />
+    <dl>
+      <dt>
+        <label>#getTranslation('', 'client.id.name')</label>
+      </dt>
+      <dd>
+        <select name="${className}_client">
+          #set ($clientHints = $services.projectmanagement.clientHints)
+          #if ("$!clientHints" == '' || $clientHints.size() != 1)
+            <option value="" disabled selected>#getTranslation('', 'relation.add.placeholder')</option>
+          #end
+          #foreach ($projManagClientHint in $clientHints)
+            <option
+              #if("$!clientHints" != '' && $clientHints.size() == 1)selected#end
+              value="$escapetool.xml($projManagClientHint)">
+              #getTranslation('clients', $projManagClientHint)
+            </option>
+          #end
+        </select>
+      </dd>
+    </dl>
+    <button class='btn btn-default' type='submit'>#getTranslation('', 'relation.add.label')</button>
+  </form>
+</div>

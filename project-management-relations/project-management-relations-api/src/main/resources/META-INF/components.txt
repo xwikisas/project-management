@@ -1,0 +1,4 @@
+com.xwiki.projectmanagement.relations.internal.DefaultRelationsManager
+com.xwiki.projectmanagement.relations.internal.rest.DefaultRelationsResource
+com.xwiki.projectmanagement.relations.script.ProjectManagementRelationsScriptService
+com.xwiki.projectmanagement.relations.store.RelationClassDocumentInitializer

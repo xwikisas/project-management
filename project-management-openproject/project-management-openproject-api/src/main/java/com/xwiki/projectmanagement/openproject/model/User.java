@@ -19,6 +19,11 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import java.util.List;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.model.Linkable;
+
 /**
  * Describes the user object of a work package.
  *
@@ -27,4 +32,40 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class User extends BaseOpenProjectObject
 {
+    private static final String KEY_ROLES = "roles";
+
+    /**
+     * Create a User object from a JsonNode.
+     *
+     * @param userJson the JsonNode containing the user information.
+     */
+    public User(JsonNode userJson)
+    {
+        super(userJson);
+    }
+
+    /**
+     * Default constructor.
+     */
+    public User()
+    {
+    }
+
+    /**
+     * @return the roles of the user as a list of {@link Linkable}.
+     * @since 1.2
+     */
+    public List<Linkable> getRoles()
+    {
+        return (List<Linkable>) get(KEY_ROLES);
+    }
+
+    /**
+     * @param roles see {@link #getRoles()}.
+     * @since 1.2
+     */
+    public void setRoles(List<Linkable> roles)
+    {
+        put(KEY_ROLES, roles);
+    }
 }

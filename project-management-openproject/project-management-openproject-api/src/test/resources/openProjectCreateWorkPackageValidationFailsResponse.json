@@ -1,0 +1,135 @@
+{
+  "subject": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Subject",
+    "type": "text",
+    "required": true,
+    "writable": false
+  },
+  "description": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Description",
+    "type": "text",
+    "required": false,
+    "writable": false
+  },
+  "type": {
+    "allowedValues": [
+      {
+        "color": "#1A67A3",
+        "isMilestone": false,
+        "name": "Task",
+        "self": {
+          "location": "/api/v3/types/1",
+          "value": ""
+        },
+        "id": 1
+      },
+      {
+        "color": "#35C53F",
+        "isMilestone": false,
+        "name": "Milestone",
+        "self": {
+          "location": "/api/v3/types/2",
+          "value": ""
+        },
+        "id": 2
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Type",
+    "type": "select",
+    "required": true,
+    "writable": false
+  },
+  "priority": {
+    "allowedValues": [
+      {
+        "color": "#C5F6FA",
+        "name": "Low",
+        "self": {
+          "location": "/api/v3/priorities/7",
+          "value": ""
+        },
+        "id": 7
+      },
+      {
+        "color": "#74C0FC",
+        "name": "Normal",
+        "self": {
+          "location": "/api/v3/priorities/8",
+          "value": ""
+        },
+        "id": 8
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Priority",
+    "type": "select",
+    "required": true,
+    "writable": false
+  },
+  "status": {
+    "allowedValues": [
+      {
+        "color": "#1098AD",
+        "name": "New",
+        "self": {
+          "location": "/api/v3/statuses/1",
+          "value": ""
+        },
+        "id": 1
+      },
+      {
+        "color": "#A5D8FF",
+        "name": "In specification",
+        "self": {
+          "location": "/api/v3/statuses/2",
+          "value": ""
+        },
+        "id": 2
+      }
+    ],
+    "defaultValue" : null,
+    "label": "Status",
+    "type": "select",
+    "required": true,
+    "writable": false
+  },
+  "assignee": {
+    "endpoint": "workPackages/availableAssignees",
+    "defaultValue": "",
+    "defaultLabel": "",
+    "label": "Assignee",
+    "type": "selectize",
+    "required": false,
+    "writable": false
+  },
+  "parent": {
+    "endpoint": "suggest/parent",
+    "defaultValue": "",
+    "defaultLabel": "",
+    "label": "",
+    "type": "selectize",
+    "required": false,
+    "writable": false
+  },
+  "startDate": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Start date",
+    "type": "date",
+    "required": false,
+    "writable": false
+  },
+  "dueDate": {
+    "allowedValues": null,
+    "defaultValue" : null,
+    "label": "Finish date",
+    "type": "date",
+    "required": false,
+    "writable": false
+  }
+}

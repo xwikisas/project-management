@@ -1,0 +1,86 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#set ($typesStr = $stringtool.join($displayer.value, ','))
+<input type="hidden" name="$escapetool.xml($displayer.parameters.name)"
+  id="$!escapetool.xml($displayer.parameters.id)"
+  value="$!escapetool.xml($typesStr)" class="openproject-calendar-types"/>
+<div class="openproject-calendar-types-checkboxes">
+  <label style="display:block;">
+    <input type="checkbox" class="openproject-calendar-type" value="WORK_PACKAGE"/>
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.workPackage'))
+  </label>
+  <label style="display:block;">
+    <input type="checkbox" class="openproject-calendar-type" value="SPRINT"/>
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.sprint'))
+  </label>
+  <label style="display:block;">
+    <input type="checkbox" class="openproject-calendar-type" value="VERSION"/>
+    $escapetool.xml($services.localization.render('openproject.calendar.eventtype.version'))
+  </label>
+</div>
+<script>
+  (function() {
+    var hiddenInput = document.querySelector('.openproject-calendar-types');
+    var checkboxes = document.querySelectorAll('.openproject-calendar-type');
+
+    // Maps a checkbox value (e.g. "SPRINT", "WORK_PROJECT") to the
+    // data-id of its color picker <li> (e.g. "sprintColor", "workProjectColor")
+    function valueToColorId(value) {
+      return value.toLowerCase().replace(/_([a-z])/g, function(match, letter) {
+        return letter.toUpperCase();
+      }) + 'Color';
+    }
+
+    function togglePicker(cb) {
+      var colorId = valueToColorId(cb.value);
+      var li = document.querySelector('li.macro-parameter[data-id="' + colorId + '"]');
+      if (li) {
+        li.style.display = cb.checked ? '' : 'none';
+      }
+    }
+
+    function syncCheckboxes() {
+      var selectedValues = (hiddenInput.value || '').split(',').map(function(v) { return v.trim(); });
+      checkboxes.forEach(function(cb) {
+        cb.checked = selectedValues.indexOf(cb.value) !== -1;
+      });
+    }
+
+    function syncHidden() {
+      var selected = [];
+      checkboxes.forEach(function(cb) {
+        if (cb.checked) { selected.push(cb.value); }
+      });
+      hiddenInput.value = selected.length > 0 ? selected.join(',') : ' ';
+    }
+
+    // initial state
+    syncCheckboxes();
+    checkboxes.forEach(togglePicker);
+
+    // on change: update hidden field + show/hide matching picker
+    checkboxes.forEach(function(cb) {
+      cb.addEventListener('change', function() {
+        syncHidden();
+        togglePicker(cb);
+      });
+    });
+  })();
+</script>

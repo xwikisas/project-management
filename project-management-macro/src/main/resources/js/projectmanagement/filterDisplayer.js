@@ -38,7 +38,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
     clean(type, inputElem, operator);
     let parent = inputElem.parent();
     inputElem.removeClass('hidden');
-    window.FilterBuilder.element.trigger('displayingFilter', [type, inputElem, operator, params]);
+    let builder = $(parent).closest('.proj-manag-constraint-builder')[0];
+    window.FilterBuilder.instances.get(builder).element.trigger('displayingFilter', [type, inputElem, operator, params]);
     switch (type) {
       case "number":
         inputElem.attr('type', 'number');
@@ -98,7 +99,11 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         };
         if (params.searchURL) {
           selectizeCfg.load = function (text, callback) {
-            const searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
+            let searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
+            if (inputElem.val() != '') {
+              let selectedItem = 'selectedItem=' + encodeURIComponent(inputElem.val());
+              searchURL += searchURL.indexOf('?') >= 0 ? '&' + selectedItem : '?' + selectedItem;
+            }
             $.getJSON(searchURL)
               .then(function (results) {
                 if (Array.isArray(results)) {

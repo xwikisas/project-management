@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
-import java.net.http.HttpClient;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -49,10 +48,10 @@ import org.xwiki.script.service.ScriptService;
 import com.xwiki.projectmanagement.exception.AuthenticationException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
+import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.CachingOpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
@@ -67,6 +66,10 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
 {
     private static final String OAUTH_COMPONENT_NAME = "oauth2client";
 
+    private static final String CLIENT_CONFIGURATION_NOT_EXISTING = "No client for connection [%s] could be created "
+        + "because the configuration doesn't exist or the access "
+        + "token for the current user is not set.";
+
     @Inject
     @Named("openproject")
     private ConfigurationSource openProjectConfiguration;
@@ -80,6 +83,9 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     @Inject
     private Logger logger;
 
+    @Inject
+    private OpenProjectApiClientFactory openProjectApiClientFactory;
+
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
     @Override
@@ -90,7 +96,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         LRUEvictionConfiguration lru = new LRUEvictionConfiguration();
         // The access token coming from OpenProject has a lifespan of 2 hours so we probably shouldn't have a cache
         // longer than that either.
-        lru.setLifespan(7200);
+        lru.setLifespan(10);
         lru.setMaxEntries(1000);
         cacheConfig.put(EntryEvictionConfiguration.CONFIGURATIONID, lru);
 
@@ -101,7 +107,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
             if (this.cache != null) {
                 this.cache.dispose();
             }
-            throw new InitializationException("Failed to create the Open Project client cache.", e);
+            throw new InitializationException("Failed to create the OpenProject client cache.", e);
         }
     }
 
@@ -159,13 +165,14 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
         String accessToken = getAccessTokenForConfiguration(connectionName);
         if (connection == null || StringUtils.isEmpty(accessToken)) {
             logger.warn(String.format(
-                "No client for connection [%s] could be created because the configuration doesn't exist or the access "
-                    + "token for the current user is not set.", connectionName));
+                CLIENT_CONFIGURATION_NOT_EXISTING, connectionName));
             return null;
         }
-        OpenProjectApiClient openProjectApiClient = new DefaultOpenProjectApiClient(connection.getServerURL(),
-            accessToken, HttpClient.newHttpClient());
-        return new CachingOpenProjectApiClient(openProjectApiClient, connection.getClientId(), cache);
+        return openProjectApiClientFactory.builder()
+            .serverUrl(connection.getServerURL())
+            .authentication(new BearerTokenAuthenticator(accessToken))
+//            .caching(cache, connection.getClientId())
+            .build();
     }
 
     @Override

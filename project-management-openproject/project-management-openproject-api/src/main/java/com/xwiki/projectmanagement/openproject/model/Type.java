@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Describes the type object of a work package.
  *
@@ -27,4 +29,44 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Type extends ColoredOpenProjectObject
 {
+    /**
+     * The key that retrieves the isMilestone attribute of this type.
+     */
+    public static final String KEY_IS_MILESTONE = "isMilestone";
+
+    /**
+     * Create a Type object from a JsonNode.
+     *
+     * @param typeNode the JsonNode containing the type information.
+     */
+    public Type(JsonNode typeNode)
+    {
+        super(typeNode);
+        this.setMilestone(typeNode.path(KEY_IS_MILESTONE).asBoolean());
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Type()
+    {
+    }
+
+    /**
+     * @return {@code true} if this type represents a milestone, {@code false} otherwise.
+     * @since 1.2
+     */
+    public boolean isMilestone()
+    {
+        return Boolean.TRUE.equals(get(KEY_IS_MILESTONE));
+    }
+
+    /**
+     * @param milestone see {@link #isMilestone()}.
+     * @since 1.2
+     */
+    public void setMilestone(boolean milestone)
+    {
+        put(KEY_IS_MILESTONE, milestone);
+    }
 }

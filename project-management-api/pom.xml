@@ -25,12 +25,14 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.1.2-SNAPSHOT</version>
+    <version>1.2.0-rc-12-SNAPSHOT</version>
   </parent>
   <name>Project Management - API</name>
-  <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.</description>
+  <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.
+  </description>
   <properties>
     <xwiki.jacoco.instructionRatio>0.72</xwiki.jacoco.instructionRatio>
+    <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
 
   <artifactId>project-management-api</artifactId>
@@ -57,6 +59,12 @@
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-rest-server</artifactId>
       <version>${platform.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-rendering-wikimacro-api</artifactId>
+      <version>${platform.version}</version>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
 </project>

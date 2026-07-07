@@ -1,0 +1,2 @@
+com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter
+com.xwiki.projectmanagement.calendar.internal.rest.DefaultCalendarResource

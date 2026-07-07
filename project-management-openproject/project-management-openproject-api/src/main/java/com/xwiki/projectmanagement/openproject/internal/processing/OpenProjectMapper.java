@@ -41,6 +41,8 @@ public final class OpenProjectMapper
 
     private static final String AUTHOR_STRING = "author";
 
+    private static final String OP_BETWEEN = "<>d";
+
     static {
         KEY_MAPPING.put("date", "start_date");
         KEY_MAPPING.put("identifier", "id");
@@ -51,9 +53,12 @@ public final class OpenProjectMapper
         KEY_MAPPING.put("updateDate", "updatedAt");
         KEY_MAPPING.put("reporter", AUTHOR_STRING);
         KEY_MAPPING.put("progress", "percentageDone");
-        OPERATOR_MAPPING.put("contains", "=");
-        OPERATOR_MAPPING.put("between", "<>d");
+        OPERATOR_MAPPING.put("equals", "=");
+        OPERATOR_MAPPING.put("contains", "~");
+        OPERATOR_MAPPING.put("between", OP_BETWEEN);
         OPERATOR_MAPPING.put("empty", "!*");
+        OPERATOR_MAPPING.put("before", OP_BETWEEN);
+        OPERATOR_MAPPING.put("after", OP_BETWEEN);
     }
 
     private OpenProjectMapper()

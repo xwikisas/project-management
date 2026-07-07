@@ -1,3 +1,6 @@
 com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext
 com.xwiki.projectmanagement.internal.DefaultProjectManagementManager
 com.xwiki.projectmanagement.internal.displayer.DefaultWorkItemPropertyDisplayerManager
+com.xwiki.projectmanagement.internal.rest.DefaultWorkItemsResource
+com.xwiki.projectmanagement.internal.rest.DefaultProjectsResource
+com.xwiki.projectmanagement.script.ProjectManagementScriptService

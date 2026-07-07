@@ -22,9 +22,11 @@ package com.xwiki.projectmanagement;
 
 import java.util.List;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.xwiki.component.annotation.Role;
 import org.xwiki.livedata.LiveDataQuery;
 
+import com.xwiki.projectmanagement.api.ProjectsApi;
 import com.xwiki.projectmanagement.exception.WorkItemCreationException;
 import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
@@ -50,7 +52,7 @@ public interface ProjectManagementClient
      * @return the work item that matches the passed id.
      * @throws WorkItemNotFoundException if the work item has not been found.
      */
-    WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException;
+    WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException, WorkItemRetrievalException;
 
     /**
      * Retrieve a list of work items based on a list of filters.
@@ -95,4 +97,13 @@ public interface ProjectManagementClient
      *     existing.
      */
     boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException;
+
+    /**
+     * @return the implementation of the api that allows performing actions on the project management projects.
+     * @since 1.2.0
+     */
+    default ProjectsApi projects()
+    {
+        throw new NotImplementedException("The PROJECTS api is not implemented yet.");
+    }
 }

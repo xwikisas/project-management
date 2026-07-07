@@ -31,6 +31,8 @@ import javax.inject.Singleton;
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.environment.Environment;
+import org.xwiki.environment.internal.ServletEnvironment;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
@@ -39,7 +41,7 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import com.xpn.xwiki.XWikiContext;
 
 /**
- * Retrieves the open project livedata configuration and resolves additional information based on the input
+ * Retrieves the OpenProject livedata configuration and resolves additional information based on the input
  * configuration.
  *
  * @version $Id$
@@ -63,6 +65,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
     @Inject
     private Provider<XWikiContext> xWikiContextProvider;
 
+    @Inject
+    private Environment environment;
+
     private String defaultConfigJSON;
 
     @Override
@@ -83,7 +88,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             maybeUpdateSearchURL(configuration, input);
             return configuration;
         } catch (IOException | LiveDataException e) {
-            logger.error("Could not read the livedata configuration of the Open Project client.", e);
+            logger.error("Could not read the livedata configuration of the OpenProject client.", e);
             return null;
         }
     }
@@ -107,6 +112,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             if (instance != null && !instance.isEmpty()) {
                 searchURL = searchURL.replace("{instance}", instance);
             }
+            searchURL = getContextPath() + searchURL;
             propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);
         }
     }
@@ -130,5 +136,13 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             return wiki;
         }
         return context.getWikiId() == null || context.getWikiId().isEmpty() ? wiki : context.getWikiId();
+    }
+
+    private String getContextPath()
+    {
+        if (this.environment instanceof ServletEnvironment) {
+            return ((ServletEnvironment) this.environment).getServletContext().getContextPath();
+        }
+        return "";
     }
 }

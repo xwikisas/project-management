@@ -20,43 +20,32 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
-import org.xwiki.csrf.CSRFToken;
-import org.xwiki.localization.ContextualLocalizationManager;
-import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
-import org.xwiki.rendering.block.LinkBlock;
-import org.xwiki.rendering.block.MacroBlock;
-import org.xwiki.rendering.listener.reference.ResourceReference;
-import org.xwiki.rendering.listener.reference.ResourceType;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
-import com.xpn.xwiki.XWikiContext;
-import com.xwiki.licensing.Licensor;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
- * Open project macro.
+ * OpenProject macro.
  *
  * @version $Id$
  */
@@ -67,8 +56,6 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 {
     private static final String CLASS = "class";
 
-    private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
-
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
@@ -78,29 +65,36 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private SkinExtension jsx;
 
     @Inject
-    private Licensor licensor;
+    private LicenseChecker licenseChecker;
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
-
-    @Inject
-    private Provider<XWikiContext> xContextProvider;
-
-    @Inject
-    private CSRFToken csrfToken;
-
-    @Inject
-    private ContextualLocalizationManager l10n;
+    private UserTokenChecker userTokenChecker;
 
     @Inject
     private StylingSetupManager stylingSetupManager;
+
+    @Inject
+    private OpenProjectMacroParameterResolver parameterResolver;
 
     /**
      * Default constructor.
      */
     public OpenProjectMacro()
     {
-        super("Open Project", "Retrieve work items from open project.", null, OpenProjectMacroParameters.class);
+        super("OpenProject", "Retrieve work items from OpenProject.", null, OpenProjectMacroParameters.class);
+    }
+
+    /**
+     * Constructor for subclasses that need to customise the macro name, description and parameters class.
+     *
+     * @param name the macro name
+     * @param description the macro description
+     * @param parametersClass the parameters class
+     */
+    protected OpenProjectMacro(String name, String description,
+        Class<? extends OpenProjectMacroParameters> parametersClass)
+    {
+        super(name, description, null, parametersClass);
     }
 
     @Override
@@ -119,60 +113,25 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        XWikiContext xContext = this.xContextProvider.get();
-
-        if (!licensor.hasLicensure(
-            new DocumentReference(xContext.getWikiId(), OPEN_PROJECT_CODE_SPACE, "OpenProjectConnectionClass")))
-        {
-            return List.of(new MacroBlock(
-                "missingLicenseMessage",
-                Map.of("extensionName", "openproject.extension.name"),
-                null,
-                context.isInline())
-            );
+        List<Block> licenseBlock = licenseChecker.getMissingLicenseBlock(context);
+        if (!licenseBlock.isEmpty()) {
+            return licenseBlock;
         }
+
+        String instanceToUse = parameterResolver.resolveInstance(parameters);
 
         ssrx.use("openproject/css/propertyStyles.css");
-        stylingSetupManager.useInstanceStyle(parameters.getInstance());
+        stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");
 
-        String viewAction = "view";
-        if (xContext.getAction().equals(viewAction)) {
-            String connectionName = parameters.getInstance();
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
 
-            if (xContext.getUserReference() == null
-                || openProjectConfiguration.getAccessTokenForConfiguration(connectionName) == null)
-            {
-                List<Block> warning = new ArrayList<>();
-                warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
-                if (xContext.getUserReference() != null) {
-                    String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
-                    LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                        OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
-                    String redirectUrl =
-                        xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
-                            + "?connectionName="
-                            + connectionName
-                            + "&redirectUrl="
-                            + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
-                            + "&token="
-                            + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
-
-                    List<Block> linkContentBlocks =
-                        Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
-
-                    LinkBlock link = new LinkBlock(
-                        linkContentBlocks,
-                        new ResourceReference(redirectUrl, ResourceType.URL),
-                        false
-                    );
-                    warning.add(link);
-                }
-                return Collections.singletonList(
-                    new GroupBlock(warning, Collections.singletonMap(CLASS, "box warningmessage")));
-            }
+        if (!warningBlock.isEmpty()) {
+            return warningBlock;
         }
-        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
-            Collections.singletonMap(CLASS, "open-project-macro")));
+        List<Block> result = super.execute(parameters, content, context);
+        Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
+        return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
+            : Collections.singletonList(new GroupBlock(result, params));
     }
 }

@@ -22,14 +22,20 @@ package com.xwiki.projectmanagement.openproject;
 
 import org.xwiki.component.annotation.Role;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.Version;
+import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -50,7 +56,7 @@ public interface OpenProjectApiClient
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
      */
-    PaginatedResult<WorkPackage> getWorkPackages(int offset, int pageSize, String filters, String sortBy)
+    PaginatedResult<WorkPackage> getWorkPackages(Integer offset, Integer pageSize, String filters, String sortBy)
         throws ProjectManagementException;
 
     /**
@@ -64,8 +70,18 @@ public interface OpenProjectApiClient
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages.
      */
-    PaginatedResult<WorkPackage> getProjectWorkPackages(String project, int offset, int pageSize, String filters,
-        String sortBy)
+    PaginatedResult<WorkPackage> getProjectWorkPackages(String project, Integer offset, Integer pageSize,
+        String filters, String sortBy)
+        throws ProjectManagementException;
+
+    /**
+     * @param offset the point where the result set begins relative to the whole set.
+     * @param pageSize the max number of entries returned.
+     * @param filters the OpenProject filters used to match against the existing page links.
+     * @return a list of page links that represent the wiki pages that are linked to work packages.
+     * @throws ProjectManagementException if something went wrong.
+     */
+    PaginatedResult<WikiPageLink> getPageLinks(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException;
 
     /**
@@ -78,19 +94,58 @@ public interface OpenProjectApiClient
      * @return a list of {@link User}
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
      */
-    PaginatedResult<User> getUsers(int offset, int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<User> getUsers(Integer offset, Integer pageSize, String filters) throws ProjectManagementException;
+
+    /**
+     * Retrieves a list of available users for creating a work package based on the specified page size and filter
+     * criteria from the current OpenProject configuration.
+     *
+     * @param url the URL of the work package for which we want to retrieve the available users.
+     * @param offset the offset from which to start retrieving users.
+     * @param pageSize the number of users to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request
+     * @return a list of {@link User}
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the users.
+     * @since 1.1
+     */
+    default PaginatedResult<User> getAvailableUsers(String url, Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving available users is not supported by this client implementation.");
+    }
 
     /**
      * Retrieves a paginated list of available projects based on the specified page size and filter criteria from the
      * current OpenProject configuration.
      *
      * @param offset the offset from which to start retrieving projects.
-     * @param pageSize the number of users to retrieve per page.
+     * @param pageSize the number of projects to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request.
      * @return a list of {@link Project}.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
      */
-    PaginatedResult<Project> getProjects(int offset, int pageSize, String filters) throws ProjectManagementException;
+    PaginatedResult<Project> getProjects(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException;
+
+    /**
+     * Retrieves a paginated list of available projects for creating work packages based on the specified page size and
+     * filter criteria from the current OpenProject configuration.
+     *
+     * @param url the URL of the work package for which we want to retrieve the available projects.
+     * @param offset the offset from which to start retrieving projects.
+     * @param pageSize the number of projects to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @return a list of {@link Project}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the projects.
+     * @since 1.1
+     */
+    default PaginatedResult<Project> getAvailableProjects(String url, Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving available projects is not supported by this client implementation.");
+    }
 
     /**
      * Retrieves all available types from the current OpenProject configuration.
@@ -117,6 +172,68 @@ public interface OpenProjectApiClient
     PaginatedResult<Priority> getPriorities() throws ProjectManagementException;
 
     /**
+     * Retrieves all available versions from the current OpenProject configuration.
+     *
+     * @return a {@link PaginatedResult} containing the list of {@link Version}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the versions.
+     * @since 1.2
+     */
+    default PaginatedResult<Version> getVersions() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving versions is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of versions available within the configured OpenProject project.
+     *
+     * @param projectId the id of the project for which we want to retrieve the versions.
+     * @return a {@link PaginatedResult} containing the list of {@link Version}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the versions.
+     * @since 1.2
+     */
+    default PaginatedResult<Version> getProjectVersions(int projectId) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving versions from project is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of available sprints from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving sprints.
+     * @param pageSize the number of sprints to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @return a {@link PaginatedResult} containing the list of {@link Sprint}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the sprints.
+     * @since 1.2
+     */
+    default PaginatedResult<Sprint> getSprints(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving sprints is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of sprints available within the configured OpenProject project.
+     *
+     * @param offset the offset from which to start retrieving sprints.
+     * @param pageSize the number of sprints to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria to apply to the request.
+     * @param projectId the id of the project for which we want to retrieve the sprints.
+     * @return a {@link PaginatedResult} containing the list of {@link Sprint}.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the sprints.
+     * @since 1.2
+     */
+    default PaginatedResult<Sprint> getProjectSprints(Integer offset, Integer pageSize, String filters, int projectId)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving sprints from project is not supported by this client implementation.");
+    }
+
+    /**
      * Retrieve the user avatar.
      *
      * @param userId the id of the user for which we want to retrieve the avatar.
@@ -124,4 +241,143 @@ public interface OpenProjectApiClient
      * @since 1.0-rc-5
      */
     UserAvatar getUserAvatar(String userId) throws ProjectManagementException;
+
+    /**
+     * Retrieves work packages form response.
+     *
+     * @param jsonBody the json body.
+     * @return the json node.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages
+     *     form
+     * @since 1.1
+     */
+    default JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving work packages form response is not supported by this client implementation.");
+    }
+
+    /**
+     * Creates a work package in OpenProject.
+     *
+     * @param url the URL to create the work package.
+     * @param jsonBody the JSON body representing the work package to be created.
+     * @return the created work package.
+     * @throws ProjectManagementException if there was an issue during the creation process.
+     * @since 1.1
+     */
+    default JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Creating work packages is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of news items from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving news items.
+     * @param pageSize the number of news items to retrieve per page.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project id).
+     * @return a {@link PaginatedResult} containing the list of {@link News} and pagination metadata.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the news.
+     * @since 1.2
+     */
+    PaginatedResult<News> getNews(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException;
+
+    /**
+     * Retrieves the full details of a single project by its identifier from the current OpenProject configuration.
+     *
+     * @param projectId the id of the project to retrieve.
+     * @return the {@link Project} with all detail fields populated.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the project.
+     * @since 1.2
+     */
+    default Project getProject(Integer projectId) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving a single project is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of memberships from the current OpenProject configuration.
+     * Each returned {@link User} has its roles populated from the membership data.
+     *
+     * @param offset the offset from which to start retrieving memberships.
+     * @param pageSize the maximum number of memberships to retrieve.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project).
+     * @return a {@link PaginatedResult} of {@link User} objects, each with their roles populated.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the memberships.
+     * @since 1.2
+     */
+    default PaginatedResult<User> getMemberships(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving memberships is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a paginated list of time entries from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving time entries.
+     * @param pageSize the maximum number of time entries to retrieve.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project and date range).
+     * @return a {@link PaginatedResult} containing the list of {@link TimeEntry} and pagination metadata.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the time entries.
+     * @since 1.2
+     */
+    default PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving time entries is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves the form response for an existing work package. The response contains the schema (allowed values) as
+     * well as a payload pre-filled with the work package's current values.
+     *
+     * @param workPackageId the id of the work package for which to retrieve the form.
+     * @param jsonBody the json body containing the changes to validate against the work package.
+     * @return the json node representing the form response.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the form.
+     * @since 1.2
+     */
+    default JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving a work package form response is not supported by this client implementation.");
+    }
+
+    /**
+     * Updates an existing work package in OpenProject.
+     *
+     * @param url the URL to update the work package (the commit link of the form response).
+     * @param jsonBody the JSON body representing the work package changes to be committed.
+     * @return the updated work package.
+     * @throws ProjectManagementException if there was an issue during the update process.
+     * @since 1.2
+     */
+    default JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Updating work packages is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves the identifier of the OpenProject instance. This is the {@code installation_uuid} exposed by the
+     * instance through its public {@code /.well-known/openproject-metadata} endpoint, so it can be retrieved with a
+     * client that uses no authentication.
+     *
+     * @return the identifier of the OpenProject instance.
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the instance id.
+     * @since 1.2
+     */
+    default String getInstanceId() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving the instance id is not supported by this client implementation.");
+    }
 }

@@ -39,7 +39,7 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.XWikiWebDriver;
 
 /**
- * Defines the behaviour of a Open Project instance. It offers methods for starting an instance, setting it up (login,
+ * Defines the behaviour of a OpenProject instance. It offers methods for starting an instance, setting it up (login,
  * change password, setup an oauth client), retrieve location and OAuth client details.
  *
  * @version $Id$
@@ -66,7 +66,7 @@ public class OpenProjectInstance
     protected String baseUrl;
 
     /**
-     * Start an Open Project instance inside a docker container.
+     * Start an OpenProject instance inside a docker container.
      *
      * @param testUtils the TestUtils that wrap the webdriver necessary for navigating the created instance.
      * @param testConfiguration the test configuration containing information necessary for the docker container
@@ -135,7 +135,7 @@ public class OpenProjectInstance
      */
     public void maybeLogin(XWikiWebDriver driver, boolean goToPage)
     {
-        LOGGER.info("Trying to log in to Open Project.");
+        LOGGER.info("Trying to log in to OpenProject.");
         if (goToPage) {
             String location = getBaseUrl();
 
@@ -196,7 +196,7 @@ public class OpenProjectInstance
     }
 
     /**
-     * @return the base url of the created Open Project instance.
+     * @return the base url of the created OpenProject instance.
      */
     public String getBaseUrl()
     {

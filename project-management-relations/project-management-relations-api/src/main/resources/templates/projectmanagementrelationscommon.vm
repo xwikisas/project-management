@@ -1,0 +1,121 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+## CONSTANTS AND GLOBALS
+#set ($className = 'ProjectManagement.Code.RelationClass')
+#set ($mode = 'view')
+#if ($xcontext.action == 'edit' || $xcontext.action == 'create')
+  #set ($mode = 'edit')
+#end
+## Load the JavaScript code required to make the object properties editable in-place.
+#set ($discard = $xwiki.jsfx.use('uicomponents/edit/editableProperty.js', {
+  'forceSkinAction': true,
+  'language': $xcontext.locale
+}))
+#set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
+#set ($discard = $xwiki.ssfx.use('uicomponents/suggest/xwiki.selectize.css', true))
+  #set ($discard = $xwiki.linkx.use($services.webjars.url('selectize.js', 'css/selectize.bootstrap3.css'),
+    {'type': 'text/css', 'rel': 'stylesheet'}))
+#set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationDocExtra'))
+#set ($discard = $xwiki.jsx.use('ProjectManagement.Code.RelationMoreOptions'))
+#set ($discard = $xwiki.linkx.use($services.webjars.url(
+    'com.xwiki.commons:xwiki-pro-commons-webjar',
+    'xwikiPropertize/xwikiPropertize.css',
+    {'evaluate': true}), {'type': 'text/css', 'rel': 'stylesheet'}))
+## CONSTANTS AND GLOBALS
+#macro (getTranslation $client $value)
+  #set ($key = "projectmanagement.relations.$!{client}.${value}")
+  #set ($translation = "$!services.localization.render($key)")
+  #if ($translation == $key)
+    #set ($key = "projectmanagement.relations.${value}")
+    #set ($translation = $services.localization.render($key))
+  #end
+  #if ($translation == $key)
+    #set ($translation = $value)
+  #end
+  $escapetool.xml($translation)
+#end
+#macro (docDisplay $name $mode)
+  $doc.display($name, $mode).replaceAll('(^..html.*?}})|(../html..$)', '')
+#end
+#macro (displayProperties $client $mode $relationObj $hideClient)
+#set ($discard = $doc.use($relationObj))
+<dl>
+  #if(!$hideClient)
+  <dt>
+    <label>#getTranslation($client, 'client.id.name')</label>
+  </dt>
+  <dd>
+    #getTranslation('clients', $doc.getValue('client'))
+  </dd>
+  #end
+  #set ($extensions = $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.params"))
+  #if ($extensions.size() > 0)
+    ## We will probably have only one.
+    #set ($content = $services.rendering.render($extensions.get(0).execute(), 'html/5.0'))
+    $content
+  #else
+    <div class="proj-manag-relation-client-params">
+      <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].clientParams" data-property-type="object">
+        <label>#getTranslation($client, 'client.params.name')</label>
+      </dt>
+      <dd>
+        #docDisplay('clientParams', $mode)
+      </dd>
+    </div>
+  #end
+  <div class="proj-manag-relation-project proj-manag-relation-property">
+    <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].project" data-property-type="object">
+      <label>#getTranslation($client, 'project.name')</label>
+    </dt>
+    <dd data-prop="project">
+      #docDisplay('project', $mode)
+    </dd>
+  </div>
+  <div class= "proj-manag-relation-workitem proj-manag-relation-property">
+    <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].workItem" data-property-type="object">
+      <label>#getTranslation($client, 'workItem.name')</label>
+    </dt>
+    <dd data-prop="workItem">
+      #docDisplay('workItem', $mode)
+    </dd>
+  </div>
+</dl>
+#end
+#macro (displayRelationObject $relationObj $hideRemove $customHeader $hideClient)
+#set ($client = ${relationObj.getValue('client')})
+#set ($translatedClient = "#getTranslation('clients', $client)")
+<div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})">
+  <h2>
+    #if ($customHeader)
+      $escapetool.xml($customHeader)
+    #else
+      $escapetool.xml($services.localization.render("projectmanagement.relations.relation.edit", [$translatedClient]))
+    #end
+    #if ($hideRemove)
+    #else
+      <a href="$doc.getURL('objectremove', "form_token=$!{services.csrf.getToken()}&classname=${escapetool.url($className)}&classid=${relationObj.number}&xredirect=${escapetool.url($doc.getURL('view', 'viewer=projectmanagementrelations'))}")" class="xobject-action delete" title="$services.localization.render('core.editors.object.removeObject.tooltip')">$services.icon.renderHTML('cross')</a>
+    #end
+  </h2>
+  <div id="proj-manag-relation-left" class="col-xs-12 col-sm-6">
+    #displayProperties($client, $mode, $relationObj, $hideClient)
+  </div>
+  <div class="clearfloats">&nbsp;</div>
+</div>
+#end

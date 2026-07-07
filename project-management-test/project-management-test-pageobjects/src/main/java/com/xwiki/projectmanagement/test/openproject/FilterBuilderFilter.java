@@ -30,7 +30,7 @@ import org.xwiki.test.ui.po.BaseElement;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
 /**
- * Models a filter inside the filter parameter of the open project macro.
+ * Models a filter inside the filter parameter of the OpenProject macro.
  *
  * @version $Id$
  * @since 1.0-rc-4

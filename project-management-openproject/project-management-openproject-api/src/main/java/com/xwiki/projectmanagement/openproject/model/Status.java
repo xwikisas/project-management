@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 /**
  * Describes the type object of a work package.
  *
@@ -27,4 +29,20 @@ package com.xwiki.projectmanagement.openproject.model;
  */
 public class Status extends ColoredOpenProjectObject
 {
+    /**
+     * Create a Status object from a JsonNode.
+     *
+     * @param statusNode the JsonNode containing the status information.
+     */
+    public Status(JsonNode statusNode)
+    {
+        super(statusNode);
+    }
+
+    /**
+     * Default constructor.
+     */
+    public Status()
+    {
+    }
 }

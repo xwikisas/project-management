@@ -24,6 +24,7 @@ package com.xwiki.projectmanagement;
  * Interface representing the project management macro sort parameter.
  *
  * @version $Id$
+ * @since 1.2.0-rc-1
  */
 public interface ProjectManagementSortEntry
 {
