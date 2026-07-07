@@ -45,10 +45,9 @@
   &lt;/div&gt;
   {{/html}}
 #else
-  #set ($canEdit = $hasEdit || $hasAdmin)
   #set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
   #set ($configObj = $doc.getObject($configClass))
-  #if ($canEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+  #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
     #set ($discard = $configObj.set('selectedConnection', $request.connection))
     #set ($discard = $configObj.set('selectedProject', $request.project))
     #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
@@ -80,7 +79,7 @@
       &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
     &lt;/div&gt;
   #else
-    #if ($canEdit)
+    #if ($hasEdit)
       &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
         &lt;div class="form-group"&gt;
           &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
