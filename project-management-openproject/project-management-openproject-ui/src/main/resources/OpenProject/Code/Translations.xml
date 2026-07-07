@@ -169,7 +169,7 @@ openproject.dashboard.selectProject.description=Optionally choose a project. Mac
 openproject.dashboard.guest=You must be logged in to view this dashboard.
 openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
 openproject.dashboard.noProject=No project is available for the selected connection.
-openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {} first.
+openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
 openproject.extension.name=OpenProject Integration (Pro)</content>
   <object>
     <name>OpenProject.Code.Translations</name>

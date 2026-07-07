@@ -123,7 +123,7 @@
     #end
     ## Warnings revealed by the JS (invalid/expired connection, or connection without any projects).
     &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
-      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection'))&lt;/p&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection', [$effectiveConnection]))&lt;/p&gt;
     &lt;/div&gt;
     &lt;div id="openproject-dashboard-no-project" class="box warningmessage hidden"&gt;
       &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.noProject'))&lt;/p&gt;
