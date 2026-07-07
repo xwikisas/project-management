@@ -37,6 +37,7 @@
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
   <content>
+openproject.dashboard.application.label=OpenProject
 openproject.config.addNewConnection=Add new connection
 openproject.config.cancel=Cancel
 openproject.config.clientId=Client ID
