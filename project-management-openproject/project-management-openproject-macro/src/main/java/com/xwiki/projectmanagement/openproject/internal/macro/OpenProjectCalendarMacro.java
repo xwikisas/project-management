@@ -90,7 +90,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
             Map<String, Object> clientContext = populateContext(parameters);
             ((DefaultProjectManagementClientExecutionContext) this.macroContext).setContext(clientContext);
         }
-        this.jsrx.use("openproject/js/calendarEvent.js");
+        this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
         return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
             Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance())));
