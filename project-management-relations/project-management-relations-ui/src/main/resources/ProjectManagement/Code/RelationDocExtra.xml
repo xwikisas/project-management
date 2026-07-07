@@ -221,9 +221,6 @@
               ]
             }
           };
-          if (dataType == 'project') {
-            cfg.query.filters[0].property = 'name';
-          }
           let firstLoad = true;
           selectizeCfg.load = function (text, callback) {
             let urlParams = { ...clientParams };
@@ -234,6 +231,11 @@
               }
             } else {
               cfg.query.filters[0].constraints[0].value = text;
+            }
+            cfg.query.filters[0].constraints[0].operator = 'contains';
+            cfg.query.filters[0].property = 'summary';
+            if (dataType == 'project') {
+              cfg.query.filters[0].property = 'name';
             }
             if (firstLoad) {
               cfg.query.filters[0].property = 'id';
