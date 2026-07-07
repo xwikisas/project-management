@@ -20,8 +20,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Template.Child2.WebHome" locale="">
-  <web>OpenProject.Code.Template.Child2</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.Template.Project Meeting Notes yyyy MM dd.WebHome" locale="">
+  <web>OpenProject.Code.Template.Project Meeting Notes yyyy MM dd</web>
   <name>WebHome</name>
   <language/>
   <defaultLanguage/>
@@ -31,17 +31,63 @@
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>Child2</title>
+  <title>Project Meeting Notes yyyy MM dd</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>Some nice content here</content>
+  <content>= 🗓️ Meeting Notes =
+
+{{info}}
+Use this page to capture project discussions, decisions, blockers, and action items.
+{{/info}}
+
+== 📌 Meeting Details ==
+
+|= Field |= Value 
+| Date | //yyyy-MM-dd// 
+| Participants | //Name 1, Name 2, Name 3// 
+| Facilitator | //Name placeholder// 
+| Related OpenProject epic | //Parent ticket placeholder// 
+
+== 🧠 Discussion Notes ==
+
+* Reviewed current project status.
+* Discussed open risks and blockers.
+* Clarified ownership for upcoming tasks.
+* Agreed on next delivery priorities.
+
+== ✅ Decisions ==
+
+|= Decision |= Rationale 
+| Proceed with the current implementation approach. | It matches the project scope and avoids unnecessary complexity. 
+| Track unresolved questions as OpenProject tickets. | This keeps decisions visible and actionable. 
+| Review specifications before the next milestone. | This reduces delivery risk. 
+
+== 📋 Action Items ==
+
+|= Action Item |= Owner |= Due Date |= Status 
+|Finalize project specifications | //Owner// |//yyyy-MM-dd//| New 
+|Review open blockers | //Owner// |//yyyy-MM-dd //| In progress 
+|Update project dashboard | //Owner// |//yyyy-MM-dd//| New 
+|Prepare next meeting agenda | //Owner// |//yyyy-MM-dd //| New 
+
+== 🚧 Blockers &amp; Risks ==
+
+|= Risk / Blocker |= Impact |= Mitigation 
+| Dependency not yet confirmed | May delay implementation | Create follow-up ticket 
+| Requirements still unclear | May cause rework | Schedule specification review 
+| Timeline pressure | May reduce testing time | Prioritize critical scope first 
+
+== 🔜 Next Meeting ==
+
+* **Date:** //yyyy-MM-dd//
+* **Focus:** Review progress, close blockers, and validate next milestone.</content>
   <object>
-    <name>OpenProject.Code.Template.Child2.WebHome</name>
+    <name>OpenProject.Code.Template.Project Meeting Notes yyyy MM dd.WebHome</name>
     <number>0</number>
     <className>OpenProject.Code.SpacePageMarkerClass</className>
-    <guid>20f0eb07-ed86-4408-8e38-e9d1ff50f462</guid>
+    <guid>04ace31d-3975-480d-b7be-35d893332b42</guid>
     <class>
       <name>OpenProject.Code.SpacePageMarkerClass</name>
       <customClass/>
