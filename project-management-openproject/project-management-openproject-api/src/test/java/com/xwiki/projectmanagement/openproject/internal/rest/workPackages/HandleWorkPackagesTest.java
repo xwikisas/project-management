@@ -88,7 +88,7 @@ public class HandleWorkPackagesTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
 
-        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
     }
 
@@ -107,7 +107,7 @@ public class HandleWorkPackagesTest
         when(this.openProjectApiClient.getAvailableProjects(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
             paginatedProjects);
 
-        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE);
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         List<Map<String, String>> expected = List.of(
@@ -128,7 +128,7 @@ public class HandleWorkPackagesTest
 
         assertThrows(
             ProjectManagementException.class,
-            () -> this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE)
+            () -> this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null)
         );
     }
 
