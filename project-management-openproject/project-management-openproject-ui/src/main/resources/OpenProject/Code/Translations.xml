@@ -40,10 +40,10 @@
 openproject.config.addNewConnection=Add new connection
 openproject.config.cancel=Cancel
 openproject.config.clientId=Client ID
-openproject.config.clientIdDescription.first=Go to OpenProject Administration &gt; Wiki connection.
+openproject.config.clientIdDescription.first=Create an OAuth application in OpenProject under Authentication &gt; OAuth Applications and copy the Client ID.
 openproject.config.clientIdDescription.second=Start the setup &amp; copy the OpenProject OAuth Client ID. Paste it below.
 openproject.config.clientSecret=Client Secret
-openproject.config.clientSecretDescription=In OpenProject Administration &gt; Wiki connection, copy the OpenProject OAuth Client Secret. Paste it below.
+openproject.config.clientSecretDescription=Copy the Client Secret from the OAuth application in OpenProject under Authentication &gt; OAuth Applications.
 openproject.config.connectionName=Connection Name
 openproject.config.connectionNameDescription=Set an easily recognizable name for the OpenProject instance you're connecting to.
 openproject.config.connectionsDescription=Defines access to OpenProject instances and associates a Connection Name to each. The Connection Name can then be used in various OpenProject Components whenever an OpenProject instance is required, such as in a parameter for the OpenProject Macro.
