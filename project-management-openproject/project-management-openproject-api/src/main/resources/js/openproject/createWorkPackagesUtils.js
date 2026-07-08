@@ -199,6 +199,11 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  }
 
 	  project.empty();
+    if (window.openProjectEvents) {
+	    window.openProjectEvents.dispatchEvent(
+	      new CustomEvent('projectsSelectDisplaying', { detail: { element: project } })
+	    );
+	  }
 
 	  let selectizeConfig = {
 	    create: false,
@@ -214,22 +219,24 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    }
 	    const searchUrl = `${baseUrl}${connection}/workPackages/availableProjects`;
 	    const selectize = project[0].selectize;
-	    $.getJSON(searchUrl, { search: text })
+	    $.getJSON(searchUrl, { search: text, selectedItem: project.val().split('/').pop() })
 	      .done(function (results) {
 	        if (incorrectTokenId) {
 	          $(incorrectTokenId).addClass("hidden");
 	        }
 	        results.forEach(function (result) {
-	          if (!selectize.options[result.value]) {
-	            selectize.addOption(result);
-	          }
+            if (!selectize.options[result.value]) {
+              selectize.addOption(result);
+            } else if (selectize.options[result.value].label != result.label) {
+              selectize.updateOption(result.value, result);
+            }
 	        });
 	        selectize.refreshOptions(false);
 	        callback();
 	        // Auto-select and lock the project when the instance exposes a single one.
 	        if (!text && results.length === 1) {
 	          selectize.setValue(results[0].value, false);
-	          selectize.disable();
+	          // selectize.disable();
 	        }
 	      })
 	      .fail(function (err) {
@@ -283,12 +290,17 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    if (select[0] && select[0].selectize) {
 	      select[0].selectize.destroy();
 	    }
+      if (window.openProjectEvents) {
+	      window.openProjectEvents.dispatchEvent(
+	        new CustomEvent('dynamicSelectizeFieldDisplaying', { detail: { element: select, name: select.attr("name") } })
+	      );
+	    }
 
 	    let selectizeConfig = {
 	      create: false,
 	      maxItems: 1,
 	      inputClass: "selectize-input form-control",
-	      preload: "focus",
+	      preload: true,
 	    };
 
 	    selectizeConfig.load = function (text, callback) {
@@ -301,7 +313,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	      // so field types living on different resources can all be driven the same way.
 	      const searchUrl = `${baseUrl}${connection}/${endpoint}`;
 	      const selectize = select[0].selectize;
-	      $.getJSON(searchUrl, { project: project, search: text })
+	      $.getJSON(searchUrl, { project: project, search: text, selectedItem: select.val().split('/').pop() })
 	        .done(function (results) {
 	          results.forEach(function (result) {
 	            if (!selectize.options[result.value]) {

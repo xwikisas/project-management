@@ -20,8 +20,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Template.Child1.WebHome" locale="">
-  <web>OpenProject.Code.Template.Child1</web>
+<xwikidoc version="1.5" reference="OpenProject.Code.Template.Project Specifications.WebHome" locale="">
+  <web>OpenProject.Code.Template.Project Specifications</web>
   <name>WebHome</name>
   <language/>
   <defaultLanguage/>
@@ -31,17 +31,51 @@
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>Child1</title>
+  <title>Project Specifications</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>{{openprojectchart /}}</content>
+  <content>= 📐 Project Specifications =
+
+{{info}}
+This page describes what the project should deliver, how it should behave, and which OpenProject tickets support the implementation.
+{{/info}}
+
+== 📝 Functional Requirements ==
+
+|= ID |= Requirement |= Status 
+|REQ-001 |The system should support the main user workflow. |New 
+|REQ-002 |The system should validate user input before submission. |New 
+|REQ-003 |The system should provide clear feedback after each action. |New 
+
+== ⚙️ Technical Notes ==
+
+* Architecture overview: //placeholder//
+* Main dependencies: //placeholder//
+* External systems: //placeholder//
+* Security considerations: //placeholder//
+* Deployment notes: //placeholder//
+
+== 📅 Project Calendar ==
+
+{{openprojectcalendar firstDay="MONDAY" types="WORK_PACKAGE"/}}
+
+== 🔎 Specification-Related Tickets ==
+
+{{openproject limit="10"/}}
+
+== ✅ Acceptance Criteria ==
+
+* The core workflow is documented and reviewed.
+* All major requirements are linked to OpenProject tickets.
+* Open questions are tracked as tickets.
+* Delivery dates are visible in the project calendar.</content>
   <object>
-    <name>OpenProject.Code.Template.Child1.WebHome</name>
+    <name>OpenProject.Code.Template.Project Specifications.WebHome</name>
     <number>0</number>
     <className>OpenProject.Code.SpacePageMarkerClass</className>
-    <guid>04ace31d-3975-480d-b7be-35d893332b42</guid>
+    <guid>20f0eb07-ed86-4408-8e38-e9d1ff50f462</guid>
     <class>
       <name>OpenProject.Code.SpacePageMarkerClass</name>
       <customClass/>

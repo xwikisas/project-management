@@ -135,12 +135,22 @@
       });
       let newVal = JSON.stringify(result);
       root.find('dd :input').val(newVal);
+      root.find('dd :input').trigger('change');
       root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property .selectized').each(function () {
         let input = $(this);
         input[0].selectize.destroy();
         input.focus();
       });
     };
+    if (XWiki.contextaction == 'edit' || XWiki.contextaction == 'create') {
+      root.find('dd :input').on('change', function () {
+        if ($(this).val()) {
+          root.closest('.proj-manag-relation').find('.proj-manag-relation-property').removeClass('hidden');
+        } else {
+          root.closest('.proj-manag-relation').find('.proj-manag-relation-property').addClass('hidden');
+        }
+      });
+    }
     if (root.find('dd').text().trim() == '') {
       root.closest('.proj-manag-relation').find('.proj-manag-relation-property').addClass('hidden');
       root.on('click', '.editableProperty-save', function () {

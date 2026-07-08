@@ -42,7 +42,7 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
         }
         document.addEventListener('op-edit-success', function(event) {
           const detail = event.detail || {};
-          if (instance != detail.connection) {
+          if (instance !== detail.connection) {
             return;
           }
           $('#' + calendarId).fullCalendar('refetchEvents');
@@ -87,4 +87,44 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
             });
         });
     });
+
+    // The active class is not removed when the color picker is closed, so we need to
+    // detect which input was clicked and use that for positioning.
+    let currentActiveInput = null;
+    document.addEventListener('mousedown', function(event) {
+        const clickedInput = event.target.closest('.color-picker');
+        if (clickedInput) {
+            currentActiveInput = clickedInput;
+        }
+    }, true);
+
+    const colpickObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            const target = mutation.target;
+            if (target.classList.contains('colpick') && target.style.display !== 'none') {
+                if (!currentActiveInput) {
+                    return;
+                }
+                colpickObserver.disconnect();
+                const pickerRect = target.getBoundingClientRect();
+                if (pickerRect.bottom > window.innerHeight) {
+                    const inputRect = currentActiveInput.getBoundingClientRect();
+
+                    // Calculate the new Y position (input top edge minus the picker height)
+                    const newTop = inputRect.top + window.scrollY - pickerRect.height - 5;
+                    target.style.setProperty('top', `${newTop}px`, 'important');
+                }
+                startObserving();
+            }
+        });
+    });
+
+    let startObserving = function() {
+        colpickObserver.observe(document.body, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['style']
+        });
+    }
+    startObserving();
 });

@@ -80,6 +80,14 @@ public class FilterBuilder
     }
 
     /**
+     * @return a new instance of the class.
+     */
+    public static FilterBuilder get()
+    {
+        return new FilterBuilder();
+    }
+
+    /**
      * @param property the name of the property that we want to filter on.
      * @param operator the operator that will be applied to the property.
      * @param value the value that the property needs to match according to the operator.

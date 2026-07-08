@@ -30,7 +30,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
-import org.xwiki.bridge.event.DocumentCreatingEvent;
+import org.xwiki.bridge.event.DocumentCreatedEvent;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.model.reference.LocalDocumentReference;
@@ -70,7 +70,7 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
 
     private static final String OPENPROJECT = "openproject";
 
-    private static final Set<String> UPDATABLE_MACROS = Set.of(OPENPROJECT, "openprojectchart");
+    private static final Set<String> UPDATABLE_MACROS = Set.of(OPENPROJECT, "openprojectchart", "openprojectcalendar");
 
     @Inject
     @Named("iterative")
@@ -84,12 +84,13 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
 
     @Inject
     private Logger logger;
+
     /**
      * Default constructor.
      */
     public OpenProjectSpaceCreatingListener()
     {
-        super(OpenProjectSpaceCreatingListener.class.getName(), List.of(new DocumentCreatingEvent()));
+        super(OpenProjectSpaceCreatingListener.class.getName(), List.of(new DocumentCreatedEvent()));
     }
 
     @Override
@@ -111,6 +112,9 @@ public class OpenProjectSpaceCreatingListener extends AbstractEventListener
             }
             findAndUpdateOPMacros(document, instance);
             document.removeXObject(spaceMarker);
+            document.setMetaDataDirty(false);
+            document.setContentDirty(false);
+            context.getWiki().saveDocument(document, context);
         } catch (XWikiException | JsonProcessingException | MacroExecutionException
                  | ComponentLookupException e) {
             logger.error("Failed to set the INSTANCE parameter of the OpenProject macros in [{}].",

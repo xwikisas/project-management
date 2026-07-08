@@ -125,6 +125,8 @@ public class HandleWorkPackages extends XWikiResource
 
     private static final String TEXT = "text";
 
+    private static final String ID = "id";
+
     private static final String REQUIRED = "required";
 
     private static final String NAME = "name";
@@ -170,6 +172,7 @@ public class HandleWorkPackages extends XWikiResource
      * @param search the string that should match the project name.
      * @param offset the offset from which to start retrieving projects.
      * @param pageSize the maximum number of projects to return.
+     * @param selected the item that is currently selected in the UI.
      * @return a list of projects that can be used for creating a work package.
      * @since 1.1
      */
@@ -180,7 +183,8 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance,
         @QueryParam("search") @DefaultValue("") String search,
         @QueryParam("offset") @DefaultValue("0") int offset,
-        @QueryParam("pageSize") @DefaultValue("25") int pageSize) throws ProjectManagementException
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize,
+        @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
@@ -190,7 +194,14 @@ public class HandleWorkPackages extends XWikiResource
                 .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
                 .build();
         }
-
+        if (selected != null) {
+            List<Project> projects = apiClient.getProjects(0, 1,
+                FilterBuilder.get().addFilter(ID, FilterBuilder.Operator.EQUALS, selected).build()).getItems();
+            if (!projects.isEmpty() && projects.get(0).getSelf() != null) {
+                projects.get(0).getSelf().setLocation("/api/v3/projects/" + selected);
+            }
+            return Response.ok(mapToValueLabel(projects)).build();
+        }
         JsonNode response;
         try {
             response = apiClient.getWorkPackagesFormResponse(EMPTY_JSON);
@@ -215,6 +226,7 @@ public class HandleWorkPackages extends XWikiResource
      * @param project the href of the project whose assignable users should be retrieved.
      * @param search the string that should match the assignee name.
      * @param pageSize the maximum number of assignees to return.
+     * @param selected the item that is currently selected in the UI.
      * @return a list of objects with the {@code value} (the user href) and {@code label} (the user name) properties.
      * @since 1.2
      */
@@ -225,7 +237,8 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance,
         @QueryParam("project") @DefaultValue("") String project,
         @QueryParam("search") @DefaultValue("") String search,
-        @QueryParam("pageSize") @DefaultValue("25") int pageSize) throws ProjectManagementException
+        @QueryParam("pageSize") @DefaultValue("25") int pageSize,
+        @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
 
@@ -238,6 +251,13 @@ public class HandleWorkPackages extends XWikiResource
 
         if (project == null || project.isEmpty()) {
             return Response.ok(new ArrayList<>()).build();
+        }
+
+        if (selected != null) {
+            List<User> users = apiClient
+                .getUsers(0, 1, FilterBuilder.get().addFilter(ID, FilterBuilder.Operator.EQUALS, selected).build())
+                .getItems();
+            return Response.ok(mapToValueLabel(users)).build();
         }
 
         try {

@@ -1159,22 +1159,23 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     event.detail.element.val(pageRelation.clientParams.instance)
     event.detail.element.trigger('change');
   });
-  window.openProjectEvents.addEventListener('projectsSelectDisplayed', function (event) {
+  window.openProjectEvents.addEventListener('projectsSelectDisplaying', function (event) {
+    debugger;
     if (!pageRelation || !pageRelation.project) {
       return;
     }
     if (event.detail.element.prop('disabled')) {
       return;
     }
-    var selectize = event.detail.element[0].selectize;
+    let $el = event.detail.element;
     var value = '/api/v3/projects/' + pageRelation.project;
-    if (!selectize.options[value]) {
-      selectize.addOption({ value: value, label: pageRelation.project });
+    if ($el.is('select') &amp;&amp;!$el.find('option[value="' + value + '"]').length) {
+      $el.append($('&lt;option&gt;', { value: value, text: pageRelation.project }));
     }
-    selectize.setValue(value);
-    event.detail.element.trigger('change');
+    $el.val(value);
+    // $el.trigger('change');
   });
-  window.openProjectEvents.addEventListener('dynamicSelectizeFieldDisplayed', function (event) {
+  window.openProjectEvents.addEventListener('dynamicSelectizeFieldDisplaying', function (event) {
     if (event.detail.name !== 'parent' || !pageRelation || !pageRelation.workItem) {
       return;
     }

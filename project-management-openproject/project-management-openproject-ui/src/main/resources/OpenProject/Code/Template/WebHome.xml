@@ -31,14 +31,79 @@
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
-  <title>Template</title>
+  <title>Project Documentation Homepage</title>
   <comment/>
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>Home Space
+  <content>= 🚀 Project Documentation Homepage =
 
-{{openproject }}</content>
+{{info}}
+Welcome to the documentation space for this OpenProject-linked project.
+
+Use this page as the central hub for project status, key links, delivery progress, and live ticket insights.
+{{/info}}
+
+== 🎯 Project Summary ==
+
+This project aims to deliver a clear, well-documented solution with transparent planning, structured specifications, and traceable execution.
+
+* 🔗 **Linked OpenProject project:** //Linked project placeholder//
+* 🎯 **Parent work package:** //Linked parent work package placeholder//
+* 👤 **Project owner:** //Name placeholder//
+* 📅 **Current phase:** //Discovery / Implementation / Testing / Launch//
+
+== ✅ Open Tickets ==
+
+{{openproject filters="{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~}" limit="15"/}}
+
+== 👤 Assigned to Me ==
+
+{{openproject filters="{~"query~":{~"filters~":[{~"property~":~"assignees~",~"constraints~":[{~"operator~":~"=~",~"value~":~"me~"}]}]~}~}" limit="9" workItemsDisplayer="liveDataCards"/}}
+
+== 📊 Project Health Charts ==
+
+{{container layoutStyle="columns"}}
+(((
+{{openprojectchart datasetsLabels="[~"Open Work Packages~",~"Closed Work Packages~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" limit="300" property="creationDate" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}
+)))
+
+(((
+{{openprojectchart limit="400" property="type" type="pie" typeParams="{~"period~":~"~",~"metric~":~"count~"}"/}}
+)))
+{{/container}}
+
+== 🔗 Useful Links ==
+
+|= Resource |= Description | 
+| OpenProject project | //Link to the connected OpenProject project// 
+| Parent epic | //Link to the selected parent work package //
+| Specifications | [[Project Specifications&gt;&gt;Project Specifications]]
+| Meeting notes | [[Meeting Notes&gt;&gt;doc:.Project Meeting Notes yyyy MM dd.WebHome]] 
+
+== 📈 Key Milestones ==
+
+* 🚩 //Milestone 1 — dummy description of a key delivery date//
+* 🚩 //Milestone 2 — dummy description of a key delivery date//
+* 🏁 //Final delivery — dummy description of target completion//
+
+//For the full calendar of dates synced from OpenProject, see the [[Project Specifications&gt;&gt;Project Specifications]] page.//
+
+== 👥 Team &amp; Contacts ==
+
+|=Role|=Name|=Contact
+|Project Lead|//John Doe//|//john.doe@example.com//
+|Product Owner|//John Doe//|//john.doe@example.com//
+|Tech Lead|//John Doe//|//john.doe@example.com//
+
+== 🧭 Next Steps ==
+
+* Review open tickets.
+* Update project specifications.
+* Add recent meeting notes.
+* Check charts for progress and risks.
+
+💡 //Tip: Use the "Project Specifications" page for detailed requirements, and "Project Meeting Notes yyyy MM dd" to track decisions and action items.//</content>
   <object>
     <name>OpenProject.Code.Template.WebHome</name>
     <number>0</number>
