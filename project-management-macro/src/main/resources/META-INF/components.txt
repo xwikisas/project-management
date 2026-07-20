@@ -7,3 +7,4 @@ com.xwiki.projectmanagement.internal.displayers.WorkItemsSingleDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemInlineDisplayer
 com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor
 com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer
+com.xwiki.projectmanagement.internal.utility.XWikiVersionChecker

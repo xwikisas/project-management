@@ -29,10 +29,6 @@ import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
-import org.xwiki.extension.CoreExtension;
-import org.xwiki.extension.repository.CoreExtensionRepository;
-import org.xwiki.extension.version.Version;
-import org.xwiki.extension.version.internal.DefaultVersion;
 import org.xwiki.job.JobException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
@@ -50,6 +46,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.utility.XWikiVersionChecker;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -67,7 +64,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 {
     private static final String JSON_EMPTY_ARRAY = "[]";
 
-    private static final Version CHART_FIX_VERSION = new DefaultVersion("18.6.0");
+    private static final String CHART_FIX_VERSION = "18.6.0";
 
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -79,7 +76,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private SkinExtension jsrx;
 
     @Inject
-    private CoreExtensionRepository coreExtensionRepository;
+    private XWikiVersionChecker xWikiVersionChecker;
 
     /**
      * constructor.
@@ -145,8 +142,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             // TODO: Remove when parent is greater than 18.6.0-rc-1. When displaying multiple charts on the same
             //  page, they get initialised on page load and on xwiki:dom:updated event. This event is sent, when
             //  rendering things async, since 18.6.0-rc-1. We need some way around it until then.
-            Version xwikiVersion = getXWikiVersion();
-            if (xwikiVersion == null || xwikiVersion.compareTo(CHART_FIX_VERSION) < 0) {
+            if (xWikiVersionChecker.isLowerThan(CHART_FIX_VERSION)) {
                 this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
                 return Collections.singletonList(
                     new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));
@@ -202,16 +198,5 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         }
 
         return filtersList;
-    }
-
-    private Version getXWikiVersion()
-    {
-        CoreExtension coreExtension =
-            coreExtensionRepository.getCoreExtension("org.xwiki.platform:xwiki-platform-model-api");
-        if (coreExtension == null) {
-            // Shouldn't happen.
-            return null;
-        }
-        return coreExtension.getId().getVersion();
     }
 }

@@ -28,10 +28,10 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProject;
 import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 
 /**
- * Sdsadas.
+ * Represent the base parameters for OpenProject macros that have both and instance and a project parameter.
  *
  * @version $Id$
- * @since 1.2.0
+ * @since 1.2.1
  */
 public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {

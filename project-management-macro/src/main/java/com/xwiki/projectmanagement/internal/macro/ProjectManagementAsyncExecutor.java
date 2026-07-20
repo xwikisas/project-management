@@ -47,7 +47,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
  * Executes project management macros asynchronously.
  *
  * @version $Id$
- * @since 1.2.0
+ * @since 1.2.1
  */
 @Singleton
 @Component(roles = ProjectManagementAsyncExecutor.class)
@@ -61,13 +61,14 @@ public class ProjectManagementAsyncExecutor
     private ComponentManager componentManager;
 
     /**
-     * @param displayerMacro asda
-     * @param parameters asd
-     * @param content fdsfd
-     * @param context wqewq
-     * @return dasda
-     * @throws RenderingException fsdfsd
-     * @throws JobException asdsa
+     * @param displayerMacro the macro that will be executed asynchronously.
+     * @param parameters the parameters of the macro.
+     * @param content the content of the macro.
+     * @param context the macro transformation context.
+     * @return the placeholder blocks that will be asynchronously populated.
+     * @throws RenderingException if some exception was thrown during the rendering of the placeholder.
+     * @throws JobException if some exception was thrown during the execution of the render job. This should not
+     *     happen as we always render the placeholder.
      */
     public List<Block> execute(Macro<ProjectManagementAsyncMacroParams> displayerMacro,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context)

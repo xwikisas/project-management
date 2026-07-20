@@ -26,7 +26,7 @@ package com.xwiki.projectmanagement.macro;
  * management specific macros.
  *
  * @version $Id$
- * @since 1.2.0
+ * @since 1.2.1
  */
 public interface ProjectManagementAsyncMacroParams
 {
