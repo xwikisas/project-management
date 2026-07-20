@@ -25,17 +25,24 @@ import java.util.Collections;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.extension.CoreExtension;
+import org.xwiki.extension.repository.CoreExtensionRepository;
+import org.xwiki.extension.version.Version;
+import org.xwiki.extension.version.internal.DefaultVersion;
 import org.xwiki.job.JobException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -60,10 +67,19 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 {
     private static final String JSON_EMPTY_ARRAY = "[]";
 
+    private static final Version CHART_FIX_VERSION = new DefaultVersion("18.6.0");
+
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
+
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsrx;
+
+    @Inject
+    private CoreExtensionRepository coreExtensionRepository;
 
     /**
      * constructor.
@@ -105,7 +121,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             {
             });
 
-            return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
+            List<Block> result = asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
             {
                 @Override
                 public boolean supportsInlineMode()
@@ -118,6 +134,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     MacroTransformationContext context) throws MacroExecutionException
                 {
                     try {
+                        prepareContext(parameters);
                         return chartTypeDisplayer.execute(getDatasets(filters, parameters), parameters.getProperty(),
                             labels, context, typeDisplayerParams);
                     } catch (WorkItemException e) {
@@ -125,6 +142,16 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     }
                 }
             }, parameters, content, context);
+            // TODO: Remove when parent is greater than 18.6.0-rc-1. When displaying multiple charts on the same
+            //  page, they get initialised on page load and on xwiki:dom:updated event. This event is sent, when
+            //  rendering things async, since 18.6.0-rc-1. We need some way around it until then.
+            Version xwikiVersion = getXWikiVersion();
+            if (xwikiVersion == null || xwikiVersion.compareTo(CHART_FIX_VERSION) < 0) {
+                this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
+                return Collections.singletonList(
+                    new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));
+            }
+            return result;
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (ComponentLookupException e) {
@@ -134,6 +161,11 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException("The execution of the displayer failed.", e);
         }
+    }
+
+    protected void prepareContext(T parameters)
+    {
+        // The extending class can fill things here.
     }
 
     private List<PaginatedResult<WorkItem>> getDatasets(List<List<LiveDataQuery.Filter>> filters, T parameters)
@@ -170,5 +202,16 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         }
 
         return filtersList;
+    }
+
+    private Version getXWikiVersion()
+    {
+        CoreExtension coreExtension =
+            coreExtensionRepository.getCoreExtension("org.xwiki.platform:xwiki-platform-model-api");
+        if (coreExtension == null) {
+            // Shouldn't happen.
+            return null;
+        }
+        return coreExtension.getId().getVersion();
     }
 }

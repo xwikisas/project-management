@@ -19,6 +19,23 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+import org.slf4j.Logger;
+import org.xwiki.component.annotation.Component;
+import org.xwiki.fullcalendar.model.CalendarEvent;
+import org.xwiki.livedata.LiveDataQuery;
+
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -28,21 +45,6 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Version;
-import org.slf4j.Logger;
-import org.xwiki.component.annotation.Component;
-import org.xwiki.fullcalendar.model.CalendarEvent;
-import org.xwiki.livedata.LiveDataQuery;
-
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * Provides calendar events from OpenProject by fetching sprints and versions and converting them into
@@ -130,7 +132,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
         for (LiveDataQuery.Filter filter : filters) {
             if (filter.getProperty().equals("project")) {
                 LiveDataQuery.Constraint constraint = filter.getConstraints().get(0);
-                return  Integer.parseInt((String) constraint.getValue());
+                return Integer.parseInt((String) constraint.getValue());
             }
         }
         return -1;

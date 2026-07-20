@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.macro;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
-import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProject;
@@ -34,8 +33,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
  * @version $Id$
  * @since 1.2.0
  */
-public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder,
-    ProjectManagementAsyncMacroParams
+public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
 {
     private String instance;
 

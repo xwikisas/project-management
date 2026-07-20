@@ -17,35 +17,21 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.macro;
+require(['jquery'], function ($) {
+  jQuery('.proj-manag-chart-wrapper').each(function () {
+    let parent = $(this)[0];
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList" && mutation.addedNodes) {
+          $(document).trigger('xwiki:dom:updated', { elements: $(this).toArray() });
+          observer.disconnect();
+        }
+      }
+    });
 
-/**
- * Parameters for the OpenProject Subprojects macro.
- *
- * @version $Id$
- * @since 1.2
- */
-public class OpenProjectSubprojectsMacroParameters extends BaseDirectOpenProjectMacroParameters
-{
-    private String instance;
-
-    private String project;
-
-    private int count = 25;
-
-    /**
-     * @return the maximum number of subprojects to display.
-     */
-    public int getCount()
-    {
-        return count;
-    }
-
-    /**
-     * @param count see {@link #getCount()}.
-     */
-    public void setCount(int count)
-    {
-        this.count = count;
-    }
-}
+    observer.observe(parent, {
+      childList: true,
+      subtree: false
+    });
+  });
+});

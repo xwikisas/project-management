@@ -20,16 +20,17 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
-import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
-import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
-import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import java.awt.Color;
+import java.util.List;
+
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyMandatory;
 
-import java.awt.Color;
-import java.util.List;
+import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
+import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
+import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 
 /**
  * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro}.
@@ -94,7 +95,8 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * Overrides the filters from the parent class to provide a more specific description and display type for
      * OpenProject filters.
      *
-     * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject instance
+     * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject
+     *     instance
      */
     @PropertyDisplayType(OpenProjectFilter.class)
     @Override

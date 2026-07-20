@@ -24,10 +24,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
@@ -55,7 +58,7 @@ public class ProjectManagementAsyncExecutor
     private BlockAsyncRendererExecutor executor;
 
     @Inject
-    private ProjectManagementAsyncRenderer asyncRenderer;
+    private ComponentManager componentManager;
 
     /**
      * @param displayerMacro asda
@@ -70,14 +73,31 @@ public class ProjectManagementAsyncExecutor
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context)
         throws RenderingException, JobException
     {
+
+        try {
+            AsyncRendererConfiguration configuration = getAsyncRendererConfiguration();
+            ProjectManagementAsyncRenderer asyncRenderer =
+                componentManager.getInstance(ProjectManagementAsyncRenderer.class);
+            asyncRenderer.initialize(displayerMacro, parameters, content, context);
+            Block result = executor.execute(asyncRenderer, configuration);
+            return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+        } catch (ComponentLookupException e) {
+            // Shouldn't happen.
+            throw new RuntimeException("We are doomed.", e);
+        }
+    }
+
+    @Nonnull
+    private static AsyncRendererConfiguration getAsyncRendererConfiguration()
+    {
         AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
 
         // Pass some properties that might be of interest to a potential displayer macro.
         configuration.setContextEntries(
             Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
                 XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
-        asyncRenderer.initialize(displayerMacro, parameters, content, context);
-        Block result = executor.execute(asyncRenderer, configuration);
-        return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+        // We always want the results to be displayed async, since we make calls to other servers.
+        configuration.setPlaceHolderForced(true);
+        return configuration;
     }
 }

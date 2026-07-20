@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.internal.listener;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -32,7 +31,7 @@ import javax.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 
@@ -42,6 +41,8 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
@@ -79,6 +80,9 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     private static final String DASHBOARD_CONFIG_CLASS_NAME = "DashboardConnectionConfigClass";
 
+    private static final LocalDocumentReference DASHBOARD_CLASS_REF =
+        new LocalDocumentReference(DASHBOARD_CONFIG_CLASS_SPACE, DASHBOARD_CONFIG_CLASS_NAME);
+
     private static final String SELECTED_CONNECTION_PROPERTY = "selectedConnection";
 
     private static final String SELECTED_PROJECT_PROPERTY = "selectedProject";
@@ -108,11 +112,8 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
         }
     }
 
-    private void handleBeforeOpenProjectMacroExecution(Object data)
+    private void handleBeforeOpenProjectMacroExecution(Object parameters)
     {
-        if (!(data instanceof Map)) {
-            return;
-        }
         XWikiContext xContext = xContextProvider.get();
         XWikiDocument currentDoc = xContext.getDoc();
 
@@ -120,58 +121,51 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
             return;
         }
 
-        Map<String, String> eventData = (Map<String, String>) data;
-
-        DocumentReference classReference =
-            new DocumentReference(
-                xContext.getWikiId(), DASHBOARD_CONFIG_CLASS_SPACE, DASHBOARD_CONFIG_CLASS_NAME
-            );
-
-        BaseObject configObject = currentDoc.getXObject(classReference);
+        BaseObject configObject = currentDoc.getXObject(DASHBOARD_CLASS_REF);
 
         if (configObject == null) {
             logger.debug("No DashboardConnectionConfigClass object found on [{}]", currentDoc.getDocumentReference());
             return;
         }
 
-        if (eventData.containsKey(INSTANCE_KEY)) {
-            resolveInstance(eventData, configObject);
+        if (parameters instanceof OpenProjectInstanceHolder) {
+            resolveInstance((OpenProjectInstanceHolder) parameters, configObject);
         }
 
-        if (eventData.containsKey(PROJECT_KEY)) {
-            resolveProject(eventData, configObject);
+        if (parameters instanceof OpenProjectProjectHolder) {
+            resolveProject((OpenProjectProjectHolder) parameters, configObject);
         }
     }
 
-    private void resolveInstance(Map<String, String> eventData, BaseObject configObject)
+    private void resolveInstance(OpenProjectInstanceHolder parameters, BaseObject configObject)
     {
-        String instance = eventData.get(INSTANCE_KEY);
+        String instance = parameters.getInstance();
         if (!(USE_SELECTED_DASHBOARD_CONNECTION_VALUE.equals(instance) || StringUtils.isBlank(instance))) {
             return;
         }
 
         String effectiveConnection = getEffectiveConnection(configObject);
         if (StringUtils.isNotBlank(effectiveConnection)) {
-            eventData.put(EFFECTIVE_INSTANCE_KEY, effectiveConnection);
+            parameters.setInstance(effectiveConnection);
         }
     }
 
-    private void resolveProject(Map<String, String> eventData, BaseObject configObject)
+    private void resolveProject(OpenProjectProjectHolder parameters, BaseObject configObject)
     {
-        String project = eventData.get(PROJECT_KEY);
+        String project = parameters.getProject();
         if (!(USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project) || StringUtils.isBlank(project))) {
             return;
         }
 
         String selectedProject = configObject.getStringValue(SELECTED_PROJECT_PROPERTY);
         if (StringUtils.isNotBlank(selectedProject)) {
-            eventData.put(EFFECTIVE_PROJECT_KEY, selectedProject);
+            parameters.setProject(selectedProject);
             return;
         }
 
         String firstProject = getFirstProjectId(getEffectiveConnection(configObject));
         if (StringUtils.isNotBlank(firstProject)) {
-            eventData.put(EFFECTIVE_PROJECT_KEY, firstProject);
+            parameters.setProject(firstProject);
         }
     }
 
