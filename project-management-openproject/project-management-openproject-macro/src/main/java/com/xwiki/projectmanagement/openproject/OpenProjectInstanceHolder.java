@@ -20,12 +20,14 @@ package com.xwiki.projectmanagement.openproject;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
+
 /**
  * Class that define access to the OpenProject instance.
  *
  * @version $Id$
  */
-public interface OpenProjectInstanceHolder
+public interface OpenProjectInstanceHolder extends ProjectManagementAsyncMacroParams
 {
     /**
      * @return the instance from where work items should be retrieved.

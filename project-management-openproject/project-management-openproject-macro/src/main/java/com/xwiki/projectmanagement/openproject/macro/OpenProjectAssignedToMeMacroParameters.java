@@ -23,9 +23,8 @@ package com.xwiki.projectmanagement.openproject.macro;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 
 /**
- * Parameters for the OpenProject "Assigned to Me" macro.
- * Extends {@link OpenProjectMacroParameters} but hides the filters and identifier parameters,
- * since the "assigned to me" filter is applied automatically by the macro.
+ * Parameters for the OpenProject "Assigned to Me" macro. Extends {@link OpenProjectMacroParameters} but hides the
+ * filters and identifier parameters, since the "assigned to me" filter is applied automatically by the macro.
  *
  * @version $Id$
  */

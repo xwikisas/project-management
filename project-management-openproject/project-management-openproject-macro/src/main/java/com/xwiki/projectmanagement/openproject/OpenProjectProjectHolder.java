@@ -19,13 +19,16 @@
  */
 package com.xwiki.projectmanagement.openproject;
 
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
+
 /**
  * Implemented by macro parameters that target a specific OpenProject project. Allows the dashboard project picker to
- * drive the project of all macros on the page, in the same way {@link OpenProjectInstanceHolder} does for the instance.
+ * drive the project of all macros on the page, in the same way {@link OpenProjectInstanceHolder} does for the
+ * instance.
  *
  * @version $Id$
  */
-public interface OpenProjectProjectHolder
+public interface OpenProjectProjectHolder extends ProjectManagementAsyncMacroParams
 {
     /**
      * @return the identifier of the project the macro should target.

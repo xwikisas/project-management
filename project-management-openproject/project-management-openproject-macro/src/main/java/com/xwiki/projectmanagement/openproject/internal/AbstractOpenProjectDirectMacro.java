@@ -24,15 +24,20 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.slf4j.Logger;
+import org.xwiki.job.JobException;
+import org.xwiki.observation.ObservationManager;
+import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
-import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 
 /**
  * Base class for OpenProject macros that render content directly (not via LiveData/async). Handles license checking,
@@ -49,9 +54,6 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     private LicenseChecker licenseChecker;
 
     @Inject
-    private OpenProjectMacroParameterResolver parameterResolver;
-
-    @Inject
     private UserTokenChecker userTokenChecker;
 
     @Inject
@@ -59,6 +61,12 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
     @Inject
     private Logger logger;
+
+    @Inject
+    private ObservationManager observationManager;
+
+    @Inject
+    private ProjectManagementAsyncExecutor asyncExecutor;
 
     /**
      * @param name the macro name.
@@ -84,8 +92,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         if (!licenseBlock.isEmpty()) {
             return licenseBlock;
         }
+        observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
 
-        String instanceToUse = parameterResolver.resolveInstance(parameters);
+        String instanceToUse = parameters.getInstance();
 
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
         if (!warningBlock.isEmpty()) {
@@ -96,12 +105,25 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         if (apiClient == null) {
             return warningBlock;
         }
+        try {
+            return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
+            {
+                @Override
+                public boolean supportsInlineMode()
+                {
+                    return AbstractOpenProjectDirectMacro.this.supportsInlineMode();
+                }
 
-        if (parameters instanceof OpenProjectProjectHolder) {
-            parameterResolver.resolveProject((OpenProjectProjectHolder) parameters);
+                @Override
+                public List<Block> execute(ProjectManagementAsyncMacroParams x, String y,
+                    MacroTransformationContext z) throws MacroExecutionException
+                {
+                    return executeInternal(parameters, content, context, apiClient, instanceToUse);
+                }
+            }, parameters, content, context);
+        } catch (RenderingException | JobException e) {
+            throw new MacroExecutionException("Failed to render the macro asynchronously.", e);
         }
-
-        return executeInternal(parameters, content, context, apiClient, instanceToUse);
     }
 
     /**

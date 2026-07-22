@@ -19,36 +19,30 @@
  */
 package com.xwiki.projectmanagement;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.stubbing.Answer;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.block.MacroBlock;
-import org.xwiki.rendering.block.MacroMarkerBlock;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
-import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
-import org.xwiki.rendering.transformation.TransformationContext;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.TestProjManagementMacro;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
-import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer;
+import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,20 +59,20 @@ public class AbstractProjectManagementMacroTest
     @InjectMockComponents
     private TestProjManagementMacro abstractMacro;
 
-    @InjectMockComponents
-    private ProjectManagementAsyncRenderer asyncRenderer;
-
     @MockComponent
     private ComponentManager componentManager;
 
     @MockComponent
     private BlockAsyncRendererExecutor executor;
 
+    @MockComponent
+    private ProjectManagementAsyncExecutor asyncExecutor;
+
     @Mock
     private MacroTransformationContext macroTransformationContext;
 
     @Mock
-    private Macro<ProjectManagementMacroParameters> displayerMacro;
+    private Macro<ProjectManagementAsyncMacroParams> displayerMacro;
 
     @Test
     void executeMacroWithDefaultValuesTest() throws MacroExecutionException, ComponentLookupException
@@ -100,29 +94,11 @@ public class AbstractProjectManagementMacroTest
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
         params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
-
-        when(componentManager.getInstance(ProjectManagementAsyncRenderer.class)).thenReturn(asyncRenderer);
-        when(this.executor.execute(any(), any())).then(
-            (Answer<Block>) invocation -> invocation.<ProjectManagementAsyncRenderer>getArgument(0).render(false, false)
-                .getBlock());
         when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name())).thenReturn(
             displayerMacro);
-        TransformationContext transformationContext = mock(TransformationContext.class);
-        when(macroTransformationContext.getTransformationContext()).thenReturn(transformationContext);
-        when(macroTransformationContext.clone()).thenReturn(macroTransformationContext);
-        when(transformationContext.getTargetSyntax()).thenReturn(Syntax.XWIKI_2_1);
-        when(displayerMacro.execute(params, "", macroTransformationContext)).thenReturn(
-            Collections.singletonList(mock(Block.class)));
-        MacroBlock macroBlock = mock(MacroBlock.class);
-        when(macroTransformationContext.getCurrentMacroBlock()).thenReturn(macroBlock);
-        when(macroBlock.getId()).thenReturn("testMacro");
-
         List<Block> result = abstractMacro.execute(params, "", macroTransformationContext);
 
         // Gets executed in the async renderer.
-        verify(displayerMacro).execute(params, "", macroTransformationContext);
-        assertEquals(1, result.size());
-        assertInstanceOf(MacroMarkerBlock.class, result.get(0));
-        assertEquals("testMacro", ((MacroMarkerBlock) result.get(0)).getId());
+        verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any());
     }
 }

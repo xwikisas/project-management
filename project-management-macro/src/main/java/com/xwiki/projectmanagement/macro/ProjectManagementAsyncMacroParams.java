@@ -17,31 +17,17 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.macro;
+package com.xwiki.projectmanagement.macro;
 
 /**
- * Parameters for the OpenProject Project News macro.
+ * Helper interface for the {@link com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer} so the
+ * class will be able to render {@link com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro},
+ * {@link com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro} or any other project
+ * management specific macros.
  *
  * @version $Id$
- * @since 1.2
+ * @since 1.2.1
  */
-public class OpenProjectNewsMacroParameters extends BaseDirectOpenProjectMacroParameters
+public interface ProjectManagementAsyncMacroParams
 {
-    private int count = 5;
-
-    /**
-     * @return the maximum number of news items to display.
-     */
-    public int getCount()
-    {
-        return count;
-    }
-
-    /**
-     * @param count see {@link #getCount()}.
-     */
-    public void setCount(int count)
-    {
-        this.count = count;
-    }
 }

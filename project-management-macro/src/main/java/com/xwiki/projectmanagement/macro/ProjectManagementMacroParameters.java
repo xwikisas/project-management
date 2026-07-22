@@ -37,6 +37,7 @@ import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
  */
 @Unstable
 public class ProjectManagementMacroParameters extends LiveDataMacroParameters
+    implements ProjectManagementAsyncMacroParams
 {
     private String identifier;
 

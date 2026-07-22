@@ -29,6 +29,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -38,8 +39,8 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
-import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroParameterResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -74,7 +75,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private StylingSetupManager stylingSetupManager;
 
     @Inject
-    private OpenProjectMacroParameterResolver parameterResolver;
+    private ObservationManager observationManager;
 
     /**
      * Default constructor.
@@ -117,9 +118,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (!licenseBlock.isEmpty()) {
             return licenseBlock;
         }
+        observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
 
-        String instanceToUse = parameterResolver.resolveInstance(parameters);
-
+        String instanceToUse = parameters.getInstance();
         ssrx.use("openproject/css/propertyStyles.css");
         stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");

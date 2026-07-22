@@ -19,26 +19,30 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManagementCalendarMacro;
-import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
-import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
-import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
-import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
-import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManagementCalendarMacro;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
+import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
+import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 
 /**
  * Display data retrieved from OpenProject in calendars.
@@ -65,6 +69,9 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     @Inject
     private StylingSetupManager stylingSetupManager;
 
+    @Inject
+    private ObservationManager observationManager;
+
     /**
      * Default constructor.
      */
@@ -78,6 +85,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     public List<Block> execute(OpenProjectCalendarMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance());
         if (!warningBlock.isEmpty()) {
             return warningBlock;
@@ -115,5 +123,4 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         return Map.of("instance", parameters.getInstance(), "sprint", hasSprint, "version", hasVersion, "versionColor",
             versionColor, "sprintColor", sprintColor);
     }
-
 }

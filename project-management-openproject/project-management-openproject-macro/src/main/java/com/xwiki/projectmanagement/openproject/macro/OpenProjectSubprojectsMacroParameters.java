@@ -19,59 +19,19 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyMandatory;
-
-import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
-import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
-import com.xwiki.projectmanagement.openproject.OpenProjectProject;
-import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
-
 /**
  * Parameters for the OpenProject Subprojects macro.
  *
  * @version $Id$
  * @since 1.2
  */
-public class OpenProjectSubprojectsMacroParameters implements OpenProjectInstanceHolder, OpenProjectProjectHolder
+public class OpenProjectSubprojectsMacroParameters extends BaseDirectOpenProjectMacroParameters
 {
     private String instance;
 
     private String project;
 
     private int count = 25;
-
-    @Override
-    public String getInstance()
-    {
-        return instance;
-    }
-
-    @Override
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectInstance.class)
-    public void setInstance(String instance)
-    {
-        this.instance = instance;
-    }
-
-    /**
-     * @return the identifier of the project whose subprojects will be displayed.
-     */
-    public String getProject()
-    {
-        return project;
-    }
-
-    /**
-     * @param project see {@link #getProject()}.
-     */
-    @PropertyMandatory
-    @PropertyDisplayType(OpenProjectProject.class)
-    public void setProject(String project)
-    {
-        this.project = project;
-    }
 
     /**
      * @return the maximum number of subprojects to display.

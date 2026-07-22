@@ -53,6 +53,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 /**
@@ -133,7 +134,7 @@ public class AsyncMacroCallResource extends XWikiResource
         if (displayer == null || displayer.isEmpty()) {
             throw new ComponentLookupException("The displayer hint is not present.");
         }
-        Macro<ProjectManagementMacroParameters> displayerMacro = componentManager.getInstance(Macro.class, displayer);
+        Macro<ProjectManagementAsyncMacroParams> displayerMacro = componentManager.getInstance(Macro.class, displayer);
         ProjectManagementMacroParameters parameters = new ProjectManagementMacroParameters();
         // TODO: Would be nicer if we retrieved the translation prefix from the json configuration.
         parameters.setSourceParameters(String.format("instance=%s&client=%s&translationPrefix=%s", instance,
