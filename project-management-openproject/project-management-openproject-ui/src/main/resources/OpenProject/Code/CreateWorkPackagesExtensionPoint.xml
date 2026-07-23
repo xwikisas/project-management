@@ -1119,74 +1119,61 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       <cache>long</cache>
     </property>
     <property>
-      <code>require(['jquery'], function ($) {
-  let pageRelation;
-  let getPageRelation = function () {
-    if (pageRelation != undefined) {
-      return pageRelation;
-    }
-    let url = XWiki.currentDocument.getRestURL('projectmanagement/relations/client/openproject', 'ancestors=true');
-    $.getJSON(url)
-      .done(function (response) {
-        pageRelation = response;
-        if (!pageRelation.clientParams || pageRelation.clientParams.trim() == '') {
-          console.warn('Client parameters are empty.');
-          return;
-        }
-        try {
-          pageRelation.clientParams = JSON.parse(pageRelation.clientParams);
-        } catch (e) {
-          console.warn("Failed to parse the client params: " + pageRelation.clientParams);
-        }
-      })
-      .fail(function () {
-        pageRelation = {};
-      });
-  };
-  getPageRelation();
+      <code>require.config({
+  paths: {
+    pageRelation: "$xwiki.getDocument('OpenProject.Code.PageRelationLoadJSX').getURL('jsx', 'r=1')"
+  }
+});
+require(['jquery', 'pageRelation'], function ($, pageRelation) {
   window.openProjectEvents = window.openProjectEvents || new EventTarget();
   window.openProjectEvents.addEventListener('connectionSelectDisplayed', function (event) {
-    if (!pageRelation) {
-      return;
-    }
-    if (!pageRelation.clientParams || !pageRelation.clientParams.instance) {
-      console.warn('There is no instance stored in the page relation.');
-      return;
-    }
-    if (event.detail.element.prop('disabled')) {
-      return;
-    }
-    event.detail.element.val(pageRelation.clientParams.instance)
-    event.detail.element.trigger('change');
+    pageRelation.get().done(function (relation) {
+      if (!relation) {
+        return;
+      }
+      if (!relation.clientParams || !relation.clientParams.instance) {
+        console.warn('There is no instance stored in the page relation.');
+        return;
+      }
+      if (event.detail.element.prop('disabled')) {
+        return;
+      }
+      event.detail.element.val(relation.clientParams.instance)
+      event.detail.element.trigger('change');
+    });
   });
   window.openProjectEvents.addEventListener('projectsSelectDisplaying', function (event) {
-    debugger;
-    if (!pageRelation || !pageRelation.project) {
-      return;
-    }
-    if (event.detail.element.prop('disabled')) {
-      return;
-    }
-    let $el = event.detail.element;
-    var value = '/api/v3/projects/' + pageRelation.project;
-    if ($el.is('select') &amp;&amp;!$el.find('option[value="' + value + '"]').length) {
-      $el.append($('&lt;option&gt;', { value: value, text: pageRelation.project }));
-    }
-    $el.val(value);
-    // $el.trigger('change');
+    pageRelation.get().done(function (relation) {
+      if (!relation || !relation.project) {
+        return;
+      }
+      if (event.detail.element.prop('disabled')) {
+        return;
+      }
+      let elem = event.detail.element;
+      var value = '/api/v3/projects/' + relation.project;
+      if (elem.is('select') &amp;&amp; !elem.find('option[value="' + value + '"]').length) {
+        elem.append($('&lt;option&gt;', { value: value, text: relation.project }));
+      }
+      elem.val(value);
+      // elem.trigger('change');
+    });
   });
   window.openProjectEvents.addEventListener('dynamicSelectizeFieldDisplaying', function (event) {
-    if (event.detail.name !== 'parent' || !pageRelation || !pageRelation.workItem) {
-      return;
-    }
-    let $el = event.detail.element;
-    var value = '/api/v3/work_packages/' + pageRelation.workItem;
-    if ($el.is('select') &amp;&amp; !$el.find('option[value="' + value + '"]').length) {
-      $el.append($('&lt;option&gt;', { value: value, text: pageRelation.workItem }));
-    }
+    pageRelation.get().done(function (relation) {
+      if (event.detail.name !== 'parent' || !relation || !relation.workItem) {
+        return;
+      }
+      let elem = event.detail.element;
+      var value = '/api/v3/work_packages/' + relation.workItem;
+      if (elem.is('select') &amp;&amp; !elem.find('option[value="' + value + '"]').length) {
+        elem.append($('&lt;option&gt;', { value: value, text: relation.workItem }));
+      }
 
-    $el.val(value);
-    //$el.trigger('change');
+      elem.val(value);
+      //elem.trigger('change');
+    });
+
   });
 });</code>
     </property>
@@ -1194,7 +1181,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       <name>AutofillWorkPackageFields</name>
     </property>
     <property>
-      <parse/>
+      <parse>1</parse>
     </property>
     <property>
       <use/>
