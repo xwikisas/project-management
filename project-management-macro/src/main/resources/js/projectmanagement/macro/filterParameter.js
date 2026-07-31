@@ -38,6 +38,13 @@ setTimeout(function () {
         livedataCfgs.set(e.target, livedataCfg);
         $('.proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
       };
+      $(document).on('filterBuilderInitialized', function (e, builderElem) {
+        builderElem.on('constraintsUpdated', updateFilterInput);
+        builderElem.on('builderRemoved', function (e) {
+          livedataCfgs.delete(e.target);
+          $('.proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
+        });
+      });
       // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);
       builder.instances.values().forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
       let initBuilder = function () {
@@ -139,13 +146,6 @@ setTimeout(function () {
           });
         });
 
-      });
-      $(document).on('filterBuilderInitialized', function (e, builderElem) {
-        builderElem.on('constraintsUpdated', updateFilterInput);
-        builderElem.on('builderRemoved', function (e) {
-          livedataCfgs.delete(e.target);
-          $('.proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
-        });
       });
     });
   });
