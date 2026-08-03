@@ -1175,6 +1175,15 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     $el.val(value);
     // $el.trigger('change');
   });
+  window.openProjectEvents.addEventListener('projectsSelectDisplayed', function (event) {
+    if (event.detail.element.prop('disabled')) {
+      return;
+    }
+    let $el = event.detail.element;
+    if ($el.val()) {
+      $el.trigger('change');
+    }
+  });
   window.openProjectEvents.addEventListener('dynamicSelectizeFieldDisplaying', function (event) {
     if (event.detail.name !== 'parent' || !pageRelation || !pageRelation.workItem) {
       return;

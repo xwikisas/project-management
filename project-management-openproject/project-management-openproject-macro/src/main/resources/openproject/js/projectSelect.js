@@ -57,7 +57,7 @@ require(['jquery'], function ($) {
       return;
     }
 
-    if (input[0].selectize) {
+    if (input[0].selectize || input[0].tomselect) {
       return;
     }
 
@@ -95,9 +95,10 @@ require(['jquery'], function ($) {
     input.xwikiSelectize(selectizeCfg);
 
     if (dashboardOption) {
-      input[0].selectize.addOption(dashboardOption);
+      let selectize = input[0].selectize || input[0].tomselect;
+      selectize.addOption(dashboardOption);
       if (input.val() === dashboardOption.value) {
-        input[0].selectize.setValue(dashboardOption.value, true);
+        selectize.setValue(dashboardOption.value, true);
       }
     }
   }
@@ -109,7 +110,7 @@ require(['jquery'], function ($) {
       return;
     }
     input.data('openprojectInstance', instance);
-    let selectize = input[0].selectize;
+    let selectize = input[0].selectize || input[0].tomselect;
     if (selectize) {
       selectize.clear(true);
       selectize.clearOptions();

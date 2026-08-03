@@ -138,7 +138,8 @@
       root.find('dd :input').trigger('change');
       root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property .selectized').each(function () {
         let input = $(this);
-        input[0].selectize.destroy();
+        let selectize = input[0].selectize || input[0].tomselect;
+        selectize.destroy();
         input.focus();
       });
     };

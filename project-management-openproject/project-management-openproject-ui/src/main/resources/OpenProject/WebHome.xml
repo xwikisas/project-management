@@ -182,10 +182,10 @@
       </selectedProject>
     </class>
     <property>
-      <selectedConnection></selectedConnection>
+      <selectedConnection/>
     </property>
     <property>
-      <selectedProject></selectedProject>
+      <selectedProject/>
     </property>
   </object>
   <object>
@@ -871,6 +871,8 @@
     }
     if (select[0].selectize) {
       select[0].selectize.destroy();
+    } else if (select[0].tomselect) {
+      select[0].tomselect.destroy();
     }
     let projectsREST = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki +
         '/openproject/instance/' + encodeURIComponent(connection) + '/suggest/projects';
@@ -904,7 +906,7 @@
         if (results &amp;&amp; results.length) {
           setMacrosVisible(true);
 
-          let selectize = select.length ? select[0].selectize : null;
+          let selectize = select.length ? (select[0].selectize || select[0].tomselect) : null;
           if (selectize &amp;&amp; !select.val()) {
             selectize.addOption(results[0]);
             selectize.setValue(results[0].value, true);
@@ -945,7 +947,7 @@
         return;
       }
       let label = value;
-      let selectize = select[0].selectize;
+      let selectize = select[0].selectize || select[0].tomselect;
       if (selectize &amp;&amp; selectize.options[value]) {
         label = selectize.options[value].label || selectize.options[value].text || value;
       }

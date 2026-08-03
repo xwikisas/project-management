@@ -23,8 +23,13 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
     switch (type) {
       case "boolean":
       case "list":
-        if (inputElem[0] && inputElem[0].selectize) {
+        if (!inputElem[0]) {
+          return;
+        }
+        if (inputElem[0].selectize) {
           inputElem[0].selectize.destroy();
+        } else if (inputElem[0].tomselect) {
+          inputElem[0].tomselect.destroy();
         }
         break;
       case "date":

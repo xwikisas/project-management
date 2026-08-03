@@ -196,7 +196,9 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	  if (project[0] && project[0].selectize) {
 	    project[0].selectize.destroy();
-	  }
+    } else if (project[0] && project[0].tomselect) {
+      project[0].tomselect.destroy();
+    }
 
 	  project.empty();
     if (window.openProjectEvents) {
@@ -218,7 +220,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	      return callback([]);
 	    }
 	    const searchUrl = `${baseUrl}${connection}/workPackages/availableProjects`;
-	    const selectize = project[0].selectize;
+	    const selectize = project[0].selectize || project[0].tomselect;
 	    $.getJSON(searchUrl, { search: text, selectedItem: project.val().split('/').pop() })
 	      .done(function (results) {
 	        if (incorrectTokenId) {
@@ -256,7 +258,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	  project.xwikiSelectize(selectizeConfig);
 
-	  applyPreselected(project[0].selectize, preselected);
+	  applyPreselected(project[0].selectize || project[0].tomselect, preselected);
 
 	  if (window.openProjectEvents) {
 	    window.openProjectEvents.dispatchEvent(
@@ -289,6 +291,8 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	    if (select[0] && select[0].selectize) {
 	      select[0].selectize.destroy();
+	    } else if (select[0] && select[0].tomselect) {
+	      select[0].tomselect.destroy();
 	    }
       if (window.openProjectEvents) {
 	      window.openProjectEvents.dispatchEvent(
@@ -312,7 +316,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	      // The endpoint is a full path under the instance (e.g. "workPackages/availableAssignees" or "suggest/parent"),
 	      // so field types living on different resources can all be driven the same way.
 	      const searchUrl = `${baseUrl}${connection}/${endpoint}`;
-	      const selectize = select[0].selectize;
+	      const selectize = select[0].selectize || select[0].tomselect;
 	      $.getJSON(searchUrl, { project: project, search: text, selectedItem: select.val().split('/').pop() })
 	        .done(function (results) {
 	          results.forEach(function (result) {
@@ -332,7 +336,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 
 	    select.xwikiSelectize(selectizeConfig);
 
-	    applyPreselected(select[0].selectize, preselected);
+	    applyPreselected(select[0].selectize || select[0].tomselect, preselected);
 
 	    // Let listeners (e.g. the dashboard autofill) react to a freshly built field, keyed by its name.
 	    if (window.openProjectEvents) {
@@ -347,6 +351,8 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  $(container).find("select").each(function () {
 	    if (this.selectize) {
 	      this.selectize.destroy();
+	    } else if (this.tomselect) {
+	      this.tomselect.destroy();
 	    }
 	  });
 	}

@@ -192,7 +192,7 @@
       });
       let initInput = function (propRoot, root) {
           let input = propRoot.find(':input');
-          if (input &lt;= 0 || input[0].selectize) {
+          if (input &lt;= 0 || input[0].selectize || input[0].tomselect) {
             return;
           }
           let clientParams = root.data('params') &amp;&amp; root.data('params');
@@ -225,7 +225,8 @@
           selectizeCfg.load = function (text, callback) {
             let urlParams = { ...clientParams };
             if (cfg.query.filters.length &lt;= 0) {
-              if (input[0].selectize &amp;&amp; Object.keys(input[0].selectize.options).length &gt; 1) {
+              let selectize = input[0].selectize || input[0].tomselect;
+              if (selectize &amp;&amp; Object.keys(selectize.options).length &gt; 1) {
                 callback([]);
                 return;
               }
