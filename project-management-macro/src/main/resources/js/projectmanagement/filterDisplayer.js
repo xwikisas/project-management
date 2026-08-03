@@ -94,9 +94,11 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         let options = params.options || [];
         let selectizeCfg = {
           create: true,
-          options,
           maxItems: 1
         };
+        if (options.size() > 0) {
+          selectizeCfg.options = options;
+        }
         if (params.searchURL) {
           selectizeCfg.load = function (text, callback) {
             let searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
