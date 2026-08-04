@@ -96,7 +96,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
         String instanceToUse = parameters.getInstance();
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }

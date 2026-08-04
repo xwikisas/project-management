@@ -77,7 +77,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         String instanceToUse = parameters.getInstance();
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }

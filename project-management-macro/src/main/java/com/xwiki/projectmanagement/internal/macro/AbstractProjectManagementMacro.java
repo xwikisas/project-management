@@ -104,6 +104,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             }
             Macro<ProjectManagementAsyncMacroParams> displayerMacro =
                 componentManager.getInstance(Macro.class, displayerId);
+            if (!displayerMacro.supportsInlineMode() && context.isInline()) {
+                throw new MacroExecutionException(
+                    String.format("Macro displayer [%s] is standalone but is being used inline.", displayerId));
+            }
             if (!WorkItemsDisplayer.liveData.equals(displayer) && !WorkItemsDisplayer.liveDataCards.equals(displayer)) {
                 return asyncExecutor.execute(displayerMacro, parameters, newContent, context);
             }

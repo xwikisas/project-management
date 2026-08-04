@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -35,10 +36,13 @@ import org.xwiki.csrf.CSRFToken;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
@@ -71,10 +75,11 @@ public class UserTokenChecker
 
     /**
      * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param context the macro transformation context.
      * @return a warning block if the connection of the current user to the given OpenProject instance does not exist or
      *     the token has expired.
      */
-    public List<Block> getWarningBlock(String instance)
+    public List<Block> getWarningBlock(String instance, MacroTransformationContext context)
     {
         XWikiContext xContext = contextProvider.get();
         String viewAction = "view";
@@ -108,8 +113,9 @@ public class UserTokenChecker
                 );
                 warning.add(link);
             }
+            Map<String, String> params = Collections.singletonMap(CLASS, "box warningmessage");
             return Collections.singletonList(
-                new GroupBlock(warning, Collections.singletonMap(CLASS, "box warningmessage")));
+                context.isInline() ? new FormatBlock(warning, Format.NONE, params) : new GroupBlock(warning, params));
         }
         return Collections.emptyList();
     }

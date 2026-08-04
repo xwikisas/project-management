@@ -32,6 +32,7 @@ import javax.inject.Singleton;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.rendering.syntax.Syntax;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
@@ -204,7 +205,9 @@ public class OpenProjectScriptService implements ScriptService
      */
     public String getNotAuthorizedMessage(String instance, Syntax syntax) throws ComponentLookupException
     {
-        return macroUtils.renderMacroContent(userTokenChecker.getWarningBlock(instance), syntax);
+        MacroTransformationContext context = new MacroTransformationContext();
+        context.setInline(false);
+        return macroUtils.renderMacroContent(userTokenChecker.getWarningBlock(instance, context), syntax);
     }
 
     /**

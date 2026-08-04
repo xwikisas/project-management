@@ -125,7 +125,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse);
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
 
         if (!warningBlock.isEmpty()) {
             return warningBlock;

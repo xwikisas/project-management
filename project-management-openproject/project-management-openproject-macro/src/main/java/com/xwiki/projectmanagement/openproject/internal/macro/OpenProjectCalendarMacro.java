@@ -86,7 +86,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         MacroTransformationContext context) throws MacroExecutionException
     {
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
-        List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance());
+        List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
