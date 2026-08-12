@@ -55,6 +55,7 @@
     <module>project-management-openproject</module>
     <module>project-management-relations</module>
     <module>project-management-calendar</module>
+    <module>project-management-presets</module>
   </modules>
   <profiles>
     <profile>

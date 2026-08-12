@@ -26,6 +26,7 @@ import java.util.List;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
@@ -40,6 +41,8 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.presets.Preset;
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Something.
@@ -55,6 +58,9 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
 
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
+
+    @Inject
+    private PresetsManager presetsManager;
 
     /**
      * @param name smth
@@ -92,9 +98,17 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         parameters.setSource("projectmanagement");
         processParameters(parameters);
         String newContent = content;
-        if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
+        if (StringUtils.isNotEmpty(parameters.getFilters())) {
             newContent = parameters.getFilters();
             parameters.setFilters("");
+        }
+        if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+            Preset preset = presetsManager.getPreset(parameters.getPresetId());
+            if (preset == null) {
+                throw new MacroExecutionException(String.format("There is no preset with id [%s].",
+                    parameters.getPresetId()));
+            }
+            newContent = preset.getFilter();
         }
         try {
             String displayerId = displayer.name();

@@ -1,0 +1,130 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="ProjectManagement.Code.Presets.PresetSheet" locale="">
+  <web>ProjectManagement.Code.Presets</web>
+  <name>PresetSheet</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>
+{{velocity}}
+## Macros
+#macro (docDisplay $name $mode)
+  $doc.display($name, $mode).replaceAll('(^..html.*?}})|(../html..$)', '')
+#end
+## Dependencies
+#template('filter_builder.vm')
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
+##set ($discard = $xwiki.jsx.use('ProjectManagement.Code.Presets.PresetSheet'))
+## Setup
+#set ($className = 'ProjectManagement.Code.Presets.PresetClass')
+#set ($obj = $doc.getObject($className))
+#set ($discard = $doc.use($className))
+## Display
+
+{{html}}
+&lt;div class="xform"&gt;
+&lt;dl&gt;
+## Id
+#if ($xcontext.action == 'create')
+  &lt;dd&gt;
+    &lt;input id="ProjectManagement.Code.Presets.PresetClass_0_id"
+      name="ProjectManagement.Code.Presets.PresetClass_0_id"
+      value="$services.projectmanagement.presets.getNextId()"/&gt;
+  &lt;dd&gt;
+#end
+## Name
+#if ($xcontext.action != 'view')
+#set ($presetName = $obj.getValue('name'))
+#if ("$!presetName" == '')
+  #set ($presetName = $request.title)
+#end
+&lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.name'))&lt;/dt&gt;
+&lt;dd&gt;
+  &lt;input type="text" id="ProjectManagement.Code.Presets.PresetClass_0_name"
+    name="ProjectManagement.Code.Presets.PresetClass_0_name"
+    value="$escapetool.xml($presetName)"/&gt;
+    ##docDisplay('name', $context.action)
+&lt;dd&gt;
+#end
+#set ($isMultiple = $request.isMultiple)
+#if ("$!isMultiple" == '')
+ #set ($isMultiple = $obj.getValue('isMultiple'))
+#end
+#if ($xcontext.action == 'view')
+&lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.isMultiple'))&lt;/dt&gt;
+&lt;dd&gt;
+  #docDisplay('isMultiple', $xcontext.action)
+&lt;dd&gt;
+#else
+  &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_isMultiple"
+    name="ProjectManagement.Code.Presets.PresetClass_0_isMultiple"
+    value="$!isMultiple"/&gt;
+    ##docDisplay('name', $context.action)
+#end
+## Filter parameter that is displayed using a FILTER BUILDER.
+#set ($client = $obj.getValue('clients'))
+#if ("$!client" == '')
+  #set ($client = $request.client)
+#end
+#if ($xcontext.action != 'view')
+&lt;dd&gt;
+  &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_clients"
+    name="ProjectManagement.Code.Presets.PresetClass_0_clients"
+    value="$escapetool.xml($client)"/&gt;
+    ##docDisplay('name', $context.action)
+&lt;dd&gt;
+#end
+#set ($opts = { 'client': $client })
+#if ("$!isMultiple" == '1')
+  #set ($discard = $opts.put('title', 'Dataset 1'))
+  #set ($discard = $opts.put('removable', true))
+#end
+&lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.filter'))&lt;/dt&gt;
+&lt;dd&gt;
+  &lt;div class="project-management-filters"&gt;
+  #filterBuilder($opts)
+  &lt;/div&gt;
+  #set ($deps = {
+    'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
+  })
+  &lt;button class="btn btn-link project-management-new-dataset"&gt;Add new dataset&lt;/button&gt;
+  &lt;textarea id="ProjectManagement.Code.Presets.PresetClass_0_filter" class="proj-manag-filter" name="ProjectManagement.Code.Presets.PresetClass_0_filter"
+    data-deps="$!escapetool.xml($jsontool.serialize($deps))"
+  &gt;$!escapetool.xml($obj.getValue('filter'))&lt;/textarea&gt;
+  &lt;/dd&gt;
+&lt;/dl&gt;
+&lt;/div&gt;
+{{/html}}
+{{/velocity}}
+</content>
+</xwikidoc>

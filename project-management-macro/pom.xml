@@ -45,6 +45,11 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-presets-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.contrib</groupId>
       <artifactId>application-chartjs-ui</artifactId>
       <version>${application.chartjs.version}</version>

@@ -51,7 +51,11 @@ projectmanagement.relations.workItem.name=Linked Work Item
 
 projectmanagement.relations.viewer.title=Project Management Relation of {0}
 
-projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.</content>
+projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.
+projectmanagement.presets.create=Create new filter preset
+projectmanagement.presets.name=Preset Name
+projectmanagement.presets.isMultiple=For Charts?
+projectmanagement.presets.filter=Filter value</content>
   <object>
     <name>ProjectManagement.Code.Translations</name>
     <number>0</number>

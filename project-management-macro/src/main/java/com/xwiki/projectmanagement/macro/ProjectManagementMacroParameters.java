@@ -45,6 +45,8 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.liveData;
 
+    private String presetId;
+
     /**
      * Default constructor.
      */
@@ -159,5 +161,23 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     public void setId(String id)
     {
         super.setId(id);
+    }
+
+    /**
+     * @return the id of the filter preset.
+     * @since 1.3.0
+     */
+    public String getPresetId()
+    {
+        return presetId;
+    }
+
+    /**
+     * @param presetId see {@link #getPresetId()}.
+     * @since 1.3.0
+     */
+    public void setPresetId(String presetId)
+    {
+        this.presetId = presetId;
     }
 }
