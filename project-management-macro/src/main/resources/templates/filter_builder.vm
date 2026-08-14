@@ -22,7 +22,8 @@
  *
  * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
  *   retrieve the filterable livedata properties. The 'title' property will be used to set the title of the builder. The
- *   'removable' property will denote whether the builder can be removed or not.
+ *   'removable' property will denote whether the builder can be removed or not. The 'readonly' property will make the
+ *   filter builder un-editable.
  *#
 #macro (filterBuilder $parameters)
 #picker_import
@@ -57,39 +58,43 @@
       #if ($parameters.title)
         <span class="proj-manag-header-title">$escapetool.xml($parameters.title)</span>
       #end
-      #if ($parameters.removable)
+      #if ($parameters.removable && !$parameters.readonly)
         <a class="proj-manag-remove-filter">$services.icon.renderHTML('trash')</a>
       #end
       </div>
-      <div>
-        <select class="btn btn-default proj-manag-add-filter">
-          <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
-          #foreach ($prop in $filterableProperties)
-            <option value="$prop.id">#if($prop.name)$prop.name#else$prop.id#end</option>
-          #end
-        </select>
-      </div>
+      #if (!$parameters.readonly)
+        <div>
+          <select class="btn btn-default proj-manag-add-filter">
+            <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
+            #foreach ($prop in $filterableProperties)
+              <option value="$prop.id">#if($prop.name)$prop.name#else$prop.id#end</option>
+            #end
+          </select>
+        </div>
+      #end
       <div class="proj-manag-constraints">
       </div>
       <div id="proj-manag-constraint-template" class="hidden">
         <div class="proj-manag-container">
           <span class="proj-manag-constraint-title">Some title</span>
-          <input type="text" class="proj-manag-constraint-name hidden"/>
+          <input #if($parameters.readonly)disabled#end type="text" class="proj-manag-constraint-name hidden"/>
         </div>
         <div class="proj-manag-filter-container">
           <div class="proj-manag-constraint-operator-container">
-            <select class="proj-manag-constraint-operator">
+            <select #if($parameters.readonly)disabled#end class="proj-manag-constraint-operator">
             </select>
           </div>
           <div class="proj-manag-container proj-manag-constraint-value-container">
-            <input class="proj-manag-constraint-value" type="text"/>
+            <input #if($parameters.readonly)disabled#end class="proj-manag-constraint-value" type="text"/>
           </div>
-          <div class="proj-manag-constraint-remove-container">
-            <a href="#" title="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.remove'))"
-              class="proj-manag-delete-filter">$services.icon.renderHTML('trash')</a>
-          </div>
+          #if(!$parameters.readonly)
+            <div class="proj-manag-constraint-remove-container">
+              <a href="#" title="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.remove'))"
+                class="proj-manag-delete-filter">$services.icon.renderHTML('trash')</a>
+            </div>
+          #end
         </div>
-        <a class="proj-manag-add-constraint" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
+        <a class="proj-manag-add-constraint #if($parameters.readonly)hidden#end" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
       </div>
     </div>
   #end
