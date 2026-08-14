@@ -43,6 +43,12 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
+/**
+ * Default implementation of {@link PresetsManager}. Retrieves the presets from xwiki pages.
+ *
+ * @version $Id$
+ * @since 1.3.0
+ */
 @Component
 @Singleton
 public class DefaultPresetsManager implements PresetsManager

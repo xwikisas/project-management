@@ -35,6 +35,7 @@ import org.xwiki.stability.Unstable;
 public interface PresetsManager
 {
     /**
+     * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the returned list relative to the superset.
      * @param limit the maximum number of preset objects returned.
      * @return a list of presets that matches the offset and limit.
@@ -43,6 +44,7 @@ public interface PresetsManager
 
     /**
      * @param client the identifier of the ProjectManagement client. i.e. openproject.
+     * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the result set.
      * @param limit the maximum size that will be returned.
      * @return a list of presets that were configured for a specific ProjectManagement client.

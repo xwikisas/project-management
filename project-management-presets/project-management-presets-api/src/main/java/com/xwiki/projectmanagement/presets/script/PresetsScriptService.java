@@ -52,7 +52,7 @@ public class PresetsScriptService implements ScriptService
     private PresetsManager manager;
 
     /**
-     * @return the next
+     * @return the next available Preset id.
      */
     public int getNextPresetId()
     {
@@ -61,6 +61,7 @@ public class PresetsScriptService implements ScriptService
 
     /**
      * @param client the id of the Project Management client for which we want the presets.
+     * @param chart whether to retrieve the chart presets or the normal ones.
      * @param offset the offset of the result set.
      * @param limit the limit of the results.
      * @return a list of presets for the given client id.
@@ -71,6 +72,7 @@ public class PresetsScriptService implements ScriptService
     }
 
     /**
+     * @param chart whether to retrieve the chart presets or the normal ones.
      * @param offset the offset of the result set.
      * @param limit the limit of the results.
      * @return a list of presets.

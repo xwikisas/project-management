@@ -45,14 +45,29 @@ public class Preset
     public static final LocalDocumentReference REFERENCE = new LocalDocumentReference(Arrays.asList("ProjectManagement",
         "Code", "Presets"), "PresetClass");
 
+    /**
+     * The field name of the ID property.
+     */
     public static final String FIELD_ID = "id";
 
+    /**
+     * The field name of the NAME property.
+     */
     public static final String FIELD_NAME = "name";
 
+    /**
+     * The field name of the FILTER property.
+     */
     public static final String FIELD_FILTER = "filter";
 
+    /**
+     * The field name of the CLIENT property.
+     */
     public static final String FIELD_CLIENT = "client";
 
+    /**
+     * The field name of the ISMULTIPLE property.
+     */
     public static final String FIELD_MULTIPLE = "isMultiple";
 
     private final BaseObject xobject;

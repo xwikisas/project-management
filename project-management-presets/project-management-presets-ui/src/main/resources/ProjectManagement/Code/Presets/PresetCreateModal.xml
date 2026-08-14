@@ -36,9 +36,7 @@
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>{{html}}
-&lt;button id='proj-manag-create-preset' data-client='openproject'&gt;Create new preset&lt;/button&gt;
-{{/html}}</content>
+  <content/>
   <object>
     <name>ProjectManagement.Code.Presets.PresetCreateModal</name>
     <number>0</number>

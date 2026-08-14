@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement;
 /**
  * Interface representing a filter preset.
  *
+ * @version $Id$
  * @since 1.3.0
  */
 public interface ProjectManagementPreset

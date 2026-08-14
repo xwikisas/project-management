@@ -35,6 +35,7 @@
     <xwiki.jacoco.instructionRatio>0.43</xwiki.jacoco.instructionRatio>
     <application.chartjs.version>1.6.3</application.chartjs.version>
     <xwiki.enforcer.banneddependencytype-xar.skip>true</xwiki.enforcer.banneddependencytype-xar.skip>
+    <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
   </properties>
 
   <dependencies>

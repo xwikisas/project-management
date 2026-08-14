@@ -51,6 +51,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
@@ -108,7 +109,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     {
         try {
             if (StringUtils.isNotEmpty(parameters.getPresetId())) {
-                parameters.setFilters(presetsManager.getPreset(Integer.parseInt(parameters.getPresetId())).getFilter());
+                maybeSetPresetFilters(parameters);
             }
             List<List<LiveDataQuery.Filter>> filters = getFiltersList(parameters.getFilters());
             ChartTypeDisplayer chartTypeDisplayer = componentManager.getInstance(ChartTypeDisplayer.class,
@@ -163,8 +164,19 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             throw new MacroExecutionException("Failed to process the parameters of the chart type.");
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException("The execution of the displayer failed.", e);
+        }
+    }
+
+    private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
+    {
+        try {
+            Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
+            if (preset == null) {
+                throw new MacroExecutionException("No preset was found with the given id.");
+            }
+            parameters.setFilters(preset.getFilter());
         } catch (NumberFormatException e) {
-            throw new MacroExecutionException("The Preset Id should be a number.");
+            throw new MacroExecutionException("The preset id should be a number.");
         }
     }
 
