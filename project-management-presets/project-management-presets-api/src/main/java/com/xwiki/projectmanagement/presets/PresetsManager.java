@@ -39,15 +39,21 @@ public interface PresetsManager
      * @param limit the maximum number of preset objects returned.
      * @return a list of presets that matches the offset and limit.
      */
-    List<Preset> getPresets(int offset, int limit);
-
-    List<Preset> getClientPresets(String client, int offset, int limit);
+    List<Preset> getPresets(Boolean chart, int offset, int limit);
 
     /**
-     * @param name the name of the Preset.
+     * @param client the identifier of the ProjectManagement client. i.e. openproject.
+     * @param offset the offset of the result set.
+     * @param limit the maximum size that will be returned.
+     * @return a list of presets that were configured for a specific ProjectManagement client.
+     */
+    List<Preset> getClientPresets(String client, Boolean chart, int offset, int limit);
+
+    /**
+     * @param id the id of the Preset.
      * @return the first Preset that matches the name.
      */
-    Preset getPreset(String name);
+    Preset getPreset(Integer id);
 
     /**
      * @return an id that is not assigned to any existing Preset.

@@ -27,6 +27,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
+import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
 import com.xwiki.projectmanagement.openproject.OpenProjectSort;
 
@@ -84,5 +85,12 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     public void setSort(String sort)
     {
         super.setSort(sort);
+    }
+
+    @PropertyDisplayType(OpenProjectPreset.class)
+    @Override
+    public void setPresetId(String presetId)
+    {
+        super.setPresetId(presetId);
     }
 }

@@ -26,8 +26,9 @@ import org.xwiki.component.annotation.Component;
 
 import com.xpn.xwiki.doc.AbstractMandatoryClassInitializer;
 import com.xpn.xwiki.objects.classes.BaseClass;
+import com.xpn.xwiki.objects.classes.NumberClass;
 
-import static com.xwiki.projectmanagement.presets.Preset.FIELD_CLIENTS;
+import static com.xwiki.projectmanagement.presets.Preset.FIELD_CLIENT;
 import static com.xwiki.projectmanagement.presets.Preset.FIELD_FILTER;
 import static com.xwiki.projectmanagement.presets.Preset.FIELD_ID;
 import static com.xwiki.projectmanagement.presets.Preset.FIELD_MULTIPLE;
@@ -55,10 +56,10 @@ public class PresetClassInitializer extends AbstractMandatoryClassInitializer
     @Override
     protected void createClass(BaseClass xclass)
     {
-        xclass.addTextField(FIELD_ID, "Filter Preset ID", 20);
+        xclass.addNumberField(FIELD_ID, "Filter Preset ID", 10, NumberClass.TYPE_INTEGER);
         xclass.addTextField(FIELD_NAME, "Filter Preset Name", 20);
         xclass.addTextAreaField(FIELD_FILTER, "Filter value", 20, 20);
-        xclass.addTextField(FIELD_CLIENTS, "Project Management Clients", 20);
+        xclass.addTextField(FIELD_CLIENT, "Project Management Client", 20);
         xclass.addBooleanField(FIELD_MULTIPLE, "Has multiple filters?", "checkbox", false);
     }
 }

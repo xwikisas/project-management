@@ -27,6 +27,7 @@
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -57,9 +58,9 @@
 ## Id
 #if ($xcontext.action == 'create')
   &lt;dd&gt;
-    &lt;input id="ProjectManagement.Code.Presets.PresetClass_0_id"
+    &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_id"
       name="ProjectManagement.Code.Presets.PresetClass_0_id"
-      value="$services.projectmanagement.presets.getNextId()"/&gt;
+      value="$services.projectmanagement.presets.getNextPresetId()"/&gt;
   &lt;dd&gt;
 #end
 ## Name
@@ -92,14 +93,14 @@
     ##docDisplay('name', $context.action)
 #end
 ## Filter parameter that is displayed using a FILTER BUILDER.
-#set ($client = $obj.getValue('clients'))
+#set ($client = $obj.getValue('client'))
 #if ("$!client" == '')
   #set ($client = $request.client)
 #end
 #if ($xcontext.action != 'view')
 &lt;dd&gt;
-  &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_clients"
-    name="ProjectManagement.Code.Presets.PresetClass_0_clients"
+  &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_client"
+    name="ProjectManagement.Code.Presets.PresetClass_0_client"
     value="$escapetool.xml($client)"/&gt;
     ##docDisplay('name', $context.action)
 &lt;dd&gt;

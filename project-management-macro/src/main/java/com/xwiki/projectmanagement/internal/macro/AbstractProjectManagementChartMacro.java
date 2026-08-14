@@ -51,6 +51,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Abstract chart macro meant to be implemented by project management implementers.
@@ -78,6 +79,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     @Inject
     private XWikiVersionChecker xWikiVersionChecker;
 
+    @Inject
+    private PresetsManager presetsManager;
+
     /**
      * constructor.
      *
@@ -103,6 +107,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         throws MacroExecutionException
     {
         try {
+            if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+                parameters.setFilters(presetsManager.getPreset(Integer.parseInt(parameters.getPresetId())).getFilter());
+            }
             List<List<LiveDataQuery.Filter>> filters = getFiltersList(parameters.getFilters());
             ChartTypeDisplayer chartTypeDisplayer = componentManager.getInstance(ChartTypeDisplayer.class,
                 parameters.getType());
@@ -156,6 +163,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             throw new MacroExecutionException("Failed to process the parameters of the chart type.");
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException("The execution of the displayer failed.", e);
+        } catch (NumberFormatException e) {
+            throw new MacroExecutionException("The Preset Id should be a number.");
         }
     }
 

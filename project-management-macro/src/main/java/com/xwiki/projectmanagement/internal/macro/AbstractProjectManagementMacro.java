@@ -102,14 +102,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             newContent = parameters.getFilters();
             parameters.setFilters("");
         }
-        if (StringUtils.isNotEmpty(parameters.getPresetId())) {
-            Preset preset = presetsManager.getPreset(parameters.getPresetId());
-            if (preset == null) {
-                throw new MacroExecutionException(String.format("There is no preset with id [%s].",
-                    parameters.getPresetId()));
-            }
-            newContent = preset.getFilter();
-        }
+        newContent = maybeGetPresetFilter(parameters, newContent);
         try {
             String displayerId = displayer.name();
             if (WorkItemsDisplayer.liveDataCards.equals(displayer)) {
@@ -133,6 +126,23 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             throw new MacroExecutionException(
                 String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer.name()),
                 e);
+        }
+    }
+
+    private String maybeGetPresetFilter(T parameters, String newContent) throws MacroExecutionException
+    {
+        try {
+            if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+                Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
+                if (preset == null) {
+                    throw new MacroExecutionException(String.format("There is no preset with id [%s].",
+                        parameters.getPresetId()));
+                }
+                return preset.getFilter();
+            }
+            return newContent;
+        } catch (NumberFormatException e) {
+            throw new MacroExecutionException("The preset id should be a number.");
         }
     }
 

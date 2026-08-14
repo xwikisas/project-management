@@ -51,15 +51,15 @@
       <defaultWeb/>
       <nameField/>
       <validationScript/>
-      <clients>
+      <client>
         <disabled>0</disabled>
-        <name>clients</name>
+        <name>client</name>
         <number>3</number>
-        <prettyName>Project Management Clients</prettyName>
+        <prettyName>Project Management Client</prettyName>
         <size>20</size>
         <unmodifiable>0</unmodifiable>
         <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
-      </clients>
+      </client>
       <filter>
         <disabled>0</disabled>
         <name>filter</name>
@@ -93,7 +93,7 @@
       </name>
     </class>
     <property>
-      <clients/>
+      <client/>
     </property>
     <property>
       <filter/>

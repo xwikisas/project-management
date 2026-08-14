@@ -46,11 +46,13 @@ public class Preset
         "Code", "Presets"), "PresetClass");
 
     public static final String FIELD_ID = "id";
+
     public static final String FIELD_NAME = "name";
 
     public static final String FIELD_FILTER = "filter";
 
-    public static final String FIELD_CLIENTS = "clients";
+    public static final String FIELD_CLIENT = "client";
+
     public static final String FIELD_MULTIPLE = "isMultiple";
 
     private final BaseObject xobject;
@@ -61,6 +63,14 @@ public class Preset
     public Preset(BaseObject xobject)
     {
         this.xobject = xobject;
+    }
+
+    /**
+     * @return the unique id of this Preset.
+     */
+    public int getId()
+    {
+        return this.xobject.getIntValue(FIELD_ID);
     }
 
     /**
@@ -80,10 +90,18 @@ public class Preset
     }
 
     /**
-     * @return the list of clients that support this preset. If empty, this preset is available to all clients.
+     * @return the list of client that support this preset. If empty, this preset is available to all client.
      */
-    public String getClients()
+    public String getClient()
     {
-        return this.xobject.getStringValue(FIELD_CLIENTS);
+        return this.xobject.getStringValue(FIELD_CLIENT);
+    }
+
+    /**
+     * @return whether this Preset is to be used by charts or not.
+     */
+    public Boolean isMultiple()
+    {
+        return this.xobject.getIntValue(FIELD_MULTIPLE) == 1;
     }
 }

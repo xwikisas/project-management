@@ -128,32 +128,46 @@
     </property>
     <property>
       <code>var XWiki = (function (XWiki) {
-  require(['jquery', 'xwiki-meta'], function ($, xm) {
+  define("proj-manag-presets", {
+    prefix: "projectmanagement.presets.create.modal.",
+    keys: [
+      "confirm",
+      "input.name.label",
+      "input.isMultiple.label",
+      "title"
+    ],
+  });
+  require(['jquery', 'xwiki-meta', 'xwiki-l10n!proj-manag-presets'], function ($, xm, l10n) {
     XWiki.ProjManagNewPreset = Class.create(XWiki.widgets.ModalPopup, {
       initialize: function ($super, trigger) {
-        debugger;
         trigger[0].observe('click', this.showDialog.bindAsEventListener(this));
         // this.urlTemplate = trigger.up().next('input[type=hidden]').value;
 
         this.client = trigger.data('client');
         this.input = new Element('input', { type: 'text', name: 'title' });
         this.checkbox = new Element('input', { type: 'checkbox', name: 'isMultiple' });
-        this.addButton = new Element('input', {
-          type: 'image',
-          src: "$xwiki.getSkinFile('icons/silk/add.png')",
-          alt: "$escapetool.javascript($services.localization.render('platform.appwithinminutes.appHomePageAddEntryLabel'))"
+        this.addButton = new Element('button', {
+          class: 'btn btn-primary'
         });
+        this.addButton.innerHTML = l10n.get('confirm');
 
-        var container = new Element('div', { id: 'proj-manag-preset-popup' });
-        container.insert(this.input);
-        container.insert(this.checkbox);
-        container.insert(this.addButton);
+        var container = $('&lt;div&gt;&lt;/div&gt;')
+          .attr('id', 'proj-manag-preset-popup')
+          .addClass('xform')
+          .append('&lt;dl&gt;');
+        container
+           .find('dl')
+            .append($('&lt;dt&gt;', { text: l10n.get('input.name.label') }))
+            .append($('&lt;dd&gt;').append(this.input))
+            .append($('&lt;dt&gt;', { text: l10n.get('input.isMultiple.label') }))
+            .append($('&lt;dd&gt;').append(this.checkbox));
+        container.append(this.addButton);
 
-        $super(container, {
+        $super(container[0], {
           show: { method: this.showDialog, keys: [] },
           add: { method: this._onAdd, keys: ['Enter'] }
         }, {
-          title: "$escapetool.javascript($services.localization.render('platform.appwithinminutes.appHomePageEntryNameLabel'))",
+          title: l10n.get('title'),
           verticalPosition: 'top'
         });
       },
@@ -168,12 +182,11 @@
       _onAdd: function () {
         if (this.input.value != '') {
           // We use the global flag because we need to replace both the page name and its title.
-          debugger;
           var docRef = XWiki.Model.resolve('ProjectManagement.Code.Presets.Preset' + Date.now(), XWiki.EntityType.DOCUMENT, XWiki.currentDocument.getDocumentReference());
           var doc = new XWiki.Document(docRef);
           var createUrl = doc.getURL('edit', new URLSearchParams({
             template: 'ProjectManagement.Code.Presets.PresetTemplate',
-            title: encodeURIComponent(this.input.value),
+            title: this.input.value,
             isMultiple: this.checkbox.checked ? 1 : 0,
             client: this.client,
             form_token: xm.form_token
@@ -187,7 +200,6 @@
 
     function init() {
       var actionBox = $('#proj-manag-create-preset');
-      debugger;
       if (actionBox) {
         new XWiki.ProjManagNewPreset(actionBox);
         return true;

@@ -57,11 +57,17 @@ public class DefaultPresetsManager implements PresetsManager
     private Provider<XWikiContext> contextProvider;
 
     @Override
-    public List<Preset> getPresets(int offset, int limit)
+    public List<Preset> getPresets(Boolean chart, int offset, int limit)
     {
         try {
+            String query = "from doc.object('%s') as obj";
+            if (chart) {
+                query += " where obj.isMultiple = 1";
+            } else {
+                query += " where obj.isMultiple = 0";
+            }
             List<String> presets =
-                queryManager.createQuery(String.format("from doc.object('%s')", Preset.CLASS_NAME), Query.XWQL)
+                queryManager.createQuery(String.format(query, Preset.CLASS_NAME), Query.XWQL)
                     .setOffset(offset).setLimit(limit).execute();
             if (presets.isEmpty()) {
                 return Collections.emptyList();
@@ -73,13 +79,19 @@ public class DefaultPresetsManager implements PresetsManager
     }
 
     @Override
-    public List<Preset> getClientPresets(String client, int offset, int limit)
+    public List<Preset> getClientPresets(String client, Boolean chart, int offset, int limit)
     {
         try {
+            String query = "from doc.object('%s') as obj where obj.client = :client";
+            if (chart) {
+                query += " and obj.isMultiple = 1";
+            } else {
+                query += " and obj.isMultiple = 0";
+            }
             List<String> presets =
                 queryManager
                     .createQuery(
-                        String.format("from doc.object('%s') as obj where obj.client = :client", Preset.CLASS_NAME),
+                        String.format(query, Preset.CLASS_NAME),
                         Query.XWQL)
                     .setLimit(limit)
                     .setOffset(offset)
@@ -95,16 +107,16 @@ public class DefaultPresetsManager implements PresetsManager
     }
 
     @Override
-    public Preset getPreset(String name)
+    public Preset getPreset(Integer id)
     {
         try {
             List<String> presets =
                 queryManager
                     .createQuery(
-                        String.format("from doc.object('%s') as obj where obj.name = :presetname", Preset.CLASS_NAME),
+                        String.format("from doc.object('%s') as obj where obj.id = :presetid", Preset.CLASS_NAME),
                         Query.XWQL)
                     .setLimit(1)
-                    .bindValue("presetname", name)
+                    .bindValue("presetid", id)
                     .execute();
             if (presets.isEmpty()) {
                 return null;
@@ -121,12 +133,12 @@ public class DefaultPresetsManager implements PresetsManager
         try {
             List<Integer> result =
                 queryManager.createQuery(String.format(
-                    "select max(obj.id) from Document as doc doc.object('%s') as obj where obj.id is not null",
+                    "select max(obj.id) from Document as doc, doc.object('%s') as obj where obj.id is not null",
                     Preset.CLASS_NAME), Query.XWQL).execute();
 
             int number = 1;
             if (!result.isEmpty() && result.get(0) != null) {
-                number = result.get(0);
+                number = result.get(0) + 1;
             }
             return number;
         } catch (QueryException e) {

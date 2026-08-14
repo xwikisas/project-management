@@ -20,8 +20,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="ProjectManagement.Code.Translations" locale="">
-  <web>ProjectManagement.Code</web>
+<xwikidoc version="1.5" reference="ProjectManagement.Code.Presets.Translations" locale="">
+  <web>ProjectManagement.Code.Presets</web>
   <name>Translations</name>
   <language/>
   <defaultLanguage>en</defaultLanguage>
@@ -36,22 +36,14 @@
   <minorEdit>false</minorEdit>
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
-  <content>projectmanagement.relations.docextra.title=Project Management Relations
-
-projectmanagement.relations.relation.add.title=Create a new relation
-projectmanagement.relations.relation.add.label=Add new relation
-projectmanagement.relations.relation.add.placeholder=Set the project management client..
-projectmanagement.relations.relation.edit=Page relation of the {0} client.
-
-projectmanagement.relations.client.id.name=Project Management Client ID
-projectmanagement.relations.client.params.name=Client Specific Parameters
-
-projectmanagement.relations.project.name=Linked Project
-projectmanagement.relations.workItem.name=Linked Work Item
-
-projectmanagement.relations.viewer.title=Project Management Relation of {0}
-
-projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.</content>
+  <content>projectmanagement.presets.create=Create new filter preset
+projectmanagement.presets.create.modal.title=Fill in the Preset details:
+projectmanagement.presets.create.modal.input.name.label=Preset Name
+projectmanagement.presets.create.modal.input.isMultiple.label=Is it a chart preset?
+projectmanagement.presets.create.modal.confirm=Create preset
+projectmanagement.presets.name=Preset Name
+projectmanagement.presets.isMultiple=For Charts?
+projectmanagement.presets.filter=Filter value</content>
   <object>
     <name>ProjectManagement.Code.Translations</name>
     <number>0</number>
