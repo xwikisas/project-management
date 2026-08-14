@@ -56,7 +56,7 @@
 &lt;div class="xform"&gt;
 &lt;dl&gt;
 ## Id
-#if ($xcontext.action == 'create')
+#if ($xcontext.action != 'view' &amp;&amp; "$!obj.getValue('id')" == '')
   &lt;dd&gt;
     &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_id"
       name="ProjectManagement.Code.Presets.PresetClass_0_id"

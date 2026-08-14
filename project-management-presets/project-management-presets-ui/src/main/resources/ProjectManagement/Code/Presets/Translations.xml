@@ -45,7 +45,7 @@ projectmanagement.presets.name=Preset Name
 projectmanagement.presets.isMultiple=For Charts?
 projectmanagement.presets.filter=Filter value</content>
   <object>
-    <name>ProjectManagement.Code.Translations</name>
+    <name>ProjectManagement.Code.Presets.Translations</name>
     <number>0</number>
     <className>XWiki.TranslationDocumentClass</className>
     <guid>38368506-8c84-4357-b3bb-872f50431334</guid>
