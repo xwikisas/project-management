@@ -82,9 +82,20 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
 
+    private static final Pattern URL_QUERY_ID_PATTERN = Pattern.compile("^query_id=(\\d+)$");
+
+    private static final Pattern QUERY_FILTERS_PATTERN = Pattern.compile("[?&]filters=([^&]+)");
+
+    private static final Pattern QUERY_SORT_BY_PATTERN = Pattern.compile("[?&]sortBy=([^&]+)");
+
+    private static final String NO_FILTERS = "[]";
+
     private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
 
     private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
+
+    private static final String INCORRECT_IDENTIFIER_FORMAT_MESSAGE =
+        "The provided identifier value is not in a supported format.";
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
@@ -126,8 +137,9 @@ public class OpenProjectClient implements ProjectManagementClient
             OpenProjectApiClient openProjectApiClient =
                 getOpenProjectApiClient();
 
-            if (identifier != null && !identifier.isEmpty()) {
-                return handleIdentifier(openProjectApiClient, identifier, offset, pageSize, filters, sortEntries);
+            if (identifier != null && !identifier.trim().isEmpty()) {
+                return handleIdentifier(openProjectApiClient, identifier.trim(), offset, pageSize, filters,
+                    sortEntries);
             }
 
             String filtersString = OpenProjectFilterHandler.convertFilters(filters);
@@ -235,6 +247,13 @@ public class OpenProjectClient implements ProjectManagementClient
         switch (identifierType) {
             case URL:
                 URL url = parseUrl(identifier);
+                String urlQueryId = extractQueryId(url.getQuery());
+
+                if (urlQueryId != null) {
+                    return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries,
+                        sortEntries);
+                }
+
                 JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
                 project = extractProjectFromPath(url.getPath());
 
@@ -283,9 +302,7 @@ public class OpenProjectClient implements ProjectManagementClient
             return IDS;
         }
 
-        throw new WorkPackageRetrievalBadRequestException(
-            "The provided identifier value is not in a supported format."
-        );
+        throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
     }
 
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
@@ -328,6 +345,90 @@ public class OpenProjectClient implements ProjectManagementClient
         JsonNode idsFilterNode = objectMapper.valueToTree(List.of(idFiltersAsJson));
 
         return OpenProjectFilterHandler.mergeFilters(filtersList, idsFilterNode);
+    }
+
+    private String extractQueryId(String queryParameters)
+    {
+        if (queryParameters == null) {
+            return null;
+        }
+
+        Matcher matcher = URL_QUERY_ID_PATTERN.matcher(queryParameters.trim());
+
+        return matcher.matches() ? matcher.group(1) : null;
+    }
+
+    /**
+     * Retrieves the work packages matching a saved query. As long as the livedata doesn't filter anything, the results
+     * are read straight from the query, which already embeds them. Once the livedata filters, the queries endpoint
+     * can't be used anymore since the filters it receives replace the ones of the query instead of restricting them, so
+     * the two sets are merged and sent to the work packages endpoint.
+     */
+    private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient, String queryId,
+        int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries,
+        List<LiveDataQuery.SortEntry> sortEntries)
+        throws ProjectManagementException
+    {
+        String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
+
+        try {
+            if (!NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
+                return handleFilteredSavedQuery(openProjectApiClient, queryId, offset, pageSize, filtersEntries,
+                    sortBy);
+            }
+
+            return OpenProjectConverters.convertPaginatedResult(
+                openProjectApiClient.getQueryWorkPackages(queryId, offset, pageSize, sortBy),
+                OpenProjectConverters::convertWorkPackageToWorkItem
+            );
+        } catch (WorkPackageRetrievalBadRequestException e) {
+            return handleWorkPackageRetrievalException(e);
+        }
+    }
+
+    /**
+     * Combines the filters of a saved query with the livedata ones and sends them to the work packages endpoint.
+     */
+    private PaginatedResult<WorkItem> handleFilteredSavedQuery(OpenProjectApiClient openProjectApiClient,
+        String queryId, int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries, String sortBy)
+        throws ProjectManagementException
+    {
+        String resultsUrl = openProjectApiClient.getQueryResultsUrl(queryId);
+        String filters =
+            OpenProjectFilterHandler.mergeApiFilters(filtersEntries, extractFiltersFromResultsUrl(resultsUrl));
+        String sorting = sortBy.isEmpty() ? extractSortByFromResultsUrl(resultsUrl) : sortBy;
+
+        return OpenProjectConverters.convertPaginatedResult(
+            openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),
+            OpenProjectConverters::convertWorkPackageToWorkItem
+        );
+    }
+
+    private String extractSortByFromResultsUrl(String resultsUrl)
+    {
+        if (resultsUrl == null) {
+            return "";
+        }
+
+        Matcher matcher = QUERY_SORT_BY_PATTERN.matcher(resultsUrl);
+
+        return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : "";
+    }
+
+    private JsonNode extractFiltersFromResultsUrl(String resultsUrl) throws WorkItemRetrievalException
+    {
+        Matcher matcher = QUERY_FILTERS_PATTERN.matcher(resultsUrl);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String filters = URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
+        try {
+            return objectMapper.readTree(filters);
+        } catch (JsonProcessingException e) {
+            throw new WorkItemRetrievalException("Failed to read the filters of the saved query", e);
+        }
     }
 
     private String extractSortByString(List<LiveDataQuery.SortEntry> sortEntries, JsonNode sortByNode)
