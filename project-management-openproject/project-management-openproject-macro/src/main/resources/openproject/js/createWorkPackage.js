@@ -80,7 +80,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     const requestBody = { project: project };
 
     try {
-      const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+      const response = await createWpUtils.createWorkPackagesOptionsRequest(connection, requestBody);
       container.empty().addClass("hidden");
 
       Object.entries(response).forEach(([key, value]) => {
@@ -146,7 +146,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     });
     createWpUtils.notify(l10n.get("notify.submit.success"), "done");
     } catch (err) {
-      createWpUtils.notify(l10n.get("notify.submit.error"), "error");
+      createWpUtils.notify(createWpUtils.getValidationMessage(err) || l10n.get("notify.submit.error"), "error");
     }
   }
 

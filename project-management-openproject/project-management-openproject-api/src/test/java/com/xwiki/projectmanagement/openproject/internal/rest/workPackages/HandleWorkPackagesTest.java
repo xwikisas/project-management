@@ -137,6 +137,8 @@ public class HandleWorkPackagesTest
     {
         CreateWorkPackage createWorkPackage = generateCreateWorkPackage();
 
+        createWorkPackage.setFormOnly(true);
+
         JsonNode workPackagesNode = mapper.readTree(
             OpenProjectTestUtils.getCreateWorkPackageValidationFailsApiResponse()
         );
