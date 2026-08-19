@@ -588,6 +588,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
         container.removeClass("hidden");
       } catch (err) {
+        if (err.status === 409) {
+          return;
+        }
         createWpUtils.notify(l10n.get("notify.inputs.error"), "error");
       }
     }
@@ -617,6 +620,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
           initializeMapping(response);
         }
       } catch (err) {
+        if (err.status === 409) {
+          return;
+        }
         createWpUtils.notify(l10n.get("notify.values.error"), "error")
       }
     }
