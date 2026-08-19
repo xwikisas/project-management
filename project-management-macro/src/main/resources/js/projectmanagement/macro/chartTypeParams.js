@@ -40,7 +40,7 @@ require(['jquery', 'xwiki-selectize'], function ($) {
     }
     let params = paramsInput.val() ? JSON.parse(paramsInput.val()) : {};
 
-    let chartType = $('.macro-editor-modal .macro-parameter select[name=type]').val();
+    let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val();
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
     let notif = new XWiki.widgets.Notification('Loading chart type parameters', 'inprogress');
     $.getJSON(getChartTypeParamsURL)
