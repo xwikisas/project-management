@@ -52,13 +52,6 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
 
     @PropertyDisplayHidden
     @Override
-    public void setType(String type)
-    {
-        super.setType(type);
-    }
-
-    @PropertyDisplayHidden
-    @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
