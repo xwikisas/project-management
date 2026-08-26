@@ -23,8 +23,8 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -65,21 +65,25 @@ public class ProjectManagementAsyncExecutor
      * @param parameters the parameters of the macro.
      * @param content the content of the macro.
      * @param context the macro transformation context.
+     * @param paramsConsumer consumes the async renderer and can modify the parameters and content of the macro
+     *     before execution. i.e. make another api call in the async context.
+     * @param forcePlaceholder denotes whether to force the placeholder or nah.
      * @return the placeholder blocks that will be asynchronously populated.
      * @throws RenderingException if some exception was thrown during the rendering of the placeholder.
      * @throws JobException if some exception was thrown during the execution of the render job. This should not
      *     happen as we always render the placeholder.
      */
     public List<Block> execute(Macro<ProjectManagementAsyncMacroParams> displayerMacro,
-        ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context)
+        ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
+        Consumer<ProjectManagementAsyncRenderer> paramsConsumer, boolean forcePlaceholder)
         throws RenderingException, JobException
     {
 
         try {
-            AsyncRendererConfiguration configuration = getAsyncRendererConfiguration();
+            AsyncRendererConfiguration configuration = getAsyncRendererConfiguration(forcePlaceholder);
             ProjectManagementAsyncRenderer asyncRenderer =
                 componentManager.getInstance(ProjectManagementAsyncRenderer.class);
-            asyncRenderer.initialize(displayerMacro, parameters, content, context);
+            asyncRenderer.initialize(displayerMacro, parameters, content, context, paramsConsumer);
             Block result = executor.execute(asyncRenderer, configuration);
             return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
         } catch (ComponentLookupException e) {
@@ -88,8 +92,7 @@ public class ProjectManagementAsyncExecutor
         }
     }
 
-    @Nonnull
-    private static AsyncRendererConfiguration getAsyncRendererConfiguration()
+    private AsyncRendererConfiguration getAsyncRendererConfiguration(boolean forcePlaceholder)
     {
         AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
 
@@ -98,7 +101,7 @@ public class ProjectManagementAsyncExecutor
             Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
                 XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
         // We always want the results to be displayed async, since we make calls to other servers.
-        configuration.setPlaceHolderForced(true);
+        configuration.setPlaceHolderForced(forcePlaceholder);
         return configuration;
     }
 }

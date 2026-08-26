@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.RenderingException;
@@ -59,6 +60,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private boolean inline;
 
+    private Consumer<ProjectManagementAsyncRenderer> paramsConsumer;
+
     /**
      * Initialize the async renderer with the required parameters for a project management displayer to function
      * properly.
@@ -68,9 +71,11 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
      * @param parameters the parameters passed to the displayer macro.
      * @param content the content passed to the displayer macro.
      * @param context the macro transformation context that will be taken in consideration by the executed macro.
+     * @param paramsConsumer
      */
     public void initialize(Macro<ProjectManagementAsyncMacroParams> displayer,
-        ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context)
+        ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
+        Consumer<ProjectManagementAsyncRenderer> paramsConsumer)
     {
         workItemsDisplayer = displayer;
         this.parameters = parameters;
@@ -78,6 +83,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         this.transformationContext = context.clone();
         this.inline = this.transformationContext.isInline();
         this.targetSyntax = context.getTransformationContext().getTargetSyntax();
+        this.paramsConsumer = paramsConsumer;
 
         // I'm assuming that the id should be deterministic only if we are interested in caching the result. Since we
         // shouldn't cache the results coming from OpenProject, we can generate a random uuid.
@@ -88,6 +94,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     protected Block execute(boolean async, boolean cached) throws RenderingException
     {
         try {
+            if (this.paramsConsumer != null) {
+                this.paramsConsumer.accept(this);
+            }
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
@@ -96,6 +105,26 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         } catch (MacroExecutionException e) {
             throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
         }
+    }
+
+    /**
+     * @param content set the content that will be passed to the executing macro. This should be called before
+     *     {@link #execute(boolean, boolean)}.
+     * @since 1.3.0
+     */
+    public void setMacroContent(String content)
+    {
+        this.content = content;
+    }
+
+    /**
+     * @return the reference to the stored macro parameters that will be passed during the async rendering. Can be
+     *     modified before {@link #execute(boolean, boolean)}.
+     * @since 1.3.0
+     */
+    public ProjectManagementAsyncMacroParams getParameters()
+    {
+        return this.parameters;
     }
 
     @Override

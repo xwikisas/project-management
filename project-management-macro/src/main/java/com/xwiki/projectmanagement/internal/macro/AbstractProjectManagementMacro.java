@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
@@ -38,13 +39,17 @@ import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 /**
- * Something.
+ * Provides the logic and extension points for implementing the base work item filtering macro. When implementing a
+ * project management client, this macro should also be implemented and minimally add the client ID to the source
+ * parameters.
  *
- * @param <T> something.
+ * @param <T> the type of your macro implementation parameters. This will allow you to add custom parameters for the
+ *     macro implementation.
  * @version $Id$
  */
 public abstract class AbstractProjectManagementMacro<T extends ProjectManagementMacroParameters>
@@ -57,10 +62,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     private ProjectManagementAsyncExecutor asyncExecutor;
 
     /**
-     * @param name smth
-     * @param description smth
-     * @param descriptor smth
-     * @param clazz smth
+     * @param name the name of the macro.
+     * @param description the description of the macro.
+     * @param descriptor the content descriptor of the macro.
+     * @param clazz the class of the parameters.
      */
     public AbstractProjectManagementMacro(String name, String description, ContentDescriptor descriptor,
         Class<?> clazz)
@@ -98,9 +103,8 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         }
         try {
             String displayerId = displayer.name();
-            if (WorkItemsDisplayer.liveDataCards.equals(displayer)) {
-                parameters.setLayouts("cards,table");
-                displayerId = WorkItemsDisplayer.liveData.name();
+            if (WorkItemsDisplayer.liveDataCards.equals(displayer) || WorkItemsDisplayer.liveData.equals(displayer)) {
+                displayerId = WorkItemLivedataDisplayer.ROLE_HINT;
             }
             Macro<ProjectManagementAsyncMacroParams> displayerMacro =
                 componentManager.getInstance(Macro.class, displayerId);
@@ -108,11 +112,8 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 throw new MacroExecutionException(
                     String.format("Macro displayer [%s] is standalone but is being used inline.", displayerId));
             }
-            if (!WorkItemsDisplayer.liveData.equals(displayer) && !WorkItemsDisplayer.liveDataCards.equals(displayer)) {
-                return asyncExecutor.execute(displayerMacro, parameters, newContent, context);
-            }
-
-            return displayerMacro.execute(parameters, newContent, context);
+            return asyncExecutor.execute(displayerMacro, parameters, newContent, context,
+                getAsyncParametersProcessor(), isAsync(parameters));
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
         } catch (JobException | RenderingException e) {
@@ -126,6 +127,17 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      * @param parameters the parameters that will be passed to the livedata macro call.
      */
     public abstract void processParameters(T parameters);
+
+    protected boolean isAsync(T parameters)
+    {
+        return !WorkItemsDisplayer.liveData.equals(parameters.getWorkItemsDisplayer())
+            && !WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer());
+    }
+
+    protected Consumer<ProjectManagementAsyncRenderer> getAsyncParametersProcessor()
+    {
+        return null;
+    }
 
     protected void addToSourceParams(T parameters, String key, String value)
     {
