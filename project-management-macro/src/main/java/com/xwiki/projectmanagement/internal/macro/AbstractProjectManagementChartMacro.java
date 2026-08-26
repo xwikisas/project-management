@@ -138,7 +138,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                         throw new MacroExecutionException("Failed to retrieve the work packages.", e);
                     }
                 }
-            }, parameters, content, context);
+            }, parameters, content, context, null, true);
             // TODO: Remove when parent is greater than 18.6.0-rc-1. When displaying multiple charts on the same
             //  page, they get initialised on page load and on xwiki:dom:updated event. This event is sent, when
             //  rendering things async, since 18.6.0-rc-1. We need some way around it until then.

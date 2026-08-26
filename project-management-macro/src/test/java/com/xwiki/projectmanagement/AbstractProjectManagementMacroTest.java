@@ -25,7 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
-import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
+import org.xwiki.job.JobException;
+import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
@@ -42,6 +43,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -63,9 +65,6 @@ public class AbstractProjectManagementMacroTest
     private ComponentManager componentManager;
 
     @MockComponent
-    private BlockAsyncRendererExecutor executor;
-
-    @MockComponent
     private ProjectManagementAsyncExecutor asyncExecutor;
 
     @Mock
@@ -75,17 +74,19 @@ public class AbstractProjectManagementMacroTest
     private Macro<ProjectManagementAsyncMacroParams> displayerMacro;
 
     @Test
-    void executeMacroWithDefaultValuesTest() throws MacroExecutionException, ComponentLookupException
+    void executeMacroWithDefaultValuesTest()
+        throws MacroExecutionException, ComponentLookupException, JobException, RenderingException
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
 
-        when(componentManager.getInstance(Macro.class, "liveData")).thenReturn(displayerMacro);
+        when(componentManager.getInstance(Macro.class, "proj-manag-liveData")).thenReturn(displayerMacro);
         abstractMacro.execute(params, "", macroTransformationContext);
 
         assertEquals("projectmanagement", params.getSource());
         assertEquals("smth=smth2&smth3=smth4", params.getSourceParameters());
 
-        verify(displayerMacro).execute(params, "", macroTransformationContext);
+        // Gets executed in the async renderer.
+        verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any(), any(), anyBoolean());
     }
 
     @Test
@@ -99,6 +100,6 @@ public class AbstractProjectManagementMacroTest
         List<Block> result = abstractMacro.execute(params, "", macroTransformationContext);
 
         // Gets executed in the async renderer.
-        verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any());
+        verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any(), any(), anyBoolean());
     }
 }
