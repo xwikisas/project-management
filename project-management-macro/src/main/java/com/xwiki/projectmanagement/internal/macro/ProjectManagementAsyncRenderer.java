@@ -71,7 +71,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
      * @param parameters the parameters passed to the displayer macro.
      * @param content the content passed to the displayer macro.
      * @param context the macro transformation context that will be taken in consideration by the executed macro.
-     * @param paramsConsumer
+     * @param paramsConsumer a consumer for the parameters that will be passed to the executing displayer macro.
+     *     This can modify the parameters in order to change the bahaviour of the displayers.
      */
     public void initialize(Macro<ProjectManagementAsyncMacroParams> displayer,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
