@@ -60,7 +60,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private boolean inline;
 
-    private Consumer<ProjectManagementAsyncRenderer> paramsConsumer;
+    private Consumer<ProjectManagementAsyncMacroParams> paramsConsumer;
 
     /**
      * Initialize the async renderer with the required parameters for a project management displayer to function
@@ -75,7 +75,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
      */
     public void initialize(Macro<ProjectManagementAsyncMacroParams> displayer,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
-        Consumer<ProjectManagementAsyncRenderer> paramsConsumer)
+        Consumer<ProjectManagementAsyncMacroParams> paramsConsumer)
     {
         workItemsDisplayer = displayer;
         this.parameters = parameters;
@@ -95,7 +95,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     {
         try {
             if (this.paramsConsumer != null) {
-                this.paramsConsumer.accept(this);
+                this.paramsConsumer.accept(this.parameters);
             }
             List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             if (this.transformationContext.getCurrentMacroBlock() != null) {

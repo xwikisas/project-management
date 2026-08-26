@@ -67,8 +67,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      * @param descriptor the content descriptor of the macro.
      * @param clazz the class of the parameters.
      */
-    public AbstractProjectManagementMacro(String name, String description, ContentDescriptor descriptor,
-        Class<?> clazz)
+    public AbstractProjectManagementMacro(String name, String description, ContentDescriptor descriptor, Class<?> clazz)
     {
         super(name, description, descriptor, clazz);
     }
@@ -90,17 +89,12 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      * @throws MacroExecutionException if something went bad.
      */
     @Override
-    public List<Block> execute(T parameters, String content,
-        MacroTransformationContext context) throws MacroExecutionException
+    public List<Block> execute(T parameters, String content, MacroTransformationContext context)
+        throws MacroExecutionException
     {
         WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
-        String newContent = content;
-        if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
-            newContent = parameters.getFilters();
-            parameters.setFilters("");
-        }
         try {
             String displayerId = displayer.name();
             if (WorkItemsDisplayer.liveDataCards.equals(displayer) || WorkItemsDisplayer.liveData.equals(displayer)) {
@@ -112,8 +106,8 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 throw new MacroExecutionException(
                     String.format("Macro displayer [%s] is standalone but is being used inline.", displayerId));
             }
-            return asyncExecutor.execute(displayerMacro, parameters, newContent, context,
-                getAsyncParametersProcessor(), isAsync(parameters));
+            return asyncExecutor.execute(displayerMacro, parameters, content, context, getAsyncParametersProcessor(),
+                isAsync(parameters));
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
         } catch (JobException | RenderingException e) {
@@ -128,15 +122,27 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      */
     public abstract void processParameters(T parameters);
 
+    /**
+     * This method offers the possibility to update the parameters right before the executing the displayer in the async
+     * thread. The updated parameters will be passed down to the displayer macro.
+     *
+     * @param parameters the parameters of the currently executing macro. Updating this will affect how the macro is
+     *     rendered.
+     * @since 1.3.0
+     */
+    public abstract void asyncProcessParameters(T parameters);
+
     protected boolean isAsync(T parameters)
     {
         return !WorkItemsDisplayer.liveData.equals(parameters.getWorkItemsDisplayer())
             && !WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer());
     }
 
-    protected Consumer<ProjectManagementAsyncRenderer> getAsyncParametersProcessor()
+    protected Consumer<ProjectManagementAsyncMacroParams> getAsyncParametersProcessor()
     {
-        return null;
+        return (params -> {
+            asyncProcessParameters((T) params);
+        });
     }
 
     protected void addToSourceParams(T parameters, String key, String value)
@@ -149,13 +155,8 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             parameters.setSourceParameters(String.format("%s=%s", key, value));
         } else {
             parameters.setSourceParameters(
-                String.format(
-                    "%s&%s=%s",
-                    sourceParameters,
-                    URLEncoder.encode(key, StandardCharsets.UTF_8),
-                    URLEncoder.encode(value, StandardCharsets.UTF_8)
-                )
-            );
+                String.format("%s&%s=%s", sourceParameters, URLEncoder.encode(key, StandardCharsets.UTF_8),
+                    URLEncoder.encode(value, StandardCharsets.UTF_8)));
         }
     }
 }

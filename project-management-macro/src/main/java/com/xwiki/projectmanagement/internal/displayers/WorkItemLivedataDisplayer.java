@@ -79,10 +79,15 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
         try {
             Macro<ProjectManagementAsyncMacroParams> displayerMacro =
                 componentManager.getInstance(Macro.class, "liveData");
+            String newContent = content;
+            if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
+                newContent = parameters.getFilters();
+                parameters.setFilters("");
+            }
             if (WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer())) {
                 parameters.setLayouts("cards,table");
             }
-            return displayerMacro.execute(parameters, content, context);
+            return displayerMacro.execute(parameters, newContent, context);
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException("Could not find the [liveData] macro.", e);
         }

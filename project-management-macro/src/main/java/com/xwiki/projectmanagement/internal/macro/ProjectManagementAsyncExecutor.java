@@ -75,7 +75,7 @@ public class ProjectManagementAsyncExecutor
      */
     public List<Block> execute(Macro<ProjectManagementAsyncMacroParams> displayerMacro,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
-        Consumer<ProjectManagementAsyncRenderer> paramsConsumer, boolean forcePlaceholder)
+        Consumer<ProjectManagementAsyncMacroParams> paramsConsumer, boolean forcePlaceholder)
         throws RenderingException, JobException
     {
 
