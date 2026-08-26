@@ -19,7 +19,9 @@
  */
 package com.xwiki.projectmanagement.internal.displayers;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -91,5 +93,11 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException("Could not find the [liveData] macro.", e);
         }
+    }
+
+    @Override
+    protected void setDefaultCategories(Set<String> defaultCategories)
+    {
+        super.setDefaultCategories(Collections.singleton("Internal"));
     }
 }
