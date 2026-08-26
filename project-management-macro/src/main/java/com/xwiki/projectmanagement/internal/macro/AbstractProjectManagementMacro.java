@@ -132,7 +132,17 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      */
     public abstract void asyncProcessParameters(T parameters);
 
-    protected boolean isAsync(T parameters)
+    /**
+     * Denotes whether this macro, given it's parameters (mainly the displayer), should be rendered asynchronously or
+     * not. Some displayers might have their own async rendering handlers which will make our async rendering redundant
+     * i.e. the livedata displayers. By default, this method returns false in the case of the livedata displayers and
+     * true otherwise.
+     *
+     * @param parameters the parameters of the currently executing macro.
+     * @return true if the rendering should be done on a separate thread. false otherwise.
+     * @since 1.3.0
+     */
+    public boolean isAsync(T parameters)
     {
         return !WorkItemsDisplayer.liveData.equals(parameters.getWorkItemsDisplayer())
             && !WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer());
