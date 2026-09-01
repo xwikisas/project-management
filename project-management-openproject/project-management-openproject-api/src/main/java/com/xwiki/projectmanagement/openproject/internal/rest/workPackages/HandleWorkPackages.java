@@ -292,6 +292,14 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+
+        if (apiClient == null) {
+            return Response
+                .status(Response.Status.CONFLICT)
+                .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
+                .build();
+        }
+
         Map<String, Object> formRequest = createRequestForOpenProjectFormRequest(workPackage);
 
         JsonNode response;
@@ -382,6 +390,14 @@ public class HandleWorkPackages extends XWikiResource
         throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+
+        if (apiClient == null) {
+            return Response
+                .status(Response.Status.CONFLICT)
+                .entity(NO_AUTHENTICATION_ERROR_MESSAGE)
+                .build();
+        }
+
         Map<String, Object> formRequest = createRequestForOpenProjectFormRequest(workPackage);
 
         try {
