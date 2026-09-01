@@ -561,7 +561,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       };
 
       try {
-        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+        const response = await createWpUtils.createWorkPackagesOptionsRequest(connection, requestBody);
 
         container.empty().addClass("hidden");
 
@@ -610,7 +610,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       };
 
       try {
-        const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+        const response = await createWpUtils.createWorkPackagesOptionsRequest(connection, requestBody);
         generateCards(response, rowsData.map(() =&gt; ""));
 
         if ($(".mapping-row").length &gt; 0) {
@@ -660,8 +660,29 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         createWpUtils.notify(l10n.get("notify.single.success"), "done");
         window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: response, connection: connection, element: selectedElement } }));
       } catch (err) {
-        createWpUtils.notify(l10n.get("notify.single.error"), "error")
+        createWpUtils.notify(createWpUtils.getValidationMessage(err) || l10n.get("notify.single.error"), "error")
       }
+    }
+
+    function showCardError(card, message) {
+      card.find('.wp-error').remove();
+
+      const error = $("&lt;div&gt;", {
+        class: "wp-error text-danger small",
+        text: message
+      });
+
+      const titleRow = card.find('.panel-body &gt; .row').first();
+
+      if (titleRow.length) {
+        titleRow.after(error);
+      } else {
+        card.find('.panel-body').append(error);
+      }
+    }
+        
+    function markCardAsCreated(card) {
+      card.find('.wp-selected').prop('checked', false).prop('disabled', true);
     }
 
     async function submitMultipleWorkPackagesForm(element) {
@@ -701,36 +722,43 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
         const titleEl = card.find('.wp-subject-title');
         titleEl.removeClass('text-success text-danger');
+        card.find('.wp-error').remove();
 
         const p = createWpUtils.createWorkPackagesRequest(connection, payload)
           .then(resp =&gt; {
             titleEl.addClass('text-success');
             window.openProjectEvents.dispatchEvent(new CustomEvent("op-creation-success", { detail: { createdWp: resp, connection: connection, element: rowExtraData._element, batch: true } }));
-            return { success: true, resp };
+            return { success: true, resp, card };
           })
           .catch(err =&gt; {
             titleEl.addClass('text-danger');
-            return { success: false, err };
+            showCardError(card, createWpUtils.getValidationMessage(err) || l10n.get('notify.single.error'));
+            return { success: false, err, card };
           });
 
         tasks.push(p);
       });
 
-      if (tasks.length === 0) {
-        createWpUtils.notify(l10n.get('notify.multiple.noSelection'), 'warning');
+      const results = await Promise.all(tasks);
+      const allSuccess = results.every(r =&gt; r.success === true);
+
+      const firstError = results.map(r =&gt; createWpUtils.getValidationMessage(r.err)).find(Boolean);
+
+      if (allSuccess) {
+        createWpUtils.notify(l10n.get('notify.multiple.allSuccess'), 'done');
+        $("#create-multiple-work-packages-form-button").addClass("hidden");
         return;
       }
 
-      const results = await Promise.all(tasks);
-      const allSuccess = results.every(r =&gt; r.success === true);
-      if (allSuccess) {
-        createWpUtils.notify(l10n.get('notify.multiple.allSuccess'), 'done');
-      } else if (results.some(r =&gt; r.success)) {
-        createWpUtils.notify(l10n.get('notify.multiple.partialSuccess'), 'warning');
+      // The work packages that were created are taken out of the selection, so that pressing create again retries
+      // only the ones that failed.
+      results.filter(r =&gt; r.success).forEach(r =&gt; markCardAsCreated(r.card));
+
+      if (results.some(r =&gt; r.success)) {
+        createWpUtils.notify(firstError || l10n.get('notify.multiple.partialSuccess'), 'error');
       } else {
-        createWpUtils.notify(l10n.get('notify.multiple.error'), 'error');
+        createWpUtils.notify(firstError || l10n.get('notify.multiple.error'), 'error');
       }
-      $("#create-multiple-work-packages-form-button").addClass("hidden");
     }
 
     function renderSingleMode() {
@@ -833,12 +861,12 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
     $(document).on('change', '#select-all-work-packages', function () {
       const checked = $(this).is(':checked');
-      $('#work-packages-container .wp-selected').prop('checked', checked);
+      $('#work-packages-container .wp-selected:not(:disabled)').prop('checked', checked);
     });
 
     $(document).on('change', '.wp-selected', function () {
-      const total = $('#work-packages-container .wp-selected').length;
-      const checked = $('#work-packages-container .wp-selected:checked').length;
+      const total = $('#work-packages-container .wp-selected:not(:disabled)').length;
+      const checked = $('#work-packages-container .wp-selected:not(:disabled):checked').length;
 
       $('#select-all-work-packages').prop('checked', total === checked);
     });

@@ -277,11 +277,13 @@ public class HandleWorkPackages extends XWikiResource
      * The resource that exposes the available options for creating a work package and creates the work package if the
      * provided options are valid.
      *
-     * @param workPackage the work package that needs to be created.
+     * @param workPackage the work package that needs to be created. When it is marked as
+     *     {@link CreateWorkPackage#getFormOnly()}, only the options of the creation form are returned.
      * @param wiki the wiki that contains the configured client.
      * @param instance the OpenProject client where to search for work item suggestions.
-     * @return the form response containing the validation errors if the creation failed or the created work package if
-     *     the creation succeeded.
+     * @return the options of the creation form when only the form is requested, the created work package when the
+     *     creation succeeded, or the options together with the first validation message and a 422 status when the work
+     *     package was rejected by OpenProject.
      * @since 1.1
      */
     @POST
@@ -308,13 +310,20 @@ public class HandleWorkPackages extends XWikiResource
 
             validateResponseType(response);
 
+            JsonNode schemaNode = getSchemaNode(response);
+
+            if (Boolean.TRUE.equals(workPackage.getFormOnly())) {
+                return Response.ok(
+                    convertFormResponseToOptionsResponse(schemaNode, objectMapper.createObjectNode())).build();
+            }
+
             JsonNode validationErrors = response.path(EMBEDDED).path(VALIDATION_ERRORS);
 
             if (!validationErrors.isEmpty()) {
-                JsonNode schemaNode = getSchemaNode(response);
                 Map<String, Object> optionsResponse = convertFormResponseToOptionsResponse(schemaNode,
                     objectMapper.createObjectNode());
-                return Response.status(Response.Status.OK).entity(optionsResponse).build();
+                optionsResponse.put(VALIDATION_MESSAGE, extractFirstValidationMessage(validationErrors));
+                return Response.status(UNPROCESSABLE_ENTITY).entity(optionsResponse).build();
             }
 
             String commitLink = response.path(LINKS).path(COMMIT).path(HREF).asText();
