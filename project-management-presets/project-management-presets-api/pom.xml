@@ -28,6 +28,9 @@
 
   <artifactId>project-management-presets-api</artifactId>
 
+  <properties>
+    <xwiki.jacoco.instructionRatio>0.74</xwiki.jacoco.instructionRatio>
+  </properties>
   <dependencies>
     <!-- Needed for the class initializer and the manager.  -->
     <dependency>
@@ -40,6 +43,18 @@
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-api</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
