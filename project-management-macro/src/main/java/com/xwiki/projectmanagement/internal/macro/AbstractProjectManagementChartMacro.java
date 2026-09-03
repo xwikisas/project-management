@@ -112,6 +112,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 maybeSetPresetFilters(parameters);
             }
             List<List<LiveDataQuery.Filter>> filters = getFiltersList(parameters.getFilters());
+            updateFilters(filters, parameters);
             ChartTypeDisplayer chartTypeDisplayer = componentManager.getInstance(ChartTypeDisplayer.class,
                 parameters.getType());
 
@@ -165,6 +166,11 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException("The execution of the displayer failed.", e);
         }
+    }
+
+    protected void updateFilters(List<List<LiveDataQuery.Filter>> filters, T parameters) throws MacroExecutionException
+    {
+        // The extending class can update the filters if needed.
     }
 
     private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
