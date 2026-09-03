@@ -366,6 +366,7 @@
         "displayer": "html",
         "filter": {
           "id": "list",
+          "defaultOperator": "=",
           "operators": [
             {
               "id": "=",
@@ -492,12 +493,16 @@
       {
         "id": "list",
         "operators": [
-          "equals",
-          "startsWith",
-          "contains",
-          "empty"
+          {
+            "id": "=",
+            "name": "Equals"
+          },
+          {
+            "id": "!",
+            "name": "Not equal"
+          }
         ],
-        "defaultOperator": "contains"
+        "defaultOperator": "="
       }
     ]
   }

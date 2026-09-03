@@ -35,6 +35,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
  * Filter converter handler.
@@ -55,6 +56,10 @@ public final class OpenProjectFilterHandler
 
     private static final Set<String> OPERATORS_EMPTY_VALS =
         Set.of("t", "w", "*", "!*", String.valueOf('o'), "c");
+
+    private static final Set<String> LIST_FILTERS =
+        Set.of(WorkItem.KEY_STATUS, WorkItem.KEY_IDENTIFIER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_CREATOR,
+            WorkItem.KEY_PRIORITY, WorkItem.KEY_TYPE, WorkItem.KEY_REPORTER, WorkItem.KEY_PROJECT);
 
     private OpenProjectFilterHandler()
     {
@@ -212,6 +217,9 @@ public final class OpenProjectFilterHandler
         Map<String, List<String>> result = new HashMap<>();
         for (LiveDataQuery.Constraint constraint : filterConstraints) {
             String operatorValue = OpenProjectMapper.mapLivedataOperator(constraint.getOperator());
+            if (LIST_FILTERS.contains(propertyName) && "contains".equals(constraint.getOperator())) {
+                operatorValue = OpenProjectMapper.mapLivedataOperator("equals");
+            }
             List<String> values =
                 convertToOpenProjectValue(propertyName, (String) constraint.getValue(), constraint.getOperator());
             if (result.containsKey(operatorValue)) {
