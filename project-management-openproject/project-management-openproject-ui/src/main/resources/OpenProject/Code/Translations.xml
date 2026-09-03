@@ -171,7 +171,13 @@ openproject.dashboard.guest=You must be logged in to view this dashboard.
 openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
 openproject.dashboard.noProject=No project is available for the selected connection.
 openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
-openproject.extension.name=OpenProject Integration (Pro)</content>
+openproject.extension.name=OpenProject Integration (Pro)
+
+openproject.config.presets.title=Filter Presets
+openproject.presets.name=Preset Name
+openproject.presets.isMultiple=Chart preset?
+openproject.presets._actions=Actions
+</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
@@ -42,6 +43,8 @@ import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
+import com.xwiki.projectmanagement.presets.Preset;
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Provides the logic and extension points for implementing the base work item filtering macro. When implementing a
@@ -60,6 +63,9 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
 
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
+
+    @Inject
+    private PresetsManager presetsManager;
 
     /**
      * @param name the name of the macro.
@@ -95,6 +101,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
+        maybeUpdateFilterFromPreset(parameters);
         try {
             String displayerId = displayer.name();
             if (WorkItemsDisplayer.liveDataCards.equals(displayer) || WorkItemsDisplayer.liveData.equals(displayer)) {
@@ -114,6 +121,22 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             throw new MacroExecutionException(
                 String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer.name()),
                 e);
+        }
+    }
+
+    private void maybeUpdateFilterFromPreset(T parameters) throws MacroExecutionException
+    {
+        try {
+            if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+                Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
+                if (preset == null) {
+                    throw new MacroExecutionException(String.format("There is no preset with id [%s].",
+                        parameters.getPresetId()));
+                }
+                parameters.setFilters(preset.getFilter());
+            }
+        } catch (NumberFormatException e) {
+            throw new MacroExecutionException("The preset id should be a number.");
         }
     }
 
