@@ -27,6 +27,7 @@ import org.xwiki.properties.annotation.PropertyMandatory;
 import com.xwiki.projectmanagement.internal.chart.displayer.BarChartDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.OpenProjectChartPreset;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
@@ -90,5 +91,12 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     public void setClient(String client)
     {
         super.setClient(client);
+    }
+
+    @PropertyDisplayType(OpenProjectChartPreset.class)
+    @Override
+    public void setPresetId(String preset)
+    {
+        super.setPresetId(preset);
     }
 }

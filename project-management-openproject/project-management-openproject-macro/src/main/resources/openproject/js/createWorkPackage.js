@@ -80,7 +80,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     const requestBody = { project: project };
 
     try {
-      const response = await createWpUtils.createWorkPackagesRequest(connection, requestBody);
+      const response = await createWpUtils.createWorkPackagesOptionsRequest(connection, requestBody);
       container.empty().addClass("hidden");
 
       Object.entries(response).forEach(([key, value]) => {
@@ -94,7 +94,9 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
 
       container.removeClass("hidden");
     } catch (err) {
-      createWpUtils.notify(l10n.get("notify.inputs.error"), "error");
+      if (err.status !== 409) {
+        createWpUtils.notify(l10n.get("notify.inputs.error"), "error");
+      }
     }
   }
 
@@ -146,7 +148,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     });
     createWpUtils.notify(l10n.get("notify.submit.success"), "done");
     } catch (err) {
-      createWpUtils.notify(l10n.get("notify.submit.error"), "error");
+      createWpUtils.notify(createWpUtils.getValidationMessage(err) || l10n.get("notify.submit.error"), "error");
     }
   }
 
@@ -198,8 +200,30 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     );
   });
 
-  $(document).on("show.bs.modal", ".macro-editor-modal", function () {
-	  initializeConnectionIfOnlyOneAvailable();
+  $(document).on("shown.bs.modal", ".macro-editor-modal", function () {
+    let modal = $(this);
+    setTimeout(function () {
+      const content = modal.find('.macro-editor');
+      if (!content || content.length <= 0) {
+        return;
+      }
+      if (!content[0].classList.contains('loading')) {
+        initializeConnectionIfOnlyOneAvailable();
+        return;
+      }
+      const observer = new MutationObserver(() => {
+        if (!content[0].classList.contains('loading')) {
+          observer.disconnect();
+          initializeConnectionIfOnlyOneAvailable();
+        }
+      });
+
+      observer.observe(content[0], {
+        attributes: true,
+        attributeFilter: ['class'],
+        subtree: true
+      });
+    });
   });
 
 	initializeConnectionIfOnlyOneAvailable();

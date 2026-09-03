@@ -42,6 +42,7 @@
   {{missingLicenseMessage extensionName="openproject.extension.name"/}}
 #else
   #set ($discard = $xwiki.jsx.use('OpenProject.Code.OpenProjectSheet'))
+  #set ($discard = $xwiki.jsx.use('ProjectManagement.Code.Presets.PresetCreateModal'))
   #macro (handleConnectionModal)
   &lt;div class="modal" id="handleConnectionModal" tabindex="-1" role="dialog" aria-labelledby="handleConnectionModal-label" data-backdrop="static" data-keyboard="false"&gt;
     &lt;div class="modal-dialog" role="document"&gt;
@@ -213,8 +214,22 @@
     }
     {{/liveData}}
 
+    {{html clean="false"}}
+    &lt;fieldset class="xform"&gt;
+      &lt;legend&gt;$escapetool.xml($services.localization.render('openproject.config.presets.title'))&lt;/legend&gt;
+        &lt;button class="btn btn-primary" id="proj-manag-create-preset" data-client="openproject"&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.create'))&lt;/button&gt;
+    &lt;/fieldset&gt;
+    {{/html}}
+
+    {{liveData
+      id="openproject-preset-filters"
+      properties="name,isMultiple,_actions"
+      source="liveTable"
+      sourceParameters="className=ProjectManagement.Code.Presets.PresetClass&amp;translationPrefix=openproject.presets."
+    /}}
+
     ## Styling job schedule.
-    {{html wiki="false"}}
+    {{html wiki="true"}}
     #set ($schedulerDoc = $xwiki.getDocument($services.model.resolveDocument('Scheduler.WebHome')))
     &lt;fieldset class="xform"&gt;
       &lt;legend&gt;$escapetool.xml($services.localization.render('openproject.config.stylejob.title'))&lt;/legend&gt;
@@ -278,6 +293,7 @@
         <name>code</name>
         <number>2</number>
         <prettyName>Code</prettyName>
+        <restricted>0</restricted>
         <rows>20</rows>
         <size>50</size>
         <unmodifiable>0</unmodifiable>

@@ -111,6 +111,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     }
 
     @Override
+    public void asyncProcessParameters(OpenProjectMacroParameters parameters)
+    {
+        // Update any parameters in the async context.
+    }
+
+    @Override
     public List<Block> execute(OpenProjectMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
