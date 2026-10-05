@@ -174,6 +174,9 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
       });
   };
   const DEFAULT_MARKER = '#';
+  // Same rule as the one enforced by the administration form: 1 to 5 non space characters, different from the markers
+  // already used by the editor.
+  const VALID_MARKER = /^(?!(@|\/|\[\[|\{\{|img::)$)\S{1,5}$/;
   let markerPromise;
   // The marker is configured by the wiki administrators. It is fetched at runtime (once per page load) instead of
   // being rendered in this skin extension, because the skin extension is cached by the browser.
@@ -186,7 +189,13 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
       markerPromise = Promise.resolve($.getJSON(url, { media: 'json' }))
         .then(property =&gt; {
           const marker = typeof property?.value === 'string' ? property.value.trim() : '';
-          return marker || DEFAULT_MARKER;
+          if (VALID_MARKER.test(marker)) {
+            return marker;
+          }
+          if (marker) {
+            console.warn(`Invalid OpenProject work package search marker [${marker}], using [${DEFAULT_MARKER}].`);
+          }
+          return DEFAULT_MARKER;
         })
         .catch(() =&gt; DEFAULT_MARKER);
     }

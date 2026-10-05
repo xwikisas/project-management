@@ -505,8 +505,17 @@ public class OpenProjectIT
     @Order(130)
     void insertInlineWorkPackageWithConfiguredMarker(TestUtils setup)
     {
+        // Markers already used by the editor and markers containing spaces are rejected before saving.
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        String invalidMarkerMessage = "Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.";
+        for (String invalidMarker : List.of("@", "a b", "")) {
+            adminPage.setWorkPackageSearchMarker(invalidMarker, false);
+            assertEquals(invalidMarkerMessage, adminPage.getWorkPackageSearchMarkerValidationMessage());
+        }
+
         String marker = "!!";
-        OpenProjectAdminPage.gotoPage().setWorkPackageSearchMarker(marker);
+        adminPage.setWorkPackageSearchMarker(marker);
+        assertEquals("", adminPage.getWorkPackageSearchMarkerValidationMessage());
 
         // The work package search uses the OpenProject instance from the page relation.
         DocumentReference docRef = new DocumentReference(page6, wiki);
