@@ -157,8 +157,9 @@
            .find('dl')
             .append($('&lt;dt&gt;', { text: l10n.get('input.name.label') }))
             .append($('&lt;dd&gt;').append(this.input))
-            .append($('&lt;dt&gt;', { text: l10n.get('input.isMultiple.label') }))
-            .append($('&lt;dd&gt;').append(this.checkbox));
+            .append($('&lt;dt&gt;').append($('&lt;label&gt;')
+              .append(this.checkbox)
+              .append(document.createTextNode(' ' + l10n.get('input.isMultiple.label')))));
         container.append(this.addButton);
 
         $super(container[0], {

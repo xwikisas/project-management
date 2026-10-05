@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
@@ -128,6 +129,22 @@ public class FilterBuilderFilter extends BaseElement
     {
         WebElement valElem = getValueElement(index);
         valElem.sendKeys(value);
+        return this;
+    }
+
+    /**
+     * Replace the value of a text constraint and move the focus away from it, so that the change is taken into account.
+     *
+     * @param index the index of the constraint, starting at 1
+     * @param value the new value
+     * @return this object
+     * @since 1.3.0-rc-2
+     */
+    public FilterBuilderFilter typeValue(int index, String value)
+    {
+        WebElement valElem = getValueElement(index);
+        valElem.clear();
+        valElem.sendKeys(value, Keys.TAB);
         return this;
     }
 

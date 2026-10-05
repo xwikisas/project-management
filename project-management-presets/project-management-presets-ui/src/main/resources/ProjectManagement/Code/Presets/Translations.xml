@@ -38,10 +38,10 @@
   <hidden>true</hidden>
   <content>projectmanagement.presets.create=Create new filter preset
 projectmanagement.presets.create.modal.title=Fill in the Preset details:
-projectmanagement.presets.create.modal.input.name.label=Preset Name
-projectmanagement.presets.create.modal.input.isMultiple.label=Is it a chart preset?
+projectmanagement.presets.create.modal.input.name.label=Name
+projectmanagement.presets.create.modal.input.isMultiple.label=Chart Preset?
 projectmanagement.presets.create.modal.confirm=Create preset
-projectmanagement.presets.name=Preset Name
+projectmanagement.presets.name=Name
 projectmanagement.presets.isMultiple=For Charts?
 projectmanagement.presets.filter=Filter value</content>
   <object>

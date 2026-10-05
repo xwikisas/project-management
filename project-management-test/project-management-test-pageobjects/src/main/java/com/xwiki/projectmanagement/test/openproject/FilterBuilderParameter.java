@@ -30,19 +30,67 @@ import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
- * Models the filter parameter of the OpenProject macro.
+ * Models a filter builder, such as the filter parameter of the OpenProject macro or a dataset of a filter preset.
  *
  * @version $Id$
  * @since 1.0-rc-4
  */
 public class FilterBuilderParameter extends BaseElement
 {
+    private static final String ADD_FILTER_CLASS = "proj-manag-add-filter";
+
+    private final WebElement container;
+
+    /**
+     * Model the first filter builder of the page.
+     */
+    public FilterBuilderParameter()
+    {
+        this(null);
+    }
+
+    /**
+     * Model the given filter builder, when there are several builders on the page.
+     *
+     * @param container the element with the {@code proj-manag-constraint-builder} class
+     * @since 1.3.0-rc-2
+     */
+    public FilterBuilderParameter(WebElement container)
+    {
+        this.container = container;
+    }
+
     /**
      * @return the container of the parameter value.
      */
     public WebElement getContainer()
     {
+        if (this.container != null) {
+            return this.container;
+        }
         return getDriver().findElement(By.className("proj-manag-constraint-builder"));
+    }
+
+    /**
+     * @return the title of the builder, e.g. {@code Dataset #1}, or an empty string if it has no title
+     * @since 1.3.0-rc-2
+     */
+    public String getTitle()
+    {
+        return getContainer().findElements(By.className("proj-manag-header-title")).stream().findFirst()
+            .map(WebElement::getText).orElse("");
+    }
+
+    /**
+     * @return {@code true} if the filters can't be changed: no filter can be added and the values are disabled
+     * @since 1.3.0-rc-2
+     */
+    public boolean isReadOnly()
+    {
+        WebElement builder = getContainer();
+        return builder.findElements(By.className(ADD_FILTER_CLASS)).isEmpty()
+            && builder.findElements(By.cssSelector(".proj-manag-constraints .proj-manag-constraint-value")).stream()
+            .noneMatch(WebElement::isEnabled);
     }
 
     /**
@@ -53,7 +101,8 @@ public class FilterBuilderParameter extends BaseElement
      */
     public FilterBuilderFilter addFilter(String filterProperty)
     {
-        Select select = new Select(getDriver().findElement(By.className("proj-manag-add-filter")));
+        WebElement builder = getContainer();
+        Select select = new Select(builder.findElement(By.className(ADD_FILTER_CLASS)));
 
         try {
             select.selectByValue(filterProperty);
@@ -62,7 +111,7 @@ public class FilterBuilderParameter extends BaseElement
         }
 
         List<WebElement> presentFilters =
-            getDriver().findElements(By.xpath("//*[contains(@class, 'proj-manag-constraint-name')]"));
+            builder.findElements(By.xpath(".//*[contains(@class, 'proj-manag-constraint-name')]"));
         WebElement createdFilter = null;
         for (WebElement presentFilter : presentFilters) {
             if (presentFilter.getAttribute("value").equals(filterProperty)) {
@@ -94,8 +143,12 @@ public class FilterBuilderParameter extends BaseElement
      */
     public void clearFilters()
     {
+        // The macro editor focuses its first parameter, whose suggestions may be displayed on top of the filters.
+        getDriver().executeJavascript("if (document.activeElement) { document.activeElement.blur(); }");
+        getDriver().waitUntilCondition(driver -> driver.findElements(By.className("selectize-dropdown")).stream()
+            .noneMatch(WebElement::isDisplayed));
         try {
-            getDriver().findElements(By.className("proj-manag-delete-filter")).forEach(WebElement::click);
+            getContainer().findElements(By.className("proj-manag-delete-filter")).forEach(WebElement::click);
         } catch (StaleElementReferenceException ignored) {
             // No problem if the elements were deleted faster than necessary. But it shouldn't happen.
         }

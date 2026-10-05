@@ -27,6 +27,7 @@ import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
+import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
@@ -37,6 +38,8 @@ import org.xwiki.test.ui.po.BaseElement;
  */
 public class OpenProjectMacroElement extends BaseElement
 {
+    private static final int LOAD_TIMEOUT = 30;
+
     private final WebElement self;
 
     /**
@@ -87,6 +90,27 @@ public class OpenProjectMacroElement extends BaseElement
                 "Can't retrieve the livedata element if no id was provided to the macro.");
         }
         return new LiveDataElement(id);
+    }
+
+    /**
+     * Wait for the work packages to be displayed by the Live Data table. The first requests made to the OpenProject
+     * instance can take longer than the default timeout.
+     *
+     * @return the Live Data table displayer of the OpenProject macro, once it is ready
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.3.0-rc-2
+     */
+    public TableLayoutElement waitForTableLayout() throws OperationNotSupportedException
+    {
+        TableLayoutElement table = getLivedata().getTableLayout();
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            table.waitUntilReady();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+        return table;
     }
 
     /**

@@ -189,6 +189,45 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
+     * Open the modal used to create a new filter preset.
+     *
+     * @return the modal
+     * @since 1.3.0-rc-2
+     */
+    public PresetCreateModal clickCreatePreset()
+    {
+        getDriver().findElement(By.id("proj-manag-create-preset")).click();
+        return new PresetCreateModal();
+    }
+
+    /**
+     * @return the Live Data listing the filter presets
+     * @since 1.3.0-rc-2
+     */
+    public LiveDataElement getPresetsLivedata()
+    {
+        return new LiveDataElement("openproject-preset-filters");
+    }
+
+    /**
+     * @param name the name of a filter preset
+     * @return the index of the preset in the presets Live Data, starting at 1, or {@code -1} if there is no preset
+     *     with the given name
+     * @since 1.3.0-rc-2
+     */
+    public int getPresetIndex(String name)
+    {
+        TableLayoutElement ld = getPresetsLivedata().getTableLayout();
+        ld.waitUntilReady();
+        for (int i = 1; i <= ld.countRows(); i++) {
+            if (name.equals(ld.getCell("Preset Name", i).getText())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
      * @return the livedata inside the Admin page.
      */
     public LiveDataElement getConnectionsLivedata()

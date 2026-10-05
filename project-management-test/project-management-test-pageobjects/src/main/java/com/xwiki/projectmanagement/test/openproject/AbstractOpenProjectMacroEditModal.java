@@ -19,9 +19,12 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.xwiki.ckeditor.test.po.CKEditor;
 import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
@@ -41,6 +44,8 @@ import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditModal
 {
     private static final String INSTANCE_PARAMETER = "instance";
+
+    private static final String PRESET_PARAMETER = "presetId";
 
     private WYSIWYGEditPage editPage;
 
@@ -142,6 +147,45 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         SuggestInputElement instanceSuggest = getSuggestInput(INSTANCE_PARAMETER).click().waitForSuggestions();
         instanceSuggest.selectByValue(connectionId);
         return instanceSuggest;
+    }
+
+    /**
+     * @return the names of the filter presets that can be selected
+     * @since 1.3.0-rc-2
+     */
+    public List<String> getPresetOptions()
+    {
+        SuggestInputElement presetSuggest = getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions();
+        List<String> options = presetSuggest.getSuggestions().stream()
+            .map(suggestion -> suggestion.getLabel().trim()).collect(Collectors.toList());
+        presetSuggest.hideSuggestions();
+        return options;
+    }
+
+    /**
+     * Select the filter preset that the macro will use.
+     *
+     * @param presetName the name of the preset
+     * @return this object
+     * @since 1.3.0-rc-2
+     */
+    public AbstractOpenProjectMacroEditModal selectPreset(String presetName)
+    {
+        // The option labels are prefixed, so they can't be matched exactly.
+        getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions().getSuggestions().stream()
+            .filter(suggestion -> presetName.equals(suggestion.getLabel().trim())).findFirst()
+            .orElseThrow(() -> new NoSuchElementException("No filter preset named " + presetName)).select();
+        return this;
+    }
+
+    /**
+     * @return the name of the selected filter preset, or an empty string if no preset is selected
+     * @since 1.3.0-rc-2
+     */
+    public String getSelectedPreset()
+    {
+        return getSuggestInput(PRESET_PARAMETER).getSelectedSuggestions().stream().findFirst()
+            .map(suggestion -> suggestion.getLabel().trim()).orElse("");
     }
 
     /**

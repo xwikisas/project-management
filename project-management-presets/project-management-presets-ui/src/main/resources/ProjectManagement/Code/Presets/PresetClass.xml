@@ -97,7 +97,7 @@
       <defaultValue>0</defaultValue>
       <disabled>0</disabled>
       <displayFormType>select</displayFormType>
-      <displayType>checkbox</displayType>
+      <displayType>yesno</displayType>
       <hint/>
       <name>isMultiple</name>
       <number>5</number>

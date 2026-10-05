@@ -19,9 +19,13 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.io.IOException;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.BaseElement;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Models the canvas element that the Chart Macro renders.
@@ -62,5 +66,18 @@ public class ChartJSCanvas extends BaseElement
     {
         String dataSource = getDataSource();
         return dataSource != null && dataSource.contains(String.format("\"%s\"", label));
+    }
+
+    /**
+     * @return the number of datasets that the chart is displaying
+     * @since 1.3.0-rc-2
+     */
+    public int getDatasetCount()
+    {
+        try {
+            return new ObjectMapper().readTree(getDataSource()).path("datasets").size();
+        } catch (IOException e) {
+            throw new IllegalStateException("The chart data source is not valid JSON.", e);
+        }
     }
 }

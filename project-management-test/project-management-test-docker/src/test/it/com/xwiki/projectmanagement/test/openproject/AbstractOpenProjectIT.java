@@ -87,9 +87,17 @@ public abstract class AbstractOpenProjectIT
 
         List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
-        TableLayoutElement ld = macros.get(0).getLivedata().getTableLayout();
-        ld.waitUntilReady();
-        return ld;
+        return macros.get(0).waitForTableLayout();
+    }
+
+    protected static String getPaginationEntriesText(OpenProjectMacroElement macro)
+    {
+        try {
+            macro.waitForTableLayout();
+        } catch (OperationNotSupportedException e) {
+            throw new IllegalStateException(e);
+        }
+        return macro.getPaginationEntriesText();
     }
 
     protected static void selectInstanceFromModal(OpenProjectMacroEditModal macroModal, String connection)

@@ -60,6 +60,6 @@ public class PresetClassInitializer extends AbstractMandatoryClassInitializer
         xclass.addTextField(FIELD_NAME, "Filter Preset Name", 20);
         xclass.addTextAreaField(FIELD_FILTER, "Filter value", 20, 20);
         xclass.addTextField(FIELD_CLIENT, "Project Management Client", 20);
-        xclass.addBooleanField(FIELD_MULTIPLE, "Has multiple filters?", "checkbox", false);
+        xclass.addBooleanField(FIELD_MULTIPLE, "Has multiple filters?", "yesno", false);
     }
 }

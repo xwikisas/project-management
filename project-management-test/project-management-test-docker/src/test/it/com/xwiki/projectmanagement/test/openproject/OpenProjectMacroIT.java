@@ -227,16 +227,6 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals("20", ld.getCell("ID", 1).getText());
     }
 
-    private static String getPaginationEntriesText(OpenProjectMacroElement macro)
-    {
-        try {
-            macro.getLivedata().getTableLayout().waitUntilReady();
-        } catch (OperationNotSupportedException e) {
-            throw new IllegalStateException(e);
-        }
-        return macro.getPaginationEntriesText();
-    }
-
     private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue)
     {
         useSuggestFilter(ld, filteredColumn, selectedValue, true);

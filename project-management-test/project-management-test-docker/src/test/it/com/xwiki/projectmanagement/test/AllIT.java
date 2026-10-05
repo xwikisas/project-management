@@ -29,6 +29,7 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
 
 /**
  * Groups all the integration tests for the project management implementations. The nested test classes share the same
@@ -65,6 +66,13 @@ public class AllIT
     @Order(4)
     @DisplayName("OpenProject CKEditor plugin")
     class NestedOpenProjectCKEditorIT extends OpenProjectCKEditorIT
+    {
+    }
+
+    @Nested
+    @Order(5)
+    @DisplayName("OpenProject filter presets")
+    class NestedOpenProjectPresetIT extends OpenProjectPresetIT
     {
     }
 }
