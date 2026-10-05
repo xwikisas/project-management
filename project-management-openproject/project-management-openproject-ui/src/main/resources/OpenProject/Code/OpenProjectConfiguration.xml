@@ -67,7 +67,7 @@
       </workPackageSearchMarker>
     </class>
     <property>
-      <workPackageSearchMarker>%</workPackageSearchMarker>
+      <workPackageSearchMarker>#</workPackageSearchMarker>
     </property>
   </object>
   <object>
