@@ -47,7 +47,23 @@
     <nameField/>
     <validationScript/>
     <workPackageSearchMarker>
-      <customDisplay/>
+      <customDisplay>{{velocity}}
+#if ($type == 'edit')
+  ## Rendered with HTML5 constraints so that the save buttons validate the value before saving it. Use single quotes
+  ## to prevent Velocity from interpreting the pattern.
+  #set ($pattern = '(?!(@|/|\[\[|\{\{|img::)$)\S{1,5}')
+  #set ($message = $services.localization.render('openproject.config.editor.marker.invalid'))
+  {{html clean="false"}}
+  &lt;input type="text" id="$escapetool.xml("${prefix}${name}")" name="$escapetool.xml("${prefix}${name}")"
+    value="$!escapetool.xml($value)" size="10" maxlength="5" required="required"
+    pattern="$escapetool.xml($pattern)"
+    data-validation-pattern-mismatch="$escapetool.xml($message)"
+    data-validation-value-missing="$escapetool.xml($message)" /&gt;
+  {{/html}}
+#else
+  $!services.rendering.escape($value, $xwiki.currentContentSyntaxId)
+#end
+{{/velocity}}</customDisplay>
       <disabled>0</disabled>
       <hint/>
       <name>workPackageSearchMarker</name>

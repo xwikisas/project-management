@@ -124,10 +124,37 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
      */
     public void setWorkPackageSearchMarker(String marker)
     {
+        setWorkPackageSearchMarker(marker, true);
+    }
+
+    /**
+     * Set the characters that trigger the work package search in the WYSIWYG editor and click the save button.
+     *
+     * @param marker the new work package search trigger
+     * @param wait whether to wait for the configuration to be saved; pass {@code false} when the value is expected to
+     *     be rejected by the form validation
+     */
+    public void setWorkPackageSearchMarker(String marker, boolean wait)
+    {
         // ConfigurableClass generates one form per configuration page, named after the lower cased section.
         getFormContainerElement(SECTION_ID.toLowerCase() + "_OpenProject.Code.OpenProjectConfiguration")
-            .setFieldValue(By.name(CONFIGURATION_CLASS + "_0_workPackageSearchMarker"), marker);
-        clickSave();
+            .setFieldValue(getWorkPackageSearchMarkerInput(), marker);
+        clickSave(wait);
+    }
+
+    /**
+     * @return the validation message displayed for the work package search trigger, or an empty string if the value
+     *     is valid
+     */
+    public String getWorkPackageSearchMarkerValidationMessage()
+    {
+        return (String) getDriver().executeJavascript("return arguments[0].validationMessage;",
+            getWorkPackageSearchMarkerInput());
+    }
+
+    private WebElement getWorkPackageSearchMarkerInput()
+    {
+        return getDriver().findElement(By.name(CONFIGURATION_CLASS + "_0_workPackageSearchMarker"));
     }
 
     /**

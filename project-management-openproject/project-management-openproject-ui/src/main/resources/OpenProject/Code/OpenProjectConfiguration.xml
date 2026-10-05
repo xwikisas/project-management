@@ -52,7 +52,23 @@
       <nameField/>
       <validationScript/>
       <workPackageSearchMarker>
-        <customDisplay/>
+        <customDisplay>{{velocity}}
+#if ($type == 'edit')
+  ## Rendered with HTML5 constraints so that the save buttons validate the value before saving it. Use single quotes
+  ## to prevent Velocity from interpreting the pattern.
+  #set ($pattern = '(?!(@|/|\[\[|\{\{|img::)$)\S{1,5}')
+  #set ($message = $services.localization.render('openproject.config.editor.marker.invalid'))
+  {{html clean="false"}}
+  &lt;input type="text" id="$escapetool.xml("${prefix}${name}")" name="$escapetool.xml("${prefix}${name}")"
+    value="$!escapetool.xml($value)" size="10" maxlength="5" required="required"
+    pattern="$escapetool.xml($pattern)"
+    data-validation-pattern-mismatch="$escapetool.xml($message)"
+    data-validation-value-missing="$escapetool.xml($message)" /&gt;
+  {{/html}}
+#else
+  $!services.rendering.escape($value, $xwiki.currentContentSyntaxId)
+#end
+{{/velocity}}</customDisplay>
         <disabled>0</disabled>
         <hint/>
         <name>workPackageSearchMarker</name>
@@ -569,7 +585,7 @@
       <categoryIcon/>
     </property>
     <property>
-      <codeToExecute/>
+      <codeToExecute>{{velocity}}$xwiki.jsx.use('OpenProject.Code.OpenProjectConfiguration'){{/velocity}}</codeToExecute>
     </property>
     <property>
       <configurationClass>OpenProject.Code.OpenProjectConfigurationClass</configurationClass>
@@ -602,6 +618,136 @@
     </property>
     <property>
       <sectionOrder/>
+    </property>
+  </object>
+  <object>
+    <name>OpenProject.Code.OpenProjectConfiguration</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>e5895e49-32f9-41bb-be43-1bae58e2e41b</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>(function() {
+  const FORM_ID = 'openproject_OpenProject.Code.OpenProjectConfiguration';
+  const FAILURES = ['badInput', 'patternMismatch', 'rangeOverflow', 'rangeUnderflow', 'stepMismatch', 'tooLong',
+    'tooShort', 'typeMismatch', 'valueMissing'];
+
+  // Use the translated validation messages from the data-validation-* attributes, like the XWiki edit forms do.
+  const useCustomValidationMessage = function(field) {
+    const failure = FAILURES.find(failure =&gt; field.validity[failure]);
+    // Convert 'patternMismatch' into 'data-validation-pattern-mismatch'.
+    const message = failure &amp;&amp;
+      field.getAttribute('data-validation-' + failure.replace(/([A-Z])/g, match =&gt; `-${match.toLowerCase()}`));
+    if (message) {
+      field.setCustomValidity(message);
+      // Remove the custom message as soon as the value changes, otherwise the field remains invalid.
+      field.addEventListener('input', () =&gt; field.setCustomValidity(''), {once: true});
+    }
+  };
+
+  // The administration replaces the save button of each section with a single button that saves all the forms
+  // without validating them. Validate our form before that button's click listener is called.
+  document.addEventListener('click', function(event) {
+    const form = document.getElementById(FORM_ID);
+    if (!form || !event.target.matches('#admin-page-content input[type="submit"]') || form.checkValidity()) {
+      return;
+    }
+    [...form.elements].filter(field =&gt; !field.validity.valid).forEach(useCustomValidationMessage);
+    form.reportValidity();
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+})();</code>
+    </property>
+    <property>
+      <name>Validate the OpenProject configuration</name>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>onDemand</use>
     </property>
   </object>
 </xwikidoc>

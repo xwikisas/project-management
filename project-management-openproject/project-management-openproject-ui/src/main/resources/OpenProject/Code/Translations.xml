@@ -89,7 +89,7 @@ openproject.config.stylejob.trigger.hint=Sync the property colors between the Wo
 openproject.config.stylejob.trigger.button=Sync colors
 
 openproject.config.editor.title=Editor
-openproject.config.editor.marker.invalid=The work package search trigger must have between 1 and 5 characters, without spaces, and must not be one of the triggers already used by the editor (@, /, [[, {{, img::).
+openproject.config.editor.marker.invalid=Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.
 OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Work package search trigger
 OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=The characters to type in the WYSIWYG editor to search for OpenProject work packages and insert them inline. Defaults to #.
 
