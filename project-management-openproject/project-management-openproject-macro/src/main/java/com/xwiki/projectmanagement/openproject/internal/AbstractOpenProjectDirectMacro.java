@@ -120,7 +120,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
                 {
                     return executeInternal(parameters, content, context, apiClient, instanceToUse);
                 }
-            }, parameters, content, context);
+            }, parameters, content, context, null, true);
         } catch (RenderingException | JobException e) {
             throw new MacroExecutionException("Failed to render the macro asynchronously.", e);
         }

@@ -88,6 +88,11 @@ openproject.config.stylejob.trigger.title=Color sync
 openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in OpenProject. You should be authorized to the OpenProject instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
 
+openproject.config.editor.title=Editor
+openproject.config.editor.marker.invalid=Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.
+OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Work package search trigger
+OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=The characters to type in the WYSIWYG editor to search for OpenProject work packages and insert them inline. Defaults to #.
+
 openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Create work package
 openproject.createworkpackage.highlight.multiple=Create work packages from table
@@ -171,7 +176,13 @@ openproject.dashboard.guest=You must be logged in to view this dashboard.
 openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
 openproject.dashboard.noProject=No project is available for the selected connection.
 openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
-openproject.extension.name=OpenProject Integration (Pro)</content>
+openproject.extension.name=OpenProject Integration (Pro)
+
+openproject.config.presets.title=Filter Presets
+openproject.presets.name=Preset Name
+openproject.presets.isMultiple=Chart preset?
+openproject.presets._actions=Actions
+</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

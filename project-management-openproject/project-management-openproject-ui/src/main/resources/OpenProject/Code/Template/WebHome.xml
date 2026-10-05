@@ -167,6 +167,7 @@ This project aims to deliver a clear, well-documented solution with transparent 
         <name>clientParams</name>
         <number>4</number>
         <prettyName>Client Parameters</prettyName>
+        <restricted>0</restricted>
         <rows>20</rows>
         <size>40</size>
         <unmodifiable>0</unmodifiable>

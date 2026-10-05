@@ -27,6 +27,7 @@ import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.ProjectManagementFilter;
+import com.xwiki.projectmanagement.ProjectManagementPreset;
 import com.xwiki.projectmanagement.ProjectManagementProperties;
 import com.xwiki.projectmanagement.ProjectManagementSortEntry;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
@@ -44,6 +45,8 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     private String url;
 
     private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.liveData;
+
+    private String presetId;
 
     /**
      * Default constructor.
@@ -159,5 +162,24 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     public void setId(String id)
     {
         super.setId(id);
+    }
+
+    /**
+     * @return the id of the filter preset.
+     * @since 1.3.0
+     */
+    public String getPresetId()
+    {
+        return presetId;
+    }
+
+    /**
+     * @param presetId see {@link #getPresetId()}.
+     * @since 1.3.0
+     */
+    @PropertyDisplayType(ProjectManagementPreset.class)
+    public void setPresetId(String presetId)
+    {
+        this.presetId = presetId;
     }
 }

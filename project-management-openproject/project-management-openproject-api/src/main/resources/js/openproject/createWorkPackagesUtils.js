@@ -160,6 +160,16 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  });
 	}
 
+	// Asks only for the options of the creation form. The work package sent along is incomplete on purpose, so the
+	// creation must not be attempted and the validation errors it would raise must not be reported.
+	let createWorkPackagesOptionsRequest = async function createWorkPackagesOptionsRequest(connection, requestBody) {
+	  return await createWorkPackagesRequest(connection, {...requestBody, formOnly: true});
+	}
+
+	let getValidationMessage = function getValidationMessage(err) {
+	  return err && err.responseJSON ? err.responseJSON.validationMessage : null;
+	}
+
 	let buildPayload = function buildPayload($container) {
 	  const payload = {};
 	  $container.find('input[name], select[name], textarea[name]').not('.wp-selected').each(function () {
@@ -364,7 +374,9 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  initProjectPicker: initProjectPicker,
 	  initDynamicSelectizeFields: initDynamicSelectizeFields,
 	  destroySelectize: destroySelectize,
-	  createWorkPackagesRequest: createWorkPackagesRequest
+	  createWorkPackagesRequest: createWorkPackagesRequest,
+	  createWorkPackagesOptionsRequest: createWorkPackagesOptionsRequest,
+	  getValidationMessage: getValidationMessage
 	}
 
   return createWPUtils;

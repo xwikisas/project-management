@@ -57,6 +57,8 @@ public class CreateWorkPackage
 
     private Integer lockVersion;
 
+    private Boolean formOnly;
+
     /**
      * Default constructor.
      */
@@ -333,5 +335,30 @@ public class CreateWorkPackage
     public void setLockVersion(Integer lockVersion)
     {
         this.lockVersion = lockVersion;
+    }
+
+    /**
+     * Getter for the flag marking a request that only builds the creation form. Such a request carries an
+     * intentionally incomplete work package, so the validation errors it triggers describe the fields that are still
+     * to be filled in and not a failed creation.
+     *
+     * @return true if the request only asks for the options of the creation form, false or null if it asks for the
+     *     creation of the work package.
+     * @since 1.2.1
+     */
+    public Boolean getFormOnly()
+    {
+        return formOnly;
+    }
+
+    /**
+     * Setter for the form only flag.
+     *
+     * @param formOnly see {@link #getFormOnly()}.
+     * @since 1.2.1
+     */
+    public void setFormOnly(Boolean formOnly)
+    {
+        this.formOnly = formOnly;
     }
 }

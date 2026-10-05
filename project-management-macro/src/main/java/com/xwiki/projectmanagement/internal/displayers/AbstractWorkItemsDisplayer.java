@@ -89,7 +89,7 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
 
         List<LiveDataQuery.Filter> filters;
         try {
-            filters = getFilters(content);
+            filters = getFilters(parameters.getFilters());
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the filters.");
         }

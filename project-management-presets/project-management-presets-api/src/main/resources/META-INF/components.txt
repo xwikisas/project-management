@@ -1,0 +1,3 @@
+com.xwiki.projectmanagement.presets.PresetClassInitializer
+com.xwiki.projectmanagement.presets.internal.DefaultPresetsManager
+com.xwiki.projectmanagement.presets.script.PresetsScriptService

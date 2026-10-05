@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.ViewPage;
 
 /**
@@ -42,5 +43,29 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
             .stream()
             .map(OpenProjectMacroElement::new)
             .collect(Collectors.toList());
+    }
+
+    /**
+     * @param cssClass the CSS class of a rendered work package property, e.g.
+     *     {@code openproject-property-type-Task-test}
+     * @return the text color of the first property with the given class, as computed by the browser
+     */
+    public String getPropertyColor(String cssClass)
+    {
+        return getDriver().findElement(By.className(cssClass)).getCssValue("color");
+    }
+
+    /**
+     * Wait for the given number of macro errors to be displayed, since some macros are rendered asynchronously.
+     *
+     * @param count the expected number of macro errors
+     * @return the messages of the macro errors displayed in the page content
+     * @since 1.3.0-rc-2
+     */
+    public List<String> waitForMacroErrors(int count)
+    {
+        By errors = By.cssSelector("#xwikicontent .xwikirenderingerror");
+        getDriver().waitUntilCondition(driver -> driver.findElements(errors).size() >= count);
+        return getDriver().findElements(errors).stream().map(WebElement::getText).collect(Collectors.toList());
     }
 }

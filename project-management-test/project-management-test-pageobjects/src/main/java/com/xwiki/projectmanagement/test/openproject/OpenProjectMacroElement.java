@@ -27,6 +27,7 @@ import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
+import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
@@ -37,6 +38,8 @@ import org.xwiki.test.ui.po.BaseElement;
  */
 public class OpenProjectMacroElement extends BaseElement
 {
+    private static final int LOAD_TIMEOUT = 30;
+
     private final WebElement self;
 
     /**
@@ -90,6 +93,27 @@ public class OpenProjectMacroElement extends BaseElement
     }
 
     /**
+     * Wait for the work packages to be displayed by the Live Data table. The first requests made to the OpenProject
+     * instance can take longer than the default timeout.
+     *
+     * @return the Live Data table displayer of the OpenProject macro, once it is ready
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.3.0-rc-2
+     */
+    public TableLayoutElement waitForTableLayout() throws OperationNotSupportedException
+    {
+        TableLayoutElement table = getLivedata().getTableLayout();
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            table.waitUntilReady();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+        return table;
+    }
+
+    /**
      * @return the livedata cards displayer of the OpenProject macro.
      * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided. The
      *     livedata page object requires an id in order to be retrieved.
@@ -110,6 +134,14 @@ public class OpenProjectMacroElement extends BaseElement
     public OpenProjectSingleDisplayer getSingleWorkItem()
     {
         return new OpenProjectSingleDisplayer(self);
+    }
+
+    /**
+     * @return the text displayed by the Live Data pagination, e.g. {@code Entries 1 - 3 out of 3}
+     */
+    public String getPaginationEntriesText()
+    {
+        return self.findElement(By.className("pagination-current-entries")).getText();
     }
 
     /**

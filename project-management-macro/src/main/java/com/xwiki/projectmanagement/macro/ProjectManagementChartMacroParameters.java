@@ -55,6 +55,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
 
     private String typeParams;
 
+    private String presetId;
+
     /**
      * @return the client id. The client being the project management implementor. i.e. openproject.
      */
@@ -189,5 +191,23 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     public void setDatasetsLabels(String datasetsLabels)
     {
         this.datasetsLabels = datasetsLabels;
+    }
+
+    /**
+     * @return the id of the preset from which to retrieve the filters.
+     * @since 1.3.0
+     */
+    public String getPresetId()
+    {
+        return presetId;
+    }
+
+    /**
+     * @param preset see {@link #getPresetId()}.
+     * @since 1.3.0
+     */
+    public void setPresetId(String preset)
+    {
+        this.presetId = preset;
     }
 }

@@ -22,8 +22,8 @@ package com.xwiki.projectmanagement.test.openproject;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
-import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
-import org.xwiki.test.ui.po.SuggestInputElement;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.test.ui.TestUtils;
 
 /**
  * Models the edit modal of the OpenProject macro.
@@ -31,61 +31,28 @@ import org.xwiki.test.ui.po.SuggestInputElement;
  * @version $Id$
  * @since 1.0-rc-4
  */
-public class OpenProjectMacroEditModal extends MacroDialogEditModal
+public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
 {
+    private static final String MACRO_NAME = "OpenProject";
+
+    private static final int EXPECTED_MACRO_COUNT = 12;
+
     /**
-     * Set the value of a macro parameter.
+     * Model an edit modal that is already opened.
+     */
+    public OpenProjectMacroEditModal()
+    {
+    }
+
+    /**
+     * Insert an OpenProject macro in the given page and wait for its edit modal to be displayed.
      *
-     * @param name the technical name of the parameter.
-     * @param value the value that should be set.
-     * @return this object.
+     * @param setup the test setup.
+     * @param docRef the page in which the macro will be inserted.
      */
-    public MacroDialogEditModal setMacroParameter(String name, CharSequence... value)
+    public OpenProjectMacroEditModal(TestUtils setup, DocumentReference docRef)
     {
-        WebElement parameterInput = getMacroParameterInput(name);
-        parameterInput.clear();
-        parameterInput.sendKeys(value);
-        return this;
-    }
-
-    /**
-     * @param name the technical name of the parameter.
-     * @return the input value of the parameter.
-     */
-    public String getMacroParameter(String name)
-    {
-        return getMacroParameterInput(name).getDomProperty("value");
-    }
-
-    /**
-     * @param name the technical name of the parameter.
-     * @return the input element of the parameter.
-     */
-    public WebElement getMacroParameterInput(String name)
-    {
-        return getDriver().findElementWithoutWaitingWithoutScrolling(
-            // We match *-editor-modal so the page object can be used both in Dashboard and CKEditor tests.
-            By.cssSelector(
-                String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],select[name='%s']",
-                    name, name)));
-    }
-
-    /**
-     * Click the "More" section of the modal that reveals all the other parameters.
-     */
-    public void clickMore()
-    {
-        getDriver().findElement(By.cssSelector("li.more")).click();
-        getDriver().scrollTo(getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
-    }
-
-    /**
-     * @param name the technical name of a parameter that is displayed using a selectized input.
-     * @return the selectized input of the given parameter name.
-     */
-    public SuggestInputElement getSuggestInput(String name)
-    {
-        return new SuggestInputElement(getMacroParameterInput(name));
+        super(setup, docRef, MACRO_NAME, EXPECTED_MACRO_COUNT);
     }
 
     /**
@@ -101,12 +68,6 @@ public class OpenProjectMacroEditModal extends MacroDialogEditModal
         input.click();
         select.selectByVisibleText(displayerName);
         return this;
-    }
-
-    @Override
-    public void clickSubmit()
-    {
-        this.getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer .btn-primary")).click();
     }
 
     /**

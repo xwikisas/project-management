@@ -25,10 +25,15 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
 import org.xwiki.test.docker.junit5.UITest;
 
-import com.xwiki.projectmanagement.test.openproject.OpenProjectIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
 
 /**
- * Groups all the integration tests for the project management implementations.
+ * Groups all the integration tests for the project management implementations. The nested test classes share the same
+ * XWiki instance and the same OpenProject instance.
  *
  * @version $Id$
  * @since 1.0-rc-4
@@ -38,8 +43,36 @@ public class AllIT
 {
     @Nested
     @Order(1)
-    @DisplayName("Overall OpenProject UI test")
-    class NestedOpenProjectIT extends OpenProjectIT
+    @DisplayName("OpenProject administration")
+    class NestedOpenProjectAdministrationIT extends OpenProjectAdministrationIT
+    {
+    }
+
+    @Nested
+    @Order(2)
+    @DisplayName("OpenProject macro")
+    class NestedOpenProjectMacroIT extends OpenProjectMacroIT
+    {
+    }
+
+    @Nested
+    @Order(3)
+    @DisplayName("OpenProject chart macro")
+    class NestedOpenProjectChartMacroIT extends OpenProjectChartMacroIT
+    {
+    }
+
+    @Nested
+    @Order(4)
+    @DisplayName("OpenProject CKEditor plugin")
+    class NestedOpenProjectCKEditorIT extends OpenProjectCKEditorIT
+    {
+    }
+
+    @Nested
+    @Order(5)
+    @DisplayName("OpenProject filter presets")
+    class NestedOpenProjectPresetIT extends OpenProjectPresetIT
     {
     }
 }

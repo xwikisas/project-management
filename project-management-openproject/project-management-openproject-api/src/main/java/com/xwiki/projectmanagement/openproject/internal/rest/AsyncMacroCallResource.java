@@ -146,7 +146,7 @@ public class AsyncMacroCallResource extends XWikiResource
         String content = jsonMapper.writeValueAsString(liveDataConfiguration);
 
         MacroTransformationContext context = new MacroTransformationContext();
-        asyncRenderer.initialize(displayerMacro, parameters, content, context);
+        asyncRenderer.initialize(displayerMacro, parameters, content, context, null);
         return asyncRenderer;
     }
 }

@@ -19,20 +19,17 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.poi.openxml4j.exceptions.InvalidOperationException;
+import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 import org.xwiki.test.docker.internal.junit5.DockerTestUtils;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
@@ -41,13 +38,45 @@ import org.xwiki.test.ui.XWikiWebDriver;
 /**
  * Defines the behaviour of a OpenProject instance. It offers methods for starting an instance, setting it up (login,
  * change password, setup an oauth client), retrieve location and OAuth client details.
+ * <p>
+ * Use {@link #fromSystemProperties()} to get either an instance started in a Docker container (the default) or an
+ * {@link ExternalOpenProjectInstance} when the {@value #URL_PROPERTY} system property is set.
  *
  * @version $Id$
  * @since 1.0-rc-4
  */
 public class OpenProjectInstance
 {
+    /**
+     * The system property holding the URL of an external OpenProject instance to use instead of starting one.
+     */
+    public static final String URL_PROPERTY = "openproject.url";
+
+    /**
+     * The system property holding the admin username of the external OpenProject instance.
+     */
+    public static final String USERNAME_PROPERTY = "openproject.username";
+
+    /**
+     * The system property holding the admin password of the external OpenProject instance.
+     */
+    public static final String PASSWORD_PROPERTY = "openproject.password";
+
+    /**
+     * The system property holding the client id of an existing OAuth application of the external OpenProject
+     * instance. When both the client id and secret are set, no OAuth application is created.
+     */
+    public static final String CLIENT_ID_PROPERTY = "openproject.clientId";
+
+    /**
+     * The system property holding the client secret of an existing OAuth application of the external OpenProject
+     * instance.
+     */
+    public static final String CLIENT_SECRET_PROPERTY = "openproject.clientSecret";
+
     protected static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectInstance.class);
+
+    private static final String DEFAULT_USERNAME = "Admin";
 
     private static final String PASSWORD_OLD = "admin";
 
@@ -59,11 +88,27 @@ public class OpenProjectInstance
 
     protected String currentPassword = PASSWORD_OLD;
 
-    protected String userName = "Admin";
+    protected String userName = DEFAULT_USERNAME;
 
     protected String clientSecret;
 
     protected String baseUrl;
+
+    /**
+     * @return an {@link ExternalOpenProjectInstance} configured from the {@code openproject.*} system properties when
+     *     {@value #URL_PROPERTY} is set, otherwise an instance that is started in a Docker container
+     */
+    public static OpenProjectInstance fromSystemProperties()
+    {
+        String url = System.getProperty(URL_PROPERTY);
+        if (StringUtils.isBlank(url)) {
+            return new OpenProjectInstance();
+        }
+        LOGGER.info("Using the external OpenProject instance at [{}].", url);
+        return new ExternalOpenProjectInstance(System.getProperty(USERNAME_PROPERTY, DEFAULT_USERNAME),
+            System.getProperty(PASSWORD_PROPERTY, PASSWORD_OLD), url, System.getProperty(CLIENT_ID_PROPERTY),
+            System.getProperty(CLIENT_SECRET_PROPERTY));
+    }
 
     /**
      * Start an OpenProject instance inside a docker container.
@@ -75,8 +120,6 @@ public class OpenProjectInstance
      */
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
-        Path localConfigPath = Paths.get("src/test/resources/doorkeeper.rb").toAbsolutePath();
-
         GenericContainer<?> openProject = new GenericContainer<>(DockerImageName.parse("openproject/openproject:16"))
             .withEnv("OPENPROJECT_SECRET_KEY_BASE", "secret")
 //            .withEnv("OPENPROJECT_HOST__NAME", "localhost:8082") // No need to include port
@@ -87,11 +130,8 @@ public class OpenProjectInstance
                 .forPort(80)
                 .withStartupTimeout(java.time.Duration.ofMinutes(5)))
             // We need to disable the https/localhost requirement for the oauth redirect uri.
-            .withFileSystemBind(
-                localConfigPath.toAbsolutePath().toString(),
-                "/app/config/initializers/doorkeeper.rb",
-                BindMode.READ_ONLY
-            );
+            .withCopyFileToContainer(MountableFile.forClasspathResource("doorkeeper.rb"),
+                "/app/config/initializers/doorkeeper.rb");
 
         DockerTestUtils.startContainer(openProject, testConfiguration);
 
@@ -124,7 +164,9 @@ public class OpenProjectInstance
         maybeLogin(driver, true);
         changePassword(driver);
         maybeLogin(driver, true);
-        createNewOAuthApp(driver);
+        if (clientId == null || clientSecret == null) {
+            createNewOAuthApp(driver);
+        }
     }
 
     /**
@@ -179,7 +221,7 @@ public class OpenProjectInstance
     public String getClientSecret()
     {
         if (clientSecret == null) {
-            throw new InvalidOperationException("Can't retrieve the client secret before having setup the OAuth app.");
+            throw new IllegalStateException("Can't retrieve the client secret before having setup the OAuth app.");
         }
         return clientSecret;
     }
@@ -190,7 +232,7 @@ public class OpenProjectInstance
     public String getClientId()
     {
         if (clientId == null) {
-            throw new InvalidOperationException("Can't retrieve the client id before having setup the OAuth app.");
+            throw new IllegalStateException("Can't retrieve the client id before having setup the OAuth app.");
         }
         return clientId;
     }
@@ -204,7 +246,7 @@ public class OpenProjectInstance
             return baseUrl;
         }
         if (openProjectContainer == null) {
-            throw new InvalidOperationException("Can't retrieve the container URL without having started it.");
+            throw new IllegalStateException("Can't retrieve the container URL without having started it.");
         }
         String host = openProjectContainer.getHost(); // usually "localhost"
         Integer port = openProjectContainer.getMappedPort(80); // random free port mapped to container's 80

@@ -48,4 +48,9 @@ public class TestProjManagementMacro extends AbstractProjectManagementMacro<Proj
         addToSourceParams(parameters, "smth", "smth2");
         addToSourceParams(parameters, "smth3", "smth4");
     }
+
+    @Override
+    public void asyncProcessParameters(ProjectManagementMacroParameters parameters)
+    {
+    }
 }

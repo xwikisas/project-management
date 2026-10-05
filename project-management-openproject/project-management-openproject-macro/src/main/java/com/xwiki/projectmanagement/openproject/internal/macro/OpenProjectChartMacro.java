@@ -64,6 +64,19 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         super("OpenProject Chart Macro", "desc", OpenProjectChartMacroParameters.class);
     }
 
+    /**
+     * Constructor for subclasses that need to customize the macro name, description and parameters class.
+     *
+     * @param name the macro name
+     * @param description the macro description
+     * @param parametersClass the parameters class
+     */
+    public OpenProjectChartMacro(String name, String description,
+        Class<? extends OpenProjectChartMacroParameters> parametersClass)
+    {
+        super(name, description, parametersClass);
+    }
+
     @Override
     public boolean supportsInlineMode()
     {

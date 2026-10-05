@@ -50,6 +50,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         inputElem.attr('type', 'number');
         break;
       case "date":
+        if (inputElem.prop('disabled')) {
+          inputElem.attr('type', 'text');
+          return;
+        }
         let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
         let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val').on('change', function() {
           let valToSet = '';

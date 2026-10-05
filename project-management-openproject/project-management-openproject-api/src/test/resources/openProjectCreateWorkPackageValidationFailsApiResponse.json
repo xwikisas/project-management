@@ -182,7 +182,8 @@
     },
     "validationErrors": {
       "subject": {
-        "_type": "Error"
+        "_type": "Error",
+        "message": "Subject can't be blank."
       }
     }
   }
