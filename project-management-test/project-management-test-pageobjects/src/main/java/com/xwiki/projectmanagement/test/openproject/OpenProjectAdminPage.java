@@ -43,6 +43,8 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
 
     private static final String SECTION_ID = "OpenProject";
 
+    private static final String CONFIGURATION_CLASS = "OpenProject.Code.OpenProjectConfigurationClass";
+
     public OpenProjectAdminPage()
     {
         super(SECTION_ID);
@@ -113,6 +115,19 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
         getDriver().waitUntilElementIsVisible(By.id("deleteConnectionModal"));
         WebElement modal = getDriver().findElement(By.id("deleteConnectionModal"));
         modal.findElement(By.className("btn-danger")).click();
+    }
+
+    /**
+     * Set and save the characters that trigger the work package search in the WYSIWYG editor.
+     *
+     * @param marker the new work package search trigger
+     */
+    public void setWorkPackageSearchMarker(String marker)
+    {
+        // ConfigurableClass generates one form per configuration page, named after the lower cased section.
+        getFormContainerElement(SECTION_ID.toLowerCase() + "_OpenProject.Code.OpenProjectConfiguration")
+            .setFieldValue(By.name(CONFIGURATION_CLASS + "_0_workPackageSearchMarker"), marker);
+        clickSave();
     }
 
     /**

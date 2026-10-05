@@ -33,6 +33,9 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomUtils;
+import org.xwiki.ckeditor.test.po.AutocompleteDropdown;
+import org.xwiki.ckeditor.test.po.CKEditor;
+import org.xwiki.ckeditor.test.po.RichTextAreaElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
@@ -89,6 +92,8 @@ public class OpenProjectIT
 
     private final LocalDocumentReference page5 = new LocalDocumentReference("Main", "ChartsTypeTest");
 
+    private final LocalDocumentReference page6 = new LocalDocumentReference("Main", "InlineWorkPackageTest");
+
     private final OpenProjectInstance openProjectInstance = new OpenProjectInstance();
     // If you use an external instance, make sure to have it started with the same commands that
     // {@link OpenProjectInstance} starts the instance. Namely, watch for doorkeeper.rb file.
@@ -109,6 +114,7 @@ public class OpenProjectIT
         setup.deletePage(new DocumentReference(page3, wiki));
         setup.deletePage(new DocumentReference(page4, wiki));
         setup.deletePage(new DocumentReference(page5, wiki));
+        setup.deletePage(new DocumentReference(page6, wiki));
 
         // OpenProject/Code/OpenProjectConfigurations/
         DocumentReference configsHome =
@@ -493,6 +499,40 @@ public class OpenProjectIT
         assertTrue(chart.hasLabel("New"));
         assertFalse(chart.hasLabel("In progress"));
         assertFalse(chart.hasLabel("Closed"));
+    }
+
+    @Test
+    @Order(130)
+    void insertInlineWorkPackageWithConfiguredMarker(TestUtils setup)
+    {
+        String marker = "!!";
+        OpenProjectAdminPage.gotoPage().setWorkPackageSearchMarker(marker);
+
+        // The work package search uses the OpenProject instance from the page relation.
+        DocumentReference docRef = new DocumentReference(page6, wiki);
+        setup.createPage(docRef, "");
+        setup.addObject(docRef, "ProjectManagement.Code.RelationClass", "client", "openproject", "clientParams",
+            String.format("{\"instance\":\"%s\"}", CONNECTION_ID));
+
+        setup.gotoPage(docRef, "edit", "editor=wysiwyg");
+        WYSIWYGEditPage editPage = new WYSIWYGEditPage();
+        RichTextAreaElement textArea = new CKEditor("content").waitToLoad().getRichTextArea();
+        String query = marker + "speakers";
+        textArea.sendKeys(query);
+        AutocompleteDropdown dropdown = new AutocompleteDropdown();
+        dropdown.waitForItemSelected(query, "Send invitation to speakers");
+        textArea.sendKeys(Keys.ENTER);
+        dropdown.waitForItemSubmitted();
+        // The macro is inserted asynchronously, after the autocomplete dropdown is closed.
+        textArea.waitUntilContentContains("startmacro:openproject");
+        editPage.clickSaveAndView();
+
+        setup.gotoPage(docRef, "edit", "editor=wiki");
+        String content = new WikiEditPage().getContent();
+        assertTrue(content.startsWith("{{openproject "), content);
+        assertTrue(content.contains(String.format("instance=\"%s\"", CONNECTION_ID)), content);
+        assertTrue(content.contains("workItemsDisplayer=\"workItemInline\""), content);
+        assertFalse(content.contains(marker), content);
     }
 
     @Test
