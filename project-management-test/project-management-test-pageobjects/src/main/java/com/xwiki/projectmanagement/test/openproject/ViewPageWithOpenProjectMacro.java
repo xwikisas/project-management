@@ -43,4 +43,14 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
             .map(OpenProjectMacroElement::new)
             .collect(Collectors.toList());
     }
+
+    /**
+     * @param cssClass the CSS class of a rendered work package property, e.g.
+     *     {@code openproject-property-type-Task-test}
+     * @return the text color of the first property with the given class, as computed by the browser
+     */
+    public String getPropertyColor(String cssClass)
+    {
+        return getDriver().findElement(By.className(cssClass)).getCssValue("color");
+    }
 }

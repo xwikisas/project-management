@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.xwiki.ckeditor.test.po.CKEditor;
@@ -117,7 +119,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     public void clickMore()
     {
         getDriver().findElement(By.cssSelector("li.more")).click();
-        getDriver().scrollTo(getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
+        scrollToFooter();
     }
 
     /**
@@ -140,6 +142,26 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         SuggestInputElement instanceSuggest = getSuggestInput(INSTANCE_PARAMETER).click().waitForSuggestions();
         instanceSuggest.selectByValue(connectionId);
         return instanceSuggest;
+    }
+
+    /**
+     * Set a random value for the {@code id} parameter. The Live Data page object needs the macro to have an id.
+     *
+     * @return this object.
+     */
+    public AbstractOpenProjectMacroEditModal setRandomId()
+    {
+        getDriver().executeJavascript("arguments[0].value = arguments[1];", getMacroParameterInput("id"),
+            String.valueOf(ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)));
+        return this;
+    }
+
+    /**
+     * Scroll to the footer of the modal, so that all the parameters are displayed.
+     */
+    public void scrollToFooter()
+    {
+        getDriver().scrollTo(getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer")));
     }
 
     @Override

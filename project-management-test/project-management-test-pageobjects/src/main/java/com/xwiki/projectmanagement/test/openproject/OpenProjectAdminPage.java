@@ -43,6 +43,8 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
 
     private static final String SECTION_ID = "OpenProject";
 
+    private static final String CONNECTION_NAME_COLUMN = "Connection name";
+
     private static final String CONFIGURATION_CLASS = "OpenProject.Code.OpenProjectConfigurationClass";
 
     public OpenProjectAdminPage()
@@ -100,7 +102,36 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     public ViewPage triggerColorSyncJob()
     {
         getDriver().findElement(By.id("open-project-sync-colors")).click();
-        return new ViewPage();
+        ViewPage schedulerPage = new ViewPage();
+        schedulerPage.waitUntilPageIsReady();
+        return schedulerPage;
+    }
+
+    /**
+     * @return {@code true} if the Job Scheduler page displays the message confirming that the color sync job was
+     *     triggered
+     */
+    public boolean isColorSyncJobTriggered()
+    {
+        return getDriver().hasElementWithoutWaiting(By.xpath(
+            "//div[contains(@class, 'infomessage')]/p[text() = 'Job OpenProject Styling Updater triggered']"));
+    }
+
+    /**
+     * @param name the name of a connection
+     * @return the index of the connection in the Live Data, starting at 1, or {@code -1} if there is no connection
+     *     with the given name
+     */
+    public int getConnectionIndex(String name)
+    {
+        TableLayoutElement ld = getConnectionsLivedata().getTableLayout();
+        ld.waitUntilReady();
+        for (int i = 1; i <= ld.countRows(); i++) {
+            if (name.equals(ld.getCell(CONNECTION_NAME_COLUMN, i).getText())) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -194,14 +225,5 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
         elem.sendKeys(clientSecret);
 
         modal.findElement(By.className("btn-primary")).click();
-    }
-
-    private void sleep(long l)
-    {
-        try {
-            Thread.sleep(l);
-        } catch (Exception ignoredException) {
-
-        }
     }
 }

@@ -113,6 +113,14 @@ public class OpenProjectMacroElement extends BaseElement
     }
 
     /**
+     * @return the text displayed by the Live Data pagination, e.g. {@code Entries 1 - 3 out of 3}
+     */
+    public String getPaginationEntriesText()
+    {
+        return self.findElement(By.className("pagination-current-entries")).getText();
+    }
+
+    /**
      * @return the wrapper of the macro.
      */
     public WebElement getElement()
