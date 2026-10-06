@@ -33,6 +33,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
@@ -56,6 +57,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -82,12 +84,6 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
 
-    private static final Pattern URL_QUERY_ID_PATTERN = Pattern.compile("^query_id=(\\d+)$");
-
-    private static final Pattern QUERY_FILTERS_PATTERN = Pattern.compile("[?&]filters=([^&]+)");
-
-    private static final Pattern QUERY_SORT_BY_PATTERN = Pattern.compile("[?&]sortBy=([^&]+)");
-
     private static final String NO_FILTERS = "[]";
 
     private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
@@ -102,6 +98,9 @@ public class OpenProjectClient implements ProjectManagementClient
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
+
+    @Inject
+    private OpenProjectIdentifierResolver identifierResolver;
 
     @Inject
     private Logger logger;
@@ -247,7 +246,7 @@ public class OpenProjectClient implements ProjectManagementClient
         switch (identifierType) {
             case URL:
                 URL url = parseUrl(identifier);
-                String urlQueryId = extractQueryId(url.getQuery());
+                String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
 
                 if (urlQueryId != null) {
                     return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries,
@@ -347,22 +346,13 @@ public class OpenProjectClient implements ProjectManagementClient
         return OpenProjectFilterHandler.mergeFilters(filtersList, idsFilterNode);
     }
 
-    private String extractQueryId(String queryParameters)
-    {
-        if (queryParameters == null) {
-            return null;
-        }
-
-        Matcher matcher = URL_QUERY_ID_PATTERN.matcher(queryParameters.trim());
-
-        return matcher.matches() ? matcher.group(1) : null;
-    }
-
     /**
      * Retrieves the work packages matching a saved query. As long as the livedata doesn't filter anything, the results
      * are read straight from the query, which already embeds them. Once the livedata filters, the queries endpoint
      * can't be used anymore since the filters it receives replace the ones of the query instead of restricting them, so
      * the two sets are merged and sent to the work packages endpoint.
+     * The filters of the query are read from its results link. The link is normally retrieved once, before the macro
+     * got executed, and passed through the source parameters; it is retrieved here only when it is missing.
      */
     private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient, String queryId,
         int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries,
@@ -372,62 +362,27 @@ public class OpenProjectClient implements ProjectManagementClient
         String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
 
         try {
-            if (!NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
-                return handleFilteredSavedQuery(openProjectApiClient, queryId, offset, pageSize, filtersEntries,
-                    sortBy);
+            if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getQueryWorkPackages(queryId, offset, pageSize, sortBy),
+                    OpenProjectConverters::convertWorkPackageToWorkItem
+                );
             }
 
+            String resultsUrl = (String) executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL);
+            if (StringUtils.isEmpty(resultsUrl)) {
+                resultsUrl = identifierResolver.getSavedQueryResultsUrl(openProjectApiClient, queryId);
+            }
+            String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
+                identifierResolver.getSavedQueryFilters(resultsUrl));
+            String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
+
             return OpenProjectConverters.convertPaginatedResult(
-                openProjectApiClient.getQueryWorkPackages(queryId, offset, pageSize, sortBy),
+                openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),
                 OpenProjectConverters::convertWorkPackageToWorkItem
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
-        }
-    }
-
-    /**
-     * Combines the filters of a saved query with the livedata ones and sends them to the work packages endpoint.
-     */
-    private PaginatedResult<WorkItem> handleFilteredSavedQuery(OpenProjectApiClient openProjectApiClient,
-        String queryId, int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries, String sortBy)
-        throws ProjectManagementException
-    {
-        String resultsUrl = openProjectApiClient.getQueryResultsUrl(queryId);
-        String filters =
-            OpenProjectFilterHandler.mergeApiFilters(filtersEntries, extractFiltersFromResultsUrl(resultsUrl));
-        String sorting = sortBy.isEmpty() ? extractSortByFromResultsUrl(resultsUrl) : sortBy;
-
-        return OpenProjectConverters.convertPaginatedResult(
-            openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),
-            OpenProjectConverters::convertWorkPackageToWorkItem
-        );
-    }
-
-    private String extractSortByFromResultsUrl(String resultsUrl)
-    {
-        if (resultsUrl == null) {
-            return "";
-        }
-
-        Matcher matcher = QUERY_SORT_BY_PATTERN.matcher(resultsUrl);
-
-        return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : "";
-    }
-
-    private JsonNode extractFiltersFromResultsUrl(String resultsUrl) throws WorkItemRetrievalException
-    {
-        Matcher matcher = QUERY_FILTERS_PATTERN.matcher(resultsUrl);
-
-        if (!matcher.find()) {
-            return null;
-        }
-
-        String filters = URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
-        try {
-            return objectMapper.readTree(filters);
-        } catch (JsonProcessingException e) {
-            throw new WorkItemRetrievalException("Failed to read the filters of the saved query", e);
         }
     }
 

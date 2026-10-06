@@ -28,6 +28,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
@@ -38,11 +40,15 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -76,6 +82,15 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     @Inject
     private ObservationManager observationManager;
+
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private OpenProjectIdentifierResolver identifierResolver;
+
+    @Inject
+    private Logger logger;
 
     /**
      * Default constructor.
@@ -113,7 +128,23 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     @Override
     public void asyncProcessParameters(OpenProjectMacroParameters parameters)
     {
-        // Update any parameters in the async context.
+        String queryId = identifierResolver.getStandaloneQueryId(parameters.getIdentifier());
+        if (queryId == null) {
+            return;
+        }
+
+        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(parameters.getInstance());
+        if (apiClient == null) {
+            return;
+        }
+
+        try {
+            addToSourceParams(parameters, OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL,
+                identifierResolver.getSavedQueryResultsUrl(apiClient, queryId));
+        } catch (ProjectManagementException e) {
+            logger.warn("Failed to retrieve the saved query [{}] of the instance [{}]. Cause: [{}].", queryId,
+                parameters.getInstance(), ExceptionUtils.getRootCauseMessage(e));
+        }
     }
 
     @Override
