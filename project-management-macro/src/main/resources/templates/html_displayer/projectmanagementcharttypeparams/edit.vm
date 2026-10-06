@@ -18,6 +18,8 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/chartTypeParams.js', {'minify': true}))
+## Needed for the styling of the div.
+#set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
 <div class="proj-manag-chart-type-params proj-manag-macro-param">
 </div>
 <template id="proj-manag-chart-type-param-template">
