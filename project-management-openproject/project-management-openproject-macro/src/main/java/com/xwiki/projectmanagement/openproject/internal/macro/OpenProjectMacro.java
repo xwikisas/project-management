@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -41,6 +42,7 @@ import org.xwiki.skinx.SkinExtension;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -83,6 +85,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public OpenProjectMacro()
     {
         super("OpenProject", "Retrieve work items from OpenProject.", null, OpenProjectMacroParameters.class);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
     /**
@@ -96,6 +99,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         Class<? extends OpenProjectMacroParameters> parametersClass)
     {
         super(name, description, null, parametersClass);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
     @Override

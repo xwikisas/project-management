@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -35,6 +36,7 @@ import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCreateWorkPackageMacroParameters;
 
 /**
@@ -55,9 +57,10 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
      */
     public OpenProjectCreateWorkPackageMacro()
     {
-        super("OpenProject Create Work Package",
-            "Easily create a new work package in OpenProject directly from XWiki.",
+        super("OpenProject Create Work Package", "Easily create a new work package in OpenProject directly from XWiki.",
             OpenProjectCreateWorkPackageMacroParameters.class);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
+
     }
 
     @Override
@@ -70,9 +73,7 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
     public List<Block> execute(OpenProjectCreateWorkPackageMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        Block infoMessage =
-            l10n.getTranslation("openproject-create-work-package.display.viewMode.message").render();
-        return List.of(new GroupBlock(List.of(infoMessage), Collections.singletonMap("class", "box "
-            + "infomessage")));
+        Block infoMessage = l10n.getTranslation("openproject-create-work-package.display.viewMode.message").render();
+        return List.of(new GroupBlock(List.of(infoMessage), Collections.singletonMap("class", "box " + "infomessage")));
     }
 }

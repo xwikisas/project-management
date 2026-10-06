@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -40,6 +41,7 @@ import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManage
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
@@ -79,6 +81,8 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     {
         super("OpenProject Calendar", "Display OpenProject events as a calendar",
             OpenProjectCalendarMacroParameters.class);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
+
     }
 
     @Override
