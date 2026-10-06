@@ -30,7 +30,7 @@ import org.xwiki.test.ui.TestUtils;
  */
 public class OpenProjectOpenClosedMacroEditModal extends AbstractOpenProjectMacroEditModal
 {
-    private static final String MACRO_NAME = "OpenProject Open vs Closed Work Packages";
+    private static final String MACRO_NAME = "Work Package Completion Rate";
 
     private static final int EXPECTED_MACRO_COUNT = 1;
 

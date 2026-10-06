@@ -49,6 +49,7 @@
     <tag>project-management-1.2.0-rc-7</tag>
   </scm>
   <modules>
+    <module>project-management-compat</module>
     <module>project-management-api</module>
     <module>project-management-livedata</module>
     <module>project-management-macro</module>

@@ -20,13 +20,17 @@
 
 package com.xwiki.projectmanagement.calendar.macro;
 
+import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyFeature;
+import org.xwiki.properties.annotation.PropertyGroup;
+import org.xwiki.properties.annotation.PropertyOrder;
+import org.xwiki.stability.Unstable;
+
 import com.xwiki.projectmanagement.ProjectManagementFilter;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.TimeInterval;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
-import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.stability.Unstable;
 
 /**
  * Parameters for the project management calendar macro. Extends {@link ProjectManagementMacroParameters} with
@@ -49,6 +53,8 @@ public class CalendarMacroParameters
     private String filters;
 
     private int limit = 25;
+
+    private String presetId;
 
     /**
      * @return the client id (e.g., "openproject").
@@ -77,6 +83,8 @@ public class CalendarMacroParameters
     /**
      * @param defaultView see {@link #getDefaultView()}.
      */
+    @PropertyGroup("display")
+    @PropertyOrder(30)
     public void setDefaultView(CalendarViews defaultView)
     {
         this.defaultView = defaultView;
@@ -93,6 +101,8 @@ public class CalendarMacroParameters
     /**
      * @param firstDay see {@link #getFirstDay()}.
      */
+    @PropertyGroup("display")
+    @PropertyOrder(40)
     public void setFirstDay(WeekDays firstDay)
     {
         this.firstDay = firstDay;
@@ -100,7 +110,7 @@ public class CalendarMacroParameters
 
     /**
      * @return the time interval displayed in the agenda views, formatted as {@code min-max} (e.g.,
-     *     {@code 06:00-20:00}).
+     *         {@code 06:00-20:00}).
      */
     public String getTimeInterval()
     {
@@ -111,6 +121,8 @@ public class CalendarMacroParameters
      * @param timeInterval see {@link #getTimeInterval()}.
      */
     @PropertyDisplayType(TimeInterval.class)
+    @PropertyGroup("display")
+    @PropertyOrder(40)
     public void setTimeInterval(String timeInterval)
     {
         this.timeInterval = timeInterval;
@@ -118,7 +130,7 @@ public class CalendarMacroParameters
 
     /**
      * @return a JSON representing the filters applied on the work items dataset. The JSON is the serialized version of
-     *     the {@link org.xwiki.livedata.LiveDataConfiguration}.
+     *         the {@link org.xwiki.livedata.LiveDataConfiguration}.
      */
     public String getFilters()
     {
@@ -129,6 +141,7 @@ public class CalendarMacroParameters
      * @param filters see {@link #getFilters()}.
      */
     @PropertyDisplayType(ProjectManagementFilter.class)
+    @PropertyFeature("filters")
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -145,8 +158,29 @@ public class CalendarMacroParameters
     /**
      * @param limit see {@link #getLimit()}.
      */
+    @PropertyGroup("display")
+    @PropertyOrder(50)
     public void setLimit(Integer limit)
     {
         this.limit = limit;
+    }
+
+    /**
+     * @return the id of the preset from which to retrieve the filters.
+     * @since 1.3.0
+     */
+    public String getPresetId()
+    {
+        return presetId;
+    }
+
+    /**
+     * @param preset see {@link #getPresetId()}.
+     * @since 1.3.0
+     */
+    @PropertyFeature("filters")
+    public void setPresetId(String preset)
+    {
+        this.presetId = preset;
     }
 }

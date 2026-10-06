@@ -93,7 +93,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         assertEquals("No",
             adminPage.getPresetsLivedata().getTableLayout().getCell("Chart preset?", presetIndex).getText());
 
-        // Use the preset in a macro that also has its own filter: the preset takes precedence.
+        // Use the preset in a macro.
         setup.deletePage(testReference);
         OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
         selectInstanceFromModal(macroModal, CONNECTION_ID);
@@ -102,7 +102,6 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         List<String> presetOptions = macroModal.getPresetOptions();
         assertTrue(presetOptions.contains(presetName), presetOptions.toString());
         macroModal.selectPreset(presetName);
-        macroModal.getFilterBuilder().addFilter("status").setSuggestValue(1, "New");
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
         assertSubjectsContain(ld, "speakers");
@@ -116,6 +115,15 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         macroModal.clickSubmit();
         macroModal.getEditPage().clickSaveAndView();
 
+        // The filters and the preset are alternatives in the macro editor, so a macro having both can only be written
+        // in wiki syntax. The preset takes precedence over the macro filters.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"presetPrecedence\" "
+            + "presetId=\"%s\" filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"status~\",~\"constraints~\":"
+            + "[{~\"operator~\":~\"equals~\",~\"value~\":~\"1~\"}]}]}}\"/}}", CONNECTION_ID, presetId));
+        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        assertEquals("Entries 1 - 1 out of 1", getPaginationEntriesText(macro));
+        assertSubjectsContain(macro.getLivedata().getTableLayout(), "speakers");
+
         // The macro uses the updated preset filters.
         setup.gotoPage(presetReference, "edit");
         editPage = new PresetEditPage();
@@ -123,8 +131,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         editPage.waitUntilFilterValueContains("\"sp\"");
         editPage.clickSaveAndViewPreset();
         setup.gotoPage(testReference);
-        ViewPageWithOpenProjectMacro macroPage = new ViewPageWithOpenProjectMacro();
-        OpenProjectMacroElement macro = macroPage.getOpenProjectMacros().get(0);
+        macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
         assertEquals("Entries 1 - 3 out of 3", getPaginationEntriesText(macro));
         assertSubjectsContain(macro.getLivedata().getTableLayout(), "sp");
 

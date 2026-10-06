@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <!--
  * See the NOTICE file distributed with this work for additional
  * information regarding copyright ownership.
@@ -18,44 +19,17 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
-    <artifactId>project-management-presets</artifactId>
+    <artifactId>project-management</artifactId>
     <version>1.3.0-rc-2-SNAPSHOT</version>
   </parent>
-
-  <artifactId>project-management-presets-api</artifactId>
-
-  <properties>
-    <xwiki.jacoco.instructionRatio>0.86</xwiki.jacoco.instructionRatio>
-  </properties>
-  <dependencies>
-    <!-- Needed for the class initializer and the manager.  -->
-    <dependency>
-      <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-oldcore</artifactId>
-      <version>${platform.version}</version>
-    </dependency>
-    <!--  Needed for the script service.  -->
-    <dependency>
-      <groupId>com.xwiki.projectmanagement</groupId>
-      <artifactId>project-management-api</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.commons</groupId>
-      <artifactId>xwiki-commons-tool-test-component</artifactId>
-      <version>${commons.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.xwiki.commons</groupId>
-      <artifactId>xwiki-commons-tool-test-component</artifactId>
-      <version>${commons.version}</version>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
-
+  <artifactId>project-management-compat</artifactId>
+  <name>Project Management - Compatibility</name>
+  <description>Compile-time copies of XWiki APIs that are more recent than the minimal supported XWiki version. Modules
+    must depend on it with the provided scope, so that it is never installed: on XWiki versions providing these APIs the
+    core classes are used, and on older versions the annotations are ignored.</description>
 </project>

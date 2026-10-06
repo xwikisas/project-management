@@ -36,6 +36,13 @@
   <name>Project Management - Open Project - Macro</name>
   <description>Contains the implementation of the Open Project Macro.</description>
   <dependencies>
+    <!-- Compile-time copy of @PropertyOrder (XWiki 17.5.0+), never installed. -->
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-compat</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>
       <artifactId>project-management-macro</artifactId>

@@ -21,7 +21,10 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyFeature;
+import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyMandatory;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
@@ -67,6 +70,8 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     }
 
     @PropertyDisplayType(OpenProjectFilter.class)
+    @PropertyFeature("filters")
+    @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
     {
@@ -74,6 +79,8 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     }
 
     @PropertyDisplayType(OpenProjectProperties.class)
+    @PropertyGroup("display")
+    @PropertyOrder(20)
     @Override
     public void setProperties(String properties)
     {
@@ -81,6 +88,8 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     }
 
     @PropertyDisplayType(OpenProjectSort.class)
+    @PropertyGroup("display")
+    @PropertyOrder(30)
     @Override
     public void setSort(String sort)
     {
@@ -88,6 +97,7 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     }
 
     @PropertyDisplayType(OpenProjectPreset.class)
+    @PropertyFeature("filters")
     @Override
     public void setPresetId(String presetId)
     {
