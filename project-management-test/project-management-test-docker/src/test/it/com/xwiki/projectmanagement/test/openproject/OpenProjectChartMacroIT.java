@@ -141,4 +141,29 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         assertFalse(chart.hasLabel("In progress"));
         assertFalse(chart.hasLabel("Closed"));
     }
+
+    @Test
+    void openClosedMacroTest(TestUtils setup, TestReference testReference)
+    {
+        setup.deletePage(testReference);
+
+        // The datasets and the grouping property are predefined, only the time range can be configured.
+        OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
+        modal.selectInstance(CONNECTION_ID);
+        modal.clickMore();
+        assertFalse(modal.hasFilterBuilder());
+        assertFalse(modal.isMacroParameterDisplayed("property"));
+        modal.setMacroParameter("days", "30");
+        modal.clickSubmit();
+        modal.getEditPage().clickSaveAndView();
+
+        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
+
+        // Checks that the chart compares the open and closed work packages.
+        ChartJSCanvas chart = new ChartJSCanvas();
+        assertEquals("line", chart.getChartType());
+        assertEquals(2, chart.getDatasetCount());
+        assertTrue(chart.hasLabel("Open"));
+        assertTrue(chart.hasLabel("Closed"));
+    }
 }

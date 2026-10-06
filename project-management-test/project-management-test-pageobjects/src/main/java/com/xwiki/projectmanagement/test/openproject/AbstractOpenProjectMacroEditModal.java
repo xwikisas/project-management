@@ -121,6 +121,29 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
                 name)));
     }
 
+    /**
+     * @param name the technical name of the parameter.
+     * @return {@code true} if the parameter is displayed in the modal, {@code false} if it is hidden or missing.
+     * @since 1.3.0-rc-2
+     */
+    public boolean isMacroParameterDisplayed(String name)
+    {
+        return getDriver().findElementsWithoutWaiting(By.cssSelector(
+            String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],select[name='%s']", name,
+                name))).stream().anyMatch(WebElement::isDisplayed);
+    }
+
+    /**
+     * @return {@code true} if the modal displays a filter builder for the filters parameter.
+     * @since 1.3.0-rc-2
+     */
+    public boolean hasFilterBuilder()
+    {
+        return getDriver()
+            .findElementsWithoutWaiting(By.cssSelector(".macro-editor-modal .proj-manag-constraint-builder")).stream()
+            .anyMatch(WebElement::isDisplayed);
+    }
+
     public void clickMore()
     {
         getDriver().findElement(By.cssSelector("li.more")).click();

@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -36,6 +37,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 
@@ -62,6 +64,8 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     public OpenProjectChartMacro()
     {
         super("OpenProject Chart Macro", "desc", OpenProjectChartMacroParameters.class);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
+
     }
 
     /**
@@ -75,6 +79,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         Class<? extends OpenProjectChartMacroParameters> parametersClass)
     {
         super(name, description, parametersClass);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
     @Override

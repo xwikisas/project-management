@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 
@@ -76,12 +77,13 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     protected AbstractOpenProjectDirectMacro(String name, String description, Class<P> parametersBeanClass)
     {
         super(name, description, null, parametersBeanClass);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
     @Override
     public boolean supportsInlineMode()
     {
-        return false;
+        return false;   
     }
 
     @Override
@@ -115,8 +117,8 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
                 }
 
                 @Override
-                public List<Block> execute(ProjectManagementAsyncMacroParams x, String y,
-                    MacroTransformationContext z) throws MacroExecutionException
+                public List<Block> execute(ProjectManagementAsyncMacroParams x, String y, MacroTransformationContext z)
+                    throws MacroExecutionException
                 {
                     return executeInternal(parameters, content, context, apiClient, instanceToUse);
                 }
