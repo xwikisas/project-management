@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,8 @@ import static org.mockito.Mockito.mockStatic;
 import org.mockito.MockedStatic;
 import org.slf4j.Logger;
 import org.xwiki.component.util.ReflectionUtils;
+import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -47,6 +50,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -54,14 +58,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @ComponentTest
+@ComponentList(OpenProjectIdentifierResolver.class)
 public class OpenProjectClientTest
 {
+    private static final String QUERY_ID = "27";
+
+    private static final String SAVED_QUERY_IDENTIFIER = "http://open-project-instance/work_packages?query_id=27";
+
+    private static final String SAVED_QUERY_RESULTS_URL = "/api/v3/projects/1/work_packages?offset=1"
+        + "&filters=%5B%7B%22status%22%3A%7B%22operator%22%3A%22o%22%2C%22values%22%3A%5B%5D%7D%7D%5D"
+        + "&sortBy=%5B%5B%22id%22%2C%22desc%22%5D%5D&pageSize=20";
+
+    private static final String SAVED_QUERY_SORT_BY = "[[\"id\",\"desc\"]]";
+
+    private static final String MERGED_FILTERS = "[{\"status\":{\"operator\":\"o\",\"values\":[]}},"
+        + "{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]";
+
     @InjectMockComponents
     private OpenProjectClient openProjectClient;
 
@@ -90,6 +109,107 @@ public class OpenProjectClientTest
             generateWorkItems());
         when(openProjectApiClient.getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
             anyString())).thenReturn(generateWorkItems());
+        when(openProjectApiClient.getQueryWorkPackages(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
+            generateWorkItems());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndNoLivedataFilters() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn(SAVED_QUERY_RESULTS_URL);
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        // The query applies its own filters and sorting.
+        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 10, "");
+        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
+        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndLivedataSortingButNoFilters() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+
+        openProjectClient.getWorkItems(0, 10, List.of(), List.of(new LiveDataQuery.SortEntry("summary", false)));
+
+        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 10, "[[\"subject\",\"asc\"]]");
+        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndStoredResultsUrl() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn(SAVED_QUERY_RESULTS_URL);
+
+        PaginatedResult<WorkItem> result =
+            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+
+        // The results link was retrieved before the macro execution, so the query isn't read again.
+        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
+        verify(openProjectApiClient, never()).getQueryWorkPackages(anyString(), anyInt(), anyInt(), anyString());
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
+            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryWithoutStoredResultsUrl() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(openProjectApiClient.getQueryResultsUrl(QUERY_ID)).thenReturn(SAVED_QUERY_RESULTS_URL);
+
+        openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+
+        verify(openProjectApiClient).getQueryResultsUrl(QUERY_ID);
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
+            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndLivedataSorting() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn(SAVED_QUERY_RESULTS_URL);
+
+        openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()),
+            List.of(new LiveDataQuery.SortEntry("summary", true)));
+
+        // The livedata sorting replaces the one of the query.
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10), anyString(), eq("[[\"subject\",\"desc\"]]"));
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryWithoutResultsLink() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(openProjectApiClient.getQueryResultsUrl(QUERY_ID)).thenReturn("");
+
+        PaginatedResult<WorkItem> result =
+            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+
+        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
+        assertEquals(0, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndUnreadableStoredFilters() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn("/api/v3/work_packages?filters=%5B%7Bnot-json");
+
+        PaginatedResult<WorkItem> result =
+            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+
+        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
+        assertEquals(0, result.getItems().size());
     }
 
     @Test
@@ -207,6 +327,28 @@ public class OpenProjectClientTest
         }
         result.setItems(workPackages);
         return result;
+    }
+
+    private LiveDataQuery.Filter getSummaryFilter()
+    {
+        return new LiveDataQuery.Filter("summary", "contains", "bug");
+    }
+
+    /**
+     * The merged filters are built from a map, so their order isn't deterministic.
+     */
+    private boolean jsonArraysEqualIgnoringOrder(String actualJson, String expectedJson)
+    {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            List<JsonNode> actual = new ArrayList<>();
+            mapper.readTree(actualJson).forEach(actual::add);
+            List<JsonNode> expected = new ArrayList<>();
+            mapper.readTree(expectedJson).forEach(expected::add);
+            return actual.size() == expected.size() && new HashSet<>(actual).equals(new HashSet<>(expected));
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private boolean jsonEquals(String actualJson, String expectedJson)

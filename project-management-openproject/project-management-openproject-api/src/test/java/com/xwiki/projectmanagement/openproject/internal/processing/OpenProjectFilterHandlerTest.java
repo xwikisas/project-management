@@ -205,6 +205,60 @@ public class OpenProjectFilterHandlerTest
         assertEqualsStringFilters(expected, convertedValues);
     }
 
+    @Test
+    void mergeApiFiltersOnDifferentPropertiesTest() throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"));
+        JsonNode apiFilters = mapper.readTree("[{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
+
+        String expected = "["
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}},"
+            + "{\"status\":{\"operator\":\"o\",\"values\":[]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, apiFilters));
+    }
+
+    @Test
+    void mergeApiFiltersOnSamePropertyAndOperatorTest() throws JsonProcessingException, ProjectManagementException
+    {
+        // The livedata property is mapped to the OpenProject one (identifier -> id) before merging.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("identifier", "equals", "5"),
+            new LiveDataQuery.Filter("identifier", "equals", "6"));
+        JsonNode apiFilters = mapper.readTree("[{\"id\":{\"operator\":\"=\",\"values\":[\"4\",\"5\"]}}]");
+
+        // The values of the api filters come first, and the duplicated value is kept once.
+        String expected = "[{\"id\":{\"operator\":\"=\",\"values\":[\"4\",\"5\",\"6\"]}}]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, apiFilters));
+    }
+
+    @Test
+    void mergeApiFiltersOnSamePropertyWithDifferentOperatorsTest()
+        throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "equals", "1"));
+        JsonNode apiFilters = mapper.readTree("[{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
+
+        // Both operators are kept, as separate filters on the same property.
+        String expected = "["
+            + "{\"status\":{\"operator\":\"=\",\"values\":[\"1\"]}},"
+            + "{\"status\":{\"operator\":\"o\",\"values\":[]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, apiFilters));
+    }
+
+    @Test
+    void mergeApiFiltersWithoutApiFiltersTest() throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"));
+        String expected = "[{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, null));
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, mapper.readTree("[]")));
+    }
+
     private void assertEqualsStringFilters(String firstFilter, String secondFilter) throws JsonProcessingException
     {
         JsonNode firstFilterJson = mapper.readTree(firstFilter);
