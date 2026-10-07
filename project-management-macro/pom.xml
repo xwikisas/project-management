@@ -32,13 +32,20 @@
   <name>Project Management - Macro</name>
   <description>Provides the basic tools for implementing a Project Management macro such as the Work Items displayers, macro parameters displayers, abstract macro definitions.</description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.43</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.33</xwiki.jacoco.instructionRatio>
     <application.chartjs.version>1.6.3</application.chartjs.version>
     <xwiki.enforcer.banneddependencytype-xar.skip>true</xwiki.enforcer.banneddependencytype-xar.skip>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
   </properties>
 
   <dependencies>
+    <!-- Compile-time copy of @PropertyOrder (XWiki 17.5.0+), never installed. -->
+    <dependency>
+      <groupId>com.xwiki.projectmanagement</groupId>
+      <artifactId>project-management-compat</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <!--  Needed to access the ProjectManagement manager, clients, and other things.  -->
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>

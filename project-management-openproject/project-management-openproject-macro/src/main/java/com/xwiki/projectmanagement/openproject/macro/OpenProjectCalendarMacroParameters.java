@@ -25,12 +25,16 @@ import java.util.List;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyFeature;
+import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyMandatory;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
 
 /**
  * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro}.
@@ -86,6 +90,8 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * @param types see {@link #getTypes()}.
      */
     @PropertyDisplayType(OpenProjectEventType.class)
+    @PropertyGroup("display")
+    @PropertyOrder(20)
     public void setTypes(List<OpenProjectEventType> types)
     {
         this.types = types;
@@ -95,10 +101,11 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * Overrides the filters from the parent class to provide a more specific description and display type for
      * OpenProject filters.
      *
-     * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject
-     *     instance
+     * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject instance
      */
     @PropertyDisplayType(OpenProjectFilter.class)
+    @PropertyFeature("filters")
+    @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
     {
@@ -126,6 +133,8 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * @param versionColor see {@link #getVersionColor()}.
      */
     @PropertyDisplayType(Color.class)
+    @PropertyGroup("other")
+    @PropertyOrder(43)
     public void setVersionColor(String versionColor)
     {
         this.versionColor = versionColor;
@@ -145,8 +154,18 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
      * @param sprintColor see {@link #getSprintColor()}.
      */
     @PropertyDisplayType(Color.class)
+    @PropertyGroup("other")
+    @PropertyOrder(46)
     public void setSprintColor(String sprintColor)
     {
         this.sprintColor = sprintColor;
+    }
+
+    @PropertyDisplayType(OpenProjectPreset.class)
+    @PropertyFeature("filters")
+    @Override
+    public void setPresetId(String preset)
+    {
+        super.setPresetId(preset);
     }
 }

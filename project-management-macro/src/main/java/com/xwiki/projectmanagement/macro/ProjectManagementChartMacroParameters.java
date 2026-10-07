@@ -21,6 +21,9 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyFeature;
+import org.xwiki.properties.annotation.PropertyGroup;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.ProjectManagementChartType;
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
@@ -75,7 +78,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
 
     /**
      * @return the type of the chart. This value is associated to a chart type implementation that handles the
-     *     displaying for the given filter.
+     *         displaying for the given filter.
      */
     public String getType()
     {
@@ -86,6 +89,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param type see {@link #getType()}.
      */
     @PropertyDisplayType(ProjectManagementChartType.class)
+    @PropertyOrder(20)
+    @PropertyGroup("display")
     public void setType(String type)
     {
         this.type = type;
@@ -103,6 +108,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param property see {@link #getProperty()}.
      */
     @PropertyDisplayType(ProjectManagementProperty.class)
+    @PropertyGroup("display")
     public void setProperty(String property)
     {
         this.property = property;
@@ -110,7 +116,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
 
     /**
      * @return a JSON representing the filters applied on the work items dataset. The JSON is the serialized version of
-     *     the {@link org.xwiki.livedata.LiveDataConfiguration}.
+     *         the {@link org.xwiki.livedata.LiveDataConfiguration}.
      */
     public String getFilters()
     {
@@ -121,6 +127,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param filters see {@link #getFilters()}.
      */
     @PropertyDisplayType(ProjectManagementFilters.class)
+    @PropertyFeature("filters")
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -137,6 +144,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     /**
      * @param limit see {@link #getLimit()}.
      */
+    @PropertyGroup("other")
     public void setLimit(Integer limit)
     {
         this.limit = limit;
@@ -153,6 +161,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     /**
      * @param offset see {@link #getOffset()}.
      */
+    @PropertyGroup("other")
     public void setOffset(Long offset)
     {
         this.offset = offset;
@@ -160,7 +169,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
 
     /**
      * @return a JSON representation of the chart type implementor configuration object. A {@link ChartTypeDisplayer}
-     *     will return the configuration type by calling {@link ChartTypeDisplayer#getParameterTypeTemplate()} ()}.
+     *         will return the configuration type by calling {@link ChartTypeDisplayer#getParameterTypeTemplate()} ()}.
      */
     public String getTypeParams()
     {
@@ -171,6 +180,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param typeParams see {@link #getTypeParams()}.
      */
     @PropertyDisplayType(ProjectManagementChartTypeParams.class)
+    @PropertyGroup("display")
+    @PropertyOrder(50)
     public void setTypeParams(String typeParams)
     {
         this.typeParams = typeParams;
@@ -188,6 +199,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param datasetsLabels see {@link #getDatasetsLabels()}.
      */
     @PropertyDisplayType(ProjectManagementLabels.class)
+    @PropertyGroup("display")
+    @PropertyOrder(30)
     public void setDatasetsLabels(String datasetsLabels)
     {
         this.datasetsLabels = datasetsLabels;
@@ -206,6 +219,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param preset see {@link #getPresetId()}.
      * @since 1.3.0
      */
+    @PropertyFeature("filters")
     public void setPresetId(String preset)
     {
         this.presetId = preset;

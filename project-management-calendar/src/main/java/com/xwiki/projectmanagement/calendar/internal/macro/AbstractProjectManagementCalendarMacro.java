@@ -20,10 +20,15 @@
 
 package com.xwiki.projectmanagement.calendar.internal.macro;
 
-import com.xpn.xwiki.XWikiContext;
-import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
-import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
-import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Provider;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
@@ -31,13 +36,12 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Provider;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
+import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
+import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
+import com.xwiki.projectmanagement.presets.Preset;
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Abstract calendar macro meant to be implemented by project management implementers. It constructs a REST URL pointing
@@ -59,12 +63,15 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     @Named("ssrx")
     private SkinExtension ssrx;
 
+    @Inject
+    private PresetsManager presetsManager;
+
     /**
      * Constructor.
      *
-     * @param name        the name of the macro.
+     * @param name the name of the macro.
      * @param description the description of the macro.
-     * @param clazz       the class of the parameters bean.
+     * @param clazz the class of the parameters bean.
      */
     public AbstractProjectManagementCalendarMacro(String name, String description, Class<?> clazz)
     {
@@ -87,9 +94,23 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
             // macro.
             URIBuilder uriBuilder = getUriBuilder(parameters);
             updateUrl(uriBuilder, parameters);
+            maybeSetPresetFilters(parameters);
             return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);
+        }
+    }
+
+    private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
+    {
+        try {
+            Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
+            if (preset == null) {
+                throw new MacroExecutionException("No preset was found with the given id.");
+            }
+            parameters.setFilters(preset.getFilter());
+        } catch (NumberFormatException e) {
+            throw new MacroExecutionException("The preset id should be a number.");
         }
     }
 
@@ -125,8 +146,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     }
 
     /**
-     * Method to add the {@code excludeWorkItems} query parameter to the REST URL. When this parameter is
-     * present, the calendar resource will skip the retrieval of standard work item events.
+     * Method to add the {@code excludeWorkItems} query parameter to the REST URL. When this parameter is present, the
+     * calendar resource will skip the retrieval of standard work item events.
      *
      * @param ub the URI builder for the calendar REST endpoint.
      */

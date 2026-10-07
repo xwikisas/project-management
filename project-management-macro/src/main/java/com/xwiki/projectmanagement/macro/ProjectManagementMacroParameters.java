@@ -21,9 +21,13 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
+import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyFeature;
+import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyHidden;
+import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.ProjectManagementFilter;
@@ -60,7 +64,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     /**
      * @return the identifier for a work item (i.e. ISSUE-100 in case of jira) or an url containing either the
-     *     identifier for a work item or a filter retrieving a list of work items.
+     *         identifier for a work item or a filter retrieving a list of work items.
      */
     public String getIdentifier()
     {
@@ -70,6 +74,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     /**
      * @param identifier see {@link #getIdentifier()}.
      */
+    @PropertyFeature("filters")
     public void setIdentifier(String identifier)
     {
         this.identifier = identifier;
@@ -82,6 +87,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     }
 
     @PropertyDisplayType(ProjectManagementProperties.class)
+    @PropertyGroup("display")
     @Override
     public void setProperties(String properties)
     {
@@ -89,6 +95,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     }
 
     @PropertyDisplayType(ProjectManagementFilter.class)
+    @PropertyFeature("filters")
     @Override
     public void setFilters(String filters)
     {
@@ -96,6 +103,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     }
 
     @PropertyDisplayType(ProjectManagementSortEntry.class)
+    @PropertyGroup("display")
     @Override
     public void setSort(String sort)
     {
@@ -114,9 +122,25 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      * @param workItemsDisplayer see {@link #getWorkItemsDisplayer()}.
      */
     @PropertyDisplayType(WorkItemsDisplayer.class)
+    @PropertyGroup("display")
+    @PropertyOrder(40)
     public void setWorkItemsDisplayer(WorkItemsDisplayer workItemsDisplayer)
     {
         this.workItemsDisplayer = workItemsDisplayer;
+    }
+
+    @PropertyGroup("display")
+    @Override
+    public void setLimit(Integer limit)
+    {
+        super.setLimit(limit);
+    }
+
+    @PropertyGroup ("display")
+    @Override
+    public void setOffset(Long offset)
+    {
+        super.setOffset(offset);
     }
 
     // PropertyHidden for parameters that are handled by the application. PropertyAdvanced for parameters that can
@@ -178,8 +202,21 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      * @since 1.3.0
      */
     @PropertyDisplayType(ProjectManagementPreset.class)
+    @PropertyFeature("filters")
     public void setPresetId(String presetId)
     {
         this.presetId = presetId;
+    }
+
+    /**
+     * We define this method now because, on version 16.0, livedata has the description parameter. We want to hide it.
+     * TODO: When parent is greater than 16.0, add the @Override annotation.
+     * 
+     * @param description remove javadoc when parent is greater than 16.0.
+     */
+    @PropertyDisplayHidden
+    @PropertyDescription("An optional textual description of the Live Data.")
+    public void setDescription(String description)
+    {
     }
 }

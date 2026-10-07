@@ -95,6 +95,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public MacroDialogEditModal setMacroParameter(String name, CharSequence... value)
     {
+        selectParameterTab(name);
         WebElement parameterInput = getMacroParameterInput(name);
         parameterInput.clear();
         parameterInput.sendKeys(value);
@@ -173,11 +174,46 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
+     * Parameters that provide the same feature (e.g. the filters and the filter preset) are displayed as tabs, only
+     * one of them being visible at a time. Select the tab of the given parameter, if it has one.
+     *
+     * @param name the technical name of the parameter.
+     * @since 1.3.0-rc-15
+     */
+    public void selectParameterTab(String name)
+    {
+        String tabPanelId = "macroParameterTreeNode-" + name;
+        getDriver().findElementsWithoutWaiting(By.cssSelector(
+            String.format(".macro-editor-modal a[role='tab'][aria-controls='%s']", tabPanelId))).stream()
+            .filter(WebElement::isDisplayed).findFirst().ifPresent(tab -> {
+                closeSuggestDropdowns();
+                tab.click();
+                getDriver().waitUntilCondition(
+                    driver -> driver.findElement(By.id(tabPanelId)).getAttribute("class").contains("active"));
+            });
+    }
+
+    /**
+     * The first suggest input of the modal (the instance) can be focused when the modal is opened, and its dropdown
+     * can then cover the other parameters. Close it by clicking outside it.
+     */
+    private void closeSuggestDropdowns()
+    {
+        By openDropdown = By.cssSelector(".selectize-dropdown.active");
+        if (getDriver().findElementsWithoutWaiting(openDropdown).stream().anyMatch(WebElement::isDisplayed)) {
+            getDriver().findElement(By.cssSelector("[class*=-editor-modal] .modal-header")).click();
+            getDriver().waitUntilCondition(driver -> getDriver().findElementsWithoutWaiting(openDropdown).stream()
+                .noneMatch(WebElement::isDisplayed));
+        }
+    }
+
+    /**
      * @return the names of the filter presets that can be selected
      * @since 1.3.0-rc-2
      */
     public List<String> getPresetOptions()
     {
+        selectParameterTab(PRESET_PARAMETER);
         SuggestInputElement presetSuggest = getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions();
         List<String> options = presetSuggest.getSuggestions().stream()
             .map(suggestion -> suggestion.getLabel().trim()).collect(Collectors.toList());
@@ -194,6 +230,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public AbstractOpenProjectMacroEditModal selectPreset(String presetName)
     {
+        selectParameterTab(PRESET_PARAMETER);
         // The option labels are prefixed, so they can't be matched exactly.
         getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions().getSuggestions().stream()
             .filter(suggestion -> presetName.equals(suggestion.getLabel().trim())).findFirst()
@@ -207,6 +244,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public String getSelectedPreset()
     {
+        selectParameterTab(PRESET_PARAMETER);
         return getSuggestInput(PRESET_PARAMETER).getSelectedSuggestions().stream().findFirst()
             .map(suggestion -> suggestion.getLabel().trim()).orElse("");
     }

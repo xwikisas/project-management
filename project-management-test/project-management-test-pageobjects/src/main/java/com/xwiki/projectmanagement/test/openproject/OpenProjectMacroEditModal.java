@@ -35,7 +35,8 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
 {
     private static final String MACRO_NAME = "OpenProject";
 
-    private static final int EXPECTED_MACRO_COUNT = 12;
+    // The macros having "OpenProject" in their name or description, i.e. all of them except the completion rate one.
+    private static final int EXPECTED_MACRO_COUNT = 11;
 
     /**
      * Model an edit modal that is already opened.
@@ -75,6 +76,7 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
      */
     public FilterBuilderParameter getFilterBuilder()
     {
+        selectParameterTab("filters");
         return new FilterBuilderParameter();
     }
 }
