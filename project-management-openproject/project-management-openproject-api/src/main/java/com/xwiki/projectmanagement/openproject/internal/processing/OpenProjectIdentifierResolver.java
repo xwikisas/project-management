@@ -63,6 +63,8 @@ public class OpenProjectIdentifierResolver
 
     private static final Pattern QUERY_SORT_BY_PATTERN = Pattern.compile("[?&]sortBy=([^&]+)");
 
+    private static final Pattern QUERY_PROJECT_PATTERN = Pattern.compile("/api/v3/projects/([^/?]+)/work_packages");
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -152,5 +154,18 @@ public class OpenProjectIdentifierResolver
         Matcher matcher = QUERY_SORT_BY_PATTERN.matcher(resultsUrl);
 
         return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : "";
+    }
+
+    /**
+     * Reads the project a saved query belongs to from its results link, without any request to OpenProject.
+     *
+     * @param resultsUrl the results link of the query, as returned by
+     * @return the id of the project of the query, or {@code null} when the query isn't bound to a project.
+     */
+    public String getSavedQueryProject(String resultsUrl)
+    {
+        Matcher matcher = QUERY_PROJECT_PATTERN.matcher(resultsUrl);
+
+        return matcher.find() ? matcher.group(1) : null;
     }
 }

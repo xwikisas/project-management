@@ -76,6 +76,12 @@ public class OpenProjectClientTest
         + "&filters=%5B%7B%22status%22%3A%7B%22operator%22%3A%22o%22%2C%22values%22%3A%5B%5D%7D%7D%5D"
         + "&sortBy=%5B%5B%22id%22%2C%22desc%22%5D%5D&pageSize=20";
 
+    private static final String GLOBAL_SAVED_QUERY_RESULTS_URL = "/api/v3/work_packages?offset=1"
+        + "&filters=%5B%7B%22status%22%3A%7B%22operator%22%3A%22o%22%2C%22values%22%3A%5B%5D%7D%7D%5D"
+        + "&sortBy=%5B%5B%22id%22%2C%22desc%22%5D%5D&pageSize=20";
+
+    private static final String SAVED_QUERY_PROJECT = "1";
+
     private static final String SAVED_QUERY_SORT_BY = "[[\"id\",\"desc\"]]";
 
     private static final String MERGED_FILTERS = "[{\"status\":{\"operator\":\"o\",\"values\":[]}},"
@@ -153,8 +159,27 @@ public class OpenProjectClientTest
         // The results link was retrieved before the macro execution, so the query isn't read again.
         verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
         verify(openProjectApiClient, never()).getQueryWorkPackages(anyString(), anyInt(), anyInt(), anyString());
+
+        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10),
+            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
+        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithGlobalSavedQueryAndLivedataFilters() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn(GLOBAL_SAVED_QUERY_RESULTS_URL);
+
+        PaginatedResult<WorkItem> result =
+            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+
         verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
             argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
+        verify(openProjectApiClient, never()).getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
+            anyString());
         assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
     }
 
@@ -167,7 +192,7 @@ public class OpenProjectClientTest
         openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
         verify(openProjectApiClient).getQueryResultsUrl(QUERY_ID);
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
+        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10),
             argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
     }
 
@@ -182,7 +207,8 @@ public class OpenProjectClientTest
             List.of(new LiveDataQuery.SortEntry("summary", true)));
 
         // The livedata sorting replaces the one of the query.
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10), anyString(), eq("[[\"subject\",\"desc\"]]"));
+        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10), anyString(),
+            eq("[[\"subject\",\"desc\"]]"));
     }
 
     @Test
@@ -196,6 +222,7 @@ public class OpenProjectClientTest
 
         verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
+        assertEquals(0, result.getTotalItems());
     }
 
     @Test
@@ -210,6 +237,7 @@ public class OpenProjectClientTest
 
         verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
+        assertEquals(0, result.getTotalItems());
     }
 
     @Test

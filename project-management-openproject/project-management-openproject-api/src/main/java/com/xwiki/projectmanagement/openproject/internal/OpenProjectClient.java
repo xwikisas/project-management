@@ -297,7 +297,9 @@ public class OpenProjectClient implements ProjectManagementClient
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
     {
         logger.warn("Failed to retrieve work packages: {}", e.getMessage());
-        return new PaginatedResult<>();
+        PaginatedResult<WorkItem> result = new PaginatedResult<>();
+        result.setTotalItems(0);
+        return result;
     }
 
     private URL parseUrl(String url) throws WorkItemRetrievalException
@@ -336,7 +338,9 @@ public class OpenProjectClient implements ProjectManagementClient
      * Retrieves the work packages matching a saved query. As long as the livedata doesn't filter anything, the results
      * are read straight from the query, which already embeds them. Once the livedata filters, the queries endpoint
      * can't be used anymore since the filters it receives replace the ones of the query instead of restricting them, so
-     * the two sets are merged and sent to the work packages endpoint.
+     * the two sets are merged and sent to the work packages endpoint. A query bound to a project keeps its scope:
+     * OpenProject doesn't add the project to the filters of the query, so the project is read from the path of the
+     * results link and the project work packages endpoint is used instead.
      * The filters of the query are read from its results link. The link is normally retrieved once, before the macro
      * got executed, and passed through the source parameters; it is retrieved here only when it is missing.
      */
@@ -362,6 +366,14 @@ public class OpenProjectClient implements ProjectManagementClient
             String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
                 identifierResolver.getSavedQueryFilters(resultsUrl));
             String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
+            String project = identifierResolver.getSavedQueryProject(resultsUrl);
+
+            if (project != null) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sorting),
+                    OpenProjectConverters::convertWorkPackageToWorkItem
+                );
+            }
 
             return OpenProjectConverters.convertPaginatedResult(
                 openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),

@@ -147,4 +147,18 @@ class OpenProjectIdentifierResolverTest
     {
         assertEquals("", resolver.getSavedQuerySortBy("/api/v3/work_packages?filters=" + ENCODED_FILTERS));
     }
+
+    @Test
+    void getSavedQueryProject()
+    {
+        assertEquals("1", resolver.getSavedQueryProject("/api/v3/projects/1/work_packages?filters=" + ENCODED_FILTERS));
+        assertEquals("demo",
+            resolver.getSavedQueryProject("https://op.example.org/api/v3/projects/demo/work_packages"));
+    }
+
+    @Test
+    void getSavedQueryProjectWhenTheQueryIsGlobal()
+    {
+        assertNull(resolver.getSavedQueryProject("/api/v3/work_packages?filters=" + ENCODED_FILTERS));
+    }
 }
