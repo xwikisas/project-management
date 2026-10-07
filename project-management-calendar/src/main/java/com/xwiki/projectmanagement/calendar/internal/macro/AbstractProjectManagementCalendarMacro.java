@@ -29,6 +29,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
@@ -104,6 +105,9 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
     {
         try {
+            if (StringUtils.isEmpty(parameters.getPresetId())) {
+                return;
+            }
             Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
             if (preset == null) {
                 throw new MacroExecutionException("No preset was found with the given id.");
