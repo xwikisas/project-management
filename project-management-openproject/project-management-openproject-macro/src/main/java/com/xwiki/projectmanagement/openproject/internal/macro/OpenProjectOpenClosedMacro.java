@@ -28,6 +28,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -42,6 +43,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
 
@@ -67,6 +69,7 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
         super("OpenProject Open v Closed work packages",
             "Display a chart comparing the open work packages against the closed work packages.",
             OpenProjectOpenClosedMacroParameters.class);
+        setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
     @Override
@@ -74,9 +77,9 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
         MacroTransformationContext context) throws MacroExecutionException
     {
         try {
-            parameters.setDatasetsLabels(objectMapper.writeValueAsString(Arrays.asList(
-                l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.open"),
-                l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.closed"))));
+            parameters.setDatasetsLabels(objectMapper.writeValueAsString(
+                Arrays.asList(l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.open"),
+                    l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.closed"))));
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to get the chart labels.", e);
         }
@@ -109,16 +112,11 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     {
         ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(Instant.now());
 
-        OffsetDateTime end = LocalDate.now()
-            .atTime(LocalTime.MAX)
-            .atOffset(offset);
+        OffsetDateTime end = LocalDate.now().atTime(LocalTime.MAX).atOffset(offset);
 
-        OffsetDateTime start = end
-            .minusDays(days)
-            .with(LocalTime.MIDNIGHT);
+        OffsetDateTime start = end.minusDays(days).with(LocalTime.MIDNIGHT);
 
-        String result = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
-            + "/"
+        String result = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "/"
             + end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         return result;
     }
