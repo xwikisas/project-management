@@ -21,7 +21,9 @@ package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyOrder;
 
+import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
 import com.xwiki.projectmanagement.internal.chart.displayer.LineChartDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -33,7 +35,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  */
 public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroParameters
 {
-    private int days;
+    private int days = 30;
 
     /**
      * Default constructor filling in the parameters.
@@ -48,6 +50,7 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
                 + "e\":\"\"}]}]}}]");
         setTypeParams("{\"period\":\"DAILY\",\"metric\":\"accumulate\"}");
         setProperty(WorkItem.KEY_CREATION_DATE);
+        setLimit(500);
     }
 
     @PropertyDisplayHidden
@@ -62,6 +65,37 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
     public void setProperty(String property)
     {
         super.setProperty(property);
+    }
+
+    @PropertyDisplayHidden
+    @Override
+    public void setType(String type)
+    {
+        super.setType(type);
+    }
+
+    @PropertyDisplayHidden
+    @Override
+    public void setPresetId(String preset)
+    {
+        super.setPresetId(preset);
+    }
+
+    // The type params and the limit are overridden only to remove them from their parameter groups, so that the few
+    // parameters of this macro are displayed together in the macro editor.
+    @PropertyDisplayType(ProjectManagementChartTypeParams.class)
+    @PropertyOrder(20)
+    @Override
+    public void setTypeParams(String typeParams)
+    {
+        super.setTypeParams(typeParams);
+    }
+
+    @PropertyOrder(30)
+    @Override
+    public void setLimit(Integer limit)
+    {
+        super.setLimit(limit);
     }
 
     @PropertyDisplayHidden
@@ -84,6 +118,7 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
      * @param days see {@link #getDays()}.
      */
     @PropertyDisplayType(Integer.class)
+    @PropertyOrder(10)
     public void setDays(int days)
     {
         this.days = days;

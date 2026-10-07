@@ -98,6 +98,13 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
         }
     }
 
+    @Override
+    protected List<LiveDataQuery.SortEntry> getSortEntries(OpenProjectChartMacroParameters parameters)
+    {
+        // When there are more work packages than the limit, leave out the oldest ones rather than the newest.
+        return List.of(new LiveDataQuery.SortEntry(WorkItem.KEY_CREATION_DATE, true));
+    }
+
     private String getBetweenValue(int days)
     {
         ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(Instant.now());

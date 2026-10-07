@@ -191,6 +191,16 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         // The extending class can fill things here.
     }
 
+    /**
+     * @param parameters the macro parameters.
+     * @return how the work items of each dataset should be sorted. This matters when there are more work items than
+     *     the limit, since it decides which ones are left out.
+     */
+    protected List<LiveDataQuery.SortEntry> getSortEntries(T parameters)
+    {
+        return Collections.emptyList();
+    }
+
     private List<PaginatedResult<WorkItem>> getDatasets(List<List<LiveDataQuery.Filter>> filters, T parameters)
         throws WorkItemException
     {
@@ -199,13 +209,13 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         for (List<LiveDataQuery.Filter> filter : filters) {
             workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
                 Math.toIntExact(parameters.getOffset()),
-                parameters.getLimit(), filter, Collections.emptyList()));
+                parameters.getLimit(), filter, getSortEntries(parameters)));
         }
 
         if (workItemsList.isEmpty()) {
             workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
                 Math.toIntExact(parameters.getOffset()), parameters.getLimit(), Collections.emptyList(),
-                Collections.emptyList()));
+                getSortEntries(parameters)));
         }
         return workItemsList;
     }
