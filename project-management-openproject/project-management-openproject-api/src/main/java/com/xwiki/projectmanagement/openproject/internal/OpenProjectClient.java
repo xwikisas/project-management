@@ -33,6 +33,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
@@ -56,6 +57,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -87,15 +89,23 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
 
+    private static final String NO_FILTERS = "[]";
+
     private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
 
     private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
+
+    private static final String INCORRECT_IDENTIFIER_FORMAT_MESSAGE =
+        "The provided identifier value is not in a supported format.";
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
+
+    @Inject
+    private OpenProjectIdentifierResolver identifierResolver;
 
     @Inject
     private Logger logger;
@@ -129,8 +139,9 @@ public class OpenProjectClient implements ProjectManagementClient
             String identifier = (String) executionContext.get("identifier");
             OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
 
-            if (identifier != null && !identifier.isEmpty()) {
-                return handleIdentifier(openProjectApiClient, identifier, offset, pageSize, filters, sortEntries);
+            if (identifier != null && !identifier.trim().isEmpty()) {
+                return handleIdentifier(openProjectApiClient, identifier.trim(), offset, pageSize, filters,
+                    sortEntries);
             }
 
             String filtersString = OpenProjectFilterHandler.convertFilters(filters);
@@ -227,6 +238,13 @@ public class OpenProjectClient implements ProjectManagementClient
         switch (identifierType) {
             case URL:
                 URL url = parseUrl(identifier);
+                String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
+
+                if (urlQueryId != null) {
+                    return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries,
+                        sortEntries);
+                }
+
                 JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
                 project = extractProjectFromPath(url.getPath());
 
@@ -273,14 +291,15 @@ public class OpenProjectClient implements ProjectManagementClient
             return IDS;
         }
 
-        throw new WorkPackageRetrievalBadRequestException(
-            "The provided identifier value is not in a supported format.");
+        throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
     }
 
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
     {
         logger.warn("Failed to retrieve work packages: {}", e.getMessage());
-        return new PaginatedResult<>();
+        PaginatedResult<WorkItem> result = new PaginatedResult<>();
+        result.setTotalItems(0);
+        return result;
     }
 
     private URL parseUrl(String url) throws WorkItemRetrievalException
@@ -313,6 +332,56 @@ public class OpenProjectClient implements ProjectManagementClient
         JsonNode idsFilterNode = objectMapper.valueToTree(List.of(idFiltersAsJson));
 
         return OpenProjectFilterHandler.mergeFilters(filtersList, idsFilterNode);
+    }
+
+    /**
+     * Retrieves the work packages matching a saved query. As long as the livedata doesn't filter anything, the results
+     * are read straight from the query, which already embeds them. Once the livedata filters, the queries endpoint
+     * can't be used anymore since the filters it receives replace the ones of the query instead of restricting them, so
+     * the two sets are merged and sent to the work packages endpoint. A query bound to a project keeps its scope:
+     * OpenProject doesn't add the project to the filters of the query, so the project is read from the path of the
+     * results link and the project work packages endpoint is used instead.
+     * The filters of the query are read from its results link. The link is normally retrieved once, before the macro
+     * got executed, and passed through the source parameters; it is retrieved here only when it is missing.
+     */
+    private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient, String queryId,
+        int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries,
+        List<LiveDataQuery.SortEntry> sortEntries)
+        throws ProjectManagementException
+    {
+        String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
+
+        try {
+            if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getQueryWorkPackages(queryId, offset, pageSize, sortBy),
+                    OpenProjectConverters::convertWorkPackageToWorkItem
+                );
+            }
+
+            String resultsUrl = (String) executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL);
+            if (StringUtils.isEmpty(resultsUrl)) {
+                resultsUrl = identifierResolver.getSavedQueryResultsUrl(openProjectApiClient, queryId);
+            }
+            String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
+                identifierResolver.getSavedQueryFilters(resultsUrl));
+            String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
+            String project = identifierResolver.getSavedQueryProject(resultsUrl);
+
+            if (project != null) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sorting),
+                    OpenProjectConverters::convertWorkPackageToWorkItem
+                );
+            }
+
+            return OpenProjectConverters.convertPaginatedResult(
+                openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),
+                OpenProjectConverters::convertWorkPackageToWorkItem
+            );
+        } catch (WorkPackageRetrievalBadRequestException e) {
+            return handleWorkPackageRetrievalException(e);
+        }
     }
 
     private String extractSortByString(List<LiveDataQuery.SortEntry> sortEntries, JsonNode sortByNode)

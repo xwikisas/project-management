@@ -56,6 +56,15 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 )
 public class OpenProjectMacroIT extends AbstractOpenProjectIT
 {
+    /**
+     * The saved "Milestones" query of the demo project, which only filters on the milestone type. The project has 3
+     * milestones: "Start of project", "Conference" and "End of project". The id is the one given by the demo data of
+     * OpenProject 16.
+     */
+    private static final String MILESTONES_QUERY_URL = "/projects/demo-project/work_packages?query_id=2";
+
+    private static final String SUBJECT_COLUMN = "Subject";
+
     private static final String PROPERTIES_PARAMETER = "properties";
 
     @Test
@@ -225,6 +234,51 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(3, ld.countRows());
         assertEquals("20", ld.getCell("ID", 1).getText());
+    }
+
+    @Test
+    void useSavedQueryUrl(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    {
+        String savedQueryUrl = this.openProject.getBaseUrl() + MILESTONES_QUERY_URL;
+
+        setup.deletePage(testReference);
+        OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
+        selectInstanceFromModal(macroModal, CONNECTION_ID);
+        WYSIWYGEditPage editPage = macroModal.getEditPage();
+        macroModal.clickMore();
+        macroModal.setMacroParameter("identifier", savedQueryUrl);
+        macroModal.clickSubmit();
+        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
+        assertEquals(3, ld.countRows());
+        ld.assertRow(SUBJECT_COLUMN, "Start of project");
+        ld.assertRow(SUBJECT_COLUMN, "Conference");
+        ld.assertRow(SUBJECT_COLUMN, "End of project");
+    }
+
+    @Test
+    void useSavedQueryUrlWithFilters(TestUtils setup, TestReference testReference)
+        throws OperationNotSupportedException
+    {
+        String savedQueryUrl = this.openProject.getBaseUrl() + MILESTONES_QUERY_URL;
+
+        setup.deletePage(testReference);
+        OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
+        selectInstanceFromModal(macroModal, CONNECTION_ID);
+        WYSIWYGEditPage editPage = macroModal.getEditPage();
+        macroModal.clickMore();
+        // The macro filters can't be combined with an identifier, so the filters are set from the livedata.
+        macroModal.setMacroParameter("identifier", savedQueryUrl);
+        macroModal.clickSubmit();
+        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
+        assertEquals(3, ld.countRows());
+
+        ld.assertRow(SUBJECT_COLUMN, "Start of project");
+        ld.assertRow(SUBJECT_COLUMN, "Conference");
+        ld.assertRow(SUBJECT_COLUMN, "End of project");
+
+        ld.filterColumn(SUBJECT_COLUMN, "end");
+        assertEquals(1, ld.countRows());
+        ld.assertRow(SUBJECT_COLUMN, "End of project");
     }
 
     private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue)

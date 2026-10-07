@@ -161,9 +161,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String URL_INSTANCE_METADATA = "/.well-known/openproject-metadata";
 
     private static final String OP_RESPONSE_INSTALLATION_UUID = "installation_uuid";
+
     private static final String API_URL_PROJECT = "/api/v3/projects/%s";
 
     private static final String API_PROJECT_PLACEHOLDER = "/projects/%s";
+
+    private static final String API_URL_QUERY = "/api/v3/queries/%s";
+
+    private static final String OP_RESPONSE_RESULTS = "results";
 
     private static final String API_URL_NEWS = "/api/v3/news";
 
@@ -224,6 +229,25 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String projectWorkPackagesUrl = String.format("%s/projects/%s/work_packages", API_URL_PART, project);
         JsonNode mainNode = getOpenProjectResponse(projectWorkPackagesUrl, offset, pageSize, filters, sortBy, "");
         return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
+    }
+
+    @Override
+    public PaginatedResult<WorkPackage> getQueryWorkPackages(String queryId, Integer offset, Integer pageSize,
+        String sortBy) throws ProjectManagementException
+    {
+        // The filters are left out on purpose, sending them would replace the ones defined by the query.
+        String queryUrl = String.format(API_URL_QUERY, queryId);
+        JsonNode queryJson = getOpenProjectResponse(queryUrl, offset, pageSize, "", sortBy, "");
+
+        return getWorkPackagePaginatedResult(queryJson.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_RESULTS), offset,
+            pageSize);
+    }
+
+    @Override
+    public String getQueryResultsUrl(String queryId) throws ProjectManagementException
+    {
+        JsonNode queryJson = getOpenProjectResponse(String.format(API_URL_QUERY, queryId), null, null, "", "", "");
+        return queryJson.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_RESULTS).path(HREF).asText();
     }
 
     @Override
