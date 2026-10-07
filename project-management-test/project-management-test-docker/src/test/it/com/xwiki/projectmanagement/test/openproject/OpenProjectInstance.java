@@ -238,6 +238,30 @@ public class OpenProjectInstance
     }
 
     /**
+     * Retrieve the URL of a saved query of a project, as linked from the work packages menu of the project. The id of
+     * a query depends on the order in which the instance created its data, so it is looked up by the query name.
+     *
+     * @param testUtils the TestUtils that wrap the webdriver used to navigate the instance.
+     * @param projectIdentifier the identifier of the project the query belongs to, i.e. {@code demo-project}.
+     * @param queryName the name of the query, as displayed in the menu.
+     * @return the absolute URL of the query, i.e. {@code http://host/projects/demo-project/work_packages?query_id=3}.
+     */
+    public String getSavedQueryUrl(TestUtils testUtils, String projectIdentifier, String queryName)
+    {
+        XWikiWebDriver driver = testUtils.getDriver();
+        maybeLogin(driver, true);
+        driver.get(String.format("%s/projects/%s/work_packages", getBaseUrl(), projectIdentifier));
+
+        // The menu groups can be collapsed, so the link is only required to be present.
+        By queryLink = By.xpath(String.format("//a[contains(@class, 'op-submenu--item-action')"
+            + " and contains(@href, 'query_id=')]"
+            + "[normalize-space(span[contains(@class, 'op-submenu--item-title')]) = '%s']", queryName));
+        driver.waitUntilCondition(ExpectedConditions.presenceOfElementLocated(queryLink));
+
+        return driver.findElement(queryLink).getAttribute("href");
+    }
+
+    /**
      * @return the base url of the created OpenProject instance.
      */
     public String getBaseUrl()
