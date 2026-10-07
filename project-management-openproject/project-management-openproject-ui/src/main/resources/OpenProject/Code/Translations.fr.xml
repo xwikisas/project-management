@@ -1,1 +1,207 @@
+<?xml version="1.1" encoding="UTF-8"?>
 
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="">
+  <web>OpenProject.Code</web>
+  <name>Translations</name>
+  <language/>
+  <defaultLanguage>en</defaultLanguage>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>Translations</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>plain/1.0</syntaxId>
+  <hidden>true</hidden>
+  <content>openproject.dashboard.application.label=OpenProject
+openproject.config.addNewConnection=Ajouter une nouvelle connexion
+openproject.config.cancel=Annuler
+openproject.config.clientId=ID Client
+openproject.config.clientIdDescription.first=Créez une application OAuth dans OpenProject dans Authentification &gt; Applications OAuth et copiez l'ID Client.
+openproject.config.clientIdDescription.second=Commencez la configuration &amp; copiez l'ID Client Oauth d'OpenProject. Collez-le ci-dessous.
+openproject.config.clientSecret=Clé secrète du client
+openproject.config.clientSecretDescription=Copiez la Clé secrète du client depuis l'application OAuth dans OpenProject, dans Authentification &gt; Applications OAuth.
+openproject.config.connectionName=Nom de la connexion
+openproject.config.connectionNameDescription=Définissez un nom facilement reconnaissable pour l'instance OpenProject à laquelle vous vous connectez.
+openproject.config.connectionsDescription=Définit les accès aux instances OpenProject et associe un nom à chaque Connexion. Le nom de la Connexion peut ensuite être utilisé de nombreux composants OpenProject, lorsqu'une instance OpenProject est requise, comme dans un paramètre pour la Macro OpenProject.
+openproject.config.connectionsTitle=Connexions aux instances OpenProject
+openproject.config.save=Sauvegarder
+openproject.config.save.saved=La Connexion {0} a été sauvegardée !
+openproject.config.save.errorOccurred=Une erreur s'est produite lors de la sauvegarde de la Connexion !
+openproject.config.createConnection=Créer une nouvelle connexion
+openproject.config.updateConnection=Mettre à jour la connexion
+openproject.config.delete=Supprimer
+openproject.config.delete.info=Supprimer la connexion
+openproject.config.delete.deleted=La Connexion {0} a été supprimée !
+openproject.config.delete.description.first=Vous êtes sur le point de supprimer la connexion {0}
+openproject.config.delete.description.second=Êtes-vous certain de vouloir continuer ?
+openproject.config.delete.errorOccurred=Une erreur s'est produite lors de la suppression de la connexion !
+openproject.config.noRights=Pas de droits
+openproject.config.serverURL=URL du serveur
+openproject.config.serverURLDescription=Copiez le lien depuis la barre d'adresse de votre navigateur, lorsque vous êtes dans votre instance OpenProject. Collez-la ci-dessous.
+openproject.config.serverUrl=URL du serveur
+openproject.config.update=Mise à jour
+openproject.config.update=Mise à jour
+openproject.config.fillInAllFields=Merci de compléter tous les champs !
+openproject.config.update.notUpdated=La Connexion {0} n''a pas été mise à jour !
+openproject.config.update.updated=La Connexion {0} a été mise à jour !
+openproject.config.isAuthorized.true=Autorisation obtenue
+openproject.config.isAuthorized.false=Pas encore autorisé
+openproject.livedatalabels.isAuthorized=Autorisé ?
+openproject.livedatalabels.actions=Actions
+openproject.livedatalabels.clientId=ID Client
+openproject.livedatalabels.clientSecret=Clé secrète du Client
+openproject.livedatalabels.connectionName=Nom de la Connexion
+openproject.livedatalabels.serverURL=URL du serveur
+openproject.livedata.action.view.done=Lot de Travaux (WP) chargé avec succès
+openproject.livedata.action.view.inprogress=Chargement du Lot de Travaux (WP)
+openproject.livedata.action.view.error=Échec de chargement du Lot de Travaux (WP)
+openproject.livedata.action.view.edit=Éditer le Lot de Travaux (WP)
+openproject.config.stylejob.title=Couleur et mise en forme
+openproject.config.stylejob.trigger.title=Synchronisation des couleurs
+### Missing: openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in OpenProject. You should be authorized to the OpenProject instances before running this job.
+### Missing: openproject.config.stylejob.trigger.button=Sync colors
+### Missing: openproject.config.editor.title=Editor
+### Missing: openproject.config.editor.marker.invalid=Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.
+### Missing: OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Work package search trigger
+### Missing: OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=The characters to type in the WYSIWYG editor to search for OpenProject work packages and insert them inline. Defaults to #.
+### Missing: openproject.createworkpackage.highlight=OpenProject
+### Missing: openproject.createworkpackage.highlight.single=Create work package
+### Missing: openproject.createworkpackage.highlight.multiple=Create work packages from table
+### Missing: openproject.createworkpackage.modal.cancel=Cancel
+### Missing: openproject.createworkpackage.modal.create.single=Create work package
+### Missing: openproject.createworkpackage.modal.create.multiple=Create work packages
+### Missing: openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.
+### Missing: openproject.createworkpackage.modal.multiple.description=This form allows you to create multiple work packages in OpenProject based on the selected table.
+### Missing: openproject.createworkpackage.modal.mapping.title=OpenProject Mapping
+### Missing: openproject.createworkpackage.modal.mapping.description=Map the columns of your table to OpenProject fields. Each mapping will map the values of a column to the OpenProject field of your choice.
+### Missing: openproject.createworkpackage.modal.mapping.add=+ Add mapping
+### Missing: openproject.createworkpackage.modal.mapping.selectColumn=Select table column
+### Missing: openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
+### Missing: openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
+### Missing: openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
+### Missing: openproject.createworkpackage.modal.select.all=Select all
+### Missing: openproject.createworkpackage.modal.title.single=Create Single Work Package
+### Missing: openproject.createworkpackage.modal.title.multiple=Create Multiple Work Packages
+### Missing: openproject.createworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
+### Missing: openproject.createworkpackage.notify.selectProject=Please select a project.
+### Missing: openproject.createworkpackage.notify.selectConnection=Please select a connection.
+### Missing: openproject.createworkpackage.notify.single.success=The work package was created successfully!
+### Missing: openproject.createworkpackage.notify.single.error=Failed to create the work package!
+### Missing: openproject.createworkpackage.notify.multiple.fillRequiredFields=Please fill the required fields highlighted in selected work packages.
+### Missing: openproject.createworkpackage.notify.multiple.noSelection=No work packages selected.
+### Missing: openproject.createworkpackage.notify.multiple.allSuccess=All work packages created successfully!
+### Missing: openproject.createworkpackage.notify.multiple.partialSuccess=Some work packages were created, some failed.
+### Missing: openproject.createworkpackage.notify.multiple.error=Failed to create work packages!
+### Missing: openproject.createworkpackage.notify.inputs.error=An error occurred while trying to create the inputs!
+### Missing: openproject.createworkpackage.notify.values.error=An error occurred while trying to set the available values!
+### Missing: openproject.createworkpackage.utils.selectPlaceholder=Select {0}...
+### Missing: openproject.createworkpackage.utils.inputPlaceholder=Enter {0}...
+### Missing: openproject.createworkpackage.utils.selectProjectPlaceholder=Select project...
+### Missing: openproject.createworkpackage.utils.loadProjects.error=An error occurred while trying to get the project options!
+### Missing: openproject.createworkpackage.macro.notify.fillRequiredFields=Please fill in all required fields!
+### Missing: openproject.createworkpackage.macro.notify.selectConnection=Please select a connection!
+### Missing: openproject.createworkpackage.macro.notify.selectProject=Please select a project!
+### Missing: openproject.createworkpackage.macro.notify.inputs.error=An error occurred while trying to create the inputs!
+### Missing: openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
+### Missing: openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
+### Missing: openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
+### Missing: openproject.editworkpackage.modal.title=Edit Work Package
+### Missing: openproject.editworkpackage.modal.save=Save
+### Missing: openproject.editworkpackage.modal.cancel=Cancel
+### Missing: openproject.editworkpackage.notify.loadError=An error occurred while trying to load the work package!
+### Missing: openproject.editworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
+### Missing: openproject.editworkpackage.notify.success=The work package was updated successfully!
+### Missing: openproject.editworkpackage.notify.error=Failed to update the work package!
+### Missing: openproject.extension.name=OpenProject Integration (Pro)
+### Missing: projectmanagement.relations.clients.openproject=OpenProject
+### Missing: projectmanagement.relations.openproject.project.name=Parent Project
+### Missing: projectmanagement.relations.openproject.workItem.name=Parent Work Package
+### Missing: projectmanagement.relations.clients.openproject=OpenProject
+### Missing: projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
+### Missing: projectmanagement.relations.openproject.notowner=These parent links are passed down from {0}. You can set new links through the {1}relations section{2}.
+### Missing: openproject.relations.mentions.noInstance=No OpenProject instance selected.
+### Missing: openproject.relations.mentions.title=Mentioned on:
+### Missing: openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
+### Missing: openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package
+### Missing: projectmanagement.relations.clients.openproject=OpenProject
+### Missing: openproject.dashboard.selectConnection.label=Select a connection
+### Missing: openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}
+### Missing: openproject.dashboard.singleConnection.description=Only one connection is available, so it has been selected automatically for this dashboard.
+### Missing: openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard.The dashboard data will update based on your selection.
+### Missing: openproject.dashboard.selectConnection.placeholder=Please select a connection..
+### Missing: openproject.dashboard.selectConnection.noConnections=No OpenProject connections are configured. Please contact your administrator to set up a connection.
+### Missing: openproject.dashboard.selectProject.label=Select a project
+### Missing: openproject.dashboard.selectProject.placeholder=Please select a project..
+### Missing: openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
+### Missing: openproject.dashboard.guest=You must be logged in to view this dashboard.
+### Missing: openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
+### Missing: openproject.dashboard.noProject=No project is available for the selected connection.
+### Missing: openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
+### Missing: openproject.extension.name=OpenProject Integration (Pro)
+### Missing: openproject.config.presets.title=Filter Presets
+### Missing: openproject.presets.name=Preset Name
+### Missing: openproject.presets.isMultiple=Chart preset?
+### Missing: openproject.presets._actions=Actions
+</content>
+  <object>
+    <name>OpenProject.Code.Translations</name>
+    <number>0</number>
+    <className>XWiki.TranslationDocumentClass</className>
+    <guid>8ebdffe0-112f-486c-b84a-ce6d184b892b</guid>
+    <class>
+      <name>XWiki.TranslationDocumentClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>1</number>
+        <prettyName>Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>GLOBAL|WIKI|USER|ON_DEMAND</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <scope>WIKI</scope>
+    </property>
+  </object>
+</xwikidoc>
