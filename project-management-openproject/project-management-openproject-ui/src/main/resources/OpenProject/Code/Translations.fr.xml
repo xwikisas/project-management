@@ -20,12 +20,12 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 -->
 
-<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="">
+<xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="fr">
   <web>OpenProject.Code</web>
   <name>Translations</name>
-  <language/>
+  <language>fr</language>
   <defaultLanguage>en</defaultLanguage>
-  <translation>0</translation>
+  <translation>1</translation>
   <creator>xwiki:XWiki.Admin</creator>
   <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
@@ -82,126 +82,89 @@ openproject.livedata.action.view.error=Échec de chargement du Lot de Travaux (W
 openproject.livedata.action.view.edit=Éditer le Lot de Travaux (WP)
 openproject.config.stylejob.title=Couleur et mise en forme
 openproject.config.stylejob.trigger.title=Synchronisation des couleurs
-### Missing: openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in OpenProject. You should be authorized to the OpenProject instances before running this job.
-### Missing: openproject.config.stylejob.trigger.button=Sync colors
-### Missing: openproject.config.editor.title=Editor
-### Missing: openproject.config.editor.marker.invalid=Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.
-### Missing: OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Work package search trigger
-### Missing: OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=The characters to type in the WYSIWYG editor to search for OpenProject work packages and insert them inline. Defaults to #.
-### Missing: openproject.createworkpackage.highlight=OpenProject
-### Missing: openproject.createworkpackage.highlight.single=Create work package
-### Missing: openproject.createworkpackage.highlight.multiple=Create work packages from table
-### Missing: openproject.createworkpackage.modal.cancel=Cancel
-### Missing: openproject.createworkpackage.modal.create.single=Create work package
-### Missing: openproject.createworkpackage.modal.create.multiple=Create work packages
-### Missing: openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.
-### Missing: openproject.createworkpackage.modal.multiple.description=This form allows you to create multiple work packages in OpenProject based on the selected table.
-### Missing: openproject.createworkpackage.modal.mapping.title=OpenProject Mapping
-### Missing: openproject.createworkpackage.modal.mapping.description=Map the columns of your table to OpenProject fields. Each mapping will map the values of a column to the OpenProject field of your choice.
-### Missing: openproject.createworkpackage.modal.mapping.add=+ Add mapping
-### Missing: openproject.createworkpackage.modal.mapping.selectColumn=Select table column
-### Missing: openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
-### Missing: openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
-### Missing: openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
-### Missing: openproject.createworkpackage.modal.select.all=Select all
-### Missing: openproject.createworkpackage.modal.title.single=Create Single Work Package
-### Missing: openproject.createworkpackage.modal.title.multiple=Create Multiple Work Packages
-### Missing: openproject.createworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
-### Missing: openproject.createworkpackage.notify.selectProject=Please select a project.
-### Missing: openproject.createworkpackage.notify.selectConnection=Please select a connection.
-### Missing: openproject.createworkpackage.notify.single.success=The work package was created successfully!
-### Missing: openproject.createworkpackage.notify.single.error=Failed to create the work package!
-### Missing: openproject.createworkpackage.notify.multiple.fillRequiredFields=Please fill the required fields highlighted in selected work packages.
-### Missing: openproject.createworkpackage.notify.multiple.noSelection=No work packages selected.
-### Missing: openproject.createworkpackage.notify.multiple.allSuccess=All work packages created successfully!
-### Missing: openproject.createworkpackage.notify.multiple.partialSuccess=Some work packages were created, some failed.
-### Missing: openproject.createworkpackage.notify.multiple.error=Failed to create work packages!
-### Missing: openproject.createworkpackage.notify.inputs.error=An error occurred while trying to create the inputs!
-### Missing: openproject.createworkpackage.notify.values.error=An error occurred while trying to set the available values!
-### Missing: openproject.createworkpackage.utils.selectPlaceholder=Select {0}...
-### Missing: openproject.createworkpackage.utils.inputPlaceholder=Enter {0}...
-### Missing: openproject.createworkpackage.utils.selectProjectPlaceholder=Select project...
-### Missing: openproject.createworkpackage.utils.loadProjects.error=An error occurred while trying to get the project options!
-### Missing: openproject.createworkpackage.macro.notify.fillRequiredFields=Please fill in all required fields!
-### Missing: openproject.createworkpackage.macro.notify.selectConnection=Please select a connection!
-### Missing: openproject.createworkpackage.macro.notify.selectProject=Please select a project!
-### Missing: openproject.createworkpackage.macro.notify.inputs.error=An error occurred while trying to create the inputs!
-### Missing: openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
-### Missing: openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
-### Missing: openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
-### Missing: openproject.editworkpackage.modal.title=Edit Work Package
-### Missing: openproject.editworkpackage.modal.save=Save
-### Missing: openproject.editworkpackage.modal.cancel=Cancel
-### Missing: openproject.editworkpackage.notify.loadError=An error occurred while trying to load the work package!
-### Missing: openproject.editworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
-### Missing: openproject.editworkpackage.notify.success=The work package was updated successfully!
-### Missing: openproject.editworkpackage.notify.error=Failed to update the work package!
-### Missing: openproject.extension.name=OpenProject Integration (Pro)
-### Missing: projectmanagement.relations.clients.openproject=OpenProject
-### Missing: projectmanagement.relations.openproject.project.name=Parent Project
-### Missing: projectmanagement.relations.openproject.workItem.name=Parent Work Package
-### Missing: projectmanagement.relations.clients.openproject=OpenProject
-### Missing: projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
-### Missing: projectmanagement.relations.openproject.notowner=These parent links are passed down from {0}. You can set new links through the {1}relations section{2}.
-### Missing: openproject.relations.mentions.noInstance=No OpenProject instance selected.
-### Missing: openproject.relations.mentions.title=Mentioned on:
-### Missing: openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
-### Missing: openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package
-### Missing: projectmanagement.relations.clients.openproject=OpenProject
-### Missing: openproject.dashboard.selectConnection.label=Select a connection
-### Missing: openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}
-### Missing: openproject.dashboard.singleConnection.description=Only one connection is available, so it has been selected automatically for this dashboard.
-### Missing: openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard.The dashboard data will update based on your selection.
-### Missing: openproject.dashboard.selectConnection.placeholder=Please select a connection..
-### Missing: openproject.dashboard.selectConnection.noConnections=No OpenProject connections are configured. Please contact your administrator to set up a connection.
-### Missing: openproject.dashboard.selectProject.label=Select a project
-### Missing: openproject.dashboard.selectProject.placeholder=Please select a project..
-### Missing: openproject.dashboard.selectProject.description=Optionally choose a project. Macros on this dashboard that require a project will use this selection.
-### Missing: openproject.dashboard.guest=You must be logged in to view this dashboard.
-### Missing: openproject.dashboard.selectConnection.prompt=Please select a connection to display the dashboard.
-### Missing: openproject.dashboard.noProject=No project is available for the selected connection.
-### Missing: openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
-### Missing: openproject.extension.name=OpenProject Integration (Pro)
-### Missing: openproject.config.presets.title=Filter Presets
-### Missing: openproject.presets.name=Preset Name
-### Missing: openproject.presets.isMultiple=Chart preset?
-### Missing: openproject.presets._actions=Actions
+openproject.config.stylejob.trigger.hint=Synchronise les couleurs entre les Lots de Travaux (WP) affichés dans XWiki et ceux affichés dans OpenProject. Vous devriez avoir des droits sur les instances OpenProject avant d'exécuter cette tâche.
+openproject.config.stylejob.trigger.button=Synchroniser les couleurs
+openproject.config.editor.title=Éditeur
+openproject.config.editor.marker.invalid=Utilisez de 1 à 5 caractères sans espaces, et autres que @, /, [[, {{ ou img::.
+OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Raccourci de recherche de Lots de Travaux (WP)
+OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=Les caractères à taper dans l'éditeur WYSIWYG pour rechercher un Lot de Travaux (WP) OpenProject et l'insérer en ligne. # par défaut.
+openproject.createworkpackage.highlight=OpenProject
+openproject.createworkpackage.highlight.single=Créer un Lot de Travaux (WP)
+openproject.createworkpackage.highlight.multiple=Créer des Lots de Travaux (WP) depuis un tableau
+openproject.createworkpackage.modal.cancel=Annuler
+openproject.createworkpackage.modal.create.single=Créer un Lot de Travaux (WP)
+openproject.createworkpackage.modal.create.multiple=Créer des Lots de Travaux (WP)
+openproject.createworkpackage.modal.single.description=Ce formulaire vous permet de créer un nouveau Lot de Travaux (WP) dans OpenProject basé sur le texte sélectionné.
+openproject.createworkpackage.modal.multiple.description=Ce formulaire vous permet de créer de multiples Lots de Travaux (WP) dans OpenProject en se basant sur le tableau sélectionné.
+openproject.createworkpackage.modal.mapping.title=Correspondance avec OpenProject
+openproject.createworkpackage.modal.mapping.description=Fait correspondre les colonnes de votre tableau aux champs OpenProject. Chaque règle de correspondance attribuera les valeurs contenues dans la colonne à un champ OpenProject de votre choix.
+openproject.createworkpackage.modal.mapping.add=+ Ajouter une correspondance
+openproject.createworkpackage.modal.mapping.selectColumn=Sélectionner la colonne du tableau
+openproject.createworkpackage.modal.mapping.selectField=Choisir un champ OpenProject
+openproject.createworkpackage.modal.mapping.isMappedTo=correspond à
+openproject.createworkpackage.modal.multiple.preview=Les Lot de Travaux (WP) suivants seront créés
+openproject.createworkpackage.modal.select.all=Tout sélectionner
+openproject.createworkpackage.modal.title.single=Créer un unique Lot de Travaux (WP)
+openproject.createworkpackage.modal.title.multiple=Créer de multiples Lots de Travaux (WP)
+openproject.createworkpackage.notify.fillRequiredFields=Merci de compléter les champs requis surlignés.
+openproject.createworkpackage.notify.selectProject=Merci de sélectionner un projet.
+openproject.createworkpackage.notify.selectConnection=Merci de sélectionner une connexion.
+openproject.createworkpackage.notify.single.success=Le Lot de Travaux (WP) a été créé avec succès !
+openproject.createworkpackage.notify.single.error=Échec de création du Lot de Travaux (WP) !
+openproject.createworkpackage.notify.multiple.fillRequiredFields=Merci de compléter les champs requis surlignés dans les Lots de Travaux (WP) sélectionnés.
+openproject.createworkpackage.notify.multiple.noSelection=Aucun Lot de Travaux (WP) sélectionné.
+openproject.createworkpackage.notify.multiple.allSuccess=Tous les Lots de Travaux (WP) ont été créés avec succès !
+openproject.createworkpackage.notify.multiple.partialSuccess=Certains Lots de Travaux (WP) ont été créés, d'autres n'ont pu l'être.
+openproject.createworkpackage.notify.multiple.error=Échec de la création des Lots de Travaux (WP) !
+openproject.createworkpackage.notify.inputs.error=Une erreur s'est produite en essayant de créer les entrées !
+openproject.createworkpackage.notify.values.error=Une erreur s'est produite en essayant de définir les valeurs disponibles !
+openproject.createworkpackage.utils.selectPlaceholder=Sélectionner {0}...
+openproject.createworkpackage.utils.inputPlaceholder=Saisissez votre {0}...
+openproject.createworkpackage.utils.selectProjectPlaceholder=Sélectionner le projet...
+openproject.createworkpackage.utils.loadProjects.error=Une erreur s'est produite en essayant d'obtenir les options du projet !
+openproject.createworkpackage.macro.notify.fillRequiredFields=Merci de compléter tous les champs requis !
+openproject.createworkpackage.macro.notify.selectConnection=Merci de sélectionner une connexion !
+openproject.createworkpackage.macro.notify.selectProject=Merci de sélectionner un projet !
+openproject.createworkpackage.macro.notify.inputs.error=Une erreur s'est produite en essayant de créer les entrées !
+openproject.createworkpackage.macro.notify.submit.noCkeditor=Lot de Travaux (WP) créé avec succès ! Merci de l'insérer manuellement, car l'instance de CKEditor n'a pas été trouvée.
+openproject.createworkpackage.macro.notify.submit.success=Lot de Travaux (WP) créé et inséré avec succès !
+openproject.createworkpackage.macro.notify.submit.error=Une erreur s'est produite lors de la création du Lot de Travaux (WP) !
+openproject.editworkpackage.modal.title=Éditer le Lot de Travaux (WP)
+openproject.editworkpackage.modal.save=Sauvegarder
+openproject.editworkpackage.modal.cancel=Annuler
+openproject.editworkpackage.notify.loadError=Une erreur s'est produite en essayant de charger le Lot de Travaux (WP) !
+openproject.editworkpackage.notify.fillRequiredFields=Merci de compléter les champs surlignés requis.
+openproject.editworkpackage.notify.success=Le Lot de Travaux (WP) a été mis à jour avec succès !
+openproject.editworkpackage.notify.error=Échec de mise à jour du Lot de Travaux (WP) !
+openproject.extension.name=OpenProject Integration (Pro)
+projectmanagement.relations.clients.openproject=OpenProject
+projectmanagement.relations.openproject.project.name=Projet Parent
+projectmanagement.relations.openproject.workItem.name=Lot de Travaux (WP) parent
+projectmanagement.relations.clients.openproject=OpenProject
+projectmanagement.relations.openproject.client.params.name=Sélectionner l'instance OpeProject
+projectmanagement.relations.openproject.notowner=Ces liens parents sont récupérés depuis {0}. Vous pouvez définir de nouveaux liens via la {1}section relations{2}.
+openproject.relations.mentions.noInstance=Pas d'instance OpenProject sélectionnée.
+openproject.relations.mentions.title=Mentionné dans :
+openproject.relations.mentions.noEndpoint=Vous utilisez une version d'OpenProject qui ne supporte pas la mention de pages XWiki.
+openproject.template.space.setinstance=Sélectionnez l'instance OpenProject, le projet et le Lot de Travaux (WP) parent
+projectmanagement.relations.clients.openproject=OpenProject
+openproject.dashboard.selectConnection.label=Sélectionnez une connexion
+openproject.dashboard.singleConnection.connectionInfo=Connexion active : {0}
+openproject.dashboard.singleConnection.description=Seule une connexion est disponible, aussi, elle a été sélectionnée automatiquement pour ce tableau de bord.
+openproject.dashboard.multipleConnections.description=Choisissez quelle instance OpenProject devrait être utilisée pour ce tableau de bord. Les données du tableau de bord s'actualiseront selon votre sélection.
+openproject.dashboard.selectConnection.placeholder=Merci de choisir une connexion..
+openproject.dashboard.selectConnection.noConnections=Aucune connexion OpenProject configurée. Merci de contacter votre administrateur pour configurer une connexion.
+openproject.dashboard.selectProject.label=Sélectionner un projet
+openproject.dashboard.selectProject.placeholder=Merci de sélectionner un projet..
+openproject.dashboard.selectProject.description=Choisissez un projet - optionnel. Les macros sur cette page requérant un projet utiliseront cette sélection.
+openproject.dashboard.guest=Vous devez vous identifier pour pouvoir voir ce tableau de bord.
+openproject.dashboard.selectConnection.prompt=Merci de choisir une connexion pour afficher le tableau de bord.
+openproject.dashboard.noProject=Aucun projet disponible pour la connexion sélectionnée.
+openproject.dashboard.selectProject.invalidConnection=La connexion sélectionnée n''est pas valide. Merci de d''abord vous authentifier sur la connexion {0}.
+openproject.extension.name=OpenProject Integration (Pro)
+openproject.config.presets.title=Présélection de filtres
+openproject.presets.name=Nom de la présélection
+openproject.presets.isMultiple=Préfiltre pour la macro chart ?
+openproject.presets._actions=Actions
 </content>
-  <object>
-    <name>OpenProject.Code.Translations</name>
-    <number>0</number>
-    <className>XWiki.TranslationDocumentClass</className>
-    <guid>8ebdffe0-112f-486c-b84a-ce6d184b892b</guid>
-    <class>
-      <name>XWiki.TranslationDocumentClass</name>
-      <customClass/>
-      <customMapping/>
-      <defaultViewSheet/>
-      <defaultEditSheet/>
-      <defaultWeb/>
-      <nameField/>
-      <validationScript/>
-      <scope>
-        <cache>0</cache>
-        <disabled>0</disabled>
-        <displayType>select</displayType>
-        <freeText>forbidden</freeText>
-        <largeStorage>0</largeStorage>
-        <multiSelect>0</multiSelect>
-        <name>scope</name>
-        <number>1</number>
-        <prettyName>Scope</prettyName>
-        <relationalStorage>0</relationalStorage>
-        <separator> </separator>
-        <separators>|, </separators>
-        <size>1</size>
-        <unmodifiable>0</unmodifiable>
-        <values>GLOBAL|WIKI|USER|ON_DEMAND</values>
-        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
-      </scope>
-    </class>
-    <property>
-      <scope>WIKI</scope>
-    </property>
-  </object>
 </xwikidoc>
