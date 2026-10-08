@@ -36,8 +36,7 @@
   <minorEdit>false</minorEdit>
   <syntaxId>plain/1.0</syntaxId>
   <hidden>true</hidden>
-  <content>
-openproject.dashboard.application.label=OpenProject
+  <content>openproject.dashboard.application.label=OpenProject
 openproject.config.addNewConnection=Add new connection
 openproject.config.cancel=Cancel
 openproject.config.clientId=Client ID
@@ -72,27 +71,23 @@ openproject.config.update.updated=Connection {0} has been updated!
 openproject.config.isAuthorized.true=Authorized
 openproject.config.isAuthorized.false=Not yet authorized
 openproject.livedatalabels.isAuthorized=Authorized?
-openproject.livedatalabels.actions = Actions
+openproject.livedatalabels.actions=Actions
 openproject.livedatalabels.clientId=Client ID
 openproject.livedatalabels.clientSecret=Client Secret
 openproject.livedatalabels.connectionName=Connection name
 openproject.livedatalabels.serverURL=Server URL
-
 openproject.livedata.action.view.done=Work Package loaded successfully
 openproject.livedata.action.view.inprogress=Loading Work Package
 openproject.livedata.action.view.error=Failed to load Work Package
 openproject.livedata.action.view.edit=Edit Work Package
-
 openproject.config.stylejob.title=Color and styling
 openproject.config.stylejob.trigger.title=Color sync
 openproject.config.stylejob.trigger.hint=Sync the property colors between the Work Items displayed in XWiki and the ones displayed in OpenProject. You should be authorized to the OpenProject instances before running this job.
 openproject.config.stylejob.trigger.button=Sync colors
-
 openproject.config.editor.title=Editor
 openproject.config.editor.marker.invalid=Use 1 to 5 characters without spaces, other than @, /, [[, {{ or img::.
 OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Work package search trigger
 OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=The characters to type in the WYSIWYG editor to search for OpenProject work packages and insert them inline. Defaults to #.
-
 openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Create work package
 openproject.createworkpackage.highlight.multiple=Create work packages from table
@@ -109,10 +104,8 @@ openproject.createworkpackage.modal.mapping.selectField=Select OpenProject field
 openproject.createworkpackage.modal.mapping.isMappedTo=is mapped to
 openproject.createworkpackage.modal.multiple.preview=The following work packages will be created
 openproject.createworkpackage.modal.select.all=Select all
-
 openproject.createworkpackage.modal.title.single=Create Single Work Package
 openproject.createworkpackage.modal.title.multiple=Create Multiple Work Packages
-
 openproject.createworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
 openproject.createworkpackage.notify.selectProject=Please select a project.
 openproject.createworkpackage.notify.selectConnection=Please select a connection.
@@ -125,12 +118,10 @@ openproject.createworkpackage.notify.multiple.partialSuccess=Some work packages 
 openproject.createworkpackage.notify.multiple.error=Failed to create work packages!
 openproject.createworkpackage.notify.inputs.error=An error occurred while trying to create the inputs!
 openproject.createworkpackage.notify.values.error=An error occurred while trying to set the available values!
-
 openproject.createworkpackage.utils.selectPlaceholder=Select {0}...
 openproject.createworkpackage.utils.inputPlaceholder=Enter {0}...
 openproject.createworkpackage.utils.selectProjectPlaceholder=Select project...
 openproject.createworkpackage.utils.loadProjects.error=An error occurred while trying to get the project options!
-
 openproject.createworkpackage.macro.notify.fillRequiredFields=Please fill in all required fields!
 openproject.createworkpackage.macro.notify.selectConnection=Please select a connection!
 openproject.createworkpackage.macro.notify.selectProject=Please select a project!
@@ -138,7 +129,6 @@ openproject.createworkpackage.macro.notify.inputs.error=An error occurred while 
 openproject.createworkpackage.macro.notify.submit.noCkeditor=Work package created successfully! Please insert it manually as CKEditor instance was not found.
 openproject.createworkpackage.macro.notify.submit.success=Work package created and inserted successfully!
 openproject.createworkpackage.macro.notify.submit.error=An error occurred while trying to create the work package!
-
 openproject.editworkpackage.modal.title=Edit Work Package
 openproject.editworkpackage.modal.save=Save
 openproject.editworkpackage.modal.cancel=Cancel
@@ -146,27 +136,22 @@ openproject.editworkpackage.notify.loadError=An error occurred while trying to l
 openproject.editworkpackage.notify.fillRequiredFields=Please fill the required fields highlighted.
 openproject.editworkpackage.notify.success=The work package was updated successfully!
 openproject.editworkpackage.notify.error=Failed to update the work package!
-
 openproject.extension.name=OpenProject Integration (Pro)
-
 projectmanagement.relations.clients.openproject=OpenProject
 projectmanagement.relations.openproject.project.name=Parent Project
 projectmanagement.relations.openproject.workItem.name=Parent Work Package
 projectmanagement.relations.clients.openproject=OpenProject
 projectmanagement.relations.openproject.client.params.name=Select the OpenProject instance
-
 projectmanagement.relations.openproject.notowner=These parent links are passed down from {0}. You can set new links through the {1}relations section{2}.
 openproject.relations.mentions.noInstance=No OpenProject instance selected.
 openproject.relations.mentions.title=Mentioned on:
 openproject.relations.mentions.noEndpoint=You are using an OpenProject version that does not support mentioning XWiki pages.
-
 openproject.template.space.setinstance=Select the OpenProject Instance, Project and Parent Work Package
 projectmanagement.relations.clients.openproject=OpenProject
-
 openproject.dashboard.selectConnection.label=Select a connection
 openproject.dashboard.singleConnection.connectionInfo=Active connection: {0}
 openproject.dashboard.singleConnection.description=Only one connection is available, so it has been selected automatically for this dashboard.
-openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard.The dashboard data will update based on your selection.
+openproject.dashboard.multipleConnections.description=Choose which OpenProject instance should be used for this dashboard. The dashboard data will update based on your selection.
 openproject.dashboard.selectConnection.placeholder=Please select a connection..
 openproject.dashboard.selectConnection.noConnections=No OpenProject connections are configured. Please contact your administrator to set up a connection.
 openproject.dashboard.selectProject.label=Select a project
@@ -177,7 +162,6 @@ openproject.dashboard.selectConnection.prompt=Please select a connection to disp
 openproject.dashboard.noProject=No project is available for the selected connection.
 openproject.dashboard.selectProject.invalidConnection=The selected connection is not valid. Please authenticate to the {0} connection first.
 openproject.extension.name=OpenProject Integration (Pro)
-
 openproject.config.presets.title=Filter Presets
 openproject.presets.name=Preset Name
 openproject.presets.isMultiple=Chart preset?
