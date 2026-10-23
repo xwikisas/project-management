@@ -27,6 +27,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -188,6 +189,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String PROJECT_MANAGEMENT_EXCEPTION_MESSAGE = "Failed to build the OpenProject entity "
         + "retrieval url [%s].";
+
+    /**
+     * Maximum time to wait for the response of the OpenProject API. Without it, an OpenProject instance that stops
+     * responding blocks the thread rendering the page forever.
+     */
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
 
     private final HttpClient client;
 
@@ -864,6 +871,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
             .uri(uri)
+            .timeout(REQUEST_TIMEOUT)
             .header("Accept", accept);
 
         authenticator.authenticate(builder);

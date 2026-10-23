@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.net.http.HttpClient;
+import java.time.Duration;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.cache.Cache;
@@ -39,11 +40,17 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
  */
 public class DefaultOpenProjectApiClientBuilder implements OpenProjectApiClientBuilder
 {
+    /**
+     * Maximum time to wait for the connection to the OpenProject instance, so that an unreachable instance doesn't
+     * block the thread rendering the page.
+     */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+
     private String serverUrl;
 
     private OpenProjectAuthenticator authenticator = NoOpAuthenticator.INSTANCE;
 
-    private HttpClient httpClient = HttpClient.newHttpClient();
+    private HttpClient httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
 
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
