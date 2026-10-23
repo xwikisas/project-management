@@ -19,14 +19,19 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.time.Duration;
+
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -43,7 +48,6 @@ import org.xwiki.test.ui.XWikiWebDriver;
  * {@link ExternalOpenProjectInstance} when the {@value #URL_PROPERTY} system property is set.
  *
  * @version $Id$
- * @since 1.0-rc-4
  */
 public class OpenProjectInstance
 {
@@ -82,7 +86,14 @@ public class OpenProjectInstance
 
     private static final String PASSWORD_NEW = "adminadminadmin";
 
-    private GenericContainer<?> openProjectContainer;
+    private static final String NETWORK_ALIAS = "openproject";
+
+    private static final By OP_LOGO = By.className("op-logo");
+
+    private static final By USERNAME_INPUT = By.id("username");
+
+    private static final By AUTHORIZE_BUTTON =
+        By.xpath("//form[@action='/oauth/authorize']//*[contains(@class, '-primary')]");
 
     protected String clientId;
 
@@ -122,50 +133,52 @@ public class OpenProjectInstance
     {
         GenericContainer<?> openProject = new GenericContainer<>(DockerImageName.parse("openproject/openproject:16"))
             .withEnv("OPENPROJECT_SECRET_KEY_BASE", "secret")
-//            .withEnv("OPENPROJECT_HOST__NAME", "localhost:8082") // No need to include port
             .withEnv("OPENPROJECT_HTTPS", "false")
             .withEnv("OPENPROJECT_DEFAULT__LANGUAGE", "en")
             .withExposedPorts(80)
+            // Join the network of the browser and XWiki containers, so that both reach OpenProject by its alias.
+            .withNetwork(Network.SHARED)
+            .withNetworkAliases(NETWORK_ALIAS)
             .waitingFor(Wait.forHttp("/")  // Waits for HTTP 200 on "/"
                 .forPort(80)
-                .withStartupTimeout(java.time.Duration.ofMinutes(5)))
+                .withStartupTimeout(Duration.ofMinutes(5)))
             // We need to disable the https/localhost requirement for the oauth redirect uri.
             .withCopyFileToContainer(MountableFile.forClasspathResource("doorkeeper.rb"),
                 "/app/config/initializers/doorkeeper.rb");
 
         DockerTestUtils.startContainer(openProject, testConfiguration);
 
-        this.openProjectContainer = openProject;
+        // OpenProject has to be reached with the same URL by the browser and by XWiki. A containerized XWiki shares the
+        // network of the browser, while an XWiki running outside Docker reaches the containers through the Docker
+        // bridge (Linux only).
+        this.baseUrl = testConfiguration.getServletEngine().isOutsideDocker()
+            ? "http://172.17.0.1:" + openProject.getMappedPort(80) : "http://" + NETWORK_ALIAS;
+        LOGGER.info("The OpenProject container is available at [{}].", this.baseUrl);
 
+        // The container answers on its mapped port before the browser container can resolve its network alias.
         XWikiWebDriver driver = testUtils.getDriver();
-
-        int iteration = 0;
-        do {
-            String location = getBaseUrl();
-            try {
-                driver.get(location);
-            } catch (Exception e) {
-                LOGGER.error("Failed to get [{}].", location);
-            }
-            if (driver.hasElement(By.cssSelector(".op-logo"))) {
-                break;
-            }
-            Thread.sleep(5 * 1000);
-        } while (iteration++ < 30);
+        new WebDriverWait(driver, Duration.ofMinutes(2), Duration.ofSeconds(5)).ignoring(WebDriverException.class)
+            .until(webDriver -> {
+                webDriver.get(getBaseUrl());
+                return driver.hasElementWithoutWaiting(OP_LOGO);
+            });
     }
 
     /**
      * Login, change password and setup an OAuth client.
      *
-     * @param driver the webdriver used to navigate the instance.
+     * @param setup the test setup, used to navigate the instance and to compute the XWiki URLs seen by the browser
      */
-    public void setupInstance(XWikiWebDriver driver)
+    public void setupInstance(TestUtils setup)
     {
+        XWikiWebDriver driver = setup.getDriver();
         maybeLogin(driver, true);
         changePassword(driver);
         maybeLogin(driver, true);
         if (clientId == null || clientSecret == null) {
-            createNewOAuthApp(driver);
+            // OpenProject redirects the browser to XWiki once the user has authorized the access.
+            createNewOAuthApp(driver,
+                StringUtils.appendIfMissing(setup.getBaseURL(), "/") + "oidc/authenticator/callback");
         }
     }
 
@@ -185,11 +198,11 @@ public class OpenProjectInstance
             waitPageLoad(driver);
         }
 
-        if (!driver.hasElement(By.id("username")) || !driver.hasElement(By.id("password"))) {
+        if (!driver.hasElementWithoutWaiting(USERNAME_INPUT)) {
             LOGGER.info("Not on the login page.");
             return;
         }
-        WebElement userNameElem = driver.findElement(By.id("username"));
+        WebElement userNameElem = driver.findElement(USERNAME_INPUT);
         WebElement passElem = driver.findElement(By.id("password"));
 
         userNameElem.sendKeys(userName);
@@ -201,17 +214,23 @@ public class OpenProjectInstance
     }
 
     /**
-     * Click on the "authorize" button on the OAuth redirect page. Do nothing if on other page.
+     * Authorize XWiki on the OpenProject OAuth page the browser has been redirected to, logging in first if needed.
      *
      * @param driver the webdriver used to navigate the instance.
      */
-    public void maybeClickAuthorization(XWikiWebDriver driver)
+    public void authorize(XWikiWebDriver driver)
     {
         try {
-            WebElement submitElem =
-                driver.findElement(By.xpath("//form[@action='/oauth/authorize']//*[contains(@class, '-primary')]"));
-            submitElem.click();
-        } catch (NoSuchElementException ignored) {
+            driver.waitUntilCondition(webDriver -> driver.hasElementWithoutWaiting(USERNAME_INPUT)
+                || driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON));
+        } catch (TimeoutException e) {
+            // OpenProject doesn't ask again for an authorization it has already given.
+            LOGGER.info("The OpenProject OAuth application is already authorized.");
+            return;
+        }
+        maybeLogin(driver, false);
+        if (driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON)) {
+            driver.findElement(AUTHORIZE_BUTTON).click();
         }
     }
 
@@ -242,23 +261,15 @@ public class OpenProjectInstance
      */
     public String getBaseUrl()
     {
-        if (baseUrl != null) {
-            return baseUrl;
-        }
-        if (openProjectContainer == null) {
+        if (baseUrl == null) {
             throw new IllegalStateException("Can't retrieve the container URL without having started it.");
         }
-        String host = openProjectContainer.getHost(); // usually "localhost"
-        Integer port = openProjectContainer.getMappedPort(80); // random free port mapped to container's 80
-
-        baseUrl = "http://172.17.0.1:" + port;
-        LOGGER.info("!!Open Proj container is at url [{}].%n", baseUrl);
         return baseUrl;
     }
 
     private void changePassword(XWikiWebDriver driver)
     {
-        if (!driver.hasElement(By.id("new_password_confirmation"))) {
+        if (!driver.hasElementWithoutWaiting(By.id("new_password_confirmation"))) {
             return;
         }
         WebElement currentPassElem = driver.findElement(By.id("password"));
@@ -276,9 +287,8 @@ public class OpenProjectInstance
         waitPageLoad(driver);
     }
 
-    private void createNewOAuthApp(XWikiWebDriver driver)
+    private void createNewOAuthApp(XWikiWebDriver driver, String redirectUri)
     {
-        // http://localhost:8081/admin/oauth/applications/new
         driver.get(getBaseUrl() + "/admin/oauth/applications/new");
         waitPageLoad(driver);
 
@@ -290,7 +300,7 @@ public class OpenProjectInstance
             By.xpath("//form[@id='new_application']"));
 
         nameInput.sendKeys("XWiki");
-        redirectUriInput.sendKeys("http://host.testcontainers.internal:8080/xwiki/oidc/authenticator/callback");
+        redirectUriInput.sendKeys(redirectUri);
         if (!apiV3Checkbox.isSelected()) {
             apiV3Checkbox.click();
         }
@@ -304,9 +314,8 @@ public class OpenProjectInstance
         WebElement clientSecretElem = driver.findElement(By.cssSelector(".attributes-key-value--value code"));
 
         this.clientId = clientIdElem.getText();
-        LOGGER.info("!!Client id retrieved [{}].", clientIdElem);
         this.clientSecret = clientSecretElem.getText();
-        LOGGER.info("!!Client secret retrieved [{}].", clientSecretElem);
+        LOGGER.info("Created the OpenProject OAuth application with client id [{}].", this.clientId);
     }
 
     private static void waitPageLoad(XWikiWebDriver driver)

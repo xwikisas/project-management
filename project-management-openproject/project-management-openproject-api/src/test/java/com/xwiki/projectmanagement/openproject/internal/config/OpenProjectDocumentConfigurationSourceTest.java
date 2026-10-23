@@ -100,7 +100,7 @@ public class OpenProjectDocumentConfigurationSourceTest
         when(this.xContextProvider.get()).thenReturn(this.xContext);
         when(this.xContext.getWikiId()).thenReturn(WIKI_NAME);
         when(this.xContext.getWiki()).thenReturn(xwiki);
-        when(this.wikiManager.getCurrentWikiId()).thenReturn("wiki");
+        when(this.wikiManager.getCurrentWikiId()).thenReturn(WIKI_NAME);
 
         EntityReference entityRef1 = new DocumentReference(WIKI_NAME, "OpenProject", "Doc1");
         EntityReference entityRef2 = new DocumentReference(WIKI_NAME, "OpenProject", "Doc2");

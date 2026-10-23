@@ -42,7 +42,6 @@ import org.xwiki.test.ui.TestUtils;
  * {@value OpenProjectInstance#CLIENT_SECRET_PROPERTY} system properties point to an existing one.
  *
  * @version $Id$
- * @since 1.0-rc-4
  */
 public class ExternalOpenProjectInstance extends OpenProjectInstance
 {

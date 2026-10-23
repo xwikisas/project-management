@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.connection;
 
-import javax.inject.Provider;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -62,9 +61,6 @@ public class HandleConnectionsTest
     private WikiReference wikiReference;
 
     @Mock
-    private Provider<XWikiContext> xContextProvider;
-
-    @Mock
     private DocumentReference userReference;
 
     private static final OpenProjectConnection openProjectConnection = new OpenProjectConnection(
@@ -84,7 +80,6 @@ public class HandleConnectionsTest
     @BeforeEach
     public void setUp()
     {
-        when(this.xContextProvider.get()).thenReturn(this.xContext);
         when(this.xContext.getUserReference()).thenReturn(userReference);
         when(this.xContext.getWikiReference()).thenReturn(wikiReference);
         when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(true);

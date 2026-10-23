@@ -28,6 +28,8 @@ mvn clean install -Pintegration-tests,docker                 # all tests (AllIT)
 mvn clean install -Pdocker -Dit.test=OpenProjectChartMacroIT
 ```
 
+When XWiki runs outside Docker (the default Jetty standalone engine), it reaches the OpenProject container through the Docker bridge (`172.17.0.1`), which only works on Linux. On macOS, run XWiki in a container instead, so that it shares the network of the browser and OpenProject: `-Dxwiki.test.ui.servletEngine=tomcat -Dxwiki.test.ui.servletEngineTag=9-jdk17` (the default Tomcat image uses a JDK that XWiki 15.10 doesn't support).
+
 To reuse an existing OpenProject instance (see `ExternalOpenProjectInstance`), pass `-Dopenproject.url=http://172.17.0.1:8082`, `-Dopenproject.username` / `-Dopenproject.password` (default `Admin` / `admin`), and optionally `-Dopenproject.clientId` / `-Dopenproject.clientSecret` to reuse an OAuth application.
 
 The `project-management-test` poms declare their own parent version and are not bumped automatically with the root version. Before running functional tests, check that they match the root `pom.xml` version and install the root modules first (`mvn install -DskipTests`), otherwise stale XARs from `~/.m2` get tested.

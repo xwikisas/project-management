@@ -26,23 +26,23 @@ import java.util.List;
 import javax.inject.Named;
 
 import org.apache.commons.lang.exception.ExceptionUtils;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.slf4j.Logger;
 import org.xwiki.cache.Cache;
 import org.xwiki.cache.CacheException;
 import org.xwiki.cache.CacheManager;
 import org.xwiki.cache.config.CacheConfiguration;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
-import org.xwiki.component.util.ReflectionUtils;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.contrib.oidc.OAuth2Exception;
 import org.xwiki.script.service.ScriptService;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -56,6 +56,8 @@ import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -67,9 +69,17 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link DefaultOpenProjectConfiguration}.
+ *
+ * @version $Id$
+ */
 @ComponentTest
-public class DefaultOpenProjectConfigurationTest
+class DefaultOpenProjectConfigurationTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @InjectMockComponents
     private DefaultOpenProjectConfiguration configuration;
 
@@ -84,9 +94,6 @@ public class DefaultOpenProjectConfigurationTest
     private CacheManager cacheManager;
 
     @MockComponent
-    private Logger logger;
-
-    @MockComponent
     private OAuth2ClientScriptService oauth2Client;
 
     @MockComponent
@@ -98,6 +105,7 @@ public class DefaultOpenProjectConfigurationTest
     @Mock
     private OpenProjectApiClient apiClient;
 
+    @Mock
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
     private List<OpenProjectConnection> connections;
@@ -129,18 +137,16 @@ public class DefaultOpenProjectConfigurationTest
                 "secondConnectionURL",
                 "secondConnectionClientId",
                 "secondConnectionClientSecret",
-                "firstInstanceId"
+                "secondInstanceId"
             ),
             new OpenProjectConnection(
                 "thirdConnection",
                 "thirdConnectionURL",
                 "thirdConnectionClientId",
                 "thirdConnectionClientSecret",
-                "firstInstanceId"
+                "thirdInstanceId"
             )
         );
-
-        ReflectionUtils.setFieldValue(this.configuration, "logger", this.logger);
 
         when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
         when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(this.connections);
@@ -192,15 +198,8 @@ public class DefaultOpenProjectConfigurationTest
 
         assertNull(token);
 
-        verify(logger)
-            .warn(
-                String.format(
-                    "Failed to retrieve the access token for instance [%s]. Cause: [%s].",
-                    connectionName,
-                    ExceptionUtils.getRootCauseMessage(exception)
-                ),
-                exception
-            );
+        assertEquals(String.format("Failed to retrieve the access token for instance [%s]. Cause: [%s].",
+            connectionName, ExceptionUtils.getRootCauseMessage(exception)), this.logCapture.getMessage(0));
 
         verify(oauth2Client).getAccessToken(connectionName);
     }
@@ -222,12 +221,8 @@ public class DefaultOpenProjectConfigurationTest
         AuthenticationException thrown = assertThrows(AuthenticationException.class,
             () -> configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL));
 
-        Assertions
-            .assertTrue(thrown.getMessage()
-                .contains(
-                    "Failed to establish the OAuth2 connection for instance [" + opConnection.getConnectionName() + "]"
-                )
-            );
+        assertThat(thrown.getMessage(), containsString(
+            "Failed to establish the OAuth2 connection for instance [" + opConnection.getConnectionName() + "]"));
 
         verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
     }
@@ -246,7 +241,6 @@ public class DefaultOpenProjectConfigurationTest
         assertSame(apiClient, client);
 
         verify(builder).serverUrl(opConnection.getServerURL());
-//        verify(builder).caching(any(), eq(opConnection.getClientId()));
 
         ArgumentCaptor<OpenProjectAuthenticator> authCaptor = ArgumentCaptor.forClass(OpenProjectAuthenticator.class);
         verify(builder).authentication(authCaptor.capture());
@@ -267,8 +261,8 @@ public class DefaultOpenProjectConfigurationTest
 
         assertNull(client);
 
-        verify(logger).warn(String.format(
-            GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()));
+        assertEquals(String.format(GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()),
+            this.logCapture.getMessage(0));
     }
 
     @Test
@@ -280,7 +274,7 @@ public class DefaultOpenProjectConfigurationTest
 
         assertNull(client);
 
-        verify(logger).warn(String.format(
-            GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()));
+        assertEquals(String.format(GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()),
+            this.logCapture.getMessage(0));
     }
 }

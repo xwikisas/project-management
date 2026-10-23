@@ -102,15 +102,28 @@ public class OpenProjectMacroElement extends BaseElement
      */
     public TableLayoutElement waitForTableLayout() throws OperationNotSupportedException
     {
-        TableLayoutElement table = getLivedata().getTableLayout();
         int timeout = getDriver().getTimeout();
         getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
         try {
+            // The Live Data is created once the macro, which is rendered asynchronously, has been loaded.
+            TableLayoutElement table = getLivedata().getTableLayout();
             table.waitUntilReady();
+            return table;
         } finally {
             getDriver().setTimeout(timeout);
         }
-        return table;
+    }
+
+    /**
+     * @param column the label of the Live Data column
+     * @param row the row index, starting from 1
+     * @return {@code true} if the given cell of the Live Data table displays a link
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.3.1
+     */
+    public boolean hasLinkInCell(String column, int row) throws OperationNotSupportedException
+    {
+        return !waitForTableLayout().getCell(column, row).findElements(By.tagName("a")).isEmpty();
     }
 
     /**

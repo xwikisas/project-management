@@ -46,12 +46,15 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     }
 
     /**
-     * @param cssClass the CSS class of a rendered work package property, e.g.
-     *     {@code openproject-property-type-Task-test}
-     * @return the text color of the first property with the given class, as computed by the browser
+     * @param property the work package property, e.g. {@code type}
+     * @param value the value of the property, e.g. {@code Task}
+     * @param instance the name of the OpenProject connection the work packages come from
+     * @return the text color of the first displayed property value, as computed by the browser
+     * @since 1.3.1
      */
-    public String getPropertyColor(String cssClass)
+    public String getPropertyColor(String property, String value, String instance)
     {
+        String cssClass = String.format("openproject-property-%s-%s-%s", property, value, instance);
         return getDriver().findElement(By.className(cssClass)).getCssValue("color");
     }
 

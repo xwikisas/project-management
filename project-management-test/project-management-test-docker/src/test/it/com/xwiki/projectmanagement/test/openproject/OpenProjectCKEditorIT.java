@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
 import org.xwiki.ckeditor.test.po.AutocompleteDropdown;
@@ -30,14 +31,15 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 import org.xwiki.test.ui.po.editor.WikiEditPage;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 
 /**
  * Test the OpenProject CKEditor plugin.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 @UITest(
     properties = {
@@ -52,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 {
     @Test
+    @Order(1)
     void insertInlineWorkPackageWithConfiguredMarker(TestUtils setup, TestReference testReference)
     {
         String marker = "!!";
@@ -78,9 +81,9 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wiki");
         String content = new WikiEditPage().getContent();
-        assertTrue(content.startsWith("{{openproject "), content);
-        assertTrue(content.contains(String.format("instance=\"%s\"", CONNECTION_ID)), content);
-        assertTrue(content.contains("workItemsDisplayer=\"workItemInline\""), content);
-        assertFalse(content.contains(marker), content);
+        assertThat(content, startsWith("{{openproject "));
+        assertThat(content, containsString(String.format("instance=\"%s\"", CONNECTION_ID)));
+        assertThat(content, containsString("workItemsDisplayer=\"workItemInline\""));
+        assertThat(content, not(containsString(marker)));
     }
 }

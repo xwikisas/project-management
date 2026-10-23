@@ -3,42 +3,12 @@
 .input|xwiki/2.0
 .# Single displayer test - display a filter that returns no work items.
 .#-----------------------------------------------------
-{{workItemsSingle sourceParams="client=test"}}
-{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "NonExistentWorkItem"
-          }
-        ]
-      }
-    ]
-  }
-}
-{{/workItemsSingle}}
+{{workItemsSingle sourceParams="client=test" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|event/1.0
 .#-----------------------------------------------------
 beginDocument
-beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "NonExistentWorkItem"
-          }
-        ]
-      }
-    ]
-  }
-}]
+beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|filters={"query":{"filters":[{"property":"identifier","constraints":[{"operator":"equals","value":"NonExistentWorkItem"}]}]}}]
 beginMacroMarkerStandalone [warning] [] [There are no work items matching this filter.]
 beginGroup [[class]=[box warningmessage]]
 beginMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]
@@ -63,21 +33,7 @@ endParagraph
 endMetaData [[non-generated-content]=[java.util.List<org.xwiki.rendering.block.Block>]]
 endGroup [[class]=[box warningmessage]]
 endMacroMarkerStandalone [warning] [] [There are no work items matching this filter.]
-endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test] [{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "NonExistentWorkItem"
-          }
-        ]
-      }
-    ]
-  }
-}]
+endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|filters={"query":{"filters":[{"property":"identifier","constraints":[{"operator":"equals","value":"NonExistentWorkItem"}]}]}}]
 endDocument
 .#-----------------------------------------------------
 .expect|xhtml/1.0

@@ -80,13 +80,13 @@ public class HandleConnectionsServiceTest
     @Named("compactwiki")
     private EntityReferenceSerializer<String> compactSerializer;
 
-    @MockComponent
+    @Mock
     private XWikiContext xContext;
 
-    @MockComponent
+    @Mock
     private XWiki xwiki;
 
-    @MockComponent
+    @Mock
     private Query query;
 
     @MockComponent
@@ -111,7 +111,7 @@ public class HandleConnectionsServiceTest
 
     private DocumentAuthors documentAuthors;
 
-    private final String WIKI_NAME = "wiki";
+    private static final String WIKI_NAME = "wiki";
 
     private final DocumentReference documentReference = new DocumentReference(
         WIKI_NAME,
@@ -128,7 +128,7 @@ public class HandleConnectionsServiceTest
         when(this.compactSerializer.serialize(documentReference)).thenReturn("serializedDocRef");
 
         when(this.xContextProvider.get()).thenReturn(this.xContext);
-        when(this.xContext.getWikiId()).thenReturn("wiki");
+        when(this.xContext.getWikiId()).thenReturn(WIKI_NAME);
         when(this.xContext.getWiki()).thenReturn(xwiki);
         when(this.xwiki.getDocument(documentReference, xContext)).thenReturn(doc);
 

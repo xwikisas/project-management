@@ -19,11 +19,15 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test the OpenProject chart macro.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 @UITest(
     properties = {
@@ -47,6 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
 {
     @Test
+    @Order(1)
     void defaultChartsMacroTest(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -61,14 +65,14 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
 
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("bar", chart.getChartType());
-        String dataSource = chart.getDataSource();
-        assertFalse(dataSource == null || dataSource.isEmpty());
+        assertThat(chart.getDataSource(), not(emptyOrNullString()));
         assertTrue(chart.hasLabel("New"));
         assertTrue(chart.hasLabel("In progress"));
         assertTrue(chart.hasLabel("Closed"));
     }
 
     @Test
+    @Order(2)
     void chartsMacroParameterTest(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -94,6 +98,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(3)
     void chartsMacroGroupingPropertyTest(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -111,8 +116,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
 
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("pie", chart.getChartType());
-        String dataSource = chart.getDataSource();
-        assertFalse(dataSource == null || dataSource.isEmpty());
+        assertThat(chart.getDataSource(), not(emptyOrNullString()));
 
         // Checks that the default status labels are not displayed.
         assertFalse(chart.hasLabel("Closed"));
@@ -122,6 +126,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(4)
     void chartsMacroFilterTest(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -143,6 +148,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(5)
     void openClosedMacroTest(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);

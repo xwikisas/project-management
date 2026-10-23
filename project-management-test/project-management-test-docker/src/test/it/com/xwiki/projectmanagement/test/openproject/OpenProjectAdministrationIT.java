@@ -19,19 +19,19 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
-import java.util.Collections;
 import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
-import org.xwiki.test.ui.po.editor.WikiEditPage;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -39,7 +39,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test the administration section of the OpenProject integration.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 @UITest(
     properties = {
@@ -55,23 +54,23 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 {
     private static final String AUTHORIZED_COLUMN = "Authorized?";
 
-    private static final String ACTIONS_COLUMN = "Actions";
-
     private static final String SAVED_MESSAGE = "Connection %s has been saved!";
 
     @Test
+    @Order(1)
     void connectionIsConfiguredAndAuthorized()
     {
         // The connection is added and authorized by the OpenProjectFixture.
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         int index = adminPage.getConnectionIndex(CONNECTION_ID);
-        assertTrue(index > 0);
+        assertThat(index, greaterThan(0));
         TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
         assertEquals("Authorized", livedata.getCell(AUTHORIZED_COLUMN, index).getText());
-        assertEquals(2, livedata.getCell(ACTIONS_COLUMN, index).findElements(By.className("action")).size());
+        assertEquals(2, adminPage.getConnectionActionCount(index));
     }
 
     @Test
+    @Order(2)
     void tryToAddConnectionWithSameName()
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
@@ -81,6 +80,7 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(3)
     void addUpdateAndDeleteConnection()
     {
         // Use a connection of its own, so that the shared connection keeps working for the other tests.
@@ -91,24 +91,25 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
 
         int index = adminPage.getConnectionIndex(name);
-        assertTrue(index > 0);
+        assertThat(index, greaterThan(0));
         TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
         assertEquals("Not yet authorized", livedata.getCell(AUTHORIZED_COLUMN, index).getText());
-        assertEquals(3, livedata.getCell(ACTIONS_COLUMN, index).findElements(By.className("action")).size());
+        assertEquals(3, adminPage.getConnectionActionCount(index));
 
         adminPage.updateConnection(index, newName, "asd", "asd", "asd");
         adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, newName));
         assertEquals(-1, adminPage.getConnectionIndex(name));
         index = adminPage.getConnectionIndex(newName);
-        assertTrue(index > 0);
+        assertThat(index, greaterThan(0));
 
         adminPage.deleteConnection(index);
         adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", newName));
         assertEquals(-1, adminPage.getConnectionIndex(newName));
-        assertTrue(adminPage.getConnectionIndex(CONNECTION_ID) > 0);
+        assertThat(adminPage.getConnectionIndex(CONNECTION_ID), greaterThan(0));
     }
 
     @Test
+    @Order(4)
     void styleSyncJob(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
         setup.createPage(testReference,
@@ -117,11 +118,10 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.triggerColorSyncJob();
         assertTrue(adminPage.isColorSyncJobTriggered());
-        // Workaround to make the scheduler job work during tests. The styles are generated synchronously.
-        setup.gotoPage(List.of("StartStylingJob"), "WebHome", "edit", Collections.singletonMap("force", 1));
-        WikiEditPage editPage = new WikiEditPage();
-        editPage.setContent("{{velocity}}$services.openproject.generateStyling(){{/velocity}}");
-        editPage.clickSaveAndView();
+        // The scheduler doesn't run the job during the test, so the styles are generated synchronously, by a page
+        // that is rendered when saved.
+        setup.createPage(List.of("StartStylingJob"), "WebHome",
+            "{{velocity}}$services.openproject.generateStyling(){{/velocity}}", "");
 
         setup.gotoPage(testReference);
         ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
@@ -130,10 +130,11 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         assertEquals(1, macros.size());
         macros.get(0).getLivedata().getTableLayout().waitUntilReady();
         // Compare one rendered type property with a known OpenProject color.
-        assertEquals("rgb(26, 103, 163)", vp.getPropertyColor("openproject-property-type-Task-" + CONNECTION_ID));
+        assertEquals("rgb(26, 103, 163)", vp.getPropertyColor("type", "Task", CONNECTION_ID));
     }
 
     @Test
+    @Order(5)
     void workPackageSearchMarkerValidation()
     {
         // Markers already used by the editor and markers containing spaces are rejected before saving.

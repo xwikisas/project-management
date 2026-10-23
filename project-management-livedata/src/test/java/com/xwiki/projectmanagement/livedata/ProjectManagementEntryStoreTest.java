@@ -20,17 +20,14 @@
 package com.xwiki.projectmanagement.livedata;
 
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveData;
-import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
@@ -41,12 +38,13 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -71,27 +69,15 @@ public class ProjectManagementEntryStoreTest
     private ComponentManager componentManager;
 
     @MockComponent
-    private Logger logger;
-
-    @MockComponent
     private ProjectManagementClientExecutionContext clientContext;
-
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
     void getQuery() throws WorkItemException, LiveDataException
     {
         String clientId = "testclient";
-        LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
-        liveDataConfiguration.setQuery(new LiveDataQuery());
-        liveDataConfiguration.getQuery().setSource(new LiveDataQuery.Source());
-        liveDataConfiguration.getQuery().getSource().setId("test");
-        liveDataConfiguration.getQuery().getSource().setParameter("client", clientId);
-        liveDataConfiguration.getQuery().setLimit(10);
-        liveDataConfiguration.getQuery().setOffset(0L);
+        LiveDataQuery query = createQuery(clientId);
 
         PaginatedResult<WorkItem> workItemResult = new PaginatedResult<>();
-        workItemResult.setPage(0);
         workItemResult.setTotalItems(2);
         workItemResult.setPage(1);
         WorkItem wi = new WorkItem();
@@ -101,7 +87,7 @@ public class ProjectManagementEntryStoreTest
         when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenReturn(workItemResult);
         when(componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)).thenReturn(false);
 
-        LiveData result = entryStore.get(liveDataConfiguration.getQuery());
+        LiveData result = entryStore.get(query);
 
         // Work item was modified in order to have a nice display.
         verify(componentManager).hasComponent(ProjectManagementLiveDataDisplayer.class, clientId);
@@ -110,9 +96,6 @@ public class ProjectManagementEntryStoreTest
         assertEquals(2, result.getCount());
         assertEquals(1, result.getEntries().size());
         // Work Item was flattened.
-        assertTrue(result.getEntries().get(0).containsKey("identifier.value"));
-        assertTrue(result.getEntries().get(0).containsKey("identifier.location"));
-
         assertEquals("1", result.getEntries().get(0).get("identifier.value"));
         assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
     }
@@ -120,27 +103,34 @@ public class ProjectManagementEntryStoreTest
     @Test
     void getQueryWithExceptionWhenRetrievingWorkItems() throws WorkItemException, LiveDataException
     {
-        LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
-        liveDataConfiguration.setQuery(new LiveDataQuery());
-        liveDataConfiguration.getQuery().setSource(new LiveDataQuery.Source());
-        liveDataConfiguration.getQuery().getSource().setId("test");
-        liveDataConfiguration.getQuery().getSource().setParameter("client", "testclient");
-        liveDataConfiguration.getQuery().setLimit(10);
-        liveDataConfiguration.getQuery().setOffset(0L);
+        LiveDataQuery query = createQuery("testclient");
+        WorkItemException cause = new WorkItemException("Failed to retrieve.");
+        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenThrow(cause);
 
-        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenThrow(
-            new WorkItemException("Failed to retrieve."));
-
-        assertThrows(LiveDataException.class, () -> entryStore.get(liveDataConfiguration.getQuery()));
+        LiveDataException exception = assertThrows(LiveDataException.class, () -> entryStore.get(query));
+        assertSame(cause, exception.getCause());
     }
 
     @Test
     void getQueryWithoutClientSourceParam()
     {
-        LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
-        liveDataConfiguration.setQuery(new LiveDataQuery());
-        liveDataConfiguration.getQuery().setSource(new LiveDataQuery.Source());
-        liveDataConfiguration.getQuery().getSource().setId("test");
-        assertThrows(LiveDataException.class, () -> entryStore.get(liveDataConfiguration.getQuery()));
+        LiveDataQuery query = createQuery(null);
+
+        LiveDataException exception = assertThrows(LiveDataException.class, () -> entryStore.get(query));
+        assertEquals("The client property was not specified in the source parameters.", exception.getMessage());
+        verifyNoInteractions(projectManagementManager);
+    }
+
+    private static LiveDataQuery createQuery(String clientId)
+    {
+        LiveDataQuery query = new LiveDataQuery();
+        query.setSource(new LiveDataQuery.Source());
+        query.getSource().setId("test");
+        if (clientId != null) {
+            query.getSource().setParameter("client", clientId);
+        }
+        query.setLimit(10);
+        query.setOffset(0L);
+        return query;
     }
 }

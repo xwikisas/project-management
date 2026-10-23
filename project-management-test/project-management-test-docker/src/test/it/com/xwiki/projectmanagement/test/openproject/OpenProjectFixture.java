@@ -27,7 +27,6 @@ import org.xwiki.test.ui.TestUtils;
  * running in the same JVM, and makes sure that the XWiki instance under test has an authorized connection to it.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 public final class OpenProjectFixture
 {
@@ -60,7 +59,7 @@ public final class OpenProjectFixture
         if (instance == null) {
             OpenProjectInstance newInstance = OpenProjectInstance.fromSystemProperties();
             newInstance.startOpenProject(setup, testConfiguration);
-            newInstance.setupInstance(setup.getDriver());
+            newInstance.setupInstance(setup);
             instance = newInstance;
         }
         ensureConnection(setup);
@@ -87,8 +86,7 @@ public final class OpenProjectFixture
         adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", CONNECTION_ID));
         adminPage.getConnectionsLivedata().getTableLayout()
             .clickAction(adminPage.getConnectionIndex(CONNECTION_ID), "authorize-connection");
-        instance.maybeLogin(setup.getDriver(), false);
-        instance.maybeClickAuthorization(setup.getDriver());
+        instance.authorize(setup.getDriver());
         new OpenProjectAdminPage().waitUntilPageIsReady();
         connectionConfigured = true;
     }

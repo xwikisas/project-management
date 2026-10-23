@@ -21,7 +21,7 @@ package utils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.io.IOUtils;
 
@@ -89,12 +89,11 @@ public class OpenProjectTestUtils
 
     private static String getJsonFromResource(String fileName) throws IOException
     {
-        InputStream stream = OpenProjectTestUtils.class.getClassLoader().getResourceAsStream(fileName);
-
-        if (stream == null) {
-            throw new RuntimeException(String.format("Could not find %s", fileName));
+        try (InputStream stream = OpenProjectTestUtils.class.getClassLoader().getResourceAsStream(fileName)) {
+            if (stream == null) {
+                throw new IOException(String.format("Could not find %s", fileName));
+            }
+            return IOUtils.toString(stream, StandardCharsets.UTF_8);
         }
-
-        return IOUtils.toString(stream, Charset.defaultCharset());
     }
 }

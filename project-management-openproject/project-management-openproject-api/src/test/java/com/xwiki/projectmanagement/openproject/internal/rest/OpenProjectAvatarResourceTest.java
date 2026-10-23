@@ -26,12 +26,12 @@ import java.net.URISyntaxException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
-import org.slf4j.Logger;
 import org.xwiki.bridge.SkinAccessBridge;
-import org.xwiki.component.util.ReflectionUtils;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -44,19 +44,23 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/**
+ * Unit tests for {@link OpenProjectAvatarResource}.
+ *
+ * @version $Id$
+ */
 @ComponentTest
-public class OpenProjectAvatarResourceTest
+class OpenProjectAvatarResourceTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @InjectMockComponents
     private OpenProjectAvatarResource avatarResource;
-
-    @MockComponent
-    private Logger logger;
 
     @MockComponent
     private OpenProjectConfiguration openProjectConfiguration;
@@ -67,10 +71,6 @@ public class OpenProjectAvatarResourceTest
     @Mock
     private OpenProjectApiClient openProjectApiClient;
 
-    @BeforeEach
-    void configure() {
-        ReflectionUtils.setFieldValue(this.avatarResource, "slf4Jlogger", this.logger);
-    }
     @Test
     public void getExistingAvatarTest() throws ProjectManagementException, URISyntaxException
     {
@@ -90,7 +90,6 @@ public class OpenProjectAvatarResourceTest
     public void getAvatarThatDoesNotExistOrFailToRetrieveTest() throws ProjectManagementException, URISyntaxException
     {
         when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(openProjectApiClient);
-        UserAvatar userAvatar = new UserAvatar(mock(StreamingOutput.class), "test");
         when(openProjectApiClient.getUserAvatar("user")).thenThrow(new ProjectManagementException(""));
         String noavatarPath = "/get/icons/xwiki/noavatar.png";
         when(skinAccessBridge.getSkinFile(any())).thenReturn(noavatarPath);
@@ -101,7 +100,8 @@ public class OpenProjectAvatarResourceTest
         Object uri = response.getMetadata().getFirst("Location");
         assertInstanceOf(URI.class, uri);
         assertEquals(noavatarPath, ((URI) uri).getPath());
-        verify(this.logger).error(anyString(), anyString(), any(Throwable.class));
+        assertEquals("Failed to retrive the avatar for user [user] due to network or server issues.",
+            this.logCapture.getMessage(0));
     }
 
     @Test

@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.livedata;
 import java.util.AbstractMap;
 import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Named;
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.renderer.PrintRenderer;
 import org.xwiki.rendering.renderer.PrintRendererFactory;
 import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
@@ -50,6 +53,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -76,7 +80,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     @Named("html/5.0")
     private PrintRendererFactory htmlRendererFactory;
 
-    @MockComponent
+    @Mock
     private PrintRenderer renderer;
 
     @MockComponent
@@ -85,8 +89,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     @MockComponent
     private ProjectManagementClientExecutionContext executionContext;
 
-    @Mock
-    private DefaultWikiPrinter printer;
+    private final DefaultWikiPrinter printer = new DefaultWikiPrinter();
 
     @BeforeEach
     void setUp()
@@ -117,14 +120,33 @@ class DefaultProjectManagementLiveDataDisplayerTest
     {
         Date now = new Date();
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("date", now);
+        WorkItem workItem = new WorkItem();
+        List<Block> dateBlocks = List.of(new WordBlock("today"));
 
-        // DisplayerManager does not know the property.
+        // The displayer manager has no displayer for the property, but dates are always displayed.
         when(defaultDisplayerManager.getDisplayerForProperty("date")).thenReturn(null);
+        when(defaultDisplayerManager.displayProperty("date", now, Map.of("workItem", workItem)))
+            .thenReturn(dateBlocks);
+        // Simulate the output of the renderer for the displayed blocks.
+        this.printer.print("<span>today</span>");
 
-        WorkItem wi = new WorkItem();
-        displayer.displayProperty(property, wi, renderer, defaultDisplayerManager);
+        displayer.displayProperty(property, workItem, renderer, defaultDisplayerManager);
 
-        assertEquals("printer", property.getValue());
+        verify(renderer).beginDocument(any());
+        assertEquals("<span>today</span>", property.getValue());
+    }
+
+    @Test
+    void testDisplayPropertyWithoutDisplayer()
+    {
+        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
+        when(defaultDisplayerManager.getDisplayerForProperty(WORK_ITEM_KEY)).thenReturn(null);
+
+        displayer.displayProperty(property, new WorkItem(), renderer, defaultDisplayerManager);
+
+        // Values that have no displayer are kept as they are.
+        assertEquals(WORK_ITEM_VALUE, property.getValue());
+        verify(defaultDisplayerManager, never()).displayProperty(anyString(), any(), anyMap());
     }
 
     @Test

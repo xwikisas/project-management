@@ -36,7 +36,6 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
  * XWiki instance and the same OpenProject instance.
  *
  * @version $Id$
- * @since 1.0-rc-4
  */
 @UITest
 public class AllIT
