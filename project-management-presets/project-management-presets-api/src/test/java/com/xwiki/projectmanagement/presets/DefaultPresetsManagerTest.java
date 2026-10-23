@@ -44,11 +44,13 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.presets.internal.DefaultPresetsManager;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
@@ -133,9 +135,9 @@ public class DefaultPresetsManagerTest
     public void getPresetsFailTest() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
-        assertThrows(RuntimeException.class, () -> {
-            this.presetsManager.getPresets(true, 0, 10);
-        });
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> this.presetsManager.getPresets(true, 0, 10));
+        assertInstanceOf(QueryException.class, exception.getCause());
     }
 
     @Test
@@ -177,9 +179,9 @@ public class DefaultPresetsManagerTest
     public void getPresetFailTest() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
-        assertThrows(RuntimeException.class, () -> {
-            Preset preset = this.presetsManager.getPreset(10);
-        });
+        RuntimeException exception =
+            assertThrows(RuntimeException.class, () -> this.presetsManager.getPreset(10));
+        assertInstanceOf(QueryException.class, exception.getCause());
     }
 
     @Test
@@ -203,15 +205,14 @@ public class DefaultPresetsManagerTest
     public void getNextIdFailTest() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
-        assertThrows(RuntimeException.class, () -> {
-            this.presetsManager.getNextId();
-        });
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> this.presetsManager.getNextId());
+        assertInstanceOf(QueryException.class, exception.getCause());
     }
 
     private void assertQueryContains(String contains) throws QueryException
     {
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         verify(this.queryManager).createQuery(argument.capture(), any());
-        assertTrue(argument.getValue().contains(contains));
+        assertThat(argument.getValue(), containsString(contains));
     }
 }

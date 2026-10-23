@@ -79,6 +79,43 @@ public class OpenProjectSingleDisplayer extends BaseElement
     }
 
     /**
+     * @return {@code true} if the header links to the work package
+     * @since 1.3.1
+     */
+    public boolean hasWorkPackageLink()
+    {
+        return !getHeader().findElements(By.tagName("a")).isEmpty();
+    }
+
+    /**
+     * @return the text displayed about the project of the work package
+     * @since 1.3.1
+     */
+    public String getProjectText()
+    {
+        return getProject().getText();
+    }
+
+    /**
+     * @return {@code true} if the project of the work package is displayed as a link
+     * @since 1.3.1
+     */
+    public boolean hasProjectLink()
+    {
+        return !getProject().findElements(By.tagName("a")).isEmpty();
+    }
+
+    /**
+     * @param name the work package property pretty name
+     * @return the displayed value of the property
+     * @since 1.3.1
+     */
+    public String getPropertyValue(String name)
+    {
+        return getProperty(name).getText();
+    }
+
+    /**
      * @return waits for the single displayer to render completely, since it renders asynchronously.
      */
     public OpenProjectSingleDisplayer waitUntilReady()

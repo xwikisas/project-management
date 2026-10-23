@@ -41,7 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * when they are run together from {@code AllIT}. Use the constants of this class to declare it.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 public abstract class AbstractOpenProjectIT
 {

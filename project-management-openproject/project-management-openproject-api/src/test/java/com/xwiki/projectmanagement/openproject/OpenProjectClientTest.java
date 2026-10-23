@@ -25,16 +25,14 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
 
 import org.mockito.MockedStatic;
-import org.slf4j.Logger;
-import org.xwiki.component.util.ReflectionUtils;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.ComponentList;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -54,20 +52,31 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectId
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * Unit tests for {@link OpenProjectClient}.
+ *
+ * @version $Id$
+ */
 @ComponentTest
 @ComponentList(OpenProjectIdentifierResolver.class)
-public class OpenProjectClientTest
+class OpenProjectClientTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     private static final String QUERY_ID = "27";
 
     private static final String SAVED_QUERY_IDENTIFIER = "http://open-project-instance/work_packages?query_id=27";
@@ -99,16 +108,11 @@ public class OpenProjectClientTest
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
 
-    @MockComponent
-    private Logger logger;
-
     private static final Integer NUMBER_OF_WORK_PACKAGES = 10;
 
     @BeforeEach
     public void setUp() throws ProjectManagementException
     {
-        ReflectionUtils.setFieldValue(this.openProjectClient, "logger", this.logger);
-
         when(executionContext.get("instance")).thenReturn("");
         when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(this.openProjectApiClient);
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenReturn(
@@ -223,6 +227,8 @@ public class OpenProjectClientTest
         verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
+        assertEquals("Failed to retrieve work packages: The saved query [27] has no results link.",
+            this.logCapture.getMessage(0));
     }
 
     @Test
@@ -238,6 +244,8 @@ public class OpenProjectClientTest
         verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
+        assertEquals("Failed to retrieve work packages: Failed to read the filters of the saved query",
+            this.logCapture.getMessage(0));
     }
 
     @Test
@@ -283,6 +291,7 @@ public class OpenProjectClientTest
             WorkPackageRetrievalBadRequestException.class);
 
         getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, 0);
+        assertEquals("Failed to retrieve work packages: null", this.logCapture.getMessage(0));
     }
 
     @Test
@@ -324,6 +333,8 @@ public class OpenProjectClientTest
         when(openProjectConfiguration.getOpenProjectApiClient(anyString())).thenReturn(null);
 
         assertEquals(0, openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
+        assertEquals("Failed to retrieve work packages: No configuration for instance [] was found.",
+            this.logCapture.getMessage(0));
     }
 
     private void getWorkItemsTest(String identifier, int expectedWorkPackagesCalls,

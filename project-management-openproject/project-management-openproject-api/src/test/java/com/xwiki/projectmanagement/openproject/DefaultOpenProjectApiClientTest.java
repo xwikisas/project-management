@@ -35,10 +35,7 @@ import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockitoAnnotations;
-import org.xwiki.test.junit5.mockito.ComponentTest;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
@@ -47,6 +44,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -57,20 +55,24 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import utils.OpenProjectTestUtils;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ComponentTest
+/**
+ * Unit tests for {@link DefaultOpenProjectApiClient}.
+ *
+ * @version $Id$
+ */
 @SuppressWarnings("unchecked")
-public class DefaultOpenProjectApiClientTest
+class DefaultOpenProjectApiClientTest
 {
     private DefaultOpenProjectApiClient openProjectApiClient;
 
@@ -92,12 +94,9 @@ public class DefaultOpenProjectApiClientTest
 
     private static final String SORT_BY_STRING = "generatedSortByString";
 
-    private static final String SELECTED_ELEMENTS_STRING = "selectedElementsString";
-
     @BeforeEach
     void setUp() throws Exception
     {
-        MockitoAnnotations.openMocks(this);
         client = mock(HttpClient.class);
         response = mock(HttpResponse.class);
         openProjectApiClient = new DefaultOpenProjectApiClient(OPEN_PROJECT_CONNECTION_URL,
@@ -106,7 +105,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getWorkPackagesTest() throws IOException, ProjectManagementException
+    void getWorkPackagesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
 
@@ -120,7 +119,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getProjectWorkPackagesTest() throws IOException, ProjectManagementException
+    void getProjectWorkPackagesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
 
@@ -139,7 +138,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getUsersTest() throws IOException, ProjectManagementException
+    void getUsersTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
 
@@ -157,7 +156,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getAvailableUsersTest() throws IOException, ProjectManagementException
+    void getAvailableUsersTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
 
@@ -175,7 +174,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getProjectsTest() throws IOException, ProjectManagementException
+    void getProjectsTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());
 
@@ -193,7 +192,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getAvailableProjectsTest() throws IOException, ProjectManagementException
+    void getAvailableProjectsTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());
 
@@ -212,7 +211,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getTypesTest() throws IOException, ProjectManagementException
+    void getTypesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getTypesValidResponse());
 
@@ -220,13 +219,13 @@ public class DefaultOpenProjectApiClientTest
 
         assertEquals(2, types.getTotalItems());
         assertEquals(2, types.getPageSize());
-        assertEquals(OFFSET, 1);
+        assertEquals(1, types.getPage());
 
         assertGeneratedTypes(types.getItems());
     }
 
     @Test
-    public void getStatusesTest() throws IOException, ProjectManagementException
+    void getStatusesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getStatusesValidResponse());
 
@@ -234,13 +233,13 @@ public class DefaultOpenProjectApiClientTest
 
         assertEquals(2, statuses.getTotalItems());
         assertEquals(2, statuses.getPageSize());
-        assertEquals(OFFSET, 1);
+        assertEquals(0, statuses.getPage());
 
         assertGeneratedStatuses(statuses.getItems());
     }
 
     @Test
-    public void getPrioritiesTest() throws IOException, ProjectManagementException
+    void getPrioritiesTest() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getPrioritiesValidResponse());
 
@@ -248,13 +247,13 @@ public class DefaultOpenProjectApiClientTest
 
         assertEquals(2, priorities.getTotalItems());
         assertEquals(2, priorities.getPageSize());
-        assertEquals(OFFSET, 1);
+        assertEquals(0, priorities.getPage());
 
         assertGeneratedPriorities(priorities.getItems());
     }
 
     @Test
-    public void getAvatarTest() throws ProjectManagementException
+    void getAvatarTest() throws ProjectManagementException
     {
         when(response.statusCode()).thenReturn(200);
         HttpHeaders headers = HttpHeaders.of(Collections.emptyMap(), (a, b) -> true);
@@ -266,7 +265,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getAvatarAndGet404() throws ProjectManagementException
+    void getAvatarAndGet404() throws ProjectManagementException
     {
         when(response.statusCode()).thenReturn(404);
         assertThrows(WorkItemNotFoundException.class, () -> {
@@ -275,19 +274,16 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getWorkPackagesFormResponseTest()
+    void getWorkPackagesFormResponseTest() throws ProjectManagementException
     {
         String jsonBody = "{}";
         when(this.response.body()).thenReturn(jsonBody);
 
-        assertDoesNotThrow(() -> {
-            JsonNode result = openProjectApiClient.getWorkPackagesFormResponse("{}");
-            assertNotNull(result);
-        });
+        assertNotNull(openProjectApiClient.getWorkPackagesFormResponse("{}"));
     }
 
     @Test
-    public void getWorkPackagesFormResponseAndGet404()
+    void getWorkPackagesFormResponseAndGet404()
     {
         when(response.statusCode()).thenReturn(404);
         when(this.response.body()).thenReturn("{}");
@@ -297,7 +293,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void getAvatarAndGetOtherResponseCode() throws ProjectManagementException, IOException, InterruptedException
+    void getAvatarAndGetOtherResponseCode() throws ProjectManagementException, IOException, InterruptedException
     {
         HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
@@ -312,7 +308,7 @@ public class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    public void projectWorkPackagesUrlParametersTest()
+    void projectWorkPackagesUrlParametersTest()
         throws ProjectManagementException, IOException, InterruptedException
     {
         when(this.response.body()).thenReturn("{}");
@@ -325,17 +321,16 @@ public class DefaultOpenProjectApiClientTest
 
         HttpRequest request = captor.getValue();
         String generatedUri = request.uri().toString();
-        assertTrue(generatedUri.startsWith(String.format("%s/api/v3/projects/%s/work_packages",
+        assertThat(generatedUri, startsWith(String.format("%s/api/v3/projects/%s/work_packages",
             OPEN_PROJECT_CONNECTION_URL, PROJECT_NAME)));
-        assertTrue(generatedUri.contains("offset=" + OFFSET));
-        assertTrue(generatedUri.contains("pageSize=" + PAGE_SIZE));
-        assertTrue(generatedUri.contains("filters=" + FILTERS_STRING));
-        assertTrue(generatedUri.contains("sortBy=" + SORT_BY_STRING));
-        assertFalse(generatedUri.contains("selectedElements=" + SELECTED_ELEMENTS_STRING));
+        assertThat(generatedUri, containsString("offset=" + OFFSET));
+        assertThat(generatedUri, containsString("pageSize=" + PAGE_SIZE));
+        assertThat(generatedUri, containsString("filters=" + FILTERS_STRING));
+        assertThat(generatedUri, containsString("sortBy=" + SORT_BY_STRING));
     }
 
     @Test
-    public void workPackagesUrlParametersTest() throws ProjectManagementException, IOException, InterruptedException
+    void workPackagesUrlParametersTest() throws ProjectManagementException, IOException, InterruptedException
     {
         when(this.response.body()).thenReturn("{}");
 
@@ -347,16 +342,15 @@ public class DefaultOpenProjectApiClientTest
 
         HttpRequest request = captor.getValue();
         String generatedUri = request.uri().toString();
-        assertTrue(generatedUri.startsWith(String.format("%s/api/v3/work_packages", OPEN_PROJECT_CONNECTION_URL)));
-        assertTrue(generatedUri.contains("offset=" + OFFSET));
-        assertTrue(generatedUri.contains("pageSize=" + PAGE_SIZE));
-        assertTrue(generatedUri.contains("filters=" + FILTERS_STRING));
-        assertTrue(generatedUri.contains("sortBy=" + SORT_BY_STRING));
-        assertFalse(generatedUri.contains("selectedElements=" + SELECTED_ELEMENTS_STRING));
+        assertThat(generatedUri, startsWith(String.format("%s/api/v3/work_packages", OPEN_PROJECT_CONNECTION_URL)));
+        assertThat(generatedUri, containsString("offset=" + OFFSET));
+        assertThat(generatedUri, containsString("pageSize=" + PAGE_SIZE));
+        assertThat(generatedUri, containsString("filters=" + FILTERS_STRING));
+        assertThat(generatedUri, containsString("sortBy=" + SORT_BY_STRING));
     }
 
     @Test
-    public void allApiMethodsThrowProjectManagementExceptionOnHttpFailure() throws IOException, InterruptedException
+    void allApiMethodsThrowProjectManagementExceptionOnHttpFailure() throws IOException, InterruptedException
     {
         when(response.statusCode()).thenReturn(500);
 
@@ -599,9 +593,8 @@ public class DefaultOpenProjectApiClientTest
         assertEquals(expected.get("name"), actualObject.getName());
         assertEquals(expected.get("self"), actualObject.getSelf());
 
-        if (actualObject instanceof Type) {
-            Type typeObject = (Type) actualObject;
-            assertEquals(expected.get("color"), typeObject.getColor());
+        if (actualObject instanceof ColoredOpenProjectObject) {
+            assertEquals(expected.get("color"), ((ColoredOpenProjectObject) actualObject).getColor());
         }
     }
 

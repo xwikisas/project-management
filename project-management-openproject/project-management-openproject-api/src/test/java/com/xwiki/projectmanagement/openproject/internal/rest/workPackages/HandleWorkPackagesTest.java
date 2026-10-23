@@ -47,10 +47,11 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import utils.OpenProjectTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -81,7 +82,6 @@ public class HandleWorkPackagesTest
     {
         when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(this.openProjectApiClient);
     }
-    // TODO: add test for default values
 
     @Test
     public void getAvailableProjectsReturnsConflictWhenTokenIsNullTest() throws ProjectManagementException
@@ -175,11 +175,18 @@ public class HandleWorkPackagesTest
 
         when(this.openProjectApiClient.getWorkPackagesFormResponse(anyString())).thenReturn(
             validationSuccessResponseNode);
-        when(this.openProjectApiClient.createWorkPackage(anyString(), anyString())).thenReturn(any(JsonNode.class));
+        JsonNode createdWorkPackage = this.mapper.readTree("{\"id\":42}");
+        when(this.openProjectApiClient.createWorkPackage(anyString(), anyString())).thenReturn(createdWorkPackage);
 
         Response response = this.handleWorkPackages.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage());
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertSame(createdWorkPackage, response.getEntity());
+        // The validated payload is committed to the link given by the form.
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(this.openProjectApiClient).createWorkPackage(eq("/api/v3/work_packages"), payloadCaptor.capture());
+        assertEquals(validationSuccessResponseNode.path("_embedded").path("payload"),
+            this.mapper.readTree(payloadCaptor.getValue()));
     }
 
     @Test

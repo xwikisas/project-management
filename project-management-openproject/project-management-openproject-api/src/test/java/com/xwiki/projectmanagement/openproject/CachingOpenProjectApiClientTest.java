@@ -20,12 +20,12 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockitoAnnotations;
 import org.xwiki.cache.Cache;
-import org.xwiki.test.junit5.mockito.ComponentTest;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,17 +42,24 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ComponentTest
+/**
+ * Unit tests for {@link CachingOpenProjectApiClient}.
+ *
+ * @version $Id$
+ */
 @SuppressWarnings("unchecked")
-public class CachingOpenProjectApiClientTest
+class CachingOpenProjectApiClientTest
 {
     private CachingOpenProjectApiClient cachingOpenProjectApiClient;
 
@@ -75,16 +82,15 @@ public class CachingOpenProjectApiClientTest
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp()
+    void setUp()
     {
         openProjectApiClient = mock(OpenProjectApiClient.class);
         cache = mock(Cache.class);
-        MockitoAnnotations.openMocks(this);
         cachingOpenProjectApiClient = new CachingOpenProjectApiClient(openProjectApiClient, CLIENT_ID, cache);
     }
 
     @Test
-    public void workPackagesCachingTest() throws ProjectManagementException
+    void workPackagesCachingTest() throws ProjectManagementException
     {
         PaginatedResult<WorkPackage> expectedResult =
             new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
@@ -131,7 +137,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void projectWorkPackagesCachingTest() throws ProjectManagementException
+    void projectWorkPackagesCachingTest() throws ProjectManagementException
     {
         String projectName = "projectName";
         PaginatedResult<WorkPackage> expectedResult =
@@ -194,7 +200,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void usersCachingTest() throws ProjectManagementException
+    void usersCachingTest() throws ProjectManagementException
     {
         PaginatedResult<User> expectedResult = new PaginatedResult<>(Collections.emptyList(),
             OFFSET, PAGE_SIZE, 0);
@@ -222,7 +228,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void availableUsersCachingTest() throws ProjectManagementException
+    void availableUsersCachingTest() throws ProjectManagementException
     {
         PaginatedResult<User> expectedResult = new PaginatedResult<>(Collections.emptyList(),
             OFFSET, PAGE_SIZE, 0);
@@ -251,7 +257,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void projectsCachingTest() throws ProjectManagementException
+    void projectsCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Project> expectedResult = new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
 
@@ -278,7 +284,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void availableProjectsCachingTest() throws ProjectManagementException
+    void availableProjectsCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Project> expectedResult = new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
 
@@ -287,7 +293,8 @@ public class CachingOpenProjectApiClientTest
 
         when((PaginatedResult<Project>) cache.get(anyString())).thenReturn(expectedResult);
 
-        PaginatedResult<Project> result = cachingOpenProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING);
+        PaginatedResult<Project> result =
+            cachingOpenProjectApiClient.getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING);
 
         assertEquals(expectedResult, result);
 
@@ -306,7 +313,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void createWorkPackageCachingTest() throws ProjectManagementException, JsonProcessingException
+    void createWorkPackageCachingTest() throws ProjectManagementException, JsonProcessingException
     {
         String jsonBody = "{}";
         JsonNode expectedNode = mapper.readTree("{}");
@@ -327,7 +334,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void typesCachingTest() throws ProjectManagementException
+    void typesCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Type> expectedResult = new PaginatedResult<>(Collections.emptyList(),
             OFFSET, PAGE_SIZE, 0);
@@ -353,7 +360,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void statusesCachingTest() throws ProjectManagementException
+    void statusesCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Status> expectedResult = new PaginatedResult<>(Collections.emptyList(),
             OFFSET, PAGE_SIZE, 0);
@@ -379,7 +386,7 @@ public class CachingOpenProjectApiClientTest
     }
 
     @Test
-    public void prioritiesCachingTest() throws ProjectManagementException
+    void prioritiesCachingTest() throws ProjectManagementException
     {
         PaginatedResult<Priority> expectedResult = new PaginatedResult<>(Collections.emptyList(),
             OFFSET, PAGE_SIZE, 0);
@@ -402,5 +409,80 @@ public class CachingOpenProjectApiClientTest
         assertEquals(expectedResult, result);
         verify(cache).set(anyString(), eq(result));
         verify(openProjectApiClient, times(1)).getPriorities();
+    }
+
+    @Test
+    void queryWorkPackagesCachingTest() throws ProjectManagementException
+    {
+        PaginatedResult<WorkPackage> expectedResult =
+            new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
+        when(openProjectApiClient.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING))
+            .thenReturn(expectedResult);
+
+        assertEquals(expectedResult,
+            cachingOpenProjectApiClient.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING));
+
+        verify(cache).set(anyString(), eq(expectedResult));
+        verify(openProjectApiClient).getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING);
+    }
+
+    @Test
+    void cachedResultsDependOnTheRequestParameters() throws ProjectManagementException
+    {
+        Map<String, PaginatedResult<? extends BaseOpenProjectObject>> cacheContent = useMapBackedCache(cache);
+        when(openProjectApiClient.getWorkPackages(any(), any(), any(), any()))
+            .thenAnswer(invocation -> new PaginatedResult<WorkPackage>());
+        when(openProjectApiClient.getProjectWorkPackages(any(), any(), any(), any(), any()))
+            .thenAnswer(invocation -> new PaginatedResult<WorkPackage>());
+
+        PaginatedResult<WorkPackage> result =
+            cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
+        // The same request is served from the cache.
+        assertSame(result,
+            cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
+        // Any other parameter value makes a different request.
+        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(2, PAGE_SIZE, FILTERS_STRING,
+            SORT_BY_STRING));
+        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, 20, FILTERS_STRING,
+            SORT_BY_STRING));
+        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "otherFilters",
+            SORT_BY_STRING));
+        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING,
+            "otherSortBy"));
+        assertNotSame(result, cachingOpenProjectApiClient.getProjectWorkPackages("project", OFFSET, PAGE_SIZE,
+            FILTERS_STRING, SORT_BY_STRING));
+
+        verify(openProjectApiClient, times(5)).getWorkPackages(any(), any(), any(), any());
+        assertEquals(6, cacheContent.size());
+    }
+
+    @Test
+    void cachedResultsAreNotSharedBetweenClients() throws ProjectManagementException
+    {
+        useMapBackedCache(cache);
+        OpenProjectApiClient otherApiClient = mock(OpenProjectApiClient.class);
+        CachingOpenProjectApiClient otherCachingClient =
+            new CachingOpenProjectApiClient(otherApiClient, "otherClientId", cache);
+        PaginatedResult<WorkPackage> firstResult = new PaginatedResult<>();
+        PaginatedResult<WorkPackage> otherResult = new PaginatedResult<>();
+        when(openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING))
+            .thenReturn(firstResult);
+        when(otherApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING))
+            .thenReturn(otherResult);
+
+        assertSame(firstResult,
+            cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
+        assertSame(otherResult,
+            otherCachingClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
+    }
+
+    private static Map<String, PaginatedResult<? extends BaseOpenProjectObject>> useMapBackedCache(
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache)
+    {
+        Map<String, PaginatedResult<? extends BaseOpenProjectObject>> content = new HashMap<>();
+        when(cache.get(anyString())).thenAnswer(invocation -> content.get(invocation.<String>getArgument(0)));
+        doAnswer(invocation -> content.put(invocation.getArgument(0), invocation.getArgument(1))).when(cache)
+            .set(anyString(), any());
+        return content;
     }
 }

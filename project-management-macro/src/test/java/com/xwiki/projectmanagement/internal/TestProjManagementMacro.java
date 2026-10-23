@@ -30,7 +30,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 /**
  * Implementation of the abstract project management macro for testing purposes.
  *
- * @version $Id
+ * @version $Id$
  * @since 1.0-rc-4
  */
 @Component

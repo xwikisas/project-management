@@ -113,9 +113,9 @@ public class SuggestTest
         List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
 
         assertEquals(1, responseEntity.size());
-        assertEquals(responseEntity.get(0).get("label"), String.valueOf(workPackage.getId()));
-        assertEquals(responseEntity.get(0).get("value"), String.valueOf(workPackage.getId()));
-        assertEquals(responseEntity.get(0).get("hint"), workPackage.getName());
+        assertEquals(String.valueOf(workPackage.getId()), responseEntity.get(0).get("label"));
+        assertEquals(String.valueOf(workPackage.getId()), responseEntity.get(0).get("value"));
+        assertEquals(workPackage.getName(), responseEntity.get(0).get("hint"));
     }
 
     @Test

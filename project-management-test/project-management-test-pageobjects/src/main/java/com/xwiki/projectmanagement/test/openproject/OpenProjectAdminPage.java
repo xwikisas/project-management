@@ -228,6 +228,17 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
+     * @param index the index of the connection in the connections Live Data, starting from 1
+     * @return the number of actions that can be performed on the connection
+     * @since 1.3.1
+     */
+    public int getConnectionActionCount(int index)
+    {
+        return getConnectionsLivedata().getTableLayout().getCell("Actions", index)
+            .findElements(By.className("action")).size();
+    }
+
+    /**
      * @return the livedata inside the Admin page.
      */
     public LiveDataElement getConnectionsLivedata()

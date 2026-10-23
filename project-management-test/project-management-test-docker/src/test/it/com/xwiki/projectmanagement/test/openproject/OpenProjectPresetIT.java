@@ -23,6 +23,7 @@ import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
@@ -31,6 +32,11 @@ import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,7 +45,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Test the filter presets that can be used by the OpenProject macros.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 @UITest(
     properties = {
@@ -61,6 +66,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
     private static final String SUBJECT_COLUMN = "Subject";
 
     @Test
+    @Order(1)
     void listPresetLifecycle(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
         String presetName = "Speakers list preset";
@@ -89,7 +95,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         // The preset is listed in the administration section.
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         int presetIndex = adminPage.getPresetIndex(presetName);
-        assertTrue(presetIndex > 0);
+        assertThat(presetIndex, greaterThan(0));
         assertEquals("No",
             adminPage.getPresetsLivedata().getTableLayout().getCell("Chart preset?", presetIndex).getText());
 
@@ -100,7 +106,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         WYSIWYGEditPage wysiwygEditPage = macroModal.getEditPage();
         macroModal.clickMore();
         List<String> presetOptions = macroModal.getPresetOptions();
-        assertTrue(presetOptions.contains(presetName), presetOptions.toString());
+        assertThat(presetOptions, hasItem(presetName));
         macroModal.selectPreset(presetName);
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
@@ -139,11 +145,11 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         setup.deletePage(presetReference);
         setup.gotoPage(testReference);
         List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
-        assertTrue(errors.get(0).contains(String.format("There is no preset with id [%s].", presetId)),
-            errors.get(0));
+        assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
     }
 
     @Test
+    @Order(2)
     void chartPresetWithMultipleDatasets(TestUtils setup, TestReference testReference)
     {
         // A list preset, which should not be proposed by the chart macro.
@@ -180,8 +186,8 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
         List<String> presetOptions = modal.getPresetOptions();
-        assertTrue(presetOptions.contains(chartPresetName), presetOptions.toString());
-        assertFalse(presetOptions.contains(listPresetName), presetOptions.toString());
+        assertThat(presetOptions, hasItem(chartPresetName));
+        assertThat(presetOptions, not(hasItem(listPresetName)));
         modal.selectPreset(chartPresetName);
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
@@ -191,6 +197,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(3)
     void invalidPresetIds(TestUtils setup, TestReference testReference)
     {
         setup.createPage(testReference, String.format("{{openproject instance=\"%1$s\" presetId=\"abc\"/}}%n%n"
@@ -201,17 +208,17 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
 
         List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(4);
         assertEquals(4, errors.size(), errors.toString());
-        assertTrue(errors.get(0).contains("The preset id should be a number."), errors.get(0));
-        assertTrue(errors.get(1).contains("There is no preset with id [999999]."), errors.get(1));
-        assertTrue(errors.get(2).contains("The preset id should be a number."), errors.get(2));
-        assertTrue(errors.get(3).contains("No preset was found with the given id."), errors.get(3));
+        assertThat(errors.get(0), containsString("The preset id should be a number."));
+        assertThat(errors.get(1), containsString("There is no preset with id [999999]."));
+        assertThat(errors.get(2), containsString("The preset id should be a number."));
+        assertThat(errors.get(3), containsString("No preset was found with the given id."));
     }
 
     private static void assertSubjectsContain(TableLayoutElement ld, String text)
     {
         for (int i = 1; i <= ld.countRows(); i++) {
             String subject = ld.getCell(SUBJECT_COLUMN, i).getText();
-            assertTrue(subject.toLowerCase().contains(text), subject);
+            assertThat(subject.toLowerCase(), containsString(text));
         }
     }
 }

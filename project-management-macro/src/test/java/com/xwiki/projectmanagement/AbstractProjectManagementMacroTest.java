@@ -28,6 +28,7 @@ import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -42,9 +43,12 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -90,16 +94,52 @@ public class AbstractProjectManagementMacroTest
     }
 
     @Test
-    void executeMacroWithSingleDisplayerTest()
-        throws Exception
+    void executeMacroWithSingleDisplayerTest() throws Exception
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
         params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
         when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name())).thenReturn(
             displayerMacro);
-        List<Block> result = abstractMacro.execute(params, "", macroTransformationContext);
+        List<Block> expected = List.of(new WordBlock("rendered"));
+        when(asyncExecutor.execute(eq(displayerMacro), eq(params), eq("content"), eq(macroTransformationContext),
+            any(), anyBoolean())).thenReturn(expected);
 
-        // Gets executed in the async renderer.
-        verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any(), any(), anyBoolean());
+        List<Block> result = abstractMacro.execute(params, "content", macroTransformationContext);
+
+        // The displayer named after the parameter value renders the work items, asynchronously.
+        assertSame(expected, result);
+        assertEquals("smth=smth2&smth3=smth4", params.getSourceParameters());
+    }
+
+    @Test
+    void executeStandaloneDisplayerInline() throws Exception
+    {
+        ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
+        params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
+        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name())).thenReturn(
+            displayerMacro);
+        when(displayerMacro.supportsInlineMode()).thenReturn(false);
+        when(macroTransformationContext.isInline()).thenReturn(true);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> abstractMacro.execute(params, "", macroTransformationContext));
+
+        assertEquals("Macro displayer [workItemsSingle] is standalone but is being used inline.",
+            exception.getMessage());
+        verify(asyncExecutor, never()).execute(any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void executeWithMissingDisplayer() throws Exception
+    {
+        ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
+        params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
+        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name()))
+            .thenThrow(new ComponentLookupException("missing"));
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> abstractMacro.execute(params, "", macroTransformationContext));
+
+        assertEquals("Could not find the displayer [workItemsSingle].", exception.getMessage());
     }
 }

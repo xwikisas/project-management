@@ -3,42 +3,12 @@
 .input|xwiki/2.0
 .# Single displayer test - display a work item with incomplete values.
 .#-----------------------------------------------------
-{{workItemsSingle sourceParams="client=test" sort="identifier:asc"}}
-{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "WorkItem2"
-          }
-        ]
-      }
-    ]
-  }
-}
-{{/workItemsSingle}}
+{{workItemsSingle sourceParams="client=test" sort="identifier:asc" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|event/1.0
 .#-----------------------------------------------------
 beginDocument
-beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc] [{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "WorkItem2"
-          }
-        ]
-      }
-    ]
-  }
-}]
+beginMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc|filters={"query":{"filters":[{"property":"identifier","constraints":[{"operator":"equals","value":"WorkItem2"}]}]}}]
 beginGroup [[class]=[work-item-page-displayer]]
 beginGroup [[class]=[work-item-header]]
 beginGroup [[class]=[work-item-header-name]]
@@ -134,21 +104,7 @@ onWord [description]
 endParagraph
 endGroup [[class]=[work-package-description]]
 endGroup [[class]=[work-item-page-displayer]]
-endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc] [{
-  "query": {
-    "filters": [
-      {
-        "property": "identifier",
-        "constraints": [
-          {
-            "operator": "equals",
-            "value": "WorkItem2"
-          }
-        ]
-      }
-    ]
-  }
-}]
+endMacroMarkerStandalone [workItemsSingle] [sourceParams=client=test|sort=identifier:asc|filters={"query":{"filters":[{"property":"identifier","constraints":[{"operator":"equals","value":"WorkItem2"}]}]}}]
 endDocument
 .#-----------------------------------------------------
 .expect|xhtml/1.0

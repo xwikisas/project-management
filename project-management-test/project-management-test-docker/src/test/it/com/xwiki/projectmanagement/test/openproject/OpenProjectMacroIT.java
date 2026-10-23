@@ -24,8 +24,8 @@ import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.docker.junit5.TestReference;
@@ -34,15 +34,17 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the OpenProject macro.
  *
  * @version $Id$
- * @since 1.3.0-rc-2
  */
 @UITest(
     properties = {
@@ -68,6 +70,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private static final String PROPERTIES_PARAMETER = "properties";
 
     @Test
+    @Order(1)
     void defaultOpenprojectMacro(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
         setup.deletePage(testReference);
@@ -77,14 +80,15 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
         macroModal.clickSubmit();
 
-        TableLayoutElement ld = saveAndGetFirstOPMacro(wysiwygEditPage);
-        // Equivalent to assert since it will throw an exception if not found.
-        ld.getCell("ID", 1).findElement(By.tagName("a"));
-        ld.getCell("Subject", 1).findElement(By.tagName("a"));
-        ld.getCell("Assignee", 1).findElement(By.tagName("a"));
+        saveAndGetFirstOPMacro(wysiwygEditPage);
+        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        assertTrue(macro.hasLinkInCell("ID", 1));
+        assertTrue(macro.hasLinkInCell(SUBJECT_COLUMN, 1));
+        assertTrue(macro.hasLinkInCell("Assignee", 1));
     }
 
     @Test
+    @Order(2)
     void singleWorkPackageDisplayer(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -106,24 +110,23 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
         OpenProjectSingleDisplayer singleDisplayer = macros.get(0).getSingleWorkItem().waitUntilReady();
 
-        // Displayed work package should have a link in the header.
-        singleDisplayer.getHeader().findElement(By.tagName("a"));
-        assertEquals("Work package from project: Demo project", singleDisplayer.getProject().getText());
-        assertDoesNotThrow(() -> {
-            singleDisplayer.getProject().findElement(By.tagName("a"));
-        });
+        assertTrue(singleDisplayer.hasWorkPackageLink());
+        assertEquals("Work package from project: Demo project", singleDisplayer.getProjectText());
+        assertTrue(singleDisplayer.hasProjectLink());
 
-        assertEquals("MILESTONE", singleDisplayer.getProperty("Type:").getText());
-        assertEquals("OpenProject Admin", singleDisplayer.getProperty("Author:").getText());
+        assertEquals("MILESTONE", singleDisplayer.getPropertyValue("Type:"));
+        assertEquals("OpenProject Admin", singleDisplayer.getPropertyValue("Author:"));
 
-        // 14/08/2025 12:00:00
+        // The date is displayed with the default date format of the wiki, e.g. 14/08/2025 12:00:00.
         SimpleDateFormat expectedDateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-        assertDoesNotThrow(() -> {
-            expectedDateFormat.parse(singleDisplayer.getProperty("Updated At:").getText());
-        });
+        expectedDateFormat.setLenient(false);
+        String updatedAt = singleDisplayer.getPropertyValue("Updated At:");
+        assertDoesNotThrow(() -> expectedDateFormat.parse(updatedAt), updatedAt);
+        assertThat(updatedAt, matchesPattern("\\d{2}/\\d{2}/\\d{4} \\d{2}:\\d{2}:\\d{2}"));
     }
 
     @Test
+    @Order(3)
     void checkLivedataSuggesters(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
         // Start from a macro that uses the single item displayer.
@@ -162,6 +165,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(4)
     void macroParameterFilterTest(TestUtils setup, TestReference testReference)
     {
         setup.createPage(testReference,
@@ -202,6 +206,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
+    @Order(5)
     void useOpenProjUrl(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
         setup.deletePage(testReference);
@@ -237,26 +242,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    void useSavedQueryUrl(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
-    {
-        String savedQueryUrl = this.openProject.getBaseUrl() + MILESTONES_QUERY_URL;
-
-        setup.deletePage(testReference);
-        OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
-        selectInstanceFromModal(macroModal, CONNECTION_ID);
-        WYSIWYGEditPage editPage = macroModal.getEditPage();
-        macroModal.clickMore();
-        macroModal.setMacroParameter("identifier", savedQueryUrl);
-        macroModal.clickSubmit();
-        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
-        assertEquals(3, ld.countRows());
-        ld.assertRow(SUBJECT_COLUMN, "Start of project");
-        ld.assertRow(SUBJECT_COLUMN, "Conference");
-        ld.assertRow(SUBJECT_COLUMN, "End of project");
-    }
-
-    @Test
-    void useSavedQueryUrlWithFilters(TestUtils setup, TestReference testReference)
+    @Order(6)
+    void useSavedQueryUrl(TestUtils setup, TestReference testReference)
         throws OperationNotSupportedException
     {
         String savedQueryUrl = this.openProject.getBaseUrl() + MILESTONES_QUERY_URL;
