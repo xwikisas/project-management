@@ -25,11 +25,14 @@ import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +63,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -347,6 +351,30 @@ class DefaultOpenProjectApiClientTest
         assertThat(generatedUri, containsString("pageSize=" + PAGE_SIZE));
         assertThat(generatedUri, containsString("filters=" + FILTERS_STRING));
         assertThat(generatedUri, containsString("sortBy=" + SORT_BY_STRING));
+    }
+
+    @Test
+    void requestsHaveATimeout() throws ProjectManagementException, IOException, InterruptedException
+    {
+        when(this.response.body()).thenReturn("{}");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
+
+        verify(client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(Optional.of(Duration.ofSeconds(20)), captor.getValue().timeout());
+    }
+
+    @Test
+    void requestTimeoutIsReportedAsProjectManagementException() throws IOException, InterruptedException
+    {
+        HttpTimeoutException timeout = new HttpTimeoutException("request timed out");
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenThrow(timeout);
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+        assertSame(timeout, exception.getCause());
     }
 
     @Test
