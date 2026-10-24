@@ -26,7 +26,6 @@ import javax.inject.Named;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
@@ -64,8 +63,7 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
         } catch (WorkItemNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
         } catch (WorkItemRetrievalException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                .build();
+            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work item.", e);
         }
     }
 
@@ -87,8 +85,7 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
         } catch (LiveDataException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (WorkItemRetrievalException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                .build();
+            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work items.", e);
         }
     }
 

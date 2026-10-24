@@ -30,11 +30,14 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.ComponentList;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -79,6 +82,9 @@ class DefaultProjectsResourceTest
 
     @InjectMockComponents
     private DefaultProjectsResource resource;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @InjectComponentManager
     private MockitoComponentManager componentManager;
@@ -145,6 +151,9 @@ class DefaultProjectsResourceTest
         Response response = this.resource.getProject(WIKI, CLIENT, PROJECT_ID);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the project.", response.getEntity());
+        assertEquals("Failed to retrieve the project."
+            + " Root cause: [WorkItemRetrievalException: Failure]", this.logCapture.getMessage(0));
     }
 
     @Test
@@ -202,5 +211,8 @@ class DefaultProjectsResourceTest
         Response response = this.resource.getProjects(WIKI, CLIENT, 1, 10, null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the projects.", response.getEntity());
+        assertEquals("Failed to retrieve the projects."
+            + " Root cause: [WorkItemRetrievalException: Failure]", this.logCapture.getMessage(0));
     }
 }

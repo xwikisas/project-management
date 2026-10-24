@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataConfiguration;
@@ -65,6 +68,21 @@ public abstract class AbstractProjectManagementResource extends XWikiResource
             return Collections.emptyList();
         }
         return configuration.getQuery().getFilters();
+    }
+
+    /**
+     * Log the given failure and build an error response holding only the given message: the exception can hold
+     * details about the project management server (URL, error responses) that are only meant for the administrators.
+     *
+     * @param status the status of the response
+     * @param message the message sent to the client
+     * @param e the failure to log
+     * @return the error response
+     */
+    protected Response errorResponse(Response.Status status, String message, Exception e)
+    {
+        this.slf4Jlogger.warn("{} Root cause: [{}]", message, ExceptionUtils.getRootCauseMessage(e));
+        return Response.status(status).entity(message).build();
     }
 
     protected void prepareClientContext()

@@ -32,11 +32,14 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.ComponentList;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -82,6 +85,9 @@ class DefaultWorkItemsResourceTest
 
     @InjectMockComponents
     private DefaultWorkItemsResource resource;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @InjectComponentManager
     private MockitoComponentManager componentManager;
@@ -164,6 +170,9 @@ class DefaultWorkItemsResourceTest
         Response response = this.resource.getWorkItem(WIKI, CLIENT, WORK_ITEM_ID);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the work item.", response.getEntity());
+        assertEquals("Failed to retrieve the work item."
+            + " Root cause: [WorkItemRetrievalException: Failure]", this.logCapture.getMessage(0));
     }
 
     @Test
@@ -234,6 +243,9 @@ class DefaultWorkItemsResourceTest
         Response response = this.resource.getWorkItems(WIKI, CLIENT, 1, 10, null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the work items.", response.getEntity());
+        assertEquals("Failed to retrieve the work items."
+            + " Root cause: [WorkItemRetrievalException: Failure]", this.logCapture.getMessage(0));
     }
 
     @Test
