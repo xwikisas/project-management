@@ -27,6 +27,9 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -59,6 +62,9 @@ public class SuggestTest
 
     @InjectMockComponents
     private Suggest suggest;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
@@ -241,13 +247,17 @@ public class SuggestTest
     @Test
     public void getSuggestionsServerError() throws ProjectManagementException
     {
-        when(this.openProjectApiClient.getTypes()).thenThrow(ProjectManagementException.class);
+        when(this.openProjectApiClient.getTypes()).thenThrow(new ProjectManagementException(
+            "Failed to retrieve the OpenProject entities. [internal error details from http://openproject.local]."));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
-
-        assertInstanceOf(ProjectManagementException.class, response.getEntity());
+        // The details of the failure are only logged, never sent to the client.
+        assertEquals("Failed to retrieve the suggestions from OpenProject.", response.getEntity());
+        assertEquals("Failed to retrieve the [types] suggestions from the OpenProject instance [instance]. Root cause: "
+            + "[ProjectManagementException: Failed to retrieve the OpenProject entities. [internal error details from "
+            + "http://openproject.local].]", this.logCapture.getMessage(0));
     }
 
     @Test

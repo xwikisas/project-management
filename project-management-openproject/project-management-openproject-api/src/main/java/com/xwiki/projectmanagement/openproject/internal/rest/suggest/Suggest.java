@@ -38,6 +38,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
@@ -154,7 +155,11 @@ public class Suggest extends XWikiResource
                     break;
             }
         } catch (ProjectManagementException e) {
-            return Response.serverError().entity(e).build();
+            // The exception message can hold the OpenProject URL and the body of its error response, which are only
+            // meant for the administrators: log them and send a generic message to the client.
+            this.slf4Jlogger.warn("Failed to retrieve the [{}] suggestions from the OpenProject instance [{}]. "
+                + "Root cause: [{}]", suggest, instance, ExceptionUtils.getRootCauseMessage(e));
+            return Response.serverError().entity("Failed to retrieve the suggestions from OpenProject.").build();
         }
         return Response.ok(response).build();
     }
