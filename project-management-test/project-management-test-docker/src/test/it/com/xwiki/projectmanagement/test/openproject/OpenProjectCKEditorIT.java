@@ -21,10 +21,7 @@ package com.xwiki.projectmanagement.test.openproject;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.Keys;
-import org.xwiki.ckeditor.test.po.AutocompleteDropdown;
 import org.xwiki.ckeditor.test.po.CKEditor;
-import org.xwiki.ckeditor.test.po.RichTextAreaElement;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -68,15 +65,8 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wysiwyg");
         WYSIWYGEditPage editPage = new WYSIWYGEditPage();
-        RichTextAreaElement textArea = new CKEditor("content").waitToLoad().getRichTextArea();
-        String query = marker + "speakers";
-        textArea.sendKeys(query);
-        AutocompleteDropdown dropdown = new AutocompleteDropdown();
-        dropdown.waitForItemSelected(query, "Send invitation to speakers");
-        textArea.sendKeys(Keys.ENTER);
-        dropdown.waitForItemSubmitted();
-        // The macro is inserted asynchronously, after the autocomplete dropdown is closed.
-        textArea.waitUntilContentContains("startmacro:openproject");
+        new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+            .insertWorkPackage(marker + "speakers", "Send invitation to speakers");
         editPage.clickSaveAndView();
 
         setup.gotoPage(testReference, "edit", "editor=wiki");

@@ -75,8 +75,6 @@ public class OpenProjectMentionTask implements TaskConsumer
 
     private static final Pattern WORK_PACKAGE_URL_ID_PATTERN = Pattern.compile(".*/work_packages/(\\d+).*");
 
-    private static final Pattern WORK_PACKAGE_ID_PATTERN = Pattern.compile(".*/work_pa2ckages/(\\d+).*");
-
     private static final String IDENTIFIER = "identifier";
 
     @Inject
