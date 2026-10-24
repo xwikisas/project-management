@@ -29,6 +29,8 @@ import org.openqa.selenium.WebElement;
 import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xwiki.test.ui.po.BaseElement;
 
 /**
@@ -39,7 +41,32 @@ import org.xwiki.test.ui.po.BaseElement;
  */
 public class OpenProjectMacroElement extends BaseElement
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectMacroElement.class);
+
     private static final int LOAD_TIMEOUT = 30;
+
+    /**
+     * Collects what the browser knows about the asynchronous rendering of the page: the placeholders still waiting
+     * for their content, the asynchronous rendering script, and the requests made to get the content (each answered
+     * by 200 with the content, 202 while it is being computed, anything else removing the placeholder).
+     */
+    private static final String ASYNC_RENDERING_STATE_SCRIPT = String.join("\n",
+        "var resources = performance.getEntriesByType('resource');",
+        "return JSON.stringify({",
+        "  placeholders: Array.from(document.querySelectorAll('.xwiki-async')).map(function(element) {",
+        "    return {id: element.dataset.xwikiAsyncId, clientId: element.dataset.xwikiAsyncClientId,",
+        "      url: element.dataset.xwikiAsyncUrl, visible: element.offsetParent !== null,",
+        "      html: element.outerHTML.substring(0, 300)};",
+        "  }),",
+        "  asyncScripts: resources.map(function(entry) { return entry.name; })",
+        "    .filter(function(name) { return name.indexOf('async.js') >= 0; }),",
+        "  asyncRequests: resources.filter(function(entry) { return entry.name.indexOf('/asyncrenderer/') >= 0; })",
+        "    .slice(-20).map(function(entry) {",
+        "      return {url: entry.name, status: entry.responseStatus, start: Math.round(entry.startTime),",
+        "        duration: Math.round(entry.duration)};",
+        "    }),",
+        "  now: Math.round(performance.now())",
+        "}, null, 2);");
 
     private final WebElement self;
 
@@ -112,8 +139,11 @@ public class OpenProjectMacroElement extends BaseElement
             return table;
         } catch (TimeoutException e) {
             // The asynchronous rendering of the macro sometimes never finishes on CI, with nothing logged: show what
-            // XWiki is doing at that point.
-            XWikiThreadDump.log("The OpenProject macro did not display its Live Data in time.");
+            // the browser and XWiki are doing at that point.
+            String reason = "The OpenProject macro did not display its Live Data in time.";
+            LOGGER.error("{} Asynchronous rendering state in the browser:\n{}", reason,
+                getDriver().executeScript(ASYNC_RENDERING_STATE_SCRIPT));
+            XWikiThreadDump.log(reason);
             throw e;
         } finally {
             getDriver().setTimeout(timeout);

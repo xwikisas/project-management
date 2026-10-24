@@ -66,7 +66,9 @@ final class XWikiThreadDump
 
     private static boolean isXWikiJetty(String commandLine)
     {
-        return commandLine.contains("jetty") && commandLine.contains("xwiki");
+        // The Jetty standalone engine runs XWiki with "java -jar start.jar". Matching on "jetty" and "xwiki" would
+        // also match the Maven JVMs, whose class path holds such JARs.
+        return commandLine.contains("start.jar");
     }
 
     private static Optional<String> threadDump(long pid)
