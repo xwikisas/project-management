@@ -223,7 +223,7 @@ class DefaultOpenProjectApiClientTest
 
         assertEquals(2, types.getTotalItems());
         assertEquals(2, types.getPageSize());
-        assertEquals(1, types.getPage());
+        assertEquals(0, types.getPage());
 
         assertGeneratedTypes(types.getItems());
     }

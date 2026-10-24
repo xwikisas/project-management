@@ -338,7 +338,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             types.add(type);
         }
 
-        return new PaginatedResult<>(types, 1, types.size(), types.size());
+        return new PaginatedResult<>(types, 0, types.size(), types.size());
     }
 
     @Override
