@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
@@ -64,6 +66,29 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
      * OpenProject 16.
      */
     private static final String MILESTONES_QUERY_URL = "/projects/demo-project/work_packages?query_id=2";
+
+    // Ids given by the demo data of OpenProject 16.
+
+    private static final String DEMO_PROJECT_ID = "1";
+
+    private static final String TASK_TYPE_ID = "1";
+
+    private static final String NEW_STATUS_ID = "1";
+
+    private static final String IN_PROGRESS_STATUS_ID = "7";
+
+    private static final String ADMIN_USER_ID = "4";
+
+    private static final String NORMAL_PRIORITY_ID = "8";
+
+    /**
+     * The {@code query_props} of an OpenProject work package list URL showing the tasks in progress, sorted by id in
+     * the given order ({@code asc} or {@code desc}), with the given columns.
+     */
+    private static final String TASKS_IN_PROGRESS_QUERY_PROPS = "{\"c\":[%s],\"hi\":false,\"g\":\"\",\"is\":true,"
+        + "\"tv\":false,\"hl\":\"none\",\"t\":\"id:%s\",\"f\":[{\"n\":\"type\",\"o\":\"=\",\"v\":[\"" + TASK_TYPE_ID
+        + "\"]},{\"n\":\"status\",\"o\":\"=\",\"v\":[\"" + IN_PROGRESS_STATUS_ID
+        + "\"]}],\"ts\":\"PT0S\",\"pp\":20,\"pa\":1}";
 
     private static final String SUBJECT_COLUMN = "Subject";
 
@@ -157,11 +182,11 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
 
         useSuggestFilter(ld, "ID", "1", false); // First work package
-        useSuggestFilter(ld, "Type", "1"); // Task
-        useSuggestFilter(ld, "Assignee", "4"); // Admin
-        useSuggestFilter(ld, "Priority", "8"); // Normal
-        useSuggestFilter(ld, "Project", "1"); // Demo proj
-        useSuggestFilter(ld, "Status", "1"); // New
+        useSuggestFilter(ld, "Type", TASK_TYPE_ID);
+        useSuggestFilter(ld, "Assignee", ADMIN_USER_ID);
+        useSuggestFilter(ld, "Priority", NORMAL_PRIORITY_ID);
+        useSuggestFilter(ld, "Project", DEMO_PROJECT_ID);
+        useSuggestFilter(ld, "Status", NEW_STATUS_ID);
     }
 
     @Test
@@ -215,26 +240,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WYSIWYGEditPage editPage = macroModal.getEditPage();
         // Create a filter.
         macroModal.clickMore();
-        macroModal.setMacroParameter("identifier",
-            "http://localhost:8081/projects/demo-project/work_packages?"
-                + "query_props=%7B%22c%22%3A%5B%22id%22%2C%22subject%22%2C%22type%22%2C%22status%22%2C%22assignee"
-                + "%22%2C%22priority%22%5D%2C%22hi%22%3Afalse%2C%22g%22%3A%22%22%2C%22is%22%3Atrue%2C%22tv%22%3Afalse"
-                + "%2C%22hl%22%3A%22none%22%2C%22t%22%3A%22id%3Aasc%22%2C%22f%22%3A%5B%7B%22n%22%3A%22type%22%2C%22o"
-                + "%22%3A%22%3D%22%2C%22v%22%3A%5B%221%22%5D%7D%2C%7B%22n%22%3A%22status%22%2C%22o%22%3A%22%3D%22%2C%22"
-                + "v%22%3A%5B%227%22%5D%7D%5D%2C%22ts%22%3A%22PT0S%22%2C%22pp%22%3A20%2C%22pa%22%3A1%7D");
+        macroModal.setMacroParameter("identifier", getTasksInProgressUrl("/projects/demo-project/work_packages",
+            "asc", "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\""));
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(2, ld.countRows());
 
         macroModal = new OpenProjectMacroEditModal(setup, testReference);
         editPage = macroModal.getEditPage();
-        macroModal.setMacroParameter("identifier",
-            "http://localhost:8081/work_packages?query_props=%7B%22c%22%3A%5B%22id%22%2C%22subject"
-                + "%22%2C%22type%22%2C%22status%22%2C%22assignee%22%2C%22priority%22%2C%22project%22%5D%2C%22"
-                + "hi%22%3Afalse%2C%22g%22%3A%22%22%2C%22is%22%3Atrue%2C%22tv%22%3Afalse%2C%22hl%22%3A%22"
-                + "none%22%2C%22t%22%3A%22id%3Adesc%22%2C%22f%22%3A%5B%7B%22n%22%3A%22type%22%2C%22o%22%3A%22%3D%22%"
-                + "2C%22v%22%3A%5B%221%22%5D%7D%2C%7B%22n%22%3A%22status%22%2C%22o%22%3A%22%3D%22%2C%22v%22%3A%5B%"
-                + "227%22%5D%7D%5D%2C%22ts%22%3A%22PT0S%22%2C%22pp%22%3A20%2C%22pa%22%3A1%7D");
+        macroModal.setMacroParameter("identifier", getTasksInProgressUrl("/work_packages", "desc",
+            "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\",\"project\""));
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(3, ld.countRows());
@@ -288,5 +303,12 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         }
         suggest.clear();
         ld.waitUntilReady();
+    }
+
+    private String getTasksInProgressUrl(String path, String sortOrder, String columns)
+    {
+        String queryProps = String.format(TASKS_IN_PROGRESS_QUERY_PROPS, columns, sortOrder);
+        return this.openProject.getBaseUrl() + path + "?query_props="
+            + URLEncoder.encode(queryProps, StandardCharsets.UTF_8);
     }
 }

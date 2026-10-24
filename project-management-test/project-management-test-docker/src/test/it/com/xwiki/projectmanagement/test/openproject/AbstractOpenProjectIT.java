@@ -63,7 +63,8 @@ public abstract class AbstractOpenProjectIT
     public static final String JYTHON_JAR = "org.python:jython-slim:2.7.3";
 
     /**
-     * Needed by the scheduler plugin, otherwise it fails.
+     * Needed by the scheduler plugin, otherwise it fails. Its version must be the XWiki version under test, the
+     * {@code platform.version} of the parent POM: an extra JAR without version gets the version of this project.
      */
     public static final String SCHEDULER_API_JAR = "org.xwiki.platform:xwiki-platform-scheduler-api:15.10";
 
