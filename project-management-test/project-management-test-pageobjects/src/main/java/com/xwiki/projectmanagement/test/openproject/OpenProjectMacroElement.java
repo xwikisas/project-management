@@ -24,6 +24,7 @@ import javax.naming.OperationNotSupportedException;
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebElement;
 import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
@@ -109,6 +110,11 @@ public class OpenProjectMacroElement extends BaseElement
             TableLayoutElement table = getLivedata().getTableLayout();
             table.waitUntilReady();
             return table;
+        } catch (TimeoutException e) {
+            // The asynchronous rendering of the macro sometimes never finishes on CI, with nothing logged: show what
+            // XWiki is doing at that point.
+            XWikiThreadDump.log("The OpenProject macro did not display its Live Data in time.");
+            throw e;
         } finally {
             getDriver().setTimeout(timeout);
         }
