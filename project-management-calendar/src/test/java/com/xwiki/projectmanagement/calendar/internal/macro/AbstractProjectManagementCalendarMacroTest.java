@@ -49,6 +49,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
+import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -217,6 +219,22 @@ class AbstractProjectManagementCalendarMacroTest
 
         assertEquals(expectedMinTime, calendarBlock.getParameters().get("minTime"));
         assertEquals(expectedMaxTime, calendarBlock.getParameters().get("maxTime"));
+    }
+
+    @Test
+    void executeWithPreset() throws Exception
+    {
+        String presetFilters = "{\"query\":{\"filters\":[{\"property\":\"status\"}]}}";
+        Preset preset = mock(Preset.class);
+        when(preset.getFilter()).thenReturn(presetFilters);
+        when(this.presetsManager.getPreset(42)).thenReturn(preset);
+        this.parameters.setPresetId("42");
+        this.parameters.setFilters("{\"query\":{\"filters\":[]}}");
+
+        URIBuilder url = new URIBuilder(execute().getParameter(JSON));
+
+        // The preset filters replace the filters parameter in the REST URL.
+        assertEquals(List.of("filters=" + presetFilters, "limit=25", EXTRA_PARAMETER), getQueryParameters(url));
     }
 
     @Test
