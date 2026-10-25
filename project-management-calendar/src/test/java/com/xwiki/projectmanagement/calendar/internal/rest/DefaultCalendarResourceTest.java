@@ -142,11 +142,11 @@ class DefaultCalendarResourceTest
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(List.of(this.workItemEvent, this.providerEvent), response.getEntity());
 
-        // The work items are filtered by the requested filters and by the calendar window: they must start before its
-        // end and end after its start. A missing limit defaults to 25 work items.
+        // The work items are filtered by the requested filters and by the calendar window: their date range must
+        // overlap it. A missing limit defaults to 25 work items.
         verify(this.client).getWorkItems(eq(1), eq(25), this.filtersCaptor.capture(), eq(Collections.emptyList()));
         List<LiveDataQuery.Filter> filters = this.filtersCaptor.getValue();
-        assertEquals(List.of("status equals open", "startDate before " + END, "dueDate after " + START),
+        assertEquals(List.of("status equals open", "dateRange between " + START + '/' + END),
             serialize(filters));
         // The provider of the additional events receives the same filters.
         verify(this.calendarEventProvider).getMoreEvents(filters);
@@ -162,7 +162,7 @@ class DefaultCalendarResourceTest
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         verify(this.client).getWorkItems(eq(1), eq(10), this.filtersCaptor.capture(), any());
-        assertEquals(List.of("startDate before " + END, "dueDate after " + START),
+        assertEquals(List.of("dateRange between " + START + '/' + END),
             serialize(this.filtersCaptor.getValue()));
     }
 
@@ -176,7 +176,7 @@ class DefaultCalendarResourceTest
         verify(this.client, never()).getWorkItems(anyInt(), anyInt(), anyList(), anyList());
         verifyNoInteractions(this.calendarEventConverter);
         verify(this.calendarEventProvider).getMoreEvents(this.filtersCaptor.capture());
-        assertEquals(List.of("status equals open", "startDate before " + END, "dueDate after " + START),
+        assertEquals(List.of("status equals open", "dateRange between " + START + '/' + END),
             serialize(this.filtersCaptor.getValue()));
     }
 

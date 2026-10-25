@@ -48,11 +48,14 @@ public class CalendarEventConverter
 {
     private static final long MILLIS_PER_HOUR = 3600000L;
 
+    private static final long MILLIS_PER_DAY = 24 * MILLIS_PER_HOUR;
+
     /**
      * Convert a single {@link WorkItem} to a {@link CalendarEvent}.
      *
      * @param workItem the work item to convert.
-     * @return the calendar event representation of the work item.
+     * @return the calendar event representation of the work item, or {@code null} if the work item has neither a
+     *     start date nor a due date
      */
     public CalendarEvent convert(WorkItem workItem)
     {
@@ -60,16 +63,25 @@ public class CalendarEventConverter
         event.setId(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER));
         event.setTitle(workItem.getLinkableValue(WorkItem.KEY_SUMMARY));
         Date startDate = workItem.getStartDate();
-        if (startDate == null) {
+        Date dueDate = workItem.getDueDate();
+        if (startDate != null) {
+            event.setStart(startDate);
+            event.setEnd(
+                Objects.requireNonNullElseGet(dueDate, () -> new Date(startDate.getTime() + MILLIS_PER_HOUR)));
+            event.setAllDay(false);
+        } else if (dueDate != null) {
+            // Without a start date, the work item is displayed as an all-day event on its due date (the end of an
+            // all-day event is exclusive).
+            event.setStart(dueDate);
+            event.setEnd(new Date(dueDate.getTime() + MILLIS_PER_DAY));
+            event.setAllDay(true);
+        } else {
+            // A work item without any date cannot be placed in the calendar.
             return null;
         }
-        event.setStart(startDate);
-        Date dueDate = workItem.getDueDate();
-        event.setEnd(Objects.requireNonNullElseGet(dueDate, () -> new Date(startDate.getTime() + MILLIS_PER_HOUR)));
 
         event.setDescription(stripHtml(workItem.getDescription()));
         event.setStatus(workItem.getStatus());
-        event.setAllDay(false);
         Map<String, Object> meta = new HashMap<>();
         meta.put("type", workItem.getType());
         meta.put("assignees", workItem.getAssignees());
