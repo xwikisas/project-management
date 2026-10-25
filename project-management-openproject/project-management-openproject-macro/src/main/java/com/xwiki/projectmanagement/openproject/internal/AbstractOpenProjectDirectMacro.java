@@ -39,6 +39,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 
 /**
  * Base class for OpenProject macros that render content directly (not via LiveData/async). Handles license checking,
@@ -59,6 +61,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private Logger logger;
@@ -98,15 +103,13 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
         String instanceToUse = parameters.getInstance();
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
+        OpenProjectAccessResult access = openProjectAccess.resolve(instanceToUse);
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
 
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instanceToUse);
-        if (apiClient == null) {
-            return warningBlock;
-        }
+        OpenProjectApiClient apiClient = access.getClient();
         try {
             return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
             {

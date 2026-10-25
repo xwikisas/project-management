@@ -45,7 +45,7 @@ import org.xwiki.rest.XWikiResource;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
 /**
@@ -93,7 +93,7 @@ public class Suggest extends XWikiResource
     private static final String ICON = "icon";
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     /**
      * @param wiki the wiki that contains the configured client.
@@ -119,7 +119,7 @@ public class Suggest extends XWikiResource
 
         String lowerSearch = search.toLowerCase();
 
-        openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        openProjectApiClient = openProjectAccess.resolve(instance).getClient();
         if (openProjectApiClient == null) {
             // No configuration was found.
             return Response.status(Response.Status.NOT_FOUND).build();

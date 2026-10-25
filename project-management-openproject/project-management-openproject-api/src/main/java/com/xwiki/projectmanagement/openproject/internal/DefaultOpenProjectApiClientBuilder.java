@@ -46,11 +46,18 @@ public class DefaultOpenProjectApiClientBuilder implements OpenProjectApiClientB
      */
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
 
+    /**
+     * Shared by all the clients that don't set their own: an {@link HttpClient} is thread-safe and meant to be reused,
+     * and creating one per client starts new threads each time a client is built (i.e. on most requests).
+     */
+    private static final HttpClient DEFAULT_HTTP_CLIENT =
+        HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
+
     private String serverUrl;
 
     private OpenProjectAuthenticator authenticator = NoOpAuthenticator.INSTANCE;
 
-    private HttpClient httpClient = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
+    private HttpClient httpClient = DEFAULT_HTTP_CLIENT;
 
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 

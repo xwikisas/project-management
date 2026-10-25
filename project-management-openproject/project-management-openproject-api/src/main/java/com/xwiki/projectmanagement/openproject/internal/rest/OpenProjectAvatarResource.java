@@ -41,7 +41,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 
 /**
@@ -57,7 +57,7 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 public class OpenProjectAvatarResource extends XWikiResource
 {
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private SkinAccessBridge skinAccessBridge;
@@ -77,7 +77,7 @@ public class OpenProjectAvatarResource extends XWikiResource
         @PathParam("id") String userId
     ) throws URISyntaxException
     {
-        OpenProjectApiClient openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient openProjectApiClient = openProjectAccess.resolve(instance).getClient();
         if (openProjectApiClient == null) {
             // No configuration was found.
             return Response.status(Response.Status.UNAUTHORIZED).build();

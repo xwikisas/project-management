@@ -45,7 +45,8 @@ import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xpn.xwiki.XWikiContext;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
 /**
  * Responsible with checking if a connection to a given OpenProject instance exists and a token was retrieved.
@@ -62,7 +63,7 @@ public class UserTokenChecker
     private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private CSRFToken csrfToken;
@@ -81,13 +82,24 @@ public class UserTokenChecker
      */
     public List<Block> getWarningBlock(String instance, MacroTransformationContext context)
     {
+        return getWarningBlock(instance, openProjectAccess.resolve(instance).getStatus(), context);
+    }
+
+    /**
+     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param status how the current user reaches the given instance, when the caller has already resolved it.
+     * @param context the macro transformation context.
+     * @return a warning block if the current user can't call the given OpenProject instance.
+     * @since 1.3.1
+     */
+    public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status,
+        MacroTransformationContext context)
+    {
         XWikiContext xContext = contextProvider.get();
         String viewAction = "view";
         String connectionName = instance;
 
-        if (xContext.getUserReference() == null
-            || openProjectConfiguration.getAccessTokenForConfiguration(connectionName) == null)
-        {
+        if (status != OpenProjectAccessStatus.AUTHENTICATED) {
             List<Block> warning = new ArrayList<>();
             warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
             if (xContext.getUserReference() != null) {

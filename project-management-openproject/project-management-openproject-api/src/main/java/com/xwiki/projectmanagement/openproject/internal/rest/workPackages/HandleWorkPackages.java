@@ -51,7 +51,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -160,7 +160,7 @@ public class HandleWorkPackages extends XWikiResource
     private static final String WRITABLE = "writable";
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -186,7 +186,7 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
 
         if (apiClient == null) {
             return Response
@@ -240,7 +240,7 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
 
         if (apiClient == null) {
             return Response
@@ -293,7 +293,7 @@ public class HandleWorkPackages extends XWikiResource
     public Response createWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
 
         if (apiClient == null) {
             return Response
@@ -355,7 +355,7 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("workPackageId") String workPackageId) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
 
         if (apiClient == null) {
             return Response
@@ -398,7 +398,7 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("workPackageId") String workPackageId, CreateWorkPackage workPackage)
         throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
 
         if (apiClient == null) {
             return Response

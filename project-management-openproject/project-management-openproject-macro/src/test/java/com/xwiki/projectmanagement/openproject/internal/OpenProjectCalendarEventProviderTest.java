@@ -40,7 +40,8 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Version;
 
@@ -70,7 +71,7 @@ class OpenProjectCalendarEventProviderTest
     private OpenProjectCalendarEventProvider provider;
 
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private ProjectManagementClientExecutionContext executionContext;
@@ -85,7 +86,7 @@ class OpenProjectCalendarEventProviderTest
         when(this.executionContext.get("limit")).thenReturn("10");
         when(this.executionContext.get("sprintColor")).thenReturn("#ff0000");
         when(this.executionContext.get("versionColor")).thenReturn("#00ff00");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
     }
 
     private void requestTypes(boolean sprints, boolean versions)
@@ -124,7 +125,7 @@ class OpenProjectCalendarEventProviderTest
     @Test
     void failsWithoutConfiguredInstance()
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(null);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
         requestTypes(true, true);
 
         WorkItemRetrievalException exception =

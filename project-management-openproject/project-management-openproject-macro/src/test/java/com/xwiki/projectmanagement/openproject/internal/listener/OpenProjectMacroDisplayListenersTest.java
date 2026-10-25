@@ -45,6 +45,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.macro.BaseDirectOpenProjectMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -83,6 +85,9 @@ class OpenProjectMacroDisplayListenersTest
 
     @MockComponent
     private OpenProjectConfiguration openProjectConfiguration;
+
+    @MockComponent
+    private OpenProjectAccess openProjectAccess;
 
     @Mock
     private XWikiContext xcontext;
@@ -261,7 +266,7 @@ class OpenProjectMacroDisplayListenersTest
         when(first.getConnectionName()).thenReturn("first");
         OpenProjectConnection second = mock(OpenProjectConnection.class);
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of(first, second));
-        when(this.openProjectConfiguration.getOpenProjectApiClient("first")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("first")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         Project project = new Project();
         project.setId(42);
         when(this.apiClient.getProjects(1, 1, "")).thenReturn(new PaginatedResult<>(List.of(project), 1, 1, 1));
@@ -284,13 +289,14 @@ class OpenProjectMacroDisplayListenersTest
 
         assertEquals(USE_SELECTED_DASHBOARD_CONNECTION_VALUE, this.parameters.getInstance());
         assertEquals(USE_SELECTED_DASHBOARD_PROJECT_VALUE, this.parameters.getProject());
-        verify(this.openProjectConfiguration, never()).getOpenProjectApiClient(any());
+        verify(this.openProjectAccess, never()).resolve(any());
     }
 
     @Test
     void leavesTheProjectUnsetWhenTheConnectionHasNoClient()
     {
         selectedConnection("dashboard");
+        when(this.openProjectAccess.resolve("dashboard")).thenReturn(OpenProjectAccessResult.notConnected());
 
         fireEvent(this.parameters);
 
@@ -302,7 +308,8 @@ class OpenProjectMacroDisplayListenersTest
     void leavesTheProjectUnsetWhenTheConnectionHasNoProject() throws Exception
     {
         selectedConnection("dashboard");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("dashboard")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("dashboard"))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.apiClient.getProjects(1, 1, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 1, 0));
 
         fireEvent(this.parameters);
@@ -314,7 +321,8 @@ class OpenProjectMacroDisplayListenersTest
     void leavesTheProjectUnsetWhenTheProjectsCannotBeRetrieved() throws Exception
     {
         selectedConnection("dashboard");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("dashboard")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("dashboard"))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.apiClient.getProjects(1, 1, "")).thenThrow(new ProjectManagementException("unreachable"));
 
         fireEvent(this.parameters);

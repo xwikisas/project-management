@@ -38,7 +38,8 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
@@ -58,7 +59,7 @@ import static org.mockito.Mockito.when;
 public class SuggestTest
 {
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @InjectMockComponents
     private Suggest suggest;
@@ -84,7 +85,8 @@ public class SuggestTest
     @BeforeEach
     public void setUp()
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(this.openProjectApiClient);
+        when(this.openProjectAccess.resolve(INSTANCE))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
     }
 
     @Test
@@ -263,7 +265,7 @@ public class SuggestTest
     @Test
     public void noConfigurationWasFoundTest()
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
+        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10, null);
 

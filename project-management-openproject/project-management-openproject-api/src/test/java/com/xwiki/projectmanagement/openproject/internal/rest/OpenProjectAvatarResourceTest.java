@@ -38,7 +38,8 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -63,7 +64,7 @@ class OpenProjectAvatarResourceTest
     private OpenProjectAvatarResource avatarResource;
 
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private SkinAccessBridge skinAccessBridge;
@@ -74,7 +75,7 @@ class OpenProjectAvatarResourceTest
     @Test
     public void getExistingAvatarTest() throws ProjectManagementException, URISyntaxException
     {
-        when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(openProjectApiClient);
+        when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
         UserAvatar userAvatar = new UserAvatar(mock(StreamingOutput.class), "test");
         when(openProjectApiClient.getUserAvatar("user")).thenReturn(userAvatar);
 
@@ -89,7 +90,7 @@ class OpenProjectAvatarResourceTest
     @Test
     public void getAvatarThatDoesNotExistOrFailToRetrieveTest() throws ProjectManagementException, URISyntaxException
     {
-        when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(openProjectApiClient);
+        when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
         when(openProjectApiClient.getUserAvatar("user")).thenThrow(new ProjectManagementException(""));
         String noavatarPath = "/get/icons/xwiki/noavatar.png";
         when(skinAccessBridge.getSkinFile(any())).thenReturn(noavatarPath);
@@ -107,7 +108,7 @@ class OpenProjectAvatarResourceTest
     @Test
     public void getAvatarWithoutBeingAuthorized() throws URISyntaxException
     {
-        when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(null);
+        when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.notConnected());
 
         Response response = avatarResource.getAvatar("wiki", "test", "user");
 

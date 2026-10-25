@@ -43,6 +43,9 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
 
@@ -50,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -84,6 +86,9 @@ class AbstractOpenProjectDirectMacroTest
     private OpenProjectConfiguration openProjectConfiguration;
 
     @MockComponent
+    private OpenProjectAccess openProjectAccess;
+
+    @MockComponent
     private ObservationManager observationManager;
 
     @MockComponent
@@ -101,7 +106,7 @@ class AbstractOpenProjectDirectMacroTest
     void setUp()
     {
         this.parameters.setInstance("main");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
     }
 
     @Test
@@ -125,23 +130,15 @@ class AbstractOpenProjectDirectMacroTest
     @Test
     void returnsTheUserTokenWarning() throws Exception
     {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
         List<Block> warningBlock = List.of(new WordBlock("warning"));
-        when(this.userTokenChecker.getWarningBlock("main", this.context)).thenReturn(warningBlock);
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.NOT_CONNECTED, this.context))
+            .thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
 
         verify(this.observationManager).notify(any(BeforeOpenProjectMacroExecutionEvent.class), same(this.macro),
             same(this.parameters));
-        verifyNoInteractions(this.asyncExecutor);
-    }
-
-    @Test
-    void returnsNothingWithoutApiClient() throws Exception
-    {
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(null);
-
-        assertTrue(this.macro.execute(this.parameters, "", this.context).isEmpty());
-
         verifyNoInteractions(this.asyncExecutor);
     }
 
@@ -158,7 +155,7 @@ class AbstractOpenProjectDirectMacroTest
 
         this.macro.execute(this.parameters, "", this.context);
 
-        verify(this.userTokenChecker).getWarningBlock("main", this.context);
+        verify(this.userTokenChecker).getWarningBlock("main", OpenProjectAccessStatus.AUTHENTICATED, this.context);
         verify(this.apiClient).getProjects(null, 5, "");
     }
 
