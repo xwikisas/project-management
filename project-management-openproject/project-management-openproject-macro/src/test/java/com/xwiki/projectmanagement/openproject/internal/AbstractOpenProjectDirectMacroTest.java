@@ -160,6 +160,22 @@ class AbstractOpenProjectDirectMacroTest
     }
 
     @Test
+    void displaysTheConnectHintBeforeThePublicData() throws Exception
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
+        Block hint = new WordBlock("hint");
+        when(this.userTokenChecker.getConnectHintBlock("main", OpenProjectAccessStatus.ANONYMOUS, this.context))
+            .thenReturn(List.of(hint));
+        OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
+        when(this.apiClient.getProjects(null, 5, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 5, 0));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertSame(hint, result.get(0));
+        verify(this.apiClient).getProjects(null, 5, "");
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void rendersAsynchronouslyWithAPlaceholder() throws Exception
     {

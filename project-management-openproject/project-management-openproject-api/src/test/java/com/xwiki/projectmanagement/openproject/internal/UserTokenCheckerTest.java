@@ -93,6 +93,8 @@ class UserTokenCheckerTest
 
     private final Block linkLabel = new WordBlock("connect");
 
+    private final Block publicDataHint = new WordBlock("public data");
+
     @BeforeEach
     void setUp()
     {
@@ -117,6 +119,12 @@ class UserTokenCheckerTest
         Translation linkTranslation = mock(Translation.class);
         when(linkTranslation.render()).thenReturn(this.linkLabel);
         when(this.l10n.getTranslation("openproject.oauth.notauthorized.link")).thenReturn(linkTranslation);
+        Translation publicDataHintTranslation = mock(Translation.class);
+        when(publicDataHintTranslation.render()).thenReturn(this.publicDataHint);
+        when(this.l10n.getTranslation("openproject.oauth.publicdata.hint")).thenReturn(publicDataHintTranslation);
+        Translation publicDataLinkTranslation = mock(Translation.class);
+        when(publicDataLinkTranslation.render()).thenReturn(this.linkLabel);
+        when(this.l10n.getTranslation("openproject.oauth.publicdata.link")).thenReturn(publicDataLinkTranslation);
     }
 
     @Test
@@ -177,5 +185,44 @@ class UserTokenCheckerTest
 
         FormatBlock format = assertInstanceOf(FormatBlock.class, result.get(0));
         assertEquals("box warningmessage", format.getParameter("class"));
+    }
+
+    @Test
+    void noWarningWithAnonymousAccess()
+    {
+        assertTrue(this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS, this.macroContext)
+            .isEmpty());
+    }
+
+    @Test
+    void connectHintWithAnonymousAccess()
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+
+        List<Block> result = this.checker.getConnectHintBlock(CONNECTION_NAME, this.macroContext);
+
+        GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
+        assertEquals("box infomessage", group.getParameter("class"));
+        assertEquals(this.publicDataHint, group.getChildren().get(0));
+        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(1));
+        assertTrue(link.getReference().getReference()
+            .startsWith("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?connectionName=main"));
+    }
+
+    @Test
+    void noConnectHintForGuests()
+    {
+        when(this.xcontext.getUserReference()).thenReturn(null);
+
+        assertTrue(this.checker.getConnectHintBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS,
+            this.macroContext).isEmpty());
+    }
+
+    @Test
+    void noConnectHintWhenAuthenticated()
+    {
+        assertTrue(this.checker.getConnectHintBlock(CONNECTION_NAME, OpenProjectAccessStatus.AUTHENTICATED,
+            this.macroContext).isEmpty());
     }
 }

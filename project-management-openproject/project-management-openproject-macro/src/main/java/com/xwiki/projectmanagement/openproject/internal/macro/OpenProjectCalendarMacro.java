@@ -19,7 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -104,8 +104,11 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         }
         this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
-        return Collections.singletonList(new GroupBlock(super.execute(parameters, content, context),
+        List<Block> result =
+            new ArrayList<>(this.userTokenChecker.getConnectHintBlock(parameters.getInstance(), context));
+        result.add(new GroupBlock(super.execute(parameters, content, context),
             Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance())));
+        return result;
     }
 
     @Override

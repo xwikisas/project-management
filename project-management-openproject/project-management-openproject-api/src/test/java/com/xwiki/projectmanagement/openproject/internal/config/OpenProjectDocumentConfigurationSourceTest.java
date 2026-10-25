@@ -48,6 +48,8 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -126,6 +128,7 @@ public class OpenProjectDocumentConfigurationSourceTest
         baseObject2.setStringValue("serverURL", "serverURL2");
         baseObject2.setStringValue("clientId", "clientId2");
         baseObject2.setStringValue("clientSecret", "clientSecret2");
+        baseObject2.setIntValue("showPublicData", 1);
 
         when(xwikiDocument1.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject1);
         when(xwikiDocument2.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject2);
@@ -145,6 +148,7 @@ public class OpenProjectDocumentConfigurationSourceTest
         assertEquals("serverURL1", connection.getServerURL());
         assertEquals("clientId1", connection.getClientId());
         assertEquals("clientSecret1", connection.getClientSecret());
+        assertFalse(connection.isShowPublicData());
 
         connection = connections.get(1);
 
@@ -152,5 +156,6 @@ public class OpenProjectDocumentConfigurationSourceTest
         assertEquals("serverURL2", connection.getServerURL());
         assertEquals("clientId2", connection.getClientId());
         assertEquals("clientSecret2", connection.getClientSecret());
+        assertTrue(connection.isShowPublicData());
     }
 }

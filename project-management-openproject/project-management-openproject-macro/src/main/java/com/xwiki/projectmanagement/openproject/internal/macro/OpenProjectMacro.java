@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -171,7 +172,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
-        List<Block> result = super.execute(parameters, content, context);
+        List<Block> result = new ArrayList<>(userTokenChecker.getConnectHintBlock(instanceToUse, context));
+        result.addAll(super.execute(parameters, content, context));
         Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
         return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
             : Collections.singletonList(new GroupBlock(result, params));

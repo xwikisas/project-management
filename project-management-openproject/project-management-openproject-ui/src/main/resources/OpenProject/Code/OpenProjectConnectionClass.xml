@@ -116,6 +116,21 @@
       <validationRegExp/>
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </serverURL>
+    <showPublicData>
+      <customDisplay/>
+      <defaultValue>0</defaultValue>
+      <disabled>0</disabled>
+      <displayFormType>checkbox</displayFormType>
+      <displayType/>
+      <hint/>
+      <name>showPublicData</name>
+      <number>6</number>
+      <prettyName>Show public data to users without an OpenProject account</prettyName>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+    </showPublicData>
   </class>
   <object>
     <name>OpenProject.Code.OpenProjectConnectionClass</name>

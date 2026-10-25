@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -100,7 +101,9 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
             return warningBlock;
         }
         parameters.setClient("openproject");
-        return super.execute(parameters, content, context);
+        List<Block> result = new ArrayList<>(userTokenChecker.getConnectHintBlock(instanceToUse, context));
+        result.addAll(super.execute(parameters, content, context));
+        return result;
     }
 
     @Override

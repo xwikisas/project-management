@@ -46,6 +46,16 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     }
 
     /**
+     * @return {@code true} if the page displays the warning asking the current user to connect to OpenProject, which
+     *     the OpenProject macros display instead of the work packages when the user can't see them
+     * @since 1.3.1
+     */
+    public boolean isConnectWarningDisplayed()
+    {
+        return getDriver().hasElementWithoutWaiting(By.cssSelector("#xwikicontent .box.warningmessage"));
+    }
+
+    /**
      * @param property the work package property, e.g. {@code type}
      * @param value the value of the property, e.g. {@code Task}
      * @param instance the name of the OpenProject connection the work packages come from

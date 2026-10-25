@@ -283,6 +283,40 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         ld.assertRow(SUBJECT_COLUMN, "End of project");
     }
 
+    @Test
+    @Order(7)
+    void showPublicDataToGuests(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    {
+        // The demo project is public and OpenProject doesn't require users to log in, so anonymous users can see its
+        // work packages.
+        setup.createPage(testReference,
+            String.format("{{openproject instance=\"%s\" id=\"showPublicData\" identifier=\"%s\"/}}", CONNECTION_ID,
+                getTasksInProgressUrl("/projects/demo-project/work_packages", "asc",
+                    "\"id\",\"subject\",\"type\",\"status\"")));
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        int connectionIndex = adminPage.getConnectionIndex(CONNECTION_ID);
+
+        // Without the option, guests are asked to connect to OpenProject.
+        setup.forceGuestUser();
+        setup.gotoPage(testReference);
+        assertTrue(new ViewPageWithOpenProjectMacro().isConnectWarningDisplayed());
+
+        setup.loginAsSuperAdmin();
+        OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, true);
+        try {
+            setup.forceGuestUser();
+            setup.gotoPage(testReference);
+            TableLayoutElement ld =
+                new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+            assertEquals(2, ld.countRows());
+            // The type is displayed in upper case.
+            assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
+        } finally {
+            setup.loginAsSuperAdmin();
+            OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, false);
+        }
+    }
+
     private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue)
     {
         useSuggestFilter(ld, filteredColumn, selectedValue, true);

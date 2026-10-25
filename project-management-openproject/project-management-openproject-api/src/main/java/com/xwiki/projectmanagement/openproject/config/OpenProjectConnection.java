@@ -39,6 +39,8 @@ public class OpenProjectConnection
 
     private String instanceId;
 
+    private boolean showPublicData;
+
     /**
      * Constructs a new {@link OpenProjectConnection} with the provided values.
      *
@@ -159,5 +161,28 @@ public class OpenProjectConnection
     public void setInstanceId(String instanceId)
     {
         this.instanceId = instanceId;
+    }
+
+    /**
+     * @return {@code true} if the users who can't call the OpenProject instance with their own account (guests, or
+     *     users who haven't connected their OpenProject account) see the data that OpenProject shows to anonymous
+     *     users
+     * @since 1.3.1
+     */
+    public boolean isShowPublicData()
+    {
+        return showPublicData;
+    }
+
+    /**
+     * Sets whether the users who can't call the OpenProject instance with their own account see the data that
+     * OpenProject shows to anonymous users.
+     *
+     * @param showPublicData {@code true} to show the public data to these users
+     * @since 1.3.1
+     */
+    public void setShowPublicData(boolean showPublicData)
+    {
+        this.showPublicData = showPublicData;
     }
 }

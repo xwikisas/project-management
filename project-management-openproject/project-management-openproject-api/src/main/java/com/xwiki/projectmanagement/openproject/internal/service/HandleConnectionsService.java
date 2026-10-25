@@ -157,6 +157,7 @@ public class HandleConnectionsService
         configObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
         configObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
         configObj.setStringValue(INSTANCE_ID, retrieveInstanceId(openProjectConnection.getServerURL()));
+        configObj.setIntValue("showPublicData", openProjectConnection.isShowPublicData() ? 1 : 0);
 
         DocumentReference oidcClassRef =
             new DocumentReference(wikiName, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");

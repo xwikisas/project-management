@@ -95,6 +95,29 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
+     * Enable or disable showing the public data of a connection to the users without an OpenProject account, and wait
+     * for the connection to be saved.
+     *
+     * @param index the index of the connection from the livedata. It starts at 1.
+     * @param showPublicData {@code true} to show the public data of the connection to these users
+     * @since 1.3.1
+     */
+    public void setShowPublicData(int index, boolean showPublicData)
+    {
+        getConnectionsLivedata().getTableLayout().clickAction(index, "edit-connection");
+        By modalSelector = By.id("handleConnectionModal");
+        getDriver().waitUntilElementIsVisible(modalSelector);
+        WebElement modal = getDriver().findElement(modalSelector);
+        WebElement checkbox = modal.findElement(By.id("show-public-data"));
+        if (checkbox.isSelected() != showPublicData) {
+            checkbox.click();
+        }
+        modal.findElement(By.className("btn-primary")).click();
+        // The modal is closed once the connection is saved.
+        getDriver().waitUntilElementDisappears(modalSelector);
+    }
+
+    /**
      * Trigger the color sync job by pressing the "Sync" button.
      *
      * @return the view page of the Job Scheduler.

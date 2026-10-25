@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -123,7 +124,10 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
                 public List<Block> execute(ProjectManagementAsyncMacroParams x, String y, MacroTransformationContext z)
                     throws MacroExecutionException
                 {
-                    return executeInternal(parameters, content, context, apiClient, instanceToUse);
+                    List<Block> result = new ArrayList<>(
+                        userTokenChecker.getConnectHintBlock(instanceToUse, access.getStatus(), context));
+                    result.addAll(executeInternal(parameters, content, context, apiClient, instanceToUse));
+                    return result;
                 }
             }, parameters, content, context, null, true);
         } catch (RenderingException | JobException e) {

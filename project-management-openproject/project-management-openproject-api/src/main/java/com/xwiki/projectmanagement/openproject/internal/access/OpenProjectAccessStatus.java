@@ -33,8 +33,17 @@ public enum OpenProjectAccessStatus
     AUTHENTICATED,
 
     /**
+     * The current user can't call the connection with their own account, but the connection shows its public data to
+     * them: OpenProject is called without credentials, and only returns what it shows to anonymous users.
+     *
+     * @see com.xwiki.projectmanagement.openproject.config.OpenProjectConnection#isShowPublicData()
+     */
+    ANONYMOUS,
+
+    /**
      * The connection is configured but the current user can't call it: either the user is a guest or they haven't
-     * connected their OpenProject account (no OAuth token, or a blank one).
+     * connected their OpenProject account (no OAuth token, or a blank one), and the connection doesn't show its public
+     * data to them (the option is off, or the OpenProject instance doesn't accept anonymous requests).
      */
     NOT_CONNECTED,
 
