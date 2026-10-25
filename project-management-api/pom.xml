@@ -31,7 +31,7 @@
   <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.
   </description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.72</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.74</xwiki.jacoco.instructionRatio>
     <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
 
@@ -65,6 +65,13 @@
       <artifactId>xwiki-platform-rendering-wikimacro-api</artifactId>
       <version>${platform.version}</version>
       <scope>compile</scope>
+    </dependency>
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
