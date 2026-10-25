@@ -91,11 +91,12 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     {
         try {
             this.ssrx.use("projectmanagercalendar/css/parameters.css");
+            // The preset filters have to be resolved before building the REST URL, which carries the filters.
+            maybeSetPresetFilters(parameters);
             // We build the REST URL to the CalendarResource endpoint, then add it to the rendering of the calendar
             // macro.
             URIBuilder uriBuilder = getUriBuilder(parameters);
             updateUrl(uriBuilder, parameters);
-            maybeSetPresetFilters(parameters);
             return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);

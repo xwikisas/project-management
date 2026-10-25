@@ -31,7 +31,7 @@
     <artifactId>project-management-calendar</artifactId>
 
     <properties>
-        <xwiki.jacoco.instructionRatio>0.98</xwiki.jacoco.instructionRatio>
+        <xwiki.jacoco.instructionRatio>0.99</xwiki.jacoco.instructionRatio>
     </properties>
 
     <name>Project Management - Calendar</name>
