@@ -72,7 +72,7 @@ public class CalendarEventConverter
         event.setAllDay(false);
         Map<String, Object> meta = new HashMap<>();
         meta.put("type", workItem.getType());
-        meta.put("asignees", workItem.getAssignees());
+        meta.put("assignees", workItem.getAssignees());
         meta.put("creator", workItem.getCreator());
         meta.put("priority", workItem.getPriority());
         meta.put("entity-type", "workItem");

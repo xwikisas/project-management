@@ -82,7 +82,7 @@ class CalendarEventConverterTest
         assertFalse(event.isAllDay());
         Map<String, Object> expectedMeta = new HashMap<>();
         expectedMeta.put("type", "Bug");
-        expectedMeta.put("asignees", assignees);
+        expectedMeta.put("assignees", assignees);
         expectedMeta.put("creator", creator);
         expectedMeta.put("priority", "High");
         expectedMeta.put("entity-type", "workItem");

@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -121,5 +122,15 @@ class DatePropertyDisplayerTest
         assertTrue(displayer.display(this.date, Map.of()).isEmpty());
         assertEquals("Failed to parse the formatted date [2024-03-15]. Cause: [ParseException: boom].",
             this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void displayWithANullFormatParameter()
+    {
+        DatePropertyDisplayer displayer = new DatePropertyDisplayer(this.parser, "yyyy-MM-dd");
+        Map<String, Object> params = new HashMap<>();
+        params.put(FORMAT, null);
+
+        assertParagraphWord("2024-03-15", displayer.display(this.date, params));
     }
 }

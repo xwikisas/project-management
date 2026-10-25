@@ -27,6 +27,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -214,5 +215,22 @@ class DefaultProjectsResourceTest
         assertEquals("Failed to retrieve the projects.", response.getEntity());
         assertEquals("Failed to retrieve the projects."
             + " Root cause: [WorkItemRetrievalException: Failure]", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void projectsNotSupportedByTheClient() throws Exception
+    {
+        ProjectManagementClient client =
+            this.componentManager.registerMockComponent(ProjectManagementClient.class, "noprojects");
+        when(client.projects()).thenThrow(new NotImplementedException("Not implemented"));
+        String expectedMessage = "The project management client [noprojects] doesn't support projects.";
+
+        Response response = this.resource.getProject(WIKI, "noprojects", PROJECT_ID);
+        assertEquals(501, response.getStatus());
+        assertEquals(expectedMessage, response.getEntity());
+
+        response = this.resource.getProjects(WIKI, "noprojects", 1, 10, null);
+        assertEquals(501, response.getStatus());
+        assertEquals(expectedMessage, response.getEntity());
     }
 }

@@ -61,6 +61,9 @@ public class ListPropertyDisplayer implements WorkItemPropertyDisplayer
         }
         List<Block> blocks = new ArrayList<>();
         for (Object o : (List<?>) property) {
+            if (o == null) {
+                continue;
+            }
             blocks.add(new GroupBlock(displayerManager.displayProperty(o.getClass().getName(), o, params)));
         }
         return blocks;

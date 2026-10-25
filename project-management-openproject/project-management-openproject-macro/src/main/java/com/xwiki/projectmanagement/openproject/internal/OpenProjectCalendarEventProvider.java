@@ -115,7 +115,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
                 sprints = apiClient.getProjectSprints(1, limit, "", projectId);
             } catch (WorkItemRetrievalException e) {
                 // If the project doesn't have backlogs enabled, it will return a 403 error message.
-                if (e.getStatusCode().equals(403)) {
+                if (Integer.valueOf(403).equals(e.getStatusCode())) {
                     this.logger.debug("Sprints are not available for the project with ID {}.", projectId);
                 } else {
                     throw e;

@@ -57,6 +57,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
 {
     private static final String KEY_CLIENT = "client";
 
+    private static final String SLASH = "/";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
@@ -119,10 +121,20 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         }
     }
 
+    private String getContextPath(XWikiContext wikiContext)
+    {
+        if (wikiContext.getRequest() != null) {
+            return wikiContext.getRequest().getContextPath();
+        }
+        // No request, e.g. when the macro is rendered by a background job: use the configured web application path.
+        String webAppPath = StringUtils.strip(wikiContext.getWiki().getWebAppPath(wikiContext), SLASH);
+        return StringUtils.isEmpty(webAppPath) ? "" : SLASH + webAppPath;
+    }
+
     private URIBuilder getUriBuilder(T parameters)
     {
         XWikiContext wikiContext = this.xcontextProvider.get();
-        String contextPath = wikiContext.getRequest().getContextPath();
+        String contextPath = getContextPath(wikiContext);
         String clientId = parameters.getClient();
         String wikiId = wikiContext.getWikiId();
         // Build the base REST URL.

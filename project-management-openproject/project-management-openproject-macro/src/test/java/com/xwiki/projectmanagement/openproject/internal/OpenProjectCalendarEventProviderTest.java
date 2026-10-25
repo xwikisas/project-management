@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.fullcalendar.model.CalendarEvent;
 import org.xwiki.livedata.LiveDataQuery;
@@ -185,11 +187,14 @@ class OpenProjectCalendarEventProviderTest
         assertTrue(this.provider.getMoreEvents(List.of(PROJECT_FILTER)).isEmpty());
     }
 
-    @Test
-    void propagatesOtherSprintRetrievalErrors() throws Exception
+    @ParameterizedTest
+    @ValueSource(ints = { 400, -2 })
+    void propagatesOtherSprintRetrievalErrors(int statusCode) throws Exception
     {
         requestTypes(true, false);
-        WorkItemRetrievalException error = new WorkItemRetrievalException("Bad request", 400);
+        // A negative value stands for an error without status code.
+        WorkItemRetrievalException error =
+            new WorkItemRetrievalException("Bad request", statusCode < 0 ? null : statusCode);
         when(this.apiClient.getProjectSprints(anyInt(), anyInt(), anyString(),
             anyInt())).thenThrow(error);
 
