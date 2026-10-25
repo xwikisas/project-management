@@ -86,10 +86,10 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         Date dateVal = (Date) property;
         SimpleDateFormat formatter = dateFormatter;
 
-        String paramsFormat = params.getOrDefault("format", "").toString();
-        if (paramsFormat != null && !paramsFormat.isEmpty()) {
+        Object paramsFormat = params.get("format");
+        if (paramsFormat != null && !paramsFormat.toString().isEmpty()) {
             try {
-                formatter = new SimpleDateFormat(paramsFormat);
+                formatter = new SimpleDateFormat(paramsFormat.toString());
             } catch (IllegalArgumentException e) {
                 formatter = dateFormatter;
             }

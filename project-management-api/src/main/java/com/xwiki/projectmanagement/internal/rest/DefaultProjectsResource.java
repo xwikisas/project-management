@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.internal.rest;
 import javax.inject.Named;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
@@ -45,6 +46,8 @@ import com.xwiki.projectmanagement.rest.WorkItemsResource;
 @Named("com.xwiki.projectmanagement.internal.rest.DefaultProjectsResource")
 public class DefaultProjectsResource extends AbstractProjectManagementResource implements ProjectsResource
 {
+    private static final int HTTP_NOT_IMPLEMENTED = 501;
+
     @Override
     public Response getProject(String wiki, String projectManagementHint, String workItemId)
     {
@@ -62,6 +65,8 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
             return Response.status(Response.Status.NOT_FOUND).build();
         } catch (WorkItemRetrievalException e) {
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the project.", e);
+        } catch (NotImplementedException e) {
+            return notImplemented(projectManagementHint);
         }
     }
 
@@ -84,6 +89,15 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (WorkItemRetrievalException e) {
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the projects.", e);
+        } catch (NotImplementedException e) {
+            return notImplemented(projectManagementHint);
         }
+    }
+
+    private Response notImplemented(String projectManagementHint)
+    {
+        return Response.status(HTTP_NOT_IMPLEMENTED).entity(
+            String.format("The project management client [%s] doesn't support projects.", projectManagementHint))
+            .build();
     }
 }

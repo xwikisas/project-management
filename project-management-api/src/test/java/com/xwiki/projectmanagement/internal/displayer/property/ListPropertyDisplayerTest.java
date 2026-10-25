@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.internal.displayer.property;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -72,5 +73,17 @@ class ListPropertyDisplayerTest
         assertEquals(2, blocks.size());
         assertWord("bug", assertInstanceOf(GroupBlock.class, blocks.get(0)).getChildren());
         assertWord("John", assertInstanceOf(GroupBlock.class, blocks.get(1)).getChildren());
+    }
+
+    @Test
+    void displaySkipsTheNullEntries()
+    {
+        when(this.displayerManager.displayProperty(String.class.getName(), "bug", Map.of()))
+            .thenReturn(List.of(new WordBlock("bug")));
+
+        List<Block> blocks = this.displayer.display(Arrays.asList(null, "bug", null), Map.of());
+
+        assertEquals(1, blocks.size());
+        assertWord("bug", assertInstanceOf(GroupBlock.class, blocks.get(0)).getChildren());
     }
 }

@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
@@ -37,6 +38,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -127,9 +129,10 @@ class DefaultProjectManagementManagerTest
     {
         String expectedMessage = "Failed to retrieve the client with hint [unknown].";
 
-        assertEquals(expectedMessage,
-            assertThrows(WorkItemException.class, () -> this.manager.getWorkItem("unknown", WORK_ITEM_ID))
-                .getMessage());
+        WorkItemException exception =
+            assertThrows(WorkItemException.class, () -> this.manager.getWorkItem("unknown", WORK_ITEM_ID));
+        assertEquals(expectedMessage, exception.getMessage());
+        assertInstanceOf(ComponentLookupException.class, exception.getCause());
         assertEquals(expectedMessage, assertThrows(WorkItemException.class,
             () -> this.manager.getWorkItems("unknown", 1, 10, Collections.emptyList(), Collections.emptyList()))
             .getMessage());
