@@ -137,6 +137,22 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     }
 
     /**
+     * @param project the project parameter of the macro
+     * @return the OpenProject id of the project
+     * @throws MacroExecutionException if the project is not an OpenProject project id, e.g. when it is empty or when
+     *     the selected dashboard project couldn't be resolved
+     */
+    protected int getProjectId(String project) throws MacroExecutionException
+    {
+        try {
+            return Integer.parseInt(project);
+        } catch (NumberFormatException e) {
+            throw new MacroExecutionException(
+                String.format("The project [%s] is not a valid OpenProject project id.", project));
+        }
+    }
+
+    /**
      * Executes the macro logic after all guards have passed and the API client is resolved.
      *
      * @param parameters the macro parameters.
