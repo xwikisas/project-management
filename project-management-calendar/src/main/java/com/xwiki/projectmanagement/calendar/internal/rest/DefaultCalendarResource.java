@@ -25,6 +25,7 @@ import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.AbstractProjectManagementResource;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -88,7 +89,24 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
         } catch (LiveDataException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (ProjectManagementException e) {
-            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the calendar events.", e);
+            return errorResponse(getErrorStatus(e), "Failed to retrieve the calendar events.", e);
         }
+    }
+
+    /**
+     * Answer with the authentication or rights failure reported by the project management client, so that the caller
+     * can tell the user what to do, and with an internal server error for any other failure.
+     */
+    private static Response.Status getErrorStatus(ProjectManagementException e)
+    {
+        if (e instanceof WorkItemRetrievalException) {
+            Integer statusCode = ((WorkItemRetrievalException) e).getStatusCode();
+            if (statusCode != null && (statusCode == Response.Status.UNAUTHORIZED.getStatusCode()
+                || statusCode == Response.Status.FORBIDDEN.getStatusCode()))
+            {
+                return Response.Status.fromStatusCode(statusCode);
+            }
+        }
+        return Response.Status.INTERNAL_SERVER_ERROR;
     }
 }

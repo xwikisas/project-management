@@ -29,6 +29,9 @@ import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -248,6 +251,57 @@ class DefaultCalendarResourceTest
         assertEquals("Failed to retrieve the calendar events.", response.getEntity());
         assertEquals("Failed to retrieve the calendar events."
             + " Root cause: [ProjectManagementException: Failed to retrieve the versions.]",
+            this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 401, 403 })
+    void getCalendarEventsWhenWorkItemRetrievalIsNotAuthorized(int statusCode) throws Exception
+    {
+        when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList()))
+            .thenThrow(new WorkItemRetrievalException("The request to the OpenProject API was invalid.", statusCode));
+
+        Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
+
+        // The authentication or rights failure is reported to the caller, without the details of the failure.
+        assertEquals(statusCode, response.getStatus());
+        assertEquals("Failed to retrieve the calendar events.", response.getEntity());
+        assertEquals("Failed to retrieve the calendar events."
+            + " Root cause: [WorkItemRetrievalException: The request to the OpenProject API was invalid.]",
+            this.logCapture.getMessage(0));
+        verifyNoInteractions(this.calendarEventProvider);
+    }
+
+    @Test
+    void getCalendarEventsWhenEventProviderIsNotAuthenticated() throws Exception
+    {
+        when(this.calendarEventProvider.getMoreEvents(anyList()))
+            .thenThrow(new WorkItemRetrievalException("The request to the OpenProject API was invalid.", 401));
+
+        Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, true);
+
+        assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the calendar events.", response.getEntity());
+        assertEquals("Failed to retrieve the calendar events."
+            + " Root cause: [WorkItemRetrievalException: The request to the OpenProject API was invalid.]",
+            this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = { 400, 404, 407 })
+    void getCalendarEventsWhenWorkItemRetrievalFailsWithOtherStatus(Integer statusCode) throws Exception
+    {
+        when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList()))
+            .thenThrow(new WorkItemRetrievalException("The request to the OpenProject API was invalid.", statusCode));
+
+        Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
+
+        // Only the authentication and rights failures are reported as such.
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the calendar events.", response.getEntity());
+        assertEquals("Failed to retrieve the calendar events."
+            + " Root cause: [WorkItemRetrievalException: The request to the OpenProject API was invalid.]",
             this.logCapture.getMessage(0));
     }
 
