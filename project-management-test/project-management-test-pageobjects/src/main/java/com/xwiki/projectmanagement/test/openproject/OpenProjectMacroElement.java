@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
@@ -46,27 +47,57 @@ public class OpenProjectMacroElement extends BaseElement
     private static final int LOAD_TIMEOUT = 30;
 
     /**
-     * Collects what the browser knows about the asynchronous rendering of the page: the placeholders still waiting
-     * for their content, the asynchronous rendering script, and the requests made to get the content (each answered
-     * by 200 with the content, 202 while it is being computed, anything else removing the placeholder).
+     * Collects what the browser knows about the initialization of the Live Data: the Live Data elements (still having
+     * the {@code loading} class until the Live Data is created), the RequireJS modules that the initialization needs
+     * (loaded or still pending, with their error), and the related requests. It then calls the initialization again
+     * and reports its outcome: an error says why it failed, a success says that it was never called. This is an
+     * asynchronous script: the last argument is the callback receiving the result.
      */
-    private static final String ASYNC_RENDERING_STATE_SCRIPT = String.join("\n",
+    private static final String LIVE_DATA_STATE_SCRIPT = String.join("\n",
+        "var callback = arguments[arguments.length - 1];",
         "var resources = performance.getEntriesByType('resource');",
-        "return JSON.stringify({",
-        "  placeholders: Array.from(document.querySelectorAll('.xwiki-async')).map(function(element) {",
-        "    return {id: element.dataset.xwikiAsyncId, clientId: element.dataset.xwikiAsyncClientId,",
-        "      url: element.dataset.xwikiAsyncUrl, visible: element.offsetParent !== null,",
+        "var state = {",
+        "  readyState: document.readyState,",
+        "  now: Math.round(performance.now()),",
+        "  resourceCount: resources.length,",
+        "  liveData: Array.from(document.querySelectorAll('.liveData')).map(function(element) {",
+        "    return {id: element.id, className: element.className,",
+        "      configLength: (element.getAttribute('data-config') || '').length,",
         "      html: element.outerHTML.substring(0, 300)};",
         "  }),",
-        "  asyncScripts: resources.map(function(entry) { return entry.name; })",
-        "    .filter(function(name) { return name.indexOf('async.js') >= 0; }),",
-        "  asyncRequests: resources.filter(function(entry) { return entry.name.indexOf('/asyncrenderer/') >= 0; })",
-        "    .slice(-20).map(function(entry) {",
-        "      return {url: entry.name, status: entry.responseStatus, start: Math.round(entry.startTime),",
-        "        duration: Math.round(entry.duration)};",
-        "    }),",
-        "  now: Math.round(performance.now())",
-        "}, null, 2);");
+        "  requests: resources.filter(function(entry) {",
+        "    return /liveData|livedata|vue|\\/rest\\/|asyncrenderer/.test(entry.name);",
+        "  }).slice(-30).map(function(entry) {",
+        "    return {url: entry.name.substring(0, 200), status: entry.responseStatus,",
+        "      start: Math.round(entry.startTime), duration: Math.round(entry.duration)};",
+        "  })",
+        "};",
+        "if (!window.require || !require.s) {",
+        "  state.requireJS = 'missing';",
+        "  callback(JSON.stringify(state, null, 2));",
+        "  return;",
+        "}",
+        "var context = require.s.contexts._;",
+        "state.defined = ['jquery', 'xwiki-livedata', 'xwiki-livedata-vue', 'vue', 'vue-i18n'].filter(function(name) {",
+        "  return context.defined.hasOwnProperty(name);",
+        "});",
+        "state.pending = Object.keys(context.registry).map(function(name) {",
+        "  var module = context.registry[name];",
+        "  return {name: name, error: module.error ? String(module.error) : null};",
+        "});",
+        "require(['jquery'], function($) {",
+        "  state.liveDataPlugin = typeof $.fn.liveData;",
+        "  state.liveDataCreated = $('.liveData').map(function() { return !!$(this).data('liveData'); }).get();",
+        "  try {",
+        "    if (state.liveDataPlugin === 'function') {",
+        "      $('.liveData').liveData();",
+        "      state.initAgain = 'success';",
+        "    }",
+        "  } catch (e) {",
+        "    state.initAgain = String((e && e.stack) || e);",
+        "  }",
+        "  callback(JSON.stringify(state, null, 2));",
+        "});");
 
     private final WebElement self;
 
@@ -138,15 +169,23 @@ public class OpenProjectMacroElement extends BaseElement
             table.waitUntilReady();
             return table;
         } catch (TimeoutException e) {
-            // The asynchronous rendering of the macro sometimes never finishes on CI, with nothing logged: show what
-            // the browser and XWiki are doing at that point.
+            // The Live Data of the macro sometimes never leaves its loading state on CI, with nothing logged: show
+            // what the browser and XWiki are doing at that point.
             String reason = "The OpenProject macro did not display its Live Data in time.";
-            LOGGER.error("{} Asynchronous rendering state in the browser:\n{}", reason,
-                getDriver().executeScript(ASYNC_RENDERING_STATE_SCRIPT));
+            LOGGER.error("{} Live Data state in the browser:\n{}", reason, getLiveDataState());
             XWikiThreadDump.log(reason);
             throw e;
         } finally {
             getDriver().setTimeout(timeout);
+        }
+    }
+
+    private Object getLiveDataState()
+    {
+        try {
+            return getDriver().executeAsyncScript(LIVE_DATA_STATE_SCRIPT);
+        } catch (WebDriverException e) {
+            return "Failed to collect it: " + e.getMessage();
         }
     }
 
