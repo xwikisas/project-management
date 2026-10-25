@@ -31,6 +31,7 @@
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
+    <xwiki.jacoco.instructionRatio>0.98</xwiki.jacoco.instructionRatio>
   </properties>
   <artifactId>project-management-openproject-macro</artifactId>
   <name>Project Management - Open Project - Macro</name>
@@ -78,6 +79,13 @@
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-skin-skinx</artifactId>
       <version>${platform.version}</version>
+    </dependency>
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-tool-test-component</artifactId>
+      <version>${commons.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
