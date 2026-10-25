@@ -23,7 +23,6 @@ package com.xwiki.projectmanagement.internal.rest;
 import javax.inject.Named;
 import javax.ws.rs.core.Response;
 
-import org.apache.tika.utils.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
@@ -62,8 +61,7 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
         } catch (WorkItemNotFoundException e) {
             return Response.status(Response.Status.NOT_FOUND).build();
         } catch (WorkItemRetrievalException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                .build();
+            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the project.", e);
         }
     }
 
@@ -85,8 +83,7 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
         } catch (LiveDataException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (WorkItemRetrievalException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                .build();
+            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the projects.", e);
         }
     }
 }

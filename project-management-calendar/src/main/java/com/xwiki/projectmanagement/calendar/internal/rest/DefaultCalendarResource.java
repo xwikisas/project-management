@@ -28,7 +28,6 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.rest.AbstractProjectManagementResource;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.fullcalendar.model.CalendarEvent;
@@ -83,12 +82,13 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
             calendarEvents.addAll(calendarEventProvider.getMoreEvents(queryFilters));
             return Response.ok(calendarEvents).build();
         } catch (ComponentLookupException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(ExceptionUtils.getStackTrace(e)).build();
+            return errorResponse(Response.Status.BAD_REQUEST,
+                String.format("No project management client or calendar event provider with id [%s].",
+                    projectManagementHint), e);
         } catch (LiveDataException e) {
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (ProjectManagementException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                .build();
+            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the calendar events.", e);
         }
     }
 }

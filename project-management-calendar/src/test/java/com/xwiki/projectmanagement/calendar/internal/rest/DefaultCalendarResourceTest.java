@@ -28,6 +28,7 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
@@ -38,6 +39,8 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -80,6 +83,9 @@ class DefaultCalendarResourceTest
 
     @InjectMockComponents
     private DefaultCalendarResource resource;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @MockComponent
     private ComponentManager componentManager;
@@ -180,6 +186,10 @@ class DefaultCalendarResourceTest
         Response response = this.resource.getCalendarEvents(WIKI, "unknown", FILTERS, START, END, 0, false);
 
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+        assertEquals("No project management client or calendar event provider with id [unknown].",
+            response.getEntity());
+        assertEquals("No project management client or calendar event provider with id [unknown]."
+            + " Root cause: [ComponentLookupException: No client]", this.logCapture.getMessage(0));
         verifyNoInteractions(this.client, this.calendarEventProvider);
     }
 
@@ -192,6 +202,9 @@ class DefaultCalendarResourceTest
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
 
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+        assertEquals("No project management client or calendar event provider with id [test].", response.getEntity());
+        assertEquals("No project management client or calendar event provider with id [test]."
+            + " Root cause: [ComponentLookupException: No provider]", this.logCapture.getMessage(0));
         verifyNoInteractions(this.client);
     }
 
@@ -216,6 +229,10 @@ class DefaultCalendarResourceTest
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the calendar events.", response.getEntity());
+        assertEquals("Failed to retrieve the calendar events."
+            + " Root cause: [WorkItemRetrievalException: Failed to retrieve the work items.]",
+            this.logCapture.getMessage(0));
         verifyNoInteractions(this.calendarEventProvider);
     }
 
@@ -228,6 +245,10 @@ class DefaultCalendarResourceTest
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, true);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the calendar events.", response.getEntity());
+        assertEquals("Failed to retrieve the calendar events."
+            + " Root cause: [ProjectManagementException: Failed to retrieve the versions.]",
+            this.logCapture.getMessage(0));
     }
 
     private static List<String> serialize(List<LiveDataQuery.Filter> filters)
