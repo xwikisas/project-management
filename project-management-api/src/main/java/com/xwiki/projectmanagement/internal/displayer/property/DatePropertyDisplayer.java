@@ -43,7 +43,10 @@ import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
  */
 public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
 {
-    private static final String DEFAULT_DATE_FORMAT = "dd/MM/yyyy hh:mm:ss";
+    /**
+     * The format used when none is configured.
+     */
+    public static final String DEFAULT_DATE_FORMAT = "dd/MM/yyyy HH:mm:ss";
 
     private final Logger logger = LoggerFactory.getLogger(DatePropertyDisplayer.class);
 
