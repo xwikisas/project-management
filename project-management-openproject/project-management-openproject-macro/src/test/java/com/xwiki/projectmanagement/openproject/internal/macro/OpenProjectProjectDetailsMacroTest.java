@@ -26,10 +26,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -41,7 +43,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 /**
@@ -52,8 +53,13 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
 {
+    private static final String LABELS_PREFIX = "openproject.openproject-project-details.labels.";
+
     @InjectMockComponents
     private OpenProjectProjectDetailsMacro macro;
+
+    @MockComponent
+    private ContextualLocalizationManager l10n;
 
     private final OpenProjectProjectDetailsMacroParameters parameters = new OpenProjectProjectDetailsMacroParameters();
 
@@ -62,6 +68,12 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
     {
         this.parameters.setInstance("main");
         this.parameters.setProject("7");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "id")).thenReturn("ID");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "name")).thenReturn("Name");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "identifier")).thenReturn("Identifier");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "description")).thenReturn("Description");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "status")).thenReturn("Status");
+        when(this.l10n.getTranslationPlain(LABELS_PREFIX + "created")).thenReturn("Created");
     }
 
     @Test
@@ -82,8 +94,7 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
         String[] lines = text(result).split("\n");
         assertEquals(6, lines.length);
         assertEquals("ID: 7", lines[0]);
-        // The label of the name is not asserted because it's not capitalized like the other labels ("name").
-        assertTrue(lines[1].endsWith(": Alpha"));
+        assertEquals("Name: Alpha", lines[1]);
         assertEquals("Identifier: alpha", lines[2]);
         assertEquals("Description: The first project", lines[3]);
         assertEquals("Status: On track", lines[4]);
