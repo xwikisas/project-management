@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.macro.BaseDirectOpenProjectMacroParameters;
+import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -239,6 +240,18 @@ class OpenProjectMacroDisplayListenersTest
 
         assertEquals("dashboard", macroParameters.getInstance());
         verify(this.dashboardConfig, never()).getStringValue("selectedProject");
+    }
+
+    @Test
+    void resolvesTheInstanceOfTheCalendarMacro()
+    {
+        OpenProjectCalendarMacroParameters calendarParameters = new OpenProjectCalendarMacroParameters();
+        calendarParameters.setInstance(USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
+        selectedConnection("dashboard");
+
+        fireEvent(calendarParameters);
+
+        assertEquals("dashboard", calendarParameters.getInstance());
     }
 
     @Test

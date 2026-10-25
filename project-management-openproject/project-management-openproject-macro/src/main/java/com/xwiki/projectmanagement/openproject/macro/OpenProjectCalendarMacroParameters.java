@@ -34,6 +34,7 @@ import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
 
 /**
@@ -42,7 +43,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
  * @version $Id$
  * @since 1.2.0
  */
-public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
+public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters implements OpenProjectInstanceHolder
 {
     private String instance;
 
@@ -63,6 +64,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
     /**
      * @return the OpenProject instance that should be used to retrieve work packages.
      */
+    @Override
     public String getInstance()
     {
         return this.instance;
@@ -71,6 +73,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters
     /**
      * @param instance see {@link #getInstance()}.
      */
+    @Override
     @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
