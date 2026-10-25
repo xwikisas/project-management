@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.model;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -88,6 +91,44 @@ class ModelJsonTest
         assertEquals("open", workItem.getStatus());
         assertEquals(50, workItem.getProgress());
         assertEquals(3, workItem.get("customField"));
+    }
+
+    @Test
+    void workItemTypedGettersAfterDeserialization() throws Exception
+    {
+        WorkItem workItem = new WorkItem();
+        workItem.setIdentifier(new Linkable("42", URL));
+        workItem.setAssignees(List.of(new Linkable("John", URL), new Linkable("Jane", URL)));
+        workItem.setStartDate(new Date(1719110400000L));
+        workItem.setProgress(50);
+        workItem.setResolved(true);
+
+        WorkItem deserialized =
+            this.objectMapper.readValue(this.objectMapper.writeValueAsString(workItem), WorkItem.class);
+
+        assertEquals(new Linkable("42", URL), deserialized.getIdentifier());
+        assertEquals(List.of(new Linkable("John", URL), new Linkable("Jane", URL)), deserialized.getAssignees());
+        assertEquals(new Date(1719110400000L), deserialized.getStartDate());
+        assertEquals(50, deserialized.getProgress());
+        assertTrue(deserialized.isResolved());
+        assertNull(deserialized.getSummary());
+        assertNull(deserialized.getDueDate());
+        assertNull(deserialized.getCreator());
+    }
+
+    @Test
+    void workItemNotResolvedByDefault()
+    {
+        assertFalse(new WorkItem().isResolved());
+    }
+
+    @Test
+    void projectIdentifierAfterDeserialization() throws Exception
+    {
+        Project project = this.objectMapper.readValue(
+            "{\"identifier\":{\"value\":\"xwiki\",\"location\":\"" + URL + "\"}}", Project.class);
+
+        assertEquals(new Linkable("xwiki", URL), project.getIdentifier());
     }
 
     @Test

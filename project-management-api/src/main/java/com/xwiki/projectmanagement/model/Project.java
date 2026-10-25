@@ -58,7 +58,7 @@ public class Project extends HashMap<String, Object>
     @JsonProperty(KEY_IDENTIFIER)
     public Linkable getIdentifier()
     {
-        return (Linkable) get(KEY_IDENTIFIER);
+        return ModelValues.toLinkable(get(KEY_IDENTIFIER));
     }
 
     /**

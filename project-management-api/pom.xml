@@ -31,7 +31,7 @@
   <description>Provides the models, exceptions and interfaces that will need to be implemented to handle Work Items.
   </description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.74</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.79</xwiki.jacoco.instructionRatio>
     <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
 
