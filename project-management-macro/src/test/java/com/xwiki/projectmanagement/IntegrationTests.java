@@ -29,6 +29,8 @@ import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.annotation.AllComponents;
 import org.xwiki.test.mockito.MockitoComponentManager;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -54,7 +56,7 @@ public class IntegrationTests
         when(clientExecutionContext.get("translationPrefix")).thenReturn("projectmanagement.");
 
         ConfigurationSource wikiCfg = componentManager.registerMockComponent(ConfigurationSource.class, "wiki");
-        when(wikiCfg.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss")).thenReturn("dd/MM/yyyy");
+        when(wikiCfg.getProperty(eq("dateformat"), anyString())).thenReturn("dd/MM/yyyy");
 
         componentManager.registerMockComponent(SkinExtension.class, "ssrx");
     }
