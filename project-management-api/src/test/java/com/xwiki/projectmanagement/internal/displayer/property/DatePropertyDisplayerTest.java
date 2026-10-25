@@ -56,8 +56,8 @@ class DatePropertyDisplayerTest
 
     private final Parser parser = mock(Parser.class);
 
-    // A morning time, so that the result doesn't depend on whether the hours are formatted on 12 or 24 hours.
-    private final Date date = new GregorianCalendar(2024, Calendar.MARCH, 15, 9, 5, 7).getTime();
+    // An afternoon time, to check that the hours are formatted on 24 hours by default.
+    private final Date date = new GregorianCalendar(2024, Calendar.MARCH, 15, 15, 5, 7).getTime();
 
     @BeforeEach
     void setUp() throws Exception
@@ -74,7 +74,7 @@ class DatePropertyDisplayerTest
     @Test
     void displayWithTheDefaultFormat()
     {
-        assertParagraphWord("15/03/2024 09:05:07", new DatePropertyDisplayer(this.parser).display(this.date, Map.of()));
+        assertParagraphWord("15/03/2024 15:05:07", new DatePropertyDisplayer(this.parser).display(this.date, Map.of()));
     }
 
     @Test
@@ -92,7 +92,7 @@ class DatePropertyDisplayerTest
     {
         DatePropertyDisplayer displayer = new DatePropertyDisplayer(this.parser, "invalid");
 
-        assertParagraphWord("15/03/2024 09:05:07", displayer.display(this.date, Map.of()));
+        assertParagraphWord("15/03/2024 15:05:07", displayer.display(this.date, Map.of()));
     }
 
     @Test

@@ -142,8 +142,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals("MILESTONE", singleDisplayer.getPropertyValue("Type:"));
         assertEquals("OpenProject Admin", singleDisplayer.getPropertyValue("Author:"));
 
-        // The date is displayed with the default date format of the wiki, e.g. 14/08/2025 12:00:00.
-        SimpleDateFormat expectedDateFormat = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
+        // The date is displayed with the default date format of the wiki, e.g. 14/08/2025 15:00:00.
+        SimpleDateFormat expectedDateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         expectedDateFormat.setLenient(false);
         String updatedAt = singleDisplayer.getPropertyValue("Updated At:");
         assertDoesNotThrow(() -> expectedDateFormat.parse(updatedAt), updatedAt);

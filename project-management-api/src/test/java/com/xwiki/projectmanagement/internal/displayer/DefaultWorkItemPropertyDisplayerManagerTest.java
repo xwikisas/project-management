@@ -80,7 +80,7 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     @BeforeComponent
     void beforeComponent()
     {
-        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy hh:mm:ss")).thenReturn("yyyy-MM-dd");
+        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy HH:mm:ss")).thenReturn("yyyy-MM-dd");
     }
 
     @BeforeEach
