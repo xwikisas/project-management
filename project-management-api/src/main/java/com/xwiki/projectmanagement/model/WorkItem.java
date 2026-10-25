@@ -171,7 +171,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_IDENTIFIER)
     public Linkable getIdentifier()
     {
-        return (Linkable) get(KEY_IDENTIFIER);
+        return ModelValues.toLinkable(get(KEY_IDENTIFIER));
     }
 
     /**
@@ -190,7 +190,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_SUMMARY)
     public Linkable getSummary()
     {
-        return (Linkable) get(KEY_SUMMARY);
+        return ModelValues.toLinkable(get(KEY_SUMMARY));
     }
 
     /**
@@ -226,7 +226,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_START_DATE)
     public Date getStartDate()
     {
-        return (Date) get(KEY_START_DATE);
+        return ModelValues.toDate(get(KEY_START_DATE));
     }
 
     /**
@@ -244,7 +244,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_DUE_DATE)
     public Date getDueDate()
     {
-        return (Date) get(KEY_DUE_DATE);
+        return ModelValues.toDate(get(KEY_DUE_DATE));
     }
 
     /**
@@ -262,7 +262,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_PROGRESS)
     public Integer getProgress()
     {
-        return (Integer) get(KEY_PROGRESS);
+        return ModelValues.toInteger(get(KEY_PROGRESS));
     }
 
     /**
@@ -280,7 +280,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_CREATION_DATE)
     public Date getCreationDate()
     {
-        return (Date) get(KEY_CREATION_DATE);
+        return ModelValues.toDate(get(KEY_CREATION_DATE));
     }
 
     /**
@@ -298,7 +298,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_UPDATE_DATE)
     public Date getUpdateDate()
     {
-        return (Date) get(KEY_UPDATE_DATE);
+        return ModelValues.toDate(get(KEY_UPDATE_DATE));
     }
 
     /**
@@ -317,7 +317,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_CREATOR)
     public Linkable getCreator()
     {
-        return (Linkable) get(KEY_CREATOR);
+        return ModelValues.toLinkable(get(KEY_CREATOR));
     }
 
     /**
@@ -336,7 +336,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_ASSIGNEES)
     public List<Linkable> getAssignees()
     {
-        return (List<Linkable>) get(KEY_ASSIGNEES);
+        return ModelValues.toLinkables(get(KEY_ASSIGNEES));
     }
 
     /**
@@ -373,7 +373,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_PROJECT)
     public Linkable getProject()
     {
-        return (Linkable) get(KEY_PROJECT);
+        return ModelValues.toLinkable(get(KEY_PROJECT));
     }
 
     /**
@@ -410,7 +410,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_REPORTER)
     public Linkable getReporter()
     {
-        return (Linkable) get(KEY_REPORTER);
+        return ModelValues.toLinkable(get(KEY_REPORTER));
     }
 
     /**
@@ -447,7 +447,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_RESOLVED)
     public boolean isResolved()
     {
-        return (boolean) get(KEY_RESOLVED);
+        return Boolean.TRUE.equals(get(KEY_RESOLVED));
     }
 
     /**
@@ -483,7 +483,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_CLOSE_DATE)
     public Date getCloseDate()
     {
-        return (Date) get(KEY_CLOSE_DATE);
+        return ModelValues.toDate(get(KEY_CLOSE_DATE));
     }
 
     /**
@@ -502,7 +502,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_MILESTONES)
     public Linkable getMilestones()
     {
-        return (Linkable) get(KEY_MILESTONES);
+        return ModelValues.toLinkable(get(KEY_MILESTONES));
     }
 
     /**
@@ -521,7 +521,7 @@ public class WorkItem extends HashMap<String, Object>
     @JsonProperty(KEY_CLOSED_BY)
     public Linkable getClosedBy()
     {
-        return (Linkable) get(KEY_CLOSED_BY);
+        return ModelValues.toLinkable(get(KEY_CLOSED_BY));
     }
 
     /**
