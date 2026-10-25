@@ -30,6 +30,7 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.configuration.ConfigurationSource;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -61,21 +62,26 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 public class OpenProjectProjectDetailsMacro
     extends AbstractOpenProjectDirectMacro<OpenProjectProjectDetailsMacroParameters>
 {
+    private static final String TRANSLATION_PREFIX = "openproject.openproject-project-details.labels.";
+
     private static final String NAME = "name";
 
-    private static final String ID = "ID";
+    private static final String ID = "id";
 
-    private static final String IDENTIFIER = "Identifier";
+    private static final String IDENTIFIER = "identifier";
 
-    private static final String DESCRIPTION = "Description";
+    private static final String DESCRIPTION = "description";
 
-    private static final String STATUS = "Status";
+    private static final String STATUS = "status";
 
-    private static final String CREATED = "Created";
+    private static final String CREATED = "created";
 
     @Inject
     @Named("wiki")
     private ConfigurationSource wikiConfigSource;
+
+    @Inject
+    private ContextualLocalizationManager l10n;
 
     /**
      * Default constructor.
@@ -148,7 +154,8 @@ public class OpenProjectProjectDetailsMacro
     private Block buildLabelValueBlock(String label, List<Block> valueBlocks)
     {
         List<Block> content = new ArrayList<>();
-        content.add(new FormatBlock(List.of(new WordBlock(label + ": ")), Format.BOLD));
+        String translatedLabel = this.l10n.getTranslationPlain(TRANSLATION_PREFIX + label);
+        content.add(new FormatBlock(List.of(new WordBlock(translatedLabel + ": ")), Format.BOLD));
         content.addAll(valueBlocks);
         return new ParagraphBlock(content);
     }
