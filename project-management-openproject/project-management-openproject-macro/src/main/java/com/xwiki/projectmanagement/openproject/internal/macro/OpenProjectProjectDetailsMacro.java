@@ -92,7 +92,7 @@ public class OpenProjectProjectDetailsMacro
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        Project project = fetchProject(apiClient, Integer.valueOf(parameters.getProject()));
+        Project project = fetchProject(apiClient, getProjectId(parameters.getProject()));
         return Collections.singletonList(
             new GroupBlock(buildProjectDetailsBlocks(project), Collections.emptyMap()));
     }

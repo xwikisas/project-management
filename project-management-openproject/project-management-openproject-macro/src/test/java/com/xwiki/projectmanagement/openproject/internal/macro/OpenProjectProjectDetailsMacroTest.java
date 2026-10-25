@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -115,5 +117,18 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
 
         assertEquals("Failed to retrieve project [7] from OpenProject.", exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "use_selected_dashboard_project" })
+    void failsWhenTheProjectIsNotAnId(String project)
+    {
+        this.parameters.setProject(project);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals(String.format("The project [%s] is not a valid OpenProject project id.", project),
+            exception.getMessage());
     }
 }
