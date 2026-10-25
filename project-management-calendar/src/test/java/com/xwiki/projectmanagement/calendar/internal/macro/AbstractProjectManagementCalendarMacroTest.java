@@ -43,6 +43,7 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.web.XWikiRequest;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
@@ -235,6 +236,22 @@ class AbstractProjectManagementCalendarMacroTest
 
         // The preset filters replace the filters parameter in the REST URL.
         assertEquals(List.of("filters=" + presetFilters, "limit=25", EXTRA_PARAMETER), getQueryParameters(url));
+    }
+
+    @Test
+    void executeWithoutRequest() throws Exception
+    {
+        when(this.xcontext.getRequest()).thenReturn(null);
+        XWiki wiki = mock(XWiki.class);
+        when(this.xcontext.getWiki()).thenReturn(wiki);
+        when(wiki.getWebAppPath(this.xcontext)).thenReturn("xwiki/");
+
+        assertEquals(REST_PATH, new URIBuilder(execute().getParameter(JSON)).getPath());
+
+        // Web application deployed as ROOT.
+        when(wiki.getWebAppPath(this.xcontext)).thenReturn("");
+
+        assertEquals(REST_PATH.substring("/xwiki".length()), new URIBuilder(execute().getParameter(JSON)).getPath());
     }
 
     @Test
