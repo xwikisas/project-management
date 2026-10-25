@@ -68,9 +68,9 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
                 this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
             int pageSize = limit != 0 ? limit : 25;
             List<LiveDataQuery.Filter> queryFilters = new ArrayList<>(getFilters(filters));
-            // Filter work items whose date range overlaps with the requested calendar window.
-            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_START_DATE, "before", end));
-            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DUE_DATE, "after", start));
+            // Filter work items whose date range overlaps with the requested calendar window, including the ones
+            // having only a start date or only a due date.
+            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DATE_RANGE, "between", start + '/' + end));
             List<CalendarEvent> calendarEvents = new ArrayList<>();
             // Fetch standard work item events unless the caller explicitly requests only provider events.
             if (!excludeWorkItems) {

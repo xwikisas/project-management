@@ -104,8 +104,21 @@ class CalendarEventConverterTest
         WorkItem workItem = createWorkItem("1", null);
         workItem.setDueDate(DUE);
 
-        // A work item without a start date cannot be placed in the calendar.
-        assertNull(this.converter.convert(workItem));
+        CalendarEvent event = this.converter.convert(workItem);
+
+        // The work item is displayed as an all-day event on its due date.
+        assertEquals(DUE, event.getStart());
+        assertEquals(Date.from(Instant.parse("2026-03-13T17:30:00Z")), event.getEnd());
+        assertTrue(event.isAllDay());
+        assertEquals("1", event.getId());
+        assertEquals("workItem", event.getMeta().get("entity-type"));
+    }
+
+    @Test
+    void convertWithoutStartDateAndDueDate()
+    {
+        // A work item without any date cannot be placed in the calendar.
+        assertNull(this.converter.convert(createWorkItem("1", null)));
     }
 
     @Test
@@ -140,14 +153,18 @@ class CalendarEventConverterTest
     }
 
     @Test
-    void convertAllSkipsWorkItemsWithoutStartDate()
+    void convertAllSkipsWorkItemsWithoutDates()
     {
-        List<CalendarEvent> events = this.converter.convertAll(
-            List.of(createWorkItem("1", START), createWorkItem("2", null), createWorkItem("3", DUE)));
+        WorkItem dueDateOnly = createWorkItem("4", null);
+        dueDateOnly.setDueDate(DUE);
 
-        assertEquals(2, events.size());
+        List<CalendarEvent> events = this.converter.convertAll(
+            List.of(createWorkItem("1", START), createWorkItem("2", null), createWorkItem("3", DUE), dueDateOnly));
+
+        assertEquals(3, events.size());
         assertEquals("1", events.get(0).getId());
         assertEquals("3", events.get(1).getId());
+        assertEquals("4", events.get(2).getId());
     }
 
     @Test

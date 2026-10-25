@@ -259,6 +259,23 @@ public class OpenProjectFilterHandlerTest
         assertEqualsStringFilters(expected, OpenProjectFilterHandler.mergeApiFilters(filters, mapper.readTree("[]")));
     }
 
+    @Test
+    void convertDateRangeFilterTest() throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"),
+            new LiveDataQuery.Filter("dateRange", "between", "2026-10-01T00:00:00Z/2026-11-01T00:00:00Z"));
+
+        // The date range is mapped to the OpenProject datesInterval filter, which also matches the work packages
+        // having only a start date or only a due date inside the interval.
+        String expected = "["
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}},"
+            + "{\"datesInterval\":{\"operator\":\"<>d\","
+            + "\"values\":[\"2026-10-01T00:00:00Z\",\"2026-11-01T00:00:00Z\"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
     private void assertEqualsStringFilters(String firstFilter, String secondFilter) throws JsonProcessingException
     {
         JsonNode firstFilterJson = mapper.readTree(firstFilter);

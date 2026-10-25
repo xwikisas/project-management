@@ -22,6 +22,8 @@ package com.xwiki.projectmanagement.openproject.internal.processing;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.xwiki.projectmanagement.model.WorkItem;
+
 /**
  * Class for converting keys and operators.
  *
@@ -53,6 +55,8 @@ public final class OpenProjectMapper
         KEY_MAPPING.put("updateDate", "updatedAt");
         KEY_MAPPING.put("reporter", AUTHOR_STRING);
         KEY_MAPPING.put("progress", "percentageDone");
+        // The OpenProject filter matching the work packages whose date range overlaps an interval.
+        KEY_MAPPING.put(WorkItem.KEY_DATE_RANGE, "datesInterval");
         OPERATOR_MAPPING.put("equals", "=");
         OPERATOR_MAPPING.put("contains", "~");
         OPERATOR_MAPPING.put("between", OP_BETWEEN);

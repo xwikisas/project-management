@@ -72,6 +72,17 @@ public class WorkItem extends HashMap<String, Object>
     public static final String KEY_DUE_DATE = "dueDate";
 
     /**
+     * The key identifying the date range of the work item, from its start date to its due date. It is not stored in
+     * the work item: it is used to filter the work items whose date range overlaps an interval, with the
+     * {@code between} operator and the two bounds of the interval separated by a slash (e.g.
+     * {@code 2026-10-01/2026-11-01}). A work item having only one of the two dates matches when that date is inside
+     * the interval.
+     *
+     * @since 1.3.1
+     */
+    public static final String KEY_DATE_RANGE = "dateRange";
+
+    /**
      * The key identifying the progress property of the work item.
      */
     public static final String KEY_PROGRESS = "progress";
