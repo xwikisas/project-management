@@ -26,6 +26,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 
 import org.mockito.MockedStatic;
@@ -329,10 +331,35 @@ class OpenProjectClientTest
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = { 401, 403 })
+    void getWorkItemsWhenOpenProjectRejectsTheUser(int statusCode) throws ProjectManagementException
+    {
+        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
+            .thenThrow(new WorkItemRetrievalException("Rejected", statusCode));
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+
+        assertEquals(statusCode, exception.getStatusCode());
+    }
+
     @Test
-    public void handleNullOpenProjectApiClientTest() throws WorkItemRetrievalException
+    void getWorkItemsWhenTheUserIsNotConnected()
     {
         when(openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConnected());
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+
+        assertEquals("The current user isn't connected to the OpenProject instance [].", exception.getMessage());
+        assertEquals(401, exception.getStatusCode());
+    }
+
+    @Test
+    void getWorkItemsWhenTheConnectionIsNotConfigured() throws WorkItemRetrievalException
+    {
+        when(openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConfigured());
 
         assertEquals(0, openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
         assertEquals("Failed to retrieve work packages: No configuration for instance [] was found.",

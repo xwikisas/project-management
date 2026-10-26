@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -56,6 +57,8 @@ import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
@@ -152,10 +155,21 @@ public class OpenProjectClient implements ProjectManagementClient
             return OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
                 OpenProjectConverters::convertWorkPackageToWorkItem);
         } catch (WorkItemRetrievalException e) {
+            // Report authentication and rights failures, so that the caller can tell the user what to do.
+            if (isAuthenticationOrRightsFailure(e)) {
+                throw e;
+            }
             return handleWorkPackageRetrievalException(e);
         } catch (ProjectManagementException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
+    }
+
+    private static boolean isAuthenticationOrRightsFailure(WorkItemRetrievalException e)
+    {
+        Integer statusCode = e.getStatusCode();
+        return statusCode != null
+            && (statusCode == HttpURLConnection.HTTP_UNAUTHORIZED || statusCode == HttpURLConnection.HTTP_FORBIDDEN);
     }
 
     @Override
@@ -217,9 +231,14 @@ public class OpenProjectClient implements ProjectManagementClient
     private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
     {
         String connectionName = (String) executionContext.get("instance");
-        OpenProjectApiClient openProjectApiClient = openProjectAccess.resolve(connectionName).getClient();
+        OpenProjectAccessResult access = openProjectAccess.resolve(connectionName);
+        OpenProjectApiClient openProjectApiClient = access.getClient();
 
-        if (openProjectApiClient == null) {
+        if (access.getStatus() == OpenProjectAccessStatus.NOT_CONNECTED) {
+            throw new WorkItemRetrievalException(String.format(
+                "The current user isn't connected to the OpenProject instance [%s].", connectionName),
+                HttpURLConnection.HTTP_UNAUTHORIZED);
+        } else if (openProjectApiClient == null) {
             throw new WorkItemRetrievalException(
                 String.format("No configuration for instance [%s] was found.", connectionName), 407);
         }

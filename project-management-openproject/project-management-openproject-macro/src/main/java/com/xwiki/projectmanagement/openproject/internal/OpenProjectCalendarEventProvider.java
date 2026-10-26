@@ -45,6 +45,8 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Version;
 
@@ -151,10 +153,14 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
     {
         String connectionName = (String) this.executionContext.get("instance");
-        OpenProjectApiClient openProjectApiClient =
-            this.openProjectAccess.resolve(connectionName).getClient();
+        OpenProjectAccessResult access = this.openProjectAccess.resolve(connectionName);
+        OpenProjectApiClient openProjectApiClient = access.getClient();
 
-        if (openProjectApiClient == null) {
+        if (access.getStatus() == OpenProjectAccessStatus.NOT_CONNECTED) {
+            throw new WorkItemRetrievalException(String.format(
+                "The current user isn't connected to the OpenProject instance [%s].", connectionName),
+                HttpURLConnection.HTTP_UNAUTHORIZED);
+        } else if (openProjectApiClient == null) {
             throw new WorkItemRetrievalException(
                 String.format("No configuration for instance [%s] was found.", connectionName));
         }
