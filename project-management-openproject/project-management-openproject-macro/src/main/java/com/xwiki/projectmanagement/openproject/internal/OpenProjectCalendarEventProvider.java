@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.HttpURLConnection;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -31,6 +32,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.fullcalendar.model.CalendarEvent;
@@ -65,6 +67,8 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     private static final String SPRINT = "sprint";
 
     private static final String VERSION = "version";
+
+    private static final int DEFAULT_LIMIT = 25;
 
     @Inject
     private OpenProjectAccess openProjectAccess;
@@ -109,7 +113,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
         throws ProjectManagementException
     {
         PaginatedResult<Sprint> sprints = new PaginatedResult<>();
-        int limit = Integer.parseInt((String) this.executionContext.get("limit"));
+        int limit = NumberUtils.toInt((String) this.executionContext.get("limit"), DEFAULT_LIMIT);
         if (projectId != -1) {
             try {
                 sprints = apiClient.getProjectSprints(1, limit, "", projectId);
@@ -127,12 +131,18 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
         return convertSprintsToCalendarEvents(sprints);
     }
 
-    private int getProjectVersion(List<LiveDataQuery.Filter> filters)
+    private int getProjectVersion(List<LiveDataQuery.Filter> filters) throws WorkItemRetrievalException
     {
         for (LiveDataQuery.Filter filter : filters) {
             if (filter.getProperty().equals("project")) {
                 LiveDataQuery.Constraint constraint = filter.getConstraints().get(0);
-                return Integer.parseInt((String) constraint.getValue());
+                try {
+                    return Integer.parseInt(String.valueOf(constraint.getValue()));
+                } catch (NumberFormatException e) {
+                    throw new WorkItemRetrievalException(String.format(
+                        "The project [%s] is not a valid OpenProject project id.", constraint.getValue()),
+                        HttpURLConnection.HTTP_BAD_REQUEST);
+                }
             }
         }
         return -1;

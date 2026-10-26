@@ -255,15 +255,15 @@ class DefaultCalendarResourceTest
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 401, 403 })
-    void getCalendarEventsWhenWorkItemRetrievalIsNotAuthorized(int statusCode) throws Exception
+    @ValueSource(ints = { 400, 401, 403 })
+    void getCalendarEventsWhenWorkItemRetrievalIsRejected(int statusCode) throws Exception
     {
         when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList()))
             .thenThrow(new WorkItemRetrievalException("The request to the OpenProject API was invalid.", statusCode));
 
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
 
-        // The authentication or rights failure is reported to the caller, without the details of the failure.
+        // The invalid request, authentication or rights failure is reported to the caller, without its details.
         assertEquals(statusCode, response.getStatus());
         assertEquals("Failed to retrieve the calendar events.", response.getEntity());
         assertEquals("Failed to retrieve the calendar events."
@@ -289,7 +289,7 @@ class DefaultCalendarResourceTest
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(ints = { 400, 404, 407 })
+    @ValueSource(ints = { 404, 407 })
     void getCalendarEventsWhenWorkItemRetrievalFailsWithOtherStatus(Integer statusCode) throws Exception
     {
         when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList()))
@@ -297,7 +297,7 @@ class DefaultCalendarResourceTest
 
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
 
-        // Only the authentication and rights failures are reported as such.
+        // Only the invalid request, authentication and rights failures are reported as such.
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
         assertEquals("Failed to retrieve the calendar events.", response.getEntity());
         assertEquals("Failed to retrieve the calendar events."

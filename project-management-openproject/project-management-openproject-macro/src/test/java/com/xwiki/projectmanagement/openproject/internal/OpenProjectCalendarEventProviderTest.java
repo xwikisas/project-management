@@ -135,6 +135,31 @@ class OpenProjectCalendarEventProviderTest
     }
 
     @Test
+    void failsWhenTheProjectIsNotAnId()
+    {
+        requestTypes(true, true);
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("project", "=", "xwiki-platform"));
+
+        WorkItemRetrievalException exception =
+            assertThrows(WorkItemRetrievalException.class, () -> this.provider.getMoreEvents(filters));
+
+        assertEquals("The project [xwiki-platform] is not a valid OpenProject project id.", exception.getMessage());
+        assertEquals(400, exception.getStatusCode());
+        verifyNoInteractions(this.apiClient);
+    }
+
+    @Test
+    void getSprintsWithTheDefaultLimit() throws Exception
+    {
+        requestTypes(true, false);
+        when(this.executionContext.get("limit")).thenReturn(null);
+        when(this.apiClient.getSprints(1, 25, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 25, 0));
+
+        assertTrue(this.provider.getMoreEvents(List.of()).isEmpty());
+        verify(this.apiClient).getSprints(1, 25, "");
+    }
+
+    @Test
     void returnsNothingWhenNeitherSprintsNorVersionsAreRequested() throws Exception
     {
         requestTypes(false, false);
