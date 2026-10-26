@@ -125,7 +125,7 @@ class OpenProjectCalendarEventProviderTest
     @Test
     void failsWithoutConfiguredInstance()
     {
-        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConfigured());
         requestTypes(true, true);
 
         WorkItemRetrievalException exception =
@@ -157,6 +157,19 @@ class OpenProjectCalendarEventProviderTest
 
         assertTrue(this.provider.getMoreEvents(List.of()).isEmpty());
         verify(this.apiClient).getSprints(1, 25, "");
+    }
+
+    @Test
+    void failsWhenTheUserIsNotConnected()
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
+        requestTypes(true, true);
+
+        WorkItemRetrievalException exception =
+            assertThrows(WorkItemRetrievalException.class, () -> this.provider.getMoreEvents(List.of()));
+
+        assertEquals("The current user isn't connected to the OpenProject instance [main].", exception.getMessage());
+        assertEquals(401, exception.getStatusCode());
     }
 
     @Test
