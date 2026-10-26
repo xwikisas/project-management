@@ -90,6 +90,8 @@ public class OpenProjectInstance
 
     private static final By OP_LOGO = By.className("op-logo");
 
+    private static final String LOGIN_PATH = "/login";
+
     private static final By USERNAME_INPUT = By.id("username");
 
     private static final By AUTHORIZE_BUTTON =
@@ -135,11 +137,17 @@ public class OpenProjectInstance
             .withEnv("OPENPROJECT_SECRET_KEY_BASE", "secret")
             .withEnv("OPENPROJECT_HTTPS", "false")
             .withEnv("OPENPROJECT_DEFAULT__LANGUAGE", "en")
+            // Let anonymous users see the public projects, to test showing the public data to XWiki users who haven't
+            // connected their OpenProject account.
+            .withEnv("OPENPROJECT_LOGIN__REQUIRED", "false")
             .withExposedPorts(80)
             // Join the network of the browser and XWiki containers, so that both reach OpenProject by its alias.
             .withNetwork(Network.SHARED)
             .withNetworkAliases(NETWORK_ALIAS)
-            .waitingFor(Wait.forHttp("/")  // Waits for HTTP 200 on "/"
+            // The home page fails (HTTP 500, "Missing host to link to") for anonymous users when OpenProject doesn't
+            // require users to log in and no host name is configured, so wait for the login page instead. The host
+            // name can't be configured: OpenProject would then reject the requests made with another host.
+            .waitingFor(Wait.forHttp(LOGIN_PATH)
                 .forPort(80)
                 .withStartupTimeout(Duration.ofMinutes(5)))
             // We need to disable the https/localhost requirement for the oauth redirect uri.
@@ -159,7 +167,7 @@ public class OpenProjectInstance
         XWikiWebDriver driver = testUtils.getDriver();
         new WebDriverWait(driver, Duration.ofMinutes(2), Duration.ofSeconds(5)).ignoring(WebDriverException.class)
             .until(webDriver -> {
-                webDriver.get(getBaseUrl());
+                webDriver.get(getBaseUrl() + LOGIN_PATH);
                 return driver.hasElementWithoutWaiting(OP_LOGO);
             });
     }
@@ -192,7 +200,8 @@ public class OpenProjectInstance
     {
         LOGGER.info("Trying to log in to OpenProject.");
         if (goToPage) {
-            String location = getBaseUrl();
+            // The home page doesn't redirect to the login page when OpenProject doesn't require users to log in.
+            String location = getBaseUrl() + LOGIN_PATH;
 
             driver.get(location);
             waitPageLoad(driver);
@@ -289,7 +298,14 @@ public class OpenProjectInstance
 
     private void createNewOAuthApp(XWikiWebDriver driver, String redirectUri)
     {
-        driver.get(getBaseUrl() + "/admin/oauth/applications/new");
+        String newApplicationUrl = getBaseUrl() + "/admin/oauth/applications/new";
+        driver.get(newApplicationUrl);
+        waitPageLoad(driver);
+        // The first login of the admin (from the login page, without a page to go back to) starts the onboarding tour
+        // of the demo projects, whose overlay then covers the pages opened next. OpenProject keeps the state of the
+        // tour in the session storage, so clear it and reload the page to stop the tour.
+        driver.executeScript("window.sessionStorage.removeItem('openProject-onboardingTour');");
+        driver.get(newApplicationUrl);
         waitPageLoad(driver);
 
         WebElement nameInput = driver.findElement(By.id("application_name"));

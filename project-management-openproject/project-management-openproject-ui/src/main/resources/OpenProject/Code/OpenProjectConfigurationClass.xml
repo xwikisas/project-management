@@ -46,6 +46,20 @@
     <defaultWeb/>
     <nameField/>
     <validationScript/>
+    <publicDataCacheDuration>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>publicDataCacheDuration</name>
+      <number>2</number>
+      <numberType>integer</numberType>
+      <prettyName>Public data cache duration (minutes)</prettyName>
+      <size>10</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.NumberClass</classType>
+    </publicDataCacheDuration>
     <workPackageSearchMarker>
       <customDisplay>{{velocity}}
 #if ($type == 'edit')

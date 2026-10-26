@@ -34,6 +34,7 @@ import org.xwiki.contrib.oidc.OAuth2Exception;
 import org.xwiki.script.service.ScriptService;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
@@ -41,7 +42,8 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
  * Default implementation of {@link OpenProjectAccess}, based on the OAuth2 tokens that the users get when they
- * connect their OpenProject account.
+ * connect their OpenProject account. The users without a token get anonymous access to the connections that show their
+ * public data.
  *
  * @version $Id$
  * @since 1.3.1
@@ -57,6 +59,9 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
 
     @Inject
     private OpenProjectApiClientFactory openProjectApiClientFactory;
+
+    @Inject
+    private PublicDataClientProvider publicDataClientProvider;
 
     @Inject
     private ComponentManager componentManager;
@@ -77,21 +82,29 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
         }
 
         // Guests have no user to attach an OAuth token to.
-        if (this.contextProvider.get().getUserReference() == null) {
-            return OpenProjectAccessResult.notConnected();
+        String accessToken =
+            this.contextProvider.get().getUserReference() != null ? getAccessToken(connectionName) : null;
+        if (StringUtils.isNotBlank(accessToken)) {
+            return OpenProjectAccessResult.authenticated(this.openProjectApiClientFactory.builder()
+                .serverUrl(connection.getServerURL())
+                .authentication(new BearerTokenAuthenticator(accessToken))
+                .build());
         }
 
-        String accessToken = getAccessToken(connectionName);
-        if (StringUtils.isBlank(accessToken)) {
-            this.logger.debug("The current user has no access token for the OpenProject connection [{}].",
-                connectionName);
-            return OpenProjectAccessResult.notConnected();
-        }
+        this.logger.debug("The current user has no access token for the OpenProject connection [{}].",
+            connectionName);
+        return resolveWithoutAccount(connection);
+    }
 
-        return OpenProjectAccessResult.authenticated(this.openProjectApiClientFactory.builder()
-            .serverUrl(connection.getServerURL())
-            .authentication(new BearerTokenAuthenticator(accessToken))
-            .build());
+    private OpenProjectAccessResult resolveWithoutAccount(OpenProjectConnection connection)
+    {
+        if (connection.isShowPublicData()) {
+            OpenProjectApiClient client = this.publicDataClientProvider.getClient(connection);
+            if (client != null) {
+                return OpenProjectAccessResult.anonymous(client);
+            }
+        }
+        return OpenProjectAccessResult.notConnected();
     }
 
     private String getAccessToken(String connectionName)

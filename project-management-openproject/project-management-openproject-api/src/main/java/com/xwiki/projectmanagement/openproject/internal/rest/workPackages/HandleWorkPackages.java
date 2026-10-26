@@ -186,7 +186,7 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
             return Response
@@ -240,7 +240,7 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
             return Response
@@ -293,7 +293,7 @@ public class HandleWorkPackages extends XWikiResource
     public Response createWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
             return Response
@@ -355,7 +355,7 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("workPackageId") String workPackageId) throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
             return Response
@@ -398,7 +398,7 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("workPackageId") String workPackageId, CreateWorkPackage workPackage)
         throws ProjectManagementException
     {
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getClient();
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
             return Response

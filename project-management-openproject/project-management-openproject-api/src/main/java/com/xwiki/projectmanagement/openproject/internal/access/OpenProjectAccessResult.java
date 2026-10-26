@@ -56,6 +56,15 @@ public final class OpenProjectAccessResult
     }
 
     /**
+     * @param client the client calling OpenProject without credentials
+     * @return a result with the {@link OpenProjectAccessStatus#ANONYMOUS} status
+     */
+    public static OpenProjectAccessResult anonymous(OpenProjectApiClient client)
+    {
+        return new OpenProjectAccessResult(OpenProjectAccessStatus.ANONYMOUS, client);
+    }
+
+    /**
      * @return a result with the {@link OpenProjectAccessStatus#NOT_CONNECTED} status and no client
      */
     public static OpenProjectAccessResult notConnected()
@@ -80,7 +89,19 @@ public final class OpenProjectAccessResult
     }
 
     /**
-     * @return the client to call OpenProject with, or {@code null} when the status doesn't allow calling OpenProject
+     * @return the client to call OpenProject with the current user's own account, or {@code null} when the status is
+     *     not {@link OpenProjectAccessStatus#AUTHENTICATED}; to use for the requests that anonymous users can't make,
+     *     such as creating or updating work packages
+     */
+    public OpenProjectApiClient getAuthenticatedClient()
+    {
+        return this.status == OpenProjectAccessStatus.AUTHENTICATED ? this.client : null;
+    }
+
+    /**
+     * @return the client to call OpenProject with, or {@code null} when the status doesn't allow calling OpenProject;
+     *     with the {@link OpenProjectAccessStatus#ANONYMOUS} status, the client can only read what OpenProject shows to
+     *     anonymous users
      */
     public OpenProjectApiClient getClient()
     {

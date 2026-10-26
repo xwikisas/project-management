@@ -54,6 +54,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
@@ -92,6 +93,17 @@ public class HandleWorkPackagesTest
 
         Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    public void getAvailableProjectsReturnsConflictWithAnonymousAccess() throws ProjectManagementException
+    {
+        when(this.openProjectAccess.resolve(INSTANCE))
+            .thenReturn(OpenProjectAccessResult.anonymous(this.openProjectApiClient));
+
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
+        verifyNoInteractions(this.openProjectApiClient);
     }
 
     @Test

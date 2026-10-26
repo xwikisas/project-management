@@ -97,6 +97,15 @@
               &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))&lt;/p&gt;
               &lt;input id="client-secret" class="form-control" name="client-secret" type="text"&gt;
             &lt;/div&gt;
+            &lt;div class="form-group"&gt;
+              &lt;label class="h5" for="show-public-data"&gt;
+                &lt;input id="show-public-data" name="show-public-data" type="checkbox"&gt;
+                &lt;strong&gt;
+                  $escapetool.xml($services.localization.render('openproject.config.showPublicData'))
+                &lt;/strong&gt;
+              &lt;/label&gt;
+              &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.showPublicDataDescription'))&lt;/p&gt;
+            &lt;/div&gt;
           &lt;/div&gt;
           &lt;div class="modal-footer"&gt;
             &lt;button type="button" class="btn btn-default" data-dismiss="modal"&gt;
@@ -370,6 +379,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       $("#client-secret").val(clientSecret);
+      $("#show-public-data").prop("checked", $(this).data("show-public-data") === true);
       $("#document-reference").val(documentReference);
       $("#connection-action").val("edit");
     });
@@ -381,6 +391,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val("");
       $("#client-id").val("");
       $("#client-secret").val("");
+      $("#show-public-data").prop("checked", false);
 
       const connectionsSpace = XWiki.Model.resolve(
         "OpenProject.Code.OpenProjectConfigurations",
@@ -452,6 +463,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $("#server-url").val().trim();
       const clientId = $("#client-id").val().trim();
       const clientSecret = $("#client-secret").val().trim();
+      const showPublicData = $("#show-public-data").prop("checked");
       const documentReference = $("#document-reference").val();
       const connectionAction = $("#connection-action").val();
 
@@ -483,6 +495,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
             serverURL: serverURL,
             clientId: clientId,
             clientSecret: clientSecret,
+            showPublicData: showPublicData,
           }),
         });
 

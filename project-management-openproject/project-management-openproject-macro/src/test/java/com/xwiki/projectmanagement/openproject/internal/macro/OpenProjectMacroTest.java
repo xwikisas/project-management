@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -167,6 +168,19 @@ class OpenProjectMacroTest
         // The live data displayer is not rendered asynchronously.
         verify(this.asyncExecutor).execute(same(this.displayerMacro), same(this.parameters), eq("content"),
             same(this.context), any(), eq(false));
+    }
+
+    @Test
+    void displaysTheConnectHintBeforeTheWorkItems() throws Exception
+    {
+        Block hint = new WordBlock("hint");
+        when(this.userTokenChecker.getConnectHintBlock("main", this.context)).thenReturn(List.of(hint));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        List<Block> expected = new ArrayList<>(List.of(hint));
+        expected.addAll(this.displayed);
+        assertEquals(List.of(new GroupBlock(expected, Map.of("class", "open-project-macro"))), result);
     }
 
     @Test

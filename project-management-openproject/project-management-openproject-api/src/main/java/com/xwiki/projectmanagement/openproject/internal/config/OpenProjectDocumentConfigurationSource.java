@@ -133,6 +133,7 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 String instanceId = baseObject.getStringValue("instanceId");
                 OpenProjectConnection connection =
                     new OpenProjectConnection(connectionName, serverURL, clientId, clientSecret, instanceId);
+                connection.setShowPublicData(baseObject.getIntValue("showPublicData") == 1);
                 objects.add(connection);
             }
             return objects;

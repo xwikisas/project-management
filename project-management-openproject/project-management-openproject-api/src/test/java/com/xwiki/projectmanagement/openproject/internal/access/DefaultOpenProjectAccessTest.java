@@ -89,6 +89,9 @@ class DefaultOpenProjectAccessTest
     private OpenProjectApiClientFactory openProjectApiClientFactory;
 
     @MockComponent
+    private PublicDataClientProvider publicDataClientProvider;
+
+    @MockComponent
     private ComponentManager componentManager;
 
     @MockComponent
@@ -106,11 +109,16 @@ class DefaultOpenProjectAccessTest
     @Mock
     private OpenProjectApiClient apiClient;
 
+    @Mock
+    private OpenProjectApiClient anonymousClient;
+
+    private final OpenProjectConnection connection =
+        new OpenProjectConnection(CONNECTION_NAME, SERVER_URL, "clientId", "clientSecret", "instanceId");
+
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.openProjectConfiguration.getConnection(CONNECTION_NAME)).thenReturn(
-            new OpenProjectConnection(CONNECTION_NAME, SERVER_URL, "clientId", "clientSecret", "instanceId"));
+        when(this.openProjectConfiguration.getConnection(CONNECTION_NAME)).thenReturn(this.connection);
         when(this.contextProvider.get()).thenReturn(this.xcontext);
         when(this.xcontext.getUserReference()).thenReturn(new DocumentReference("wiki", "XWiki", "user"));
         when(this.componentManager.getInstance(ScriptService.class, "oauth2client")).thenReturn(this.oauth2Client);
@@ -202,5 +210,66 @@ class DefaultOpenProjectAccessTest
         assertEquals(OpenProjectAccessStatus.NOT_CONNECTED, result.getStatus());
         assertEquals("Failed to retrieve the access token for the OpenProject connection [main]. "
             + "Cause: [ComponentLookupException: Missing].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void resolveAnonymousForGuests()
+    {
+        this.connection.setShowPublicData(true);
+        when(this.xcontext.getUserReference()).thenReturn(null);
+        when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(this.anonymousClient);
+
+        OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
+
+        assertEquals(OpenProjectAccessStatus.ANONYMOUS, result.getStatus());
+        assertSame(this.anonymousClient, result.getClient());
+        assertNull(result.getAuthenticatedClient());
+    }
+
+    @Test
+    void resolveAnonymousForUsersWithoutToken() throws Exception
+    {
+        this.connection.setShowPublicData(true);
+        when(this.oauth2Client.getAccessToken(CONNECTION_NAME)).thenReturn(null);
+        when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(this.anonymousClient);
+
+        OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
+
+        assertEquals(OpenProjectAccessStatus.ANONYMOUS, result.getStatus());
+        assertSame(this.anonymousClient, result.getClient());
+    }
+
+    @Test
+    void resolveNotConnectedWhenOpenProjectRejectsAnonymousRequests()
+    {
+        this.connection.setShowPublicData(true);
+        when(this.xcontext.getUserReference()).thenReturn(null);
+        when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(null);
+
+        OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
+
+        assertEquals(OpenProjectAccessStatus.NOT_CONNECTED, result.getStatus());
+        assertNull(result.getClient());
+    }
+
+    @Test
+    void resolveAuthenticatedEvenWhenShowingPublicData()
+    {
+        this.connection.setShowPublicData(true);
+
+        OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
+
+        assertEquals(OpenProjectAccessStatus.AUTHENTICATED, result.getStatus());
+        assertSame(this.apiClient, result.getAuthenticatedClient());
+        verifyNoInteractions(this.publicDataClientProvider);
+    }
+
+    @Test
+    void resolveNotConnectedWithoutPublicData()
+    {
+        when(this.xcontext.getUserReference()).thenReturn(null);
+
+        assertEquals(OpenProjectAccessStatus.NOT_CONNECTED, this.access.resolve(CONNECTION_NAME).getStatus());
+        verifyNoInteractions(this.publicDataClientProvider);
     }
 }

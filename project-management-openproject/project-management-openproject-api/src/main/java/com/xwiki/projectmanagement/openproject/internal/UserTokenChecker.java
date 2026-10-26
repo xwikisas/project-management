@@ -49,7 +49,8 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
 /**
- * Responsible with checking if a connection to a given OpenProject instance exists and a token was retrieved.
+ * Builds the messages telling the current user that they need to connect their OpenProject account, either to see any
+ * data of an OpenProject instance, or to see more than its public data.
  *
  * @version $Id$
  * @since 1.2.0-rc-1
@@ -77,8 +78,8 @@ public class UserTokenChecker
     /**
      * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
      * @param context the macro transformation context.
-     * @return a warning block if the connection of the current user to the given OpenProject instance does not exist or
-     *     the token has expired.
+     * @return a warning block, to display instead of the OpenProject data, if the current user can't call the given
+     *     OpenProject instance (see {@link #getWarningBlock(String, OpenProjectAccessStatus, MacroTransformationContext)})
      */
     public List<Block> getWarningBlock(String instance, MacroTransformationContext context)
     {
@@ -89,46 +90,83 @@ public class UserTokenChecker
      * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
      * @param status how the current user reaches the given instance, when the caller has already resolved it.
      * @param context the macro transformation context.
-     * @return a warning block if the current user can't call the given OpenProject instance.
+     * @return a warning block, to display instead of the OpenProject data, if the current user can't call the given
+     *     OpenProject instance, neither with their own account nor anonymously.
      * @since 1.3.1
      */
     public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status,
         MacroTransformationContext context)
     {
+        if (status == OpenProjectAccessStatus.AUTHENTICATED || status == OpenProjectAccessStatus.ANONYMOUS) {
+            return Collections.emptyList();
+        }
+        return getMessageBlock(instance, "openproject.oauth.notauthorized", "box warningmessage", context);
+    }
+
+    /**
+     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param context the macro transformation context.
+     * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
+     *     OpenProject account when they only see the public data of the given instance (see
+     *     {@link #getConnectHintBlock(String, OpenProjectAccessStatus, MacroTransformationContext)})
+     * @since 1.3.1
+     */
+    public List<Block> getConnectHintBlock(String instance, MacroTransformationContext context)
+    {
+        return getConnectHintBlock(instance, openProjectAccess.resolve(instance).getStatus(), context);
+    }
+
+    /**
+     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param status how the current user reaches the given instance.
+     * @param context the macro transformation context.
+     * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
+     *     OpenProject account when they only see the public data of the given instance; empty for guests, who can't
+     *     connect an OpenProject account.
+     * @since 1.3.1
+     */
+    public List<Block> getConnectHintBlock(String instance, OpenProjectAccessStatus status,
+        MacroTransformationContext context)
+    {
+        if (status != OpenProjectAccessStatus.ANONYMOUS || contextProvider.get().getUserReference() == null) {
+            return Collections.emptyList();
+        }
+        return getMessageBlock(instance, "openproject.oauth.publicdata", "box infomessage", context);
+    }
+
+    private List<Block> getMessageBlock(String connectionName, String translationPrefix, String cssClass,
+        MacroTransformationContext context)
+    {
         XWikiContext xContext = contextProvider.get();
         String viewAction = "view";
-        String connectionName = instance;
 
-        if (status != OpenProjectAccessStatus.AUTHENTICATED) {
-            List<Block> warning = new ArrayList<>();
-            warning.add(l10n.getTranslation("openproject.oauth.notauthorized.hint").render());
-            if (xContext.getUserReference() != null) {
-                String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
-                LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                    OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
-                String redirectUrl =
-                    xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
-                        + "?connectionName="
-                        + connectionName
-                        + "&redirectUrl="
-                        + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
-                        + "&token="
-                        + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+        List<Block> message = new ArrayList<>();
+        message.add(l10n.getTranslation(translationPrefix + ".hint").render());
+        if (xContext.getUserReference() != null) {
+            String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
+            LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
+                OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
+            String redirectUrl =
+                xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
+                    + "?connectionName="
+                    + connectionName
+                    + "&redirectUrl="
+                    + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
+                    + "&token="
+                    + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
 
-                List<Block> linkContentBlocks =
-                    Collections.singletonList(l10n.getTranslation("openproject.oauth.notauthorized.link").render());
+            List<Block> linkContentBlocks =
+                Collections.singletonList(l10n.getTranslation(translationPrefix + ".link").render());
 
-                LinkBlock link = new LinkBlock(
-                    linkContentBlocks,
-                    new ResourceReference(redirectUrl, ResourceType.URL),
-                    false
-                );
-                warning.add(link);
-            }
-            Map<String, String> params = Collections.singletonMap(CLASS, "box warningmessage");
-            return Collections.singletonList(
-                context.isInline() ? new FormatBlock(warning, Format.NONE, params) : new GroupBlock(warning, params));
+            LinkBlock link = new LinkBlock(
+                linkContentBlocks,
+                new ResourceReference(redirectUrl, ResourceType.URL),
+                false
+            );
+            message.add(link);
         }
-        return Collections.emptyList();
+        Map<String, String> params = Collections.singletonMap(CLASS, cssClass);
+        return Collections.singletonList(
+            context.isInline() ? new FormatBlock(message, Format.NONE, params) : new GroupBlock(message, params));
     }
 }

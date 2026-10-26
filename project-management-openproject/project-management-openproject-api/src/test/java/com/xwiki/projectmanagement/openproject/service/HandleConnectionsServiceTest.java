@@ -179,6 +179,8 @@ public class HandleConnectionsServiceTest
         when(this.openProjectApiClientBuilder.build()).thenReturn(this.openProjectApiClient);
         when(this.openProjectApiClient.getInstanceId()).thenReturn("instanceId");
 
+        openProjectConnection.setShowPublicData(true);
+
         handleConnectionsService.handleConnection(openProjectConnection, documentReference);
 
         assertEquals(userReference, documentAuthors.getCreator());
@@ -191,6 +193,7 @@ public class HandleConnectionsServiceTest
         assertEquals(openProjectConnection.getClientId(), configObj.getStringValue("clientId"));
         assertEquals(openProjectConnection.getClientSecret(), configObj.getStringValue("clientSecret"));
         assertEquals("instanceId", configObj.getStringValue("instanceId"));
+        assertEquals(1, configObj.getIntValue("showPublicData"));
 
         assertEquals(openProjectConnection.getConnectionName(), oidcObj.getStringValue("configurationName"));
         assertEquals(
