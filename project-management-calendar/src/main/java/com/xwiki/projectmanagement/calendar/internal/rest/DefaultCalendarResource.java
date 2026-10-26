@@ -94,14 +94,15 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
     }
 
     /**
-     * Answer with the authentication or rights failure reported by the project management client, so that the caller
-     * can tell the user what to do, and with an internal server error for any other failure.
+     * Answer with the invalid request, authentication or rights failure reported by the project management client, so
+     * that the caller can tell the user what to do, and with an internal server error for any other failure.
      */
     private static Response.Status getErrorStatus(ProjectManagementException e)
     {
         if (e instanceof WorkItemRetrievalException) {
             Integer statusCode = ((WorkItemRetrievalException) e).getStatusCode();
-            if (statusCode != null && (statusCode == Response.Status.UNAUTHORIZED.getStatusCode()
+            if (statusCode != null && (statusCode == Response.Status.BAD_REQUEST.getStatusCode()
+                || statusCode == Response.Status.UNAUTHORIZED.getStatusCode()
                 || statusCode == Response.Status.FORBIDDEN.getStatusCode()))
             {
                 return Response.Status.fromStatusCode(statusCode);
