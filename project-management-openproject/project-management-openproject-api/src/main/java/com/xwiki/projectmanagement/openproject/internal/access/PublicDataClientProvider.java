@@ -55,8 +55,9 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 /**
  * Provides the clients that call OpenProject without credentials, to show the public data of a connection to the users
  * who can't call it with their own account. Their results are cached: they are the same for every user, unlike the
- * results of the requests made with a user's token, which are never cached. There is one cache per wiki, since the
- * duration of the cache is configured per wiki.
+ * results of the requests made with a user's token, which are never cached. Whether an OpenProject instance accepts
+ * anonymous requests is cached for the same duration, so that an instance refusing them isn't asked again on each
+ * request. There is one cache of each kind per wiki, since the duration of the cache is configured per wiki.
  *
  * @version $Id$
  * @since 1.3.1
@@ -78,6 +79,10 @@ public class PublicDataClientProvider implements Disposable
     private static final LocalDocumentReference CONFIGURATION_CLASS =
         new LocalDocumentReference(CODE_SPACE, "OpenProjectConfigurationClass");
 
+    private static final String CACHE_ID_PREFIX = "projectmanagement.openproject.publicdata.";
+
+    private static final String ANONYMOUS_ACCESS_CACHE_ID_PREFIX = CACHE_ID_PREFIX + "anonymousaccess.";
+
     private static final String CACHE_DURATION_PROPERTY = "publicDataCacheDuration";
 
     private static final int MAX_CACHE_ENTRIES = 1000;
@@ -96,8 +101,7 @@ public class PublicDataClientProvider implements Disposable
     @Inject
     private Logger logger;
 
-    private final Map<String, Cache<PaginatedResult<? extends BaseOpenProjectObject>>> caches =
-        new ConcurrentHashMap<>();
+    private final Map<String, WikiCaches> caches = new ConcurrentHashMap<>();
 
     /**
      * @param connection a connection configured in the current wiki
@@ -106,19 +110,23 @@ public class PublicDataClientProvider implements Disposable
      */
     public OpenProjectApiClient getClient(OpenProjectConnection connection)
     {
-        Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache =
-            getCache(this.contextProvider.get().getWikiId());
-        if (cache == null) {
+        WikiCaches wikiCaches = this.caches.computeIfAbsent(this.contextProvider.get().getWikiId(), this::createCaches);
+        if (wikiCaches == null) {
             return null;
         }
 
         // The results of anonymous requests only depend on the OpenProject instance, not on the connection.
         OpenProjectApiClient client = this.openProjectApiClientFactory.builder()
             .serverUrl(connection.getServerURL())
-            .caching(cache, connection.getServerURL())
+            .caching(wikiCaches.results, connection.getServerURL())
             .build();
 
-        return acceptsAnonymousRequests(client, connection) ? client : null;
+        Boolean acceptsAnonymousRequests = wikiCaches.anonymousAccess.get(connection.getServerURL());
+        if (acceptsAnonymousRequests == null) {
+            acceptsAnonymousRequests = acceptsAnonymousRequests(client, connection);
+            wikiCaches.anonymousAccess.set(connection.getServerURL(), acceptsAnonymousRequests);
+        }
+        return acceptsAnonymousRequests ? client : null;
     }
 
     /**
@@ -129,23 +137,23 @@ public class PublicDataClientProvider implements Disposable
      */
     public void clearCache(String wikiId)
     {
-        Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache = this.caches.remove(wikiId);
-        if (cache != null) {
-            cache.dispose();
+        WikiCaches wikiCaches = this.caches.remove(wikiId);
+        if (wikiCaches != null) {
+            wikiCaches.dispose();
         }
     }
 
     @Override
     public void dispose()
     {
-        this.caches.values().forEach(Cache::dispose);
+        this.caches.values().forEach(WikiCaches::dispose);
         this.caches.clear();
     }
 
     private boolean acceptsAnonymousRequests(OpenProjectApiClient client, OpenProjectConnection connection)
     {
         try {
-            // A cheap request, whose result is cached, so that OpenProject is only asked once per cache duration.
+            // A cheap request, whose outcome is cached by the caller.
             client.getProjects(1, 1, "");
             return true;
         } catch (WorkItemRetrievalException e) {
@@ -175,26 +183,32 @@ public class PublicDataClientProvider implements Disposable
         return true;
     }
 
-    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> getCache(String wikiId)
+    private WikiCaches createCaches(String wikiId)
     {
-        return this.caches.computeIfAbsent(wikiId, this::createCache);
-    }
-
-    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> createCache(String wikiId)
-    {
-        CacheConfiguration cacheConfiguration = new CacheConfiguration();
-        cacheConfiguration.setConfigurationId("projectmanagement.openproject.publicdata." + wikiId);
-        LRUEvictionConfiguration lru = new LRUEvictionConfiguration();
-        lru.setLifespan(getCacheDuration() * SECONDS_PER_MINUTE);
-        lru.setMaxEntries(MAX_CACHE_ENTRIES);
-        cacheConfiguration.put(EntryEvictionConfiguration.CONFIGURATIONID, lru);
+        int lifespan = getCacheDuration() * SECONDS_PER_MINUTE;
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> results = null;
         try {
-            return this.cacheManager.createNewCache(cacheConfiguration);
+            results = createCache(CACHE_ID_PREFIX + wikiId, lifespan);
+            return new WikiCaches(results, createCache(ANONYMOUS_ACCESS_CACHE_ID_PREFIX + wikiId, lifespan));
         } catch (CacheException e) {
+            if (results != null) {
+                results.dispose();
+            }
             this.logger.error("Failed to create the cache of the OpenProject public data for the wiki [{}].", wikiId,
                 e);
             return null;
         }
+    }
+
+    private <T> Cache<T> createCache(String cacheId, int lifespan) throws CacheException
+    {
+        CacheConfiguration cacheConfiguration = new CacheConfiguration();
+        cacheConfiguration.setConfigurationId(cacheId);
+        LRUEvictionConfiguration lru = new LRUEvictionConfiguration();
+        lru.setLifespan(lifespan);
+        lru.setMaxEntries(MAX_CACHE_ENTRIES);
+        cacheConfiguration.put(EntryEvictionConfiguration.CONFIGURATIONID, lru);
+        return this.cacheManager.createNewCache(cacheConfiguration);
     }
 
     private int getCacheDuration()
@@ -209,6 +223,31 @@ public class PublicDataClientProvider implements Disposable
             this.logger.warn("Failed to read the duration of the cache of the OpenProject public data. Cause: [{}].",
                 ExceptionUtils.getRootCauseMessage(e));
             return DEFAULT_CACHE_DURATION;
+        }
+    }
+
+    /**
+     * The caches of a wiki.
+     */
+    private static final class WikiCaches
+    {
+        private final Cache<PaginatedResult<? extends BaseOpenProjectObject>> results;
+
+        /**
+         * Whether each OpenProject instance, identified by its URL, accepts anonymous requests.
+         */
+        private final Cache<Boolean> anonymousAccess;
+
+        WikiCaches(Cache<PaginatedResult<? extends BaseOpenProjectObject>> results, Cache<Boolean> anonymousAccess)
+        {
+            this.results = results;
+            this.anonymousAccess = anonymousAccess;
+        }
+
+        void dispose()
+        {
+            this.results.dispose();
+            this.anonymousAccess.dispose();
         }
     }
 }
