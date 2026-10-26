@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.script;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,6 +50,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 
@@ -82,6 +85,9 @@ public class OpenProjectScriptService implements ScriptService
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private StylingSetupManager stylingSetupManager;
@@ -145,8 +151,7 @@ public class OpenProjectScriptService implements ScriptService
      */
     public boolean isUserAuthorized(String instanceName)
     {
-        String accessToken = openProjectConfiguration.getAccessTokenForConfiguration(instanceName);
-        return accessToken != null;
+        return openProjectAccess.resolve(instanceName).getStatus() == OpenProjectAccessStatus.AUTHENTICATED;
     }
 
     /**
@@ -224,15 +229,18 @@ public class OpenProjectScriptService implements ScriptService
      * @param page the number of the page.
      * @param pageSize the number of elements per page.
      * @param filters the OP rest filters.
-     * @return a list of OpenProject wiki links - entities that represent wiki pages mentioned inside a work package.
+     * @return a list of OpenProject wiki links - entities that represent wiki pages mentioned inside a work package,
+     *     empty when the current user can't call the given instance.
      * @throws ProjectManagementException if some exception is thrown.
      * @since 1.2.0
      */
     public PaginatedResult<WikiPageLink> getMentioningWorkPackages(String instance, int page, int pageSize,
         String filters) throws ProjectManagementException
     {
-        OpenProjectApiClient openProjectApiClient =
-            openProjectConfiguration.getOpenProjectApiClient(instance);
+        OpenProjectApiClient openProjectApiClient = openProjectAccess.resolve(instance).getClient();
+        if (openProjectApiClient == null) {
+            return new PaginatedResult<>(Collections.emptyList(), page, pageSize, 0);
+        }
 
         try {
             return openProjectApiClient.getPageLinks(page, pageSize, filters);

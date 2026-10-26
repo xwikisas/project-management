@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectProjectHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
@@ -95,6 +96,9 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
+    private OpenProjectAccess openProjectAccess;
 
     /**
      * Default constructor.
@@ -188,7 +192,7 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
         if (StringUtils.isBlank(connection)) {
             return "";
         }
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(connection);
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(connection).getClient();
         if (apiClient == null) {
             return "";
         }

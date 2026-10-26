@@ -44,9 +44,10 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
@@ -100,7 +101,7 @@ class OpenProjectClientTest
     private OpenProjectClient openProjectClient;
 
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private ProjectManagementClientExecutionContext executionContext;
@@ -114,7 +115,8 @@ class OpenProjectClientTest
     public void setUp() throws ProjectManagementException
     {
         when(executionContext.get("instance")).thenReturn("");
-        when(openProjectConfiguration.getOpenProjectApiClient(any())).thenReturn(this.openProjectApiClient);
+        when(openProjectAccess.resolve(any()))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenReturn(
             generateWorkItems());
         when(openProjectApiClient.getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
@@ -330,7 +332,7 @@ class OpenProjectClientTest
     @Test
     public void handleNullOpenProjectApiClientTest() throws WorkItemRetrievalException
     {
-        when(openProjectConfiguration.getOpenProjectApiClient(anyString())).thenReturn(null);
+        when(openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConnected());
 
         assertEquals(0, openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
         assertEquals("Failed to retrieve work packages: No configuration for instance [] was found.",

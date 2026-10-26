@@ -32,6 +32,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 
 import static org.mockito.Mockito.when;
 
@@ -51,6 +53,9 @@ abstract class AbstractDirectMacroTest
     protected OpenProjectConfiguration openProjectConfiguration;
 
     @MockComponent
+    protected OpenProjectAccess openProjectAccess;
+
+    @MockComponent
     protected ProjectManagementAsyncExecutor asyncExecutor;
 
     @MockComponent
@@ -66,7 +71,7 @@ abstract class AbstractDirectMacroTest
     @BeforeEach
     void setUpDirectMacro() throws Exception
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.openProjectConfiguration.getConnection("main"))
             .thenReturn(new OpenProjectConnection("main", SERVER_URL, "id", "secret", "instanceId"));
         when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy")).thenReturn("yyyy-MM-dd");

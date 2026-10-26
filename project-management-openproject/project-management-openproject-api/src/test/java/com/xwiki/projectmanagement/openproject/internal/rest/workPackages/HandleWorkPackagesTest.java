@@ -40,7 +40,8 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -59,7 +60,7 @@ import static org.mockito.Mockito.when;
 public class HandleWorkPackagesTest
 {
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
@@ -80,13 +81,14 @@ public class HandleWorkPackagesTest
     @BeforeEach
     public void setUp()
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(this.openProjectApiClient);
+        when(this.openProjectAccess.resolve(INSTANCE))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
     }
 
     @Test
     public void getAvailableProjectsReturnsConflictWhenTokenIsNullTest() throws ProjectManagementException
     {
-        when(this.openProjectConfiguration.getOpenProjectApiClient(INSTANCE)).thenReturn(null);
+        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
 
         Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());

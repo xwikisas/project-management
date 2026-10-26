@@ -44,11 +44,11 @@ import org.xwiki.skinx.SkinExtension;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -86,7 +86,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private ObservationManager observationManager;
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private OpenProjectIdentifierResolver identifierResolver;
@@ -137,7 +137,7 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
             return;
         }
 
-        OpenProjectApiClient apiClient = openProjectConfiguration.getOpenProjectApiClient(parameters.getInstance());
+        OpenProjectApiClient apiClient = openProjectAccess.resolve(parameters.getInstance()).getClient();
         if (apiClient == null) {
             return;
         }

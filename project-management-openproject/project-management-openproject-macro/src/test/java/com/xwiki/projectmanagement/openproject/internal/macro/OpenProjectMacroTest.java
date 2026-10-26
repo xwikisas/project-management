@@ -49,10 +49,11 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -100,7 +101,7 @@ class OpenProjectMacroTest
     private ObservationManager observationManager;
 
     @MockComponent
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private OpenProjectIdentifierResolver identifierResolver;
@@ -225,7 +226,7 @@ class OpenProjectMacroTest
     {
         this.parameters.setIdentifier("saved");
         when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
         this.macro.asyncProcessParameters(this.parameters);
@@ -241,12 +242,13 @@ class OpenProjectMacroTest
         this.macro.asyncProcessParameters(this.parameters);
 
         assertNull(this.parameters.getSourceParameters());
-        verifyNoInteractions(this.openProjectConfiguration);
+        verifyNoInteractions(this.openProjectAccess);
     }
 
     @Test
     void asyncProcessParametersWithoutApiClient() throws Exception
     {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
         this.parameters.setIdentifier("saved");
         when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
 
@@ -261,7 +263,7 @@ class OpenProjectMacroTest
     {
         this.parameters.setIdentifier("saved");
         when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-        when(this.openProjectConfiguration.getOpenProjectApiClient("main")).thenReturn(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
             .thenThrow(new ProjectManagementException("forbidden"));
 

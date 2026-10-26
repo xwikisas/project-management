@@ -54,8 +54,8 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.Project;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
@@ -99,7 +99,7 @@ public class OpenProjectClient implements ProjectManagementClient
         "The provided identifier value is not in a supported format.";
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
@@ -217,7 +217,7 @@ public class OpenProjectClient implements ProjectManagementClient
     private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
     {
         String connectionName = (String) executionContext.get("instance");
-        OpenProjectApiClient openProjectApiClient = openProjectConfiguration.getOpenProjectApiClient(connectionName);
+        OpenProjectApiClient openProjectApiClient = openProjectAccess.resolve(connectionName).getClient();
 
         if (openProjectApiClient == null) {
             throw new WorkItemRetrievalException(

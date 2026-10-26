@@ -42,7 +42,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Version;
 
@@ -67,7 +67,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     private static final String VERSION = "version";
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     private ProjectManagementClientExecutionContext executionContext;
@@ -142,7 +142,7 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     {
         String connectionName = (String) this.executionContext.get("instance");
         OpenProjectApiClient openProjectApiClient =
-            this.openProjectConfiguration.getOpenProjectApiClient(connectionName);
+            this.openProjectAccess.resolve(connectionName).getClient();
 
         if (openProjectApiClient == null) {
             throw new WorkItemRetrievalException(

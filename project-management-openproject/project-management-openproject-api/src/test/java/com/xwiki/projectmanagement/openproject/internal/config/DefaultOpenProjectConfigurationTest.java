@@ -19,54 +19,21 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.config;
 
-import java.net.URI;
-import java.net.http.HttpRequest;
 import java.util.List;
 
 import javax.inject.Named;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.xwiki.cache.Cache;
-import org.xwiki.cache.CacheException;
-import org.xwiki.cache.CacheManager;
-import org.xwiki.cache.config.CacheConfiguration;
-import org.xwiki.component.manager.ComponentLookupException;
-import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.configuration.ConfigurationSource;
-import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
-import org.xwiki.contrib.oidc.OAuth2Exception;
-import org.xwiki.script.service.ScriptService;
-import org.xwiki.test.LogLevel;
-import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xwiki.projectmanagement.exception.AuthenticationException;
-import com.xwiki.projectmanagement.model.PaginatedResult;
-import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
-import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
-import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -77,9 +44,6 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 class DefaultOpenProjectConfigurationTest
 {
-    @RegisterExtension
-    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
-
     @InjectMockComponents
     private DefaultOpenProjectConfiguration configuration;
 
@@ -87,32 +51,7 @@ class DefaultOpenProjectConfigurationTest
     @Named("openproject")
     private ConfigurationSource openProjectConfiguration;
 
-    @MockComponent
-    private ComponentManager componentManager;
-
-    @MockComponent
-    private CacheManager cacheManager;
-
-    @MockComponent
-    private OAuth2ClientScriptService oauth2Client;
-
-    @MockComponent
-    private OpenProjectApiClientFactory openProjectApiClientFactory;
-
-    @Mock
-    private OpenProjectApiClientBuilder builder;
-
-    @Mock
-    private OpenProjectApiClient apiClient;
-
-    @Mock
-    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
-
     private List<OpenProjectConnection> connections;
-
-    private static final String ACCESS_TOKEN = "accessToken";
-
-    private static final String REDIRECT_URL = "redirectURL";
 
     private static final OpenProjectConnection opConnection = new OpenProjectConnection(
         "firstConnection",
@@ -122,13 +61,8 @@ class DefaultOpenProjectConfigurationTest
         "firstInstanceId"
     );
 
-    private static final String GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE =
-        "No client for connection [%s] could be created because the configuration doesn't exist or the access "
-            + "token for the current user is not set.";
-
-    @SuppressWarnings("unchecked")
     @BeforeEach
-    void setUp() throws CacheException, ComponentLookupException, OAuth2Exception
+    void setUp()
     {
         this.connections = List.of(
             opConnection,
@@ -148,10 +82,7 @@ class DefaultOpenProjectConfigurationTest
             )
         );
 
-        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
         when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(this.connections);
-        when(this.componentManager.getInstance(ScriptService.class, "oauth2client")).thenReturn(oauth2Client);
-        when(this.oauth2Client.getAccessToken(opConnection.getConnectionName())).thenReturn(ACCESS_TOKEN);
     }
 
     @Test
@@ -177,104 +108,5 @@ class DefaultOpenProjectConfigurationTest
         OpenProjectConnection result = configuration.getConnection(connectionName);
 
         assertNull(result);
-    }
-
-    @Test
-    public void getAccessTokenForConfigurationTest()
-    {
-        String token = configuration.getAccessTokenForConfiguration(opConnection.getConnectionName());
-
-        assertEquals(ACCESS_TOKEN, token);
-    }
-
-    @Test
-    public void getAccessTokenForConfigurationReturnsNullTest() throws OAuth2Exception
-    {
-        String connectionName = "invalidConnection";
-        Exception exception = new OAuth2Exception("Failed to retrieve the access token");
-        when(oauth2Client.getAccessToken(connectionName)).thenThrow(exception);
-
-        String token = configuration.getAccessTokenForConfiguration(connectionName);
-
-        assertNull(token);
-
-        assertEquals(String.format("Failed to retrieve the access token for instance [%s]. Cause: [%s].",
-            connectionName, ExceptionUtils.getRootCauseMessage(exception)), this.logCapture.getMessage(0));
-
-        verify(oauth2Client).getAccessToken(connectionName);
-    }
-
-    @Test
-    public void createNewTokenTest() throws OAuth2Exception, AuthenticationException
-    {
-        configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL);
-
-        verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
-    }
-
-    @Test
-    public void createNewTokenGeneratesErrorTest() throws OAuth2Exception
-    {
-        doThrow(OAuth2Exception.class).when(oauth2Client)
-            .authorize(opConnection.getConnectionName(), REDIRECT_URL);
-
-        AuthenticationException thrown = assertThrows(AuthenticationException.class,
-            () -> configuration.createNewToken(opConnection.getConnectionName(), REDIRECT_URL));
-
-        assertThat(thrown.getMessage(), containsString(
-            "Failed to establish the OAuth2 connection for instance [" + opConnection.getConnectionName() + "]"));
-
-        verify(oauth2Client).authorize(opConnection.getConnectionName(), REDIRECT_URL);
-    }
-
-    @Test
-    public void getOpenProjectApiClientTest()
-    {
-        when(openProjectApiClientFactory.builder()).thenReturn(builder);
-        when(builder.serverUrl(any())).thenReturn(builder);
-        when(builder.authentication(any())).thenReturn(builder);
-        when(builder.caching(any(), any())).thenReturn(builder);
-        when(builder.build()).thenReturn(apiClient);
-
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
-
-        assertSame(apiClient, client);
-
-        verify(builder).serverUrl(opConnection.getServerURL());
-
-        ArgumentCaptor<OpenProjectAuthenticator> authCaptor = ArgumentCaptor.forClass(OpenProjectAuthenticator.class);
-        verify(builder).authentication(authCaptor.capture());
-
-        // Any valid absolute URL works here; the authenticator only adds headers, it does not depend on the URI.
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder(URI.create("http://localhost"));
-        authCaptor.getValue().authenticate(requestBuilder);
-        assertEquals("Bearer " + ACCESS_TOKEN,
-            requestBuilder.build().headers().firstValue("Authorization").orElse(null));
-    }
-
-    @Test
-    public void getOpenProjectApiClientConnectionIsNullTest()
-    {
-        when(openProjectConfiguration.getProperty("openprojectConnections")).thenReturn(List.of());
-
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
-
-        assertNull(client);
-
-        assertEquals(String.format(GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()),
-            this.logCapture.getMessage(0));
-    }
-
-    @Test
-    public void getOpenProjectApiClientTokenIsEmptyTest() throws OAuth2Exception
-    {
-        when(oauth2Client.getAccessToken(anyString())).thenReturn(null);
-
-        OpenProjectApiClient client = configuration.getOpenProjectApiClient(opConnection.getConnectionName());
-
-        assertNull(client);
-
-        assertEquals(String.format(GET_OPEN_PROJECT_CLIENT_ERROR_MESSAGE, opConnection.getConnectionName()),
-            this.logCapture.getMessage(0));
     }
 }
