@@ -19,6 +19,10 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.access;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -60,7 +64,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -112,6 +118,11 @@ class PublicDataClientProviderTest
     @Mock
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
+    @Mock
+    private Cache<Boolean> anonymousAccessCache;
+
+    private final Map<String, Boolean> anonymousAccessCacheEntries = new HashMap<>();
+
     private final OpenProjectConnection connection =
         new OpenProjectConnection("main", SERVER_URL, "clientId", "clientSecret", "instanceId");
 
@@ -126,7 +137,13 @@ class PublicDataClientProviderTest
             .thenReturn(this.configurationDocument);
         when(this.configurationDocument.getXObject(any(EntityReference.class))).thenReturn(this.configuration);
         when(this.configuration.getIntValue("publicDataCacheDuration")).thenReturn(10);
-        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenReturn((Cache) this.cache);
+        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenAnswer(
+            invocation -> ((CacheConfiguration) invocation.getArgument(0)).getConfigurationId().contains(
+                "anonymousaccess") ? this.anonymousAccessCache : this.cache);
+        when(this.anonymousAccessCache.get(anyString()))
+            .thenAnswer(invocation -> this.anonymousAccessCacheEntries.get(invocation.getArgument(0)));
+        doAnswer(invocation -> this.anonymousAccessCacheEntries.put(invocation.getArgument(0),
+            invocation.getArgument(1))).when(this.anonymousAccessCache).set(anyString(), any());
 
         when(this.openProjectApiClientFactory.builder()).thenReturn(this.builder);
         when(this.builder.serverUrl(any())).thenReturn(this.builder);
@@ -147,12 +164,14 @@ class PublicDataClientProviderTest
     }
 
     @Test
-    void getClientReusesTheCacheOfTheWiki() throws Exception
+    void getClientReusesTheCachesOfTheWiki() throws Exception
     {
         this.provider.getClient(this.connection);
         this.provider.getClient(this.connection);
 
-        verify(this.cacheManager, times(1)).createNewCache(any());
+        verify(this.cacheManager, times(2)).createNewCache(any());
+        // The second call doesn't check again if OpenProject accepts anonymous requests.
+        verify(this.client).getProjects(1, 1, "");
     }
 
     @Test
@@ -195,7 +214,11 @@ class PublicDataClientProviderTest
         when(this.client.getProjects(1, 1, "")).thenThrow(new WorkItemRetrievalException("Rejected", statusCode));
 
         assertNull(this.provider.getClient(this.connection));
+        // The refusal is cached: OpenProject isn't asked again, and the warning isn't logged again.
+        assertNull(this.provider.getClient(this.connection));
 
+        verify(this.client).getProjects(1, 1, "");
+        assertEquals(1, this.logCapture.size());
         assertEquals("The OpenProject connection [main] is configured to show its public data, but "
             + "[https://openproject.example.org] doesn't accept anonymous requests. Allow them in the OpenProject "
             + "administration (e.g. by disabling \"Login required\") or disable the option of the connection.",
@@ -220,7 +243,10 @@ class PublicDataClientProviderTest
         when(this.client.getProjects(1, 1, "")).thenThrow(new ProjectManagementException("Unreachable"));
 
         assertSame(this.client, this.provider.getClient(this.connection));
+        assertSame(this.client, this.provider.getClient(this.connection));
 
+        verify(this.client).getProjects(1, 1, "");
+        assertEquals(1, this.logCapture.size());
         assertEquals("Failed to check if [https://openproject.example.org] accepts anonymous requests for the "
             + "OpenProject connection [main]. Cause: [ProjectManagementException: Unreachable].",
             this.logCapture.getMessage(0));
@@ -238,6 +264,23 @@ class PublicDataClientProviderTest
     }
 
     @Test
+    void getClientWhenTheAnonymousAccessCacheCantBeCreated() throws Exception
+    {
+        when(this.cacheManager.createNewCache(any(CacheConfiguration.class))).thenAnswer(invocation -> {
+            if (((CacheConfiguration) invocation.getArgument(0)).getConfigurationId().contains("anonymousaccess")) {
+                throw new CacheException("Error");
+            }
+            return this.cache;
+        });
+
+        assertNull(this.provider.getClient(this.connection));
+
+        verify(this.cache).dispose();
+        assertEquals("Failed to create the cache of the OpenProject public data for the wiki [wiki].",
+            this.logCapture.getMessage(0));
+    }
+
+    @Test
     void clearCache() throws Exception
     {
         this.provider.getClient(this.connection);
@@ -246,8 +289,9 @@ class PublicDataClientProviderTest
         this.provider.clearCache("otherWiki");
 
         verify(this.cache).dispose();
+        verify(this.anonymousAccessCache).dispose();
         this.provider.getClient(this.connection);
-        verify(this.cacheManager, times(2)).createNewCache(any());
+        verify(this.cacheManager, times(4)).createNewCache(any());
     }
 
     @Test
@@ -258,14 +302,26 @@ class PublicDataClientProviderTest
         this.provider.dispose();
 
         verify(this.cache).dispose();
+        verify(this.anonymousAccessCache).dispose();
     }
 
     private int getCacheLifespan() throws Exception
     {
         ArgumentCaptor<CacheConfiguration> captor = ArgumentCaptor.forClass(CacheConfiguration.class);
-        verify(this.cacheManager).createNewCache(captor.capture());
-        assertEquals("projectmanagement.openproject.publicdata.wiki", captor.getValue().getConfigurationId());
-        return ((LRUEvictionConfiguration) captor.getValue().get(EntryEvictionConfiguration.CONFIGURATIONID))
+        verify(this.cacheManager, times(2)).createNewCache(captor.capture());
+        List<CacheConfiguration> configurations = captor.getAllValues();
+        assertEquals("projectmanagement.openproject.publicdata.wiki", configurations.get(0).getConfigurationId());
+        assertEquals("projectmanagement.openproject.publicdata.anonymousaccess.wiki",
+            configurations.get(1).getConfigurationId());
+        int lifespan = getLifespan(configurations.get(0));
+        // Whether OpenProject accepts anonymous requests is cached for as long as the public data.
+        assertEquals(lifespan, getLifespan(configurations.get(1)));
+        return lifespan;
+    }
+
+    private int getLifespan(CacheConfiguration configuration)
+    {
+        return ((LRUEvictionConfiguration) configuration.get(EntryEvictionConfiguration.CONFIGURATIONID))
             .getLifespan();
     }
 }

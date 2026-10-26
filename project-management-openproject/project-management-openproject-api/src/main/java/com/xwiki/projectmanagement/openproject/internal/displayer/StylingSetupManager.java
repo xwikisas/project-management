@@ -53,6 +53,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
@@ -145,7 +147,15 @@ public class StylingSetupManager
                 new EntityReference(openProjCfgName, EntityType.DOCUMENT, OPEN_PROJECT_SSX_EXTENSIONS.getParent()));
             LOGGER.debug("Generating style for instance [{}] at document [{}].", openProjCfgName, stylesDocRef);
             try {
-                OpenProjectApiClient apiClient = openProjectAccess.resolve(openProjCfgName).getClient();
+                // Only users with their own OpenProject account generate the styling, which saves the styles page as
+                // the current user: users seeing the public data of a connection may be guests.
+                OpenProjectAccessResult access = openProjectAccess.resolve(openProjCfgName);
+                if (access.getStatus() == OpenProjectAccessStatus.ANONYMOUS) {
+                    LOGGER.debug("Skipping styling update for [{}] since the current user isn't connected to it.",
+                        openProjCfgName);
+                    continue;
+                }
+                OpenProjectApiClient apiClient = access.getAuthenticatedClient();
                 if (apiClient == null) {
                     LOGGER.warn("Skipping styling update for [{}] due to missing configuration or access token.",
                         openProjCfgName);

@@ -1,0 +1,156 @@
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+package com.xwiki.projectmanagement.openproject.internal.displayer;
+
+import java.util.Collections;
+
+import javax.inject.Named;
+import javax.inject.Provider;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.xwiki.model.document.DocumentAuthors;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.DocumentReferenceResolver;
+import org.xwiki.model.reference.EntityReference;
+import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.user.UserReferenceResolver;
+
+import com.xpn.xwiki.XWiki;
+import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.Type;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+/**
+ * Unit tests for {@link StylingSetupManager}.
+ *
+ * @version $Id$
+ */
+@ComponentTest
+class StylingSetupManagerTest
+{
+    private static final String CONNECTION_NAME = "main";
+
+    @InjectMockComponents
+    private StylingSetupManager stylingSetupManager;
+
+    @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @MockComponent
+    private OpenProjectAccess openProjectAccess;
+
+    @MockComponent
+    private DocumentReferenceResolver<EntityReference> documentReferenceResolver;
+
+    @MockComponent
+    @Named("document")
+    private UserReferenceResolver<DocumentReference> userReferenceResolver;
+
+    @MockComponent
+    private Provider<XWikiContext> contextProvider;
+
+    @Mock
+    private XWikiContext xcontext;
+
+    @Mock
+    private XWiki xwiki;
+
+    @Mock
+    private XWikiDocument stylesDocument;
+
+    @Mock
+    private BaseObject styleObject;
+
+    @Mock
+    private OpenProjectApiClient client;
+
+    @BeforeEach
+    void setUp() throws Exception
+    {
+        when(this.contextProvider.get()).thenReturn(this.xcontext);
+        when(this.xcontext.getWiki()).thenReturn(this.xwiki);
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(Collections.singletonList(
+            new OpenProjectConnection(CONNECTION_NAME, "https://openproject.example.org", "id", "secret", "inst")));
+        DocumentReference stylesReference = new DocumentReference("wiki", "OpenProject", CONNECTION_NAME);
+        when(this.documentReferenceResolver.resolve(any(EntityReference.class))).thenReturn(stylesReference);
+        when(this.xwiki.getDocument(stylesReference, this.xcontext)).thenReturn(this.stylesDocument);
+        when(this.stylesDocument.getXObject(any(EntityReference.class), anyString(), anyString(), anyBoolean()))
+            .thenReturn(this.styleObject);
+        when(this.stylesDocument.getAuthors()).thenReturn(mock(DocumentAuthors.class));
+
+        Status status = new Status();
+        status.setName("New");
+        status.setColor("#ff0000");
+        when(this.client.getStatuses()).thenReturn(new PaginatedResult<>(Collections.singletonList(status), 1, 1, 1));
+        Type type = new Type();
+        type.setName("Bug");
+        type.setColor("#00ff00");
+        when(this.client.getTypes()).thenReturn(new PaginatedResult<>(Collections.singletonList(type), 1, 1, 1));
+    }
+
+    @Test
+    void setupInstanceStylesWhenAuthenticated() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verify(this.styleObject).set(eq("code"), anyString(), same(this.xcontext));
+        verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
+    }
+
+    @Test
+    void setupInstanceStylesWhenShowingPublicData() throws Exception
+    {
+        // The current user, possibly a guest, only sees the public data of the connection: the styles page must not
+        // be saved as them.
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.anonymous(this.client));
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verifyNoInteractions(this.client);
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+    }
+}
