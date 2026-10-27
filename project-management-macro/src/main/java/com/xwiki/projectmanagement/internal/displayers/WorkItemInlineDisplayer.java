@@ -26,13 +26,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -64,9 +62,6 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
     private static final String ATTRIBUTE_CLASS = "class";
 
     private static final String KEY_INSTANCE = "instance";
-
-    @Inject
-    private ContextualLocalizationManager localizationManager;
 
     /**
      * Default constructor.
@@ -110,19 +105,6 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
         addSummaryBadge(children, workItem);
 
         return context.isInline() ? children : Collections.singletonList(new GroupBlock(children));
-    }
-
-    private String getNoItemsMessage()
-    {
-        String translationPrefix = (String) macroContext.get("translationPrefix");
-        if (translationPrefix != null) {
-            String translated =
-                localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"));
-            if (translated != null) {
-                return translated;
-            }
-        }
-        return "There are no work items matching this filter.";
     }
 
     private void addTypeBadge(List<Block> children, WorkItem workItem)

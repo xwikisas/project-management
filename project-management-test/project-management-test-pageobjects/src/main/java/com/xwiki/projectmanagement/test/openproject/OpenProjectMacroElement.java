@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javax.naming.OperationNotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
@@ -155,6 +158,71 @@ public class OpenProjectMacroElement extends BaseElement
     public String getPaginationEntriesText()
     {
         return self.findElement(By.className("pagination-current-entries")).getText();
+    }
+
+    /**
+     * Wait for the work packages displayed as a list to be rendered, since the macro is rendered asynchronously.
+     *
+     * @return the lines of the list, one per work package: its key (or its id prefixed by {@code #}) followed by its
+     *     subject
+     * @since 1.3.1
+     */
+    public List<String> getListedWorkPackages()
+    {
+        waitUntilRendered();
+        return getTexts(self.findElements(By.tagName("li")));
+    }
+
+    /**
+     * Wait for the work packages displayed as an enumeration to be rendered, since the macro is rendered
+     * asynchronously.
+     *
+     * @return the displayed text, i.e. the keys (or the ids prefixed by {@code #}) of the work packages separated by
+     *     commas
+     * @since 1.3.1
+     */
+    public String getEnumeratedWorkPackages()
+    {
+        waitUntilRendered();
+        return self.getText();
+    }
+
+    /**
+     * @return the work packages displayed as links to OpenProject, by their displayed identifier
+     * @since 1.3.1
+     */
+    public List<String> getWorkPackageLinks()
+    {
+        waitUntilRendered();
+        return getTexts(self.findElements(By.tagName("a")));
+    }
+
+    /**
+     * @return the work packages displayed as closed (struck through) by the list and enumeration displayers, as
+     *     displayed
+     * @since 1.3.1
+     */
+    public List<String> getClosedWorkPackages()
+    {
+        waitUntilRendered();
+        return getTexts(self.findElements(By.tagName("del")));
+    }
+
+    private void waitUntilRendered()
+    {
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            // The macro is rendered asynchronously: the work packages show up once it is, linked to OpenProject.
+            getDriver().waitUntilCondition(driver -> !self.findElements(By.tagName("a")).isEmpty());
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+    }
+
+    private static List<String> getTexts(List<WebElement> elements)
+    {
+        return elements.stream().map(WebElement::getText).collect(Collectors.toList());
     }
 
     /**

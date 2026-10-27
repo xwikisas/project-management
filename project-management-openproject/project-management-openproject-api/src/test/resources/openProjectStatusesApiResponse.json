@@ -26,7 +26,7 @@
         "_type": "Status",
         "id": 2,
         "name": "Second status",
-        "isClosed": false,
+        "isClosed": true,
         "color": "#A5D8FF",
         "isDefault": false,
         "isReadonly": false,

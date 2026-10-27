@@ -22,7 +22,10 @@ package com.xwiki.projectmanagement.test.openproject;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,6 +41,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -79,30 +86,112 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
     @Order(1)
     void displayWorkPackagesFromTheirKeys(TestUtils setup, TestReference testReference) throws Exception
     {
-        // Work packages of the two demo projects, which have different keys.
+        // Work packages of the two demo projects, which have different keys, and a closed one.
         List<JsonNode> demoProjectWorkPackages = getWorkPackages("1");
         JsonNode first = demoProjectWorkPackages.get(0);
         JsonNode second = demoProjectWorkPackages.get(1);
         JsonNode other = getWorkPackages("2").get(0);
+        JsonNode closed = getClosedWorkPackage(List.of(first, second, other));
 
         // Keys mixed with an id, and with a key that doesn't match any work package, which is skipped.
-        String identifier = String.join(",", getKey(other), first.get("id").asText(), "UNKNOWN-1", getKey(second));
-        setup.createPage(testReference, String.format("{{openproject instance=\"%1$s\" id=\"keys\" identifier=\"%2$s\"/}}"
-            + "\n\n{{openproject instance=\"%1$s\" identifier=\"%3$s\" workItemsDisplayer=\"workItemsSingle\"/}}",
-            CONNECTION, identifier, getKey(second)));
+        String identifier =
+            String.join(",", getKey(other), first.get("id").asText(), "UNKNOWN-1", getKey(second), getKey(closed));
+        String macro = "{{openproject instance=\"%1$s\" identifier=\"%2$s\"%3$s/}}";
+        setup.createPage(testReference, String.join("\n\n",
+            String.format(macro, CONNECTION, identifier, " id=\"keys\""),
+            String.format(macro, CONNECTION, getKey(second), " workItemsDisplayer=\"workItemsSingle\""),
+            String.format(macro, CONNECTION, identifier, " workItemsDisplayer=\"workItemsList\""),
+            "Fixed issues: " + String.format(macro, CONNECTION, identifier, " workItemsDisplayer=\"workItemsEnum\"")));
 
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
-        assertEquals(2, macros.size());
+        assertEquals(4, macros.size());
 
         // The work packages are displayed in the order of the identifier.
         TableLayoutElement table = macros.get(0).waitForTableLayout();
-        assertEquals(3, table.countRows());
+        assertEquals(4, table.countRows());
         assertEquals(other.get("id").asText(), table.getCell("ID", 1).getText());
         assertEquals(first.get("id").asText(), table.getCell("ID", 2).getText());
         assertEquals(second.get("id").asText(), table.getCell("ID", 3).getText());
+        assertEquals(closed.get("id").asText(), table.getCell("ID", 4).getText());
 
         OpenProjectSingleDisplayer single = macros.get(1).getSingleWorkItem().waitUntilReady();
         assertThat(single.getHeaderText(), containsString(second.get("subject").asText()));
+        // The header shows the key of the work package instead of its id.
+        assertThat(single.getHeaderText(), containsString(getKey(second)));
+        assertThat(single.getHeaderText(), not(containsString("#" + second.get("id").asText())));
+        // The properties are labelled by name, including the fields specific to the instance (e.g. its custom fields),
+        // and neither the key, already in the header, nor whether the work package is closed, given by its status,
+        // are repeated.
+        List<String> propertyNames = single.getPropertyNames();
+        assertThat(propertyNames, hasItem("Status"));
+        assertThat(propertyNames, everyItem(not(startsWith("openproject.property."))));
+        assertThat(propertyNames, not(hasItem("Resolved")));
+        assertThat(propertyNames, not(hasItem("Key")));
+
+        // The list and the enumeration display the work packages by key, even those given by id, and strike through
+        // the closed ones.
+        List<JsonNode> displayed = List.of(other, first, second, closed);
+        List<String> keys = displayed.stream().map(OpenProjectWorkPackageKeysIT::getKey).collect(Collectors.toList());
+        Set<String> closedStatuses = getClosedStatuses();
+        List<JsonNode> closedDisplayed = displayed.stream()
+            .filter(workPackage -> closedStatuses.contains(getStatus(workPackage))).collect(Collectors.toList());
+
+        OpenProjectMacroElement list = macros.get(2);
+        assertEquals(displayed.stream().map(OpenProjectWorkPackageKeysIT::getListLine).collect(Collectors.toList()),
+            list.getListedWorkPackages());
+        assertEquals(keys, list.getWorkPackageLinks());
+        assertEquals(closedDisplayed.stream().map(OpenProjectWorkPackageKeysIT::getListLine)
+            .collect(Collectors.toList()), list.getClosedWorkPackages());
+
+        OpenProjectMacroElement enumeration = macros.get(3);
+        assertEquals(String.join(", ", keys), enumeration.getEnumeratedWorkPackages());
+        assertEquals(keys, enumeration.getWorkPackageLinks());
+        assertEquals(closedDisplayed.stream().map(OpenProjectWorkPackageKeysIT::getKey).collect(Collectors.toList()),
+            enumeration.getClosedWorkPackages());
+    }
+
+    /**
+     * @param excluded the work packages to skip
+     * @return a closed work package of the public demo projects, other than the excluded ones
+     */
+    private JsonNode getClosedWorkPackage(List<JsonNode> excluded) throws Exception
+    {
+        Set<String> excludedIds = excluded.stream().map(workPackage -> workPackage.get("id").asText())
+            .collect(Collectors.toSet());
+        JsonNode workPackages = this.semanticOpenProject.getApiResource(String.format(
+            "/work_packages?pageSize=20&filters=%s&sortBy=%s",
+            URLEncoder.encode("[{\"status\":{\"operator\":\"c\",\"values\":[]}}]", StandardCharsets.UTF_8),
+            URLEncoder.encode("[[\"id\",\"asc\"]]", StandardCharsets.UTF_8)));
+        for (JsonNode workPackage : workPackages.get("_embedded").get("elements")) {
+            if (!excludedIds.contains(workPackage.get("id").asText())) {
+                return workPackage;
+            }
+        }
+        throw new IllegalStateException("The demo data has no closed work package.");
+    }
+
+    /**
+     * @return the names of the statuses of the work packages that are closed
+     */
+    private Set<String> getClosedStatuses() throws Exception
+    {
+        Set<String> closedStatuses = new HashSet<>();
+        for (JsonNode status : this.semanticOpenProject.getApiResource("/statuses").get("_embedded").get("elements")) {
+            if (status.get("isClosed").asBoolean()) {
+                closedStatuses.add(status.get("name").asText());
+            }
+        }
+        return closedStatuses;
+    }
+
+    private static String getListLine(JsonNode workPackage)
+    {
+        return getKey(workPackage) + " " + workPackage.get("subject").asText();
+    }
+
+    private static String getStatus(JsonNode workPackage)
+    {
+        return workPackage.get("_links").get("status").get("title").asText();
     }
 
     /**

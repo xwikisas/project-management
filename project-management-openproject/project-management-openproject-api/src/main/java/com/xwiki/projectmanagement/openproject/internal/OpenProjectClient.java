@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFi
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -159,23 +161,23 @@ public class OpenProjectClient implements ProjectManagementClient
             List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
             List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
 
+            PaginatedResult<WorkItem> workItems;
             if (identifier != null && IDS_PATTERN.matcher(identifier).matches()) {
-                return handleIds(openProjectApiClient, fields, identifier, page, pageSize, mappedFilters,
+                workItems = handleIds(openProjectApiClient, fields, identifier, page, pageSize, mappedFilters,
                     mappedSortEntries);
-            }
-
-            if (identifier != null && !identifier.trim().isEmpty()) {
-                return handleIdentifier(openProjectApiClient, fields, identifier.trim(), offset, pageSize,
+            } else if (identifier != null && !identifier.trim().isEmpty()) {
+                workItems = handleIdentifier(openProjectApiClient, fields, identifier.trim(), offset, pageSize,
                     mappedFilters, mappedSortEntries);
+            } else {
+                String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
+                String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
+                PaginatedResult<WorkPackage> workPackagesPaginatedResult =
+                    openProjectApiClient.getWorkPackages(offset, pageSize, filtersString, sortByString);
+                workItems = OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
+                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
             }
-
-            String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
-            String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
-            PaginatedResult<WorkPackage> workPackagesPaginatedResult =
-                openProjectApiClient.getWorkPackages(offset, pageSize, filtersString, sortByString);
-
-            return OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
-                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+            markClosedWorkItems(openProjectApiClient, workItems);
+            return workItems;
         } catch (WorkItemRetrievalException e) {
             // Report authentication and rights failures, so that the caller can tell the user what to do.
             if (isAuthenticationOrRightsFailure(e)) {
@@ -416,6 +418,36 @@ public class OpenProjectClient implements ProjectManagementClient
             }
             throw new WorkItemRetrievalException(String.format("Failed to resolve the work package key [%s].", key),
                 cause);
+        }
+    }
+
+    /**
+     * Marks the work items whose status is closed as resolved. The work package collections only link the status of
+     * each work package, so whether it is closed comes from the statuses of the instance (which the client caches).
+     */
+    private void markClosedWorkItems(OpenProjectApiClient openProjectApiClient, PaginatedResult<WorkItem> workItems)
+    {
+        if (workItems.getItems() == null || workItems.getItems().isEmpty()) {
+            return;
+        }
+        Set<String> closedStatuses = new HashSet<>();
+        try {
+            PaginatedResult<Status> statuses = openProjectApiClient.getStatuses();
+            if (statuses == null || statuses.getItems() == null) {
+                return;
+            }
+            for (Status status : statuses.getItems()) {
+                if (status.isClosed()) {
+                    closedStatuses.add(status.getName());
+                }
+            }
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            // The work items can still be displayed, without telling which ones are closed.
+            logger.warn("Failed to retrieve the work package statuses: {}", ExceptionUtils.getRootCauseMessage(e));
+            return;
+        }
+        for (WorkItem workItem : workItems.getItems()) {
+            workItem.setResolved(closedStatuses.contains(workItem.getStatus()));
         }
     }
 

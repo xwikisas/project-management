@@ -60,5 +60,18 @@
       "location": "http://xwiki.com/id/1"
     },
     "description": "This is some nice description"
+  },
+  {
+    "identifier": {
+      "value": "3",
+      "location": "http://xwiki.com/id/3"
+    },
+    "key": "PROJ-3",
+    "customField": "Some value",
+    "summary": {
+      "value": "Do that other thing",
+      "location": "http://xwiki.com/id/3"
+    },
+    "resolved": false
   }
 ]

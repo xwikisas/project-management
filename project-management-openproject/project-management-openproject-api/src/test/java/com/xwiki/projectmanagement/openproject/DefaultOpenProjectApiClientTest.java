@@ -189,6 +189,8 @@ class DefaultOpenProjectApiClientTest
         assertEquals(OFFSET, workPackages.getPage());
 
         assertGeneratedWorkPackages(workPackages.getItems());
+        // OpenProject versions older than 17.x don't provide the displayed identifier.
+        assertNull(workPackages.getItems().get(0).getDisplayId());
     }
 
     @Test
@@ -426,13 +428,15 @@ class DefaultOpenProjectApiClientTest
     void getWorkPackageByKey() throws ProjectManagementException, IOException, InterruptedException
     {
         when(this.response.statusCode()).thenReturn(200);
-        when(this.response.body()).thenReturn("{\"id\":1911,\"subject\":\"Fix the bug\"}");
+        when(this.response.body())
+            .thenReturn("{\"id\":1911,\"displayId\":\"XWIKI-123\",\"subject\":\"Fix the bug\"}");
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
 
         WorkPackage workPackage = openProjectApiClient.getWorkPackage("XWIKI-123");
 
         assertEquals(1911, workPackage.getId());
         assertEquals("Fix the bug", workPackage.getSubject());
+        assertEquals("XWIKI-123", workPackage.getDisplayId());
         verify(client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
         assertEquals(String.format("%s/api/v3/work_packages/XWIKI-123", OPEN_PROJECT_CONNECTION_URL),
             captor.getValue().uri().toString());
@@ -604,6 +608,8 @@ class DefaultOpenProjectApiClientTest
             ),
             statuses.get(1)
         );
+        assertFalse(statuses.get(0).isClosed());
+        assertTrue(statuses.get(1).isClosed());
     }
 
     private void assertGeneratedPriorities(List<Priority> priorities)

@@ -19,6 +19,10 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.BaseElement;
@@ -122,6 +126,17 @@ public class OpenProjectSingleDisplayer extends BaseElement
     public String getPropertyValue(String name)
     {
         return getProperty(name).getText();
+    }
+
+    /**
+     * @return the labels of the displayed work package properties, without the trailing colon
+     * @since 1.3.1
+     */
+    public List<String> getPropertyNames()
+    {
+        return parent.findElements(By.cssSelector(".work-item-page-displayer td.work-item-property-name")).stream()
+            .map(element -> StringUtils.removeEnd(element.getText().trim(), ":"))
+            .collect(Collectors.toList());
     }
 
     /**

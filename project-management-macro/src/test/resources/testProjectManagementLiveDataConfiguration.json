@@ -1,0 +1,11 @@
+{
+  "meta": {
+    "propertyDescriptors": [
+      {
+        "id": "customField",
+        "type": "String",
+        "name": "Custom field"
+      }
+    ]
+  }
+}

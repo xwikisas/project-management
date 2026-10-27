@@ -158,6 +158,13 @@ public class WorkItem extends HashMap<String, Object>
     public static final String KEY_CLOSED_BY = "closedBy";
 
     /**
+     * The key identifying the key property of the work item.
+     *
+     * @since 1.3.1
+     */
+    public static final String KEY_KEY = "key";
+
+    /**
      * @return the type of the work item. i.e. task, bug, epic, etc.
      */
     @JsonProperty(KEY_TYPE)
@@ -542,6 +549,28 @@ public class WorkItem extends HashMap<String, Object>
     public void setClosedBy(Linkable closedBy)
     {
         put(KEY_CLOSED_BY, closedBy);
+    }
+
+    /**
+     * @return the human-readable key of this work item when it differs from its identifier, e.g. {@code XWIKI-123}
+     *     for an OpenProject work package identified by {@code 123} on an instance using project-based semantic
+     *     identifiers; {@code null} if the work item is only known by its identifier
+     * @since 1.3.1
+     */
+    @JsonProperty(KEY_KEY)
+    public String getKey()
+    {
+        return (String) get(KEY_KEY);
+    }
+
+    /**
+     * @param key see {@link #getKey()}.
+     * @since 1.3.1
+     */
+    @JsonProperty(KEY_KEY)
+    public void setKey(String key)
+    {
+        put(KEY_KEY, key);
     }
 
     /**

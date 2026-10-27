@@ -21,7 +21,9 @@ require(['jquery'], function ($) {
   const unneededParams = {
     liveData: [],
     liveDataCards: [],
-    workItemsSingle: ["sort", "offset", "limit", "properties"]
+    workItemsSingle: ["sort", "offset", "limit", "properties"],
+    workItemsList: ["properties"],
+    workItemsEnum: ["properties"]
   };
   let hideShowParams = function () {
     let displayerVal = $('.macro-editor select[name="workItemsDisplayer"]').val();

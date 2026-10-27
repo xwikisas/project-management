@@ -92,7 +92,8 @@ public final class OpenProjectWorkItemFields
         WorkItem.KEY_DATE_RANGE, WorkItem.KEY_PROGRESS, WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE,
         WorkItem.KEY_CREATOR, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_PRIORITY, WorkItem.KEY_PROJECT,
         WorkItem.KEY_STATUS, WorkItem.KEY_REPORTER, WorkItem.KEY_RESOLUTION, WorkItem.KEY_RESOLVED,
-        WorkItem.KEY_LABELS, WorkItem.KEY_CLOSE_DATE, WorkItem.KEY_MILESTONES, WorkItem.KEY_CLOSED_BY, "_actions");
+        WorkItem.KEY_LABELS, WorkItem.KEY_CLOSE_DATE, WorkItem.KEY_MILESTONES, WorkItem.KEY_CLOSED_BY, WorkItem.KEY_KEY,
+        "_actions");
 
     /**
      * The fields referencing other resources that can't be filtered, at least in the global work package queries.
