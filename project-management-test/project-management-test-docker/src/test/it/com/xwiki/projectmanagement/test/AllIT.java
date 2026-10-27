@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.test;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Order;
 import org.xwiki.test.docker.junit5.UITest;
 
 import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
@@ -43,42 +42,36 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT
 public class AllIT
 {
     @Nested
-    @Order(1)
     @DisplayName("OpenProject administration")
     class NestedOpenProjectAdministrationIT extends OpenProjectAdministrationIT
     {
     }
 
     @Nested
-    @Order(2)
     @DisplayName("OpenProject macro")
     class NestedOpenProjectMacroIT extends OpenProjectMacroIT
     {
     }
 
     @Nested
-    @Order(3)
     @DisplayName("OpenProject chart macro")
     class NestedOpenProjectChartMacroIT extends OpenProjectChartMacroIT
     {
     }
 
     @Nested
-    @Order(4)
     @DisplayName("OpenProject CKEditor plugin")
     class NestedOpenProjectCKEditorIT extends OpenProjectCKEditorIT
     {
     }
 
     @Nested
-    @Order(5)
     @DisplayName("OpenProject filter presets")
     class NestedOpenProjectPresetIT extends OpenProjectPresetIT
     {
     }
 
     @Nested
-    @Order(6)
     @DisplayName("OpenProject work package keys")
     class NestedOpenProjectWorkPackageKeysIT extends OpenProjectWorkPackageKeysIT
     {
