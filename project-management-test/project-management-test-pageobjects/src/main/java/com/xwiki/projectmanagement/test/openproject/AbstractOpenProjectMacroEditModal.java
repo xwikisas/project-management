@@ -47,6 +47,16 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final String PRESET_PARAMETER = "presetId";
 
+    private static final String WATCH_REFRESH_SCRIPT = "window.projManagMacroRefreshed = false;"
+        + "Object.values(CKEDITOR.instances).forEach(editor => {"
+        + "  const listener = editor.on('afterCommandExec', event => {"
+        + "    if (event.data.name === 'xwiki-refresh') {"
+        + "      listener.removeListener();"
+        + "      window.projManagMacroRefreshed = true;"
+        + "    }"
+        + "  });"
+        + "});";
+
     private WYSIWYGEditPage editPage;
 
     protected AbstractOpenProjectMacroEditModal()
@@ -274,7 +284,13 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     {
         // A notification triggered by a previous save may still be displayed on top of the modal footer.
         getDriver().waitUntilElementDisappears(By.className("xnotification"));
+        // Submitting the modal makes CKEditor refresh the edited content (render the macros again). The macro widgets
+        // are initialized at the end of the refresh, and saving before that would save their output instead of the
+        // macro calls, so we wait for the refresh to be done.
+        getDriver().executeJavascript(WATCH_REFRESH_SCRIPT);
         getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer .btn-primary")).click();
+        getDriver().waitUntilCondition(
+            driver -> Boolean.TRUE.equals(getDriver().executeJavascript("return window.projManagMacroRefreshed;")));
     }
 
     private MacroDialogSelectModal openMacroSelectModal(TestUtils setup)
