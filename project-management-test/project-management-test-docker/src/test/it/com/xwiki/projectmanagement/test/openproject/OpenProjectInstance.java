@@ -24,6 +24,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -122,26 +125,11 @@ public class OpenProjectInstance
      */
     protected String apiBaseUrl;
 
-    private final String networkAlias;
-
-    private GenericContainer<?> container;
-
     /**
-     * An instance started in a Docker container, reached through the {@value #NETWORK_ALIAS} network alias.
+     * The identifiers of the projects before switching to semantic identifiers, which are restored when switching
+     * back to classic identifiers.
      */
-    public OpenProjectInstance()
-    {
-        this(NETWORK_ALIAS);
-    }
-
-    /**
-     * @param networkAlias the network alias of the container, which must be unique among the instances started by
-     *     the tests
-     */
-    public OpenProjectInstance(String networkAlias)
-    {
-        this.networkAlias = networkAlias;
-    }
+    private List<String> classicProjectIdentifiers;
 
     /**
      * @return an {@link ExternalOpenProjectInstance} configured from the {@code openproject.*} system properties when
@@ -176,8 +164,7 @@ public class OpenProjectInstance
             .withEnv("SECRET_KEY_BASE", RandomStringUtils.randomAlphanumeric(128))
             .withEnv("OPENPROJECT_HTTPS", "false")
             .withEnv("OPENPROJECT_DEFAULT__LANGUAGE", "en")
-            // One web worker (instead of 2) is enough for the tests, and saves memory, which matters when the tests start
-            // several instances.
+            // One web worker (instead of 2) is enough for the tests, and saves memory.
             .withEnv("OPENPROJECT_WEB_WORKERS", "1")
             // Let anonymous users see the public projects, to test showing the public data to XWiki users who haven't
             // connected their OpenProject account.
@@ -185,7 +172,7 @@ public class OpenProjectInstance
             .withExposedPorts(80)
             // Join the network of the browser and XWiki containers, so that both reach OpenProject by its alias.
             .withNetwork(Network.SHARED)
-            .withNetworkAliases(this.networkAlias)
+            .withNetworkAliases(NETWORK_ALIAS)
             // The home page fails (HTTP 500, "Missing host to link to") for anonymous users when OpenProject doesn't
             // require users to log in and no host name is configured, so wait for the login page instead. The host
             // name can't be configured: OpenProject would then reject the requests made with another host.
@@ -197,13 +184,12 @@ public class OpenProjectInstance
                 "/app/config/initializers/doorkeeper.rb");
 
         DockerTestUtils.startContainer(openProject, testConfiguration);
-        this.container = openProject;
 
         // OpenProject has to be reached with the same URL by the browser and by XWiki. A containerized XWiki shares the
         // network of the browser, while an XWiki running outside Docker reaches the containers through the Docker
         // bridge (Linux only).
         this.baseUrl = testConfiguration.getServletEngine().isOutsideDocker()
-            ? "http://172.17.0.1:" + openProject.getMappedPort(80) : "http://" + this.networkAlias;
+            ? "http://172.17.0.1:" + openProject.getMappedPort(80) : "http://" + NETWORK_ALIAS;
         // The tests themselves run outside Docker.
         this.apiBaseUrl = "http://" + openProject.getHost() + ':' + openProject.getMappedPort(80);
         LOGGER.info("The OpenProject container is available at [{}].", this.baseUrl);
@@ -238,47 +224,78 @@ public class OpenProjectInstance
     /**
      * Identify the work packages by their key (e.g. {@code PROJ-123}) instead of their id ("Project-based semantic
      * identifiers"). This setting applies to the whole instance, and converts the identifiers of all its projects,
-     * e.g. {@code demo-project} becomes {@code DP}.
+     * e.g. {@code demo-project} becomes {@code DP}, so call {@link #useClassicIdentifiers(XWikiWebDriver)} once done.
      *
-     * @param driver the webdriver used to navigate the instance, with the admin user logged in
+     * @param driver the webdriver used to navigate the instance
      * @throws Exception if the conversion doesn't finish in time
      */
     public void useSemanticIdentifiers(XWikiWebDriver driver) throws Exception
     {
+        this.classicProjectIdentifiers = getProjectIdentifiers();
+        submitIdentifierSetting(driver, "semantic");
+        // The identifiers are converted by a background job, which ends by switching the setting.
+        waitForIdentifiers("semantic", () -> {
+            JsonNode workPackage = getFirstWorkPackage();
+            return !workPackage.get("displayId").asText().equals(workPackage.get("id").asText());
+        });
+    }
+
+    /**
+     * Identify the work packages by their id again, after {@link #useSemanticIdentifiers(XWikiWebDriver)}, restoring
+     * the identifiers the projects had before.
+     *
+     * @param driver the webdriver used to navigate the instance
+     * @throws Exception if the conversion doesn't finish in time
+     */
+    public void useClassicIdentifiers(XWikiWebDriver driver) throws Exception
+    {
+        submitIdentifierSetting(driver, "classic");
+        // The setting is switched right away, but the project identifiers are restored by a background job.
+        waitForIdentifiers("classic", () -> {
+            JsonNode workPackage = getFirstWorkPackage();
+            return workPackage.get("displayId").asText().equals(workPackage.get("id").asText())
+                && getProjectIdentifiers().equals(this.classicProjectIdentifiers);
+        });
+    }
+
+    private void submitIdentifierSetting(XWikiWebDriver driver, String value)
+    {
+        maybeLogin(driver, true);
         driver.get(getBaseUrl() + "/admin/settings/work_packages_identifier");
         waitPageLoad(driver);
         // The form asks for a confirmation in a dialog before submitting the setting, so submit it directly.
         driver.executeScript("const form = document.getElementById('wp-identifier-settings-form');"
             + "for (const input of form.querySelectorAll(\"[name='settings[work_packages_identifier]']\")) {"
-            + "  if (input.type === 'radio') { input.checked = input.value === 'semantic'; }"
-            + "  else { input.value = 'semantic'; }"
+            + "  if (input.type === 'radio') { input.checked = input.value === arguments[0]; }"
+            + "  else { input.value = arguments[0]; }"
             + "}"
-            + "form.submit();");
+            + "form.submit();", value);
         waitPageLoad(driver);
-
-        // The identifiers are converted by a background job, which ends by switching the setting.
-        String workPackagesPath = "/work_packages?pageSize=1&filters=%5B%5D";
-        long deadline = System.currentTimeMillis() + Duration.ofMinutes(2).toMillis();
-        JsonNode workPackage = getApiResource(workPackagesPath).get("_embedded").get("elements").get(0);
-        while (workPackage.get("displayId").asText().equals(workPackage.get("id").asText())) {
-            if (System.currentTimeMillis() > deadline) {
-                throw new TimeoutException("OpenProject didn't switch to semantic identifiers in time.");
-            }
-            Thread.sleep(1000);
-            workPackage = getApiResource(workPackagesPath).get("_embedded").get("elements").get(0);
-        }
-        LOGGER.info("OpenProject at [{}] uses semantic identifiers.", getBaseUrl());
     }
 
-    /**
-     * Stop the container of the instance, if it was started by the tests.
-     */
-    public void stop()
+    private void waitForIdentifiers(String mode, Callable<Boolean> converted) throws Exception
     {
-        if (this.container != null) {
-            this.container.stop();
-            this.container = null;
+        long deadline = System.currentTimeMillis() + Duration.ofMinutes(2).toMillis();
+        while (!converted.call()) {
+            if (System.currentTimeMillis() > deadline) {
+                throw new TimeoutException(String.format("OpenProject didn't switch to %s identifiers in time.", mode));
+            }
+            Thread.sleep(1000);
         }
+        LOGGER.info("OpenProject at [{}] uses {} identifiers.", getBaseUrl(), mode);
+    }
+
+    private JsonNode getFirstWorkPackage() throws Exception
+    {
+        return getApiResource("/work_packages?pageSize=1&filters=%5B%5D").get("_embedded").get("elements").get(0);
+    }
+
+    private List<String> getProjectIdentifiers() throws Exception
+    {
+        List<String> identifiers = new ArrayList<>();
+        getApiResource("/projects?pageSize=100&sortBy=%5B%5B%22id%22%2C%22asc%22%5D%5D").get("_embedded")
+            .get("elements").forEach(project -> identifiers.add(project.get("identifier").asText()));
+        return identifiers;
     }
 
     /**

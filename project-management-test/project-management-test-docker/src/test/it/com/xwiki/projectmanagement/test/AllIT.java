@@ -33,8 +33,8 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT
 
 /**
  * Groups all the integration tests for the project management implementations. The nested test classes share the same
- * XWiki instance and the same OpenProject instance, except for the tests of the work package keys, which need an
- * OpenProject instance using project-based semantic identifiers.
+ * XWiki instance and the same OpenProject instance. The tests of the work package keys switch this OpenProject instance
+ * to project-based semantic identifiers while they run, and then back to classic identifiers.
  *
  * @version $Id$
  */
