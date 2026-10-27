@@ -30,10 +30,12 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT;
 
 /**
  * Groups all the integration tests for the project management implementations. The nested test classes share the same
- * XWiki instance and the same OpenProject instance.
+ * XWiki instance and the same OpenProject instance, except for the tests of the work package keys, which need an
+ * OpenProject instance using project-based semantic identifiers.
  *
  * @version $Id$
  */
@@ -72,6 +74,13 @@ public class AllIT
     @Order(5)
     @DisplayName("OpenProject filter presets")
     class NestedOpenProjectPresetIT extends OpenProjectPresetIT
+    {
+    }
+
+    @Nested
+    @Order(6)
+    @DisplayName("OpenProject work package keys")
+    class NestedOpenProjectWorkPackageKeysIT extends OpenProjectWorkPackageKeysIT
     {
     }
 }

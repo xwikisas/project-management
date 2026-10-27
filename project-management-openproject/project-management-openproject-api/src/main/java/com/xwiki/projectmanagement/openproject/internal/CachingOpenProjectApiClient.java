@@ -20,6 +20,9 @@
 
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.xwiki.cache.Cache;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -106,6 +109,22 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public WorkPackage getWorkPackage(String idOrKey) throws ProjectManagementException
+    {
+        // A missing work package is cached as an empty result, so that it isn't requested again for each page view.
+        String cacheKey = getCacheKey(String.format("workItem/%s", idOrKey), null, null, "", "");
+        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) cache.get(cacheKey);
+        if (result == null) {
+            WorkPackage workPackage = client.getWorkPackage(idOrKey);
+            List<WorkPackage> items =
+                workPackage == null ? Collections.emptyList() : Collections.singletonList(workPackage);
+            result = new PaginatedResult<>(items, 0, 1, items.size());
+            cache.set(cacheKey, result);
+        }
+        return result.getItems().isEmpty() ? null : result.getItems().get(0);
     }
 
     @Override

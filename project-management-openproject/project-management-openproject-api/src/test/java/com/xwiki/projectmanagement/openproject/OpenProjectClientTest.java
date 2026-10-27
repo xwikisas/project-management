@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
@@ -269,7 +271,7 @@ class OpenProjectClientTest
     {
         when(executionContext.get("identifier")).thenReturn("1,2,3,4,5,6,7,8,9,10");
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(),
             argThat(actual -> jsonEquals(
@@ -279,6 +281,97 @@ class OpenProjectClientTest
         );
 
         assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithKeysKeepsTheOrderOfTheIdentifier() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(" XWIKI-123 , xwiki-456,1911,XWIKI-123,XWIKI-404 ");
+        when(openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
+        when(openProjectApiClient.getWorkPackage("xwiki-456")).thenReturn(createWorkPackage(2));
+        // OpenProject returns the work packages sorted by id.
+        when(openProjectApiClient.getWorkPackages(eq(1), eq(3), argThat(this::isIdFilterOf5And2And1911), eq("")))
+            .thenReturn(new PaginatedResult<>(
+                List.of(createWorkPackage(2), createWorkPackage(5), createWorkPackage(1911)), 1, 3, 3));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(List.of("5", "2", "1911"), getIds(result));
+        assertEquals(3, result.getTotalItems());
+        // Each key is resolved only once.
+        verify(openProjectApiClient).getWorkPackage("XWIKI-123");
+        verify(openProjectApiClient).getWorkPackage("XWIKI-404");
+
+        // The work packages are paginated after being ordered.
+        result = openProjectClient.getWorkItems(1, 1, List.of(), List.of());
+
+        assertEquals(List.of("2"), getIds(result));
+        assertEquals(3, result.getTotalItems());
+    }
+
+    @Test
+    void getWorkItemsWithKeysSortedByTheLivedata() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn("XWIKI-123,XWIKI-456,1911");
+        when(openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
+        when(openProjectApiClient.getWorkPackage("XWIKI-456")).thenReturn(createWorkPackage(2));
+        LiveDataQuery.SortEntry sortEntry = new LiveDataQuery.SortEntry("identifier", true);
+
+        openProjectClient.getWorkItems(10, 10, List.of(), List.of(sortEntry));
+
+        verify(openProjectApiClient).getWorkPackages(eq(2), eq(10), argThat(this::isIdFilterOf5And2And1911),
+            eq(OpenProjectSortingHandler.convertSorting(List.of(sortEntry))));
+    }
+
+    @Test
+    void getWorkItemsWithUnknownKeys() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn("XWIKI-404,XWIKI-405");
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(0, result.getItems().size());
+        assertEquals(0, result.getTotalItems());
+        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
+    }
+
+    @Test
+    void getWorkItemsWithAKeyRejectedByOpenProject() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn("XWIKI-123,1911");
+        when(openProjectApiClient.getWorkPackage("XWIKI-123"))
+            .thenThrow(new WorkItemRetrievalException("Invalid key", 400));
+
+        openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(actual -> jsonEquals(actual, "[{\"id\":{\"operator\":\"=\",\"values\":[\"1911\"]}}]")), eq(""));
+        assertEquals("Failed to resolve the work package key [XWIKI-123]: Invalid key", logCapture.getMessage(0));
+    }
+
+    @Test
+    void getWorkItemsWithAKeyWhenOpenProjectRejectsTheUser() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn("XWIKI-123");
+        when(openProjectApiClient.getWorkPackage("XWIKI-123"))
+            .thenThrow(new WorkItemRetrievalException("Rejected", 401));
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+
+        assertEquals(401, exception.getStatusCode());
+    }
+
+    @Test
+    void getWorkItemsWithAnInvalidIdentifier()
+    {
+        when(executionContext.get("identifier")).thenReturn("XWIKI-123,not a key");
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+
+        assertEquals("The provided identifier value is not in a supported format.",
+            exception.getCause().getMessage());
     }
 
     @Test
@@ -395,6 +488,25 @@ class OpenProjectClientTest
         }
         result.setItems(workPackages);
         return result;
+    }
+
+    private boolean isIdFilterOf5And2And1911(String filters)
+    {
+        return jsonEquals(filters, "[{\"id\":{\"operator\":\"=\",\"values\":[\"5\",\"2\",\"1911\"]}}]");
+    }
+
+    private static WorkPackage createWorkPackage(int id)
+    {
+        WorkPackage workPackage = new WorkPackage();
+        workPackage.setId(id);
+        workPackage.setSelf(new Linkable(String.valueOf(id), "http://open-project-instance/work_packages/" + id));
+        return workPackage;
+    }
+
+    private static List<String> getIds(PaginatedResult<WorkItem> result)
+    {
+        return result.getItems().stream().map(workItem -> workItem.getIdentifier().getValue())
+            .collect(Collectors.toList());
     }
 
     private LiveDataQuery.Filter getSummaryFilter()

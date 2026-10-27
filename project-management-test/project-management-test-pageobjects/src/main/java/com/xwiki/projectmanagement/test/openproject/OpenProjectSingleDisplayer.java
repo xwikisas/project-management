@@ -88,6 +88,15 @@ public class OpenProjectSingleDisplayer extends BaseElement
     }
 
     /**
+     * @return the text of the header, which includes the subject of the work package
+     * @since 1.3.1
+     */
+    public String getHeaderText()
+    {
+        return getHeader().getText();
+    }
+
+    /**
      * @return the text displayed about the project of the work package
      * @since 1.3.1
      */
