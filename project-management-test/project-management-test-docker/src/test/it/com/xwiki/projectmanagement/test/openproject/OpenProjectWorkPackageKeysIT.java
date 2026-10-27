@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test the work package keys (e.g. {@code PROJ-123}) of the OpenProject instances using project-based semantic
- * identifiers.
+ * identifiers, by switching the shared OpenProject instance to them during the test.
  *
  * @version $Id$
  */
@@ -65,21 +65,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 )
 public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
 {
-    private static final String CONNECTION = OpenProjectFixture.SEMANTIC_CONNECTION_ID;
-
-    private OpenProjectInstance semanticOpenProject;
-
     @BeforeAll
-    void setUpSemanticOpenProject(TestUtils setup, TestConfiguration testConfiguration) throws Exception
+    void useSemanticIdentifiers(TestUtils setup, TestConfiguration testConfiguration) throws Exception
     {
-        this.semanticOpenProject = OpenProjectFixture.ensureSemanticReady(setup, testConfiguration);
+        OpenProjectFixture.useSemanticIdentifiers(setup, testConfiguration);
     }
 
     @AfterAll
-    void tearDownSemanticOpenProject()
+    void useClassicIdentifiers(TestUtils setup) throws Exception
     {
-        // No other test uses this instance.
-        OpenProjectFixture.stopSemantic();
+        // The other tests expect the work packages to be identified by their id.
+        OpenProjectFixture.useClassicIdentifiers(setup);
     }
 
     @Test
@@ -96,12 +92,12 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         // Keys mixed with an id, and with a key that doesn't match any work package, which is skipped.
         String identifier =
             String.join(",", getKey(other), first.get("id").asText(), "UNKNOWN-1", getKey(second), getKey(closed));
-        String macro = "{{openproject instance=\"%1$s\" identifier=\"%2$s\"%3$s/}}";
+        String macro = "{{openproject instance=\"" + CONNECTION_ID + "\" identifier=\"%1$s\"%2$s/}}";
         setup.createPage(testReference, String.join("\n\n",
-            String.format(macro, CONNECTION, identifier, " id=\"keys\""),
-            String.format(macro, CONNECTION, getKey(second), " workItemsDisplayer=\"workItemsSingle\""),
-            String.format(macro, CONNECTION, identifier, " workItemsDisplayer=\"workItemsList\""),
-            "Fixed issues: " + String.format(macro, CONNECTION, identifier, " workItemsDisplayer=\"workItemsEnum\"")));
+            String.format(macro, identifier, " id=\"keys\""),
+            String.format(macro, getKey(second), " workItemsDisplayer=\"workItemsSingle\""),
+            String.format(macro, identifier, " workItemsDisplayer=\"workItemsList\""),
+            "Fixed issues: " + String.format(macro, identifier, " workItemsDisplayer=\"workItemsEnum\"")));
 
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(4, macros.size());
@@ -158,7 +154,7 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
     {
         Set<String> excludedIds = excluded.stream().map(workPackage -> workPackage.get("id").asText())
             .collect(Collectors.toSet());
-        JsonNode workPackages = this.semanticOpenProject.getApiResource(String.format(
+        JsonNode workPackages = this.openProject.getApiResource(String.format(
             "/work_packages?pageSize=20&filters=%s&sortBy=%s",
             URLEncoder.encode("[{\"status\":{\"operator\":\"c\",\"values\":[]}}]", StandardCharsets.UTF_8),
             URLEncoder.encode("[[\"id\",\"asc\"]]", StandardCharsets.UTF_8)));
@@ -176,7 +172,7 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
     private Set<String> getClosedStatuses() throws Exception
     {
         Set<String> closedStatuses = new HashSet<>();
-        for (JsonNode status : this.semanticOpenProject.getApiResource("/statuses").get("_embedded").get("elements")) {
+        for (JsonNode status : this.openProject.getApiResource("/statuses").get("_embedded").get("elements")) {
             if (status.get("isClosed").asBoolean()) {
                 closedStatuses.add(status.get("name").asText());
             }
@@ -200,7 +196,7 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
      */
     private List<JsonNode> getWorkPackages(String projectId) throws Exception
     {
-        JsonNode workPackages = this.semanticOpenProject.getApiResource(
+        JsonNode workPackages = this.openProject.getApiResource(
             String.format("/projects/%s/work_packages?pageSize=2&filters=%s&sortBy=%s", projectId,
                 URLEncoder.encode("[]", StandardCharsets.UTF_8),
                 URLEncoder.encode("[[\"id\",\"asc\"]]", StandardCharsets.UTF_8)));
