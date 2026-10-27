@@ -32,11 +32,13 @@ import org.xwiki.test.ui.TestUtils;
  * {@code project-management-test-docker} directory:
  *
  * <pre>
- * docker run -d -p 8082:80 -e OPENPROJECT_SECRET_KEY_BASE=secret -e OPENPROJECT_HTTPS=false \
- *   -e OPENPROJECT_DEFAULT__LANGUAGE=en \
+ * docker run -d -p 8082:80 -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e OPENPROJECT_HTTPS=false \
+ *   -e OPENPROJECT_DEFAULT__LANGUAGE=en -e OPENPROJECT_LOGIN__REQUIRED=false \
  *   -v "$PWD/src/test/resources/doorkeeper.rb:/app/config/initializers/doorkeeper.rb:ro" \
- *   openproject/openproject:16
+ *   openproject/openproject:17.9.4
  * </pre>
+ *
+ * The tests also call the API of the instance, from outside Docker, through the same URL.
  *
  * A new OAuth application is created on each run, unless the {@value OpenProjectInstance#CLIENT_ID_PROPERTY} and
  * {@value OpenProjectInstance#CLIENT_SECRET_PROPERTY} system properties point to an existing one.
@@ -59,6 +61,7 @@ public class ExternalOpenProjectInstance extends OpenProjectInstance
         this.userName = userName;
         this.currentPassword = password;
         this.baseUrl = baseUrl;
+        this.apiBaseUrl = baseUrl;
         this.clientId = clientId;
         this.clientSecret = clientSecret;
     }
