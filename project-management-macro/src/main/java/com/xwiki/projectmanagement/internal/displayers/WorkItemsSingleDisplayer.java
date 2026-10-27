@@ -42,7 +42,6 @@ import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
-import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -159,7 +158,10 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         TableBuilder tableLinkables = new TableBuilder();
         TableBuilder tableTimeProps = new TableBuilder();
         String propertyPrefix = translationPrefix + PREFIX_PROPERTY;
+        Map<String, String> propertyNames = getPropertyNames();
 
+        // The status already tells whether the work item is closed.
+        workItem.remove(WorkItem.KEY_RESOLVED);
         Map<String, Object> displayerParams = Map.of(
             KEY_INSTANCE, macroContext.getContext().getOrDefault(KEY_INSTANCE, "").toString(),
             "workItem", workItem
@@ -168,7 +170,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
             if (property.getValue() == null) {
                 continue;
             }
-            List<Block> propertyNameBlock = getTranslationBlocks(property.getKey(), propertyPrefix);
+            List<Block> propertyNameBlock = getPropertyNameBlocks(property.getKey(), propertyPrefix, propertyNames);
             propertyNameBlock.add(new SpecialSymbolBlock(':'));
             List<Block> propertyValueBlock = getPropertyDisplayerManager().displayProperty(property.getKey(),
                 property.getValue(), displayerParams);
@@ -244,7 +246,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     }
 
     //  <div class="work-item-header">
-    //    <p>Work Item <a href="#">#123</a></p>
+    //    <p>Work Item <a href="#">#123</a></p> (or <a href="#">PROJ-123</a> when the work item has a key)
     //    <p>Some nice title.</p>
     //  </div>
     private GroupBlock getHeaderBlock(String translationPrefix, WorkItem workItem)
@@ -252,16 +254,15 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         List<Block> headerId = getTranslationBlocks("displayer.single.header.workItem", translationPrefix);
         headerId.add(new SpaceBlock());
         headerId.add(
-            new LinkBlock(
-                Arrays.asList(new SpecialSymbolBlock('#'),
-                    new WordBlock(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER))),
+            new LinkBlock(getIdentifierLabelBlocks(workItem),
                 new ResourceReference(workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER), ResourceType.URL),
                 false
             ));
         List<Block> headerName = getPropertyDisplayerManager().displayProperty(String.class.getName(),
             workItem.getLinkableValue(WorkItem.KEY_SUMMARY), Collections.emptyMap());
-        // Remove id and summary so they won't be displayed again.
+        // Remove id, key and summary so they won't be displayed again.
         workItem.remove(WorkItem.KEY_IDENTIFIER);
+        workItem.remove(WorkItem.KEY_KEY);
         workItem.remove(WorkItem.KEY_SUMMARY);
         GroupBlock headerIdGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(headerId)),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header-id"));
@@ -270,6 +271,17 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
 
         return new GroupBlock(Arrays.asList(headerNameGroup, headerIdGroup),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header"));
+    }
+
+    private List<Block> getPropertyNameBlocks(String property, String propertyPrefix,
+        Map<String, String> propertyNames)
+    {
+        String name = propertyNames.get(property);
+        if (localizationManager.getTranslation(propertyPrefix + property) == null && name != null) {
+            return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(), name,
+                Collections.emptyMap()));
+        }
+        return getTranslationBlocks(property, propertyPrefix);
     }
 
     private List<Block> getTranslationBlocks(String key, String translationPrefix)

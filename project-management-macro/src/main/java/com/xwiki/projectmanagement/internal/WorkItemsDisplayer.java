@@ -42,5 +42,17 @@ public enum WorkItemsDisplayer
     /**
      * Display a single work item as an inline badge.
      */
-    workItemInline;
+    workItemInline,
+    /**
+     * Display the work items as a bulleted list, one work item per line with its linked identifier and its summary.
+     *
+     * @since 1.3.1
+     */
+    workItemsList,
+    /**
+     * Display the linked identifiers of the work items separated by commas, usable inline in a sentence.
+     *
+     * @since 1.3.1
+     */
+    workItemsEnum;
 }

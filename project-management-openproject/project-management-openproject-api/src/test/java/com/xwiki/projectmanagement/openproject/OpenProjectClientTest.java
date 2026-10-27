@@ -56,12 +56,16 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
+import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -520,6 +524,62 @@ class OpenProjectClientTest
 
         assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
         assertEquals("Failed to retrieve the work package fields: ProjectManagementException: Forbidden",
+            this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getWorkItemsMarksClosedWorkItemsAsResolved() throws ProjectManagementException
+    {
+        Status open = new Status();
+        open.setName("New");
+        open.setClosed(false);
+        Status closed = new Status();
+        closed.setName("Closed");
+        closed.setClosed(true);
+        when(openProjectApiClient.getStatuses()).thenReturn(new PaginatedResult<>(List.of(open, closed), 0, 2, 2));
+        WorkPackage openWorkPackage = createWorkPackage(1);
+        openWorkPackage.setStatus(new Linkable("New", "http://open-project-instance/statuses/1/edit"));
+        WorkPackage closedWorkPackage = createWorkPackage(2);
+        closedWorkPackage.setStatus(new Linkable("Closed", "http://open-project-instance/statuses/2/edit"));
+        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(openWorkPackage, closedWorkPackage), 1, 10, 2));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertFalse(result.getItems().get(0).isResolved());
+        assertTrue(result.getItems().get(1).isResolved());
+    }
+
+    @Test
+    void getWorkItemsWithKeys() throws ProjectManagementException
+    {
+        WorkPackage withKey = createWorkPackage(1);
+        withKey.setDisplayId("PROJ-1");
+        // Without project-based semantic identifiers, OpenProject displays the id.
+        WorkPackage withId = createWorkPackage(2);
+        withId.setDisplayId("2");
+        WorkPackage withoutDisplayId = createWorkPackage(3);
+        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(withKey, withId, withoutDisplayId), 1, 10, 3));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals("PROJ-1", result.getItems().get(0).getKey());
+        assertEquals("1", result.getItems().get(0).getIdentifier().getValue());
+        assertNull(result.getItems().get(1).getKey());
+        assertNull(result.getItems().get(2).getKey());
+    }
+
+    @Test
+    void getWorkItemsWhenStatusesFail() throws ProjectManagementException
+    {
+        when(openProjectApiClient.getStatuses()).thenThrow(new ProjectManagementException("Forbidden"));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertFalse(result.getItems().get(0).containsKey(WorkItem.KEY_RESOLVED));
+        assertEquals("Failed to retrieve the work package statuses: ProjectManagementException: Forbidden",
             this.logCapture.getMessage(0));
     }
 

@@ -794,6 +794,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         workPackage.setSubject(element.path(OP_RESPONSE_SUBJECT).asText());
 
+        JsonNode displayId = element.path("displayId");
+        if (!displayId.isMissingNode() && !displayId.isNull()) {
+            workPackage.setDisplayId(displayId.asText());
+        }
+
         workPackage.setFieldValues(WorkPackageFieldsParser.parseFieldValues(element, connectionUrl));
 
         return workPackage;

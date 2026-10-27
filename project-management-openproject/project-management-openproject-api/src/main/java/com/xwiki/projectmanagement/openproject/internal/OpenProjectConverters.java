@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.Project;
@@ -136,6 +138,11 @@ public final class OpenProjectConverters
             workItem.setIdentifier(
                 new Linkable(String.valueOf(workPackage.getId()), workPackage.getSelf().getLocation()));
             workItem.setSummary(new Linkable(workPackage.getSubject(), workPackage.getSelf().getLocation()));
+        }
+        // The key is only worth displaying when OpenProject identifies the work package by more than its id.
+        String displayId = workPackage.getDisplayId();
+        if (StringUtils.isNotEmpty(displayId) && !displayId.equals(String.valueOf(workPackage.getId()))) {
+            workItem.setKey(displayId);
         }
     }
 

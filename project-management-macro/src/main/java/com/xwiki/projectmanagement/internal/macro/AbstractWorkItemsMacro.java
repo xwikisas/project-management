@@ -22,15 +22,19 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.macro.AbstractMacro;
 
@@ -54,6 +58,8 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
 {
     private static final String KEY_CLIENT = "client";
 
+    private static final String LIVE_DATA_SOURCE = "projectmanagement";
+
     @Inject
     protected ProjectManagementManager projectManagementManager;
 
@@ -62,6 +68,10 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
 
     @Inject
     protected LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
+
+    @Inject
+    @Named(LIVE_DATA_SOURCE)
+    protected LiveDataConfigurationResolver<LiveDataConfiguration> liveDataConfigurationResolver;
 
     @Inject
     protected WorkItemPropertyDisplayerManager displayerManager;
@@ -114,6 +124,41 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
             return Collections.emptyList();
         }
         return configuration.getQuery().getFilters();
+    }
+
+    /**
+     * The properties that the client adds to the generic ones, such as the custom fields of an OpenProject instance,
+     * have no translation: their names come from the client, which declares them in its Live Data configuration.
+     *
+     * @return the names of the work item properties declared by the Live Data configuration of the client, keyed by
+     *     property id, when they differ from the id
+     * @since 1.3.1
+     */
+    protected Map<String, String> getPropertyNames()
+    {
+        LiveDataConfiguration input = new LiveDataConfiguration();
+        input.setQuery(new LiveDataQuery());
+        input.getQuery().setSource(new LiveDataQuery.Source(LIVE_DATA_SOURCE));
+        for (Map.Entry<String, Object> parameter : macroContext.getContext().entrySet()) {
+            input.getQuery().getSource().setParameter(parameter.getKey(), parameter.getValue());
+        }
+        Map<String, String> names = new HashMap<>();
+        try {
+            LiveDataConfiguration configuration = liveDataConfigurationResolver.resolve(input);
+            if (configuration == null || configuration.getMeta() == null
+                || configuration.getMeta().getPropertyDescriptors() == null)
+            {
+                return names;
+            }
+            for (LiveDataPropertyDescriptor descriptor : configuration.getMeta().getPropertyDescriptors()) {
+                if (descriptor.getName() != null && !descriptor.getName().equals(descriptor.getId())) {
+                    names.put(descriptor.getId(), descriptor.getName());
+                }
+            }
+        } catch (LiveDataException e) {
+            // The properties are then labelled by their translation keys.
+        }
+        return names;
     }
 
     protected List<LiveDataQuery.SortEntry> getSortEntries(String sort)

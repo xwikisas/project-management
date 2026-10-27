@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.internal.displayers;
  */
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +32,18 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.SpecialSymbolBlock;
+import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.reference.ResourceReference;
+import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
@@ -59,6 +68,9 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
     @Inject
     @Named("ssrx")
     protected SkinExtension ssrx;
+
+    @Inject
+    protected ContextualLocalizationManager localizationManager;
 
     /**
      * @param name the name of the work item.
@@ -119,6 +131,60 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
     protected abstract List<Block> internalExecute(PaginatedResult<WorkItem> workItemList,
         ProjectManagementMacroParameters parameters,
         MacroTransformationContext context);
+
+    /**
+     * @return the message telling that no work item matches the filters, translated with the translation prefix of
+     *     the client when it has one
+     */
+    protected String getNoItemsMessage()
+    {
+        String translationPrefix = (String) macroContext.get("translationPrefix");
+        if (translationPrefix != null) {
+            String translated =
+                localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"));
+            if (translated != null) {
+                return translated;
+            }
+        }
+        return "There are no work items matching this filter.";
+    }
+
+    /**
+     * @param workItem a work item
+     * @return the key of the work item (e.g. {@code XWIKI-123}) or, when it has none, its identifier prefixed by
+     *     {@code #} (e.g. {@code #123}), linked to the work item when it has a location
+     * @since 1.3.1
+     */
+    protected List<Block> getIdentifierBlocks(WorkItem workItem)
+    {
+        List<Block> label = getIdentifierLabelBlocks(workItem);
+        String location = workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER);
+        if (label.isEmpty() || StringUtils.isEmpty(location)) {
+            return label;
+        }
+        List<Block> blocks = new ArrayList<>();
+        blocks.add(new LinkBlock(label, new ResourceReference(location, ResourceType.URL), false));
+        return blocks;
+    }
+
+    /**
+     * @param workItem a work item
+     * @return the key of the work item (e.g. {@code XWIKI-123}) or, when it has none, its identifier prefixed by
+     *     {@code #} (e.g. {@code #123}), not linked; empty when the work item has neither
+     * @since 1.3.1
+     */
+    protected List<Block> getIdentifierLabelBlocks(WorkItem workItem)
+    {
+        String key = workItem.getKey();
+        if (StringUtils.isNotEmpty(key)) {
+            return new ArrayList<>(Collections.singletonList(new WordBlock(key)));
+        }
+        String value = workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER);
+        if (value != null) {
+            return new ArrayList<>(Arrays.asList(new SpecialSymbolBlock('#'), new WordBlock(value)));
+        }
+        return new ArrayList<>();
+    }
 
     @Override
     protected void setDefaultCategories(Set<String> defaultCategories)

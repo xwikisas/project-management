@@ -29,6 +29,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  */
 public class Status extends ColoredOpenProjectObject
 {
+    private static final String KEY_IS_CLOSED = "isClosed";
+
+    /**
+     * Kept out of the map entries, so that the JSON representation of the status, which some REST resources return,
+     * doesn't change.
+     */
+    private boolean closed;
+
     /**
      * Create a Status object from a JsonNode.
      *
@@ -37,6 +45,7 @@ public class Status extends ColoredOpenProjectObject
     public Status(JsonNode statusNode)
     {
         super(statusNode);
+        setClosed(statusNode.path(KEY_IS_CLOSED).asBoolean());
     }
 
     /**
@@ -44,5 +53,23 @@ public class Status extends ColoredOpenProjectObject
      */
     public Status()
     {
+    }
+
+    /**
+     * @return {@code true} if the work packages having this status are closed
+     * @since 1.3.1
+     */
+    public boolean isClosed()
+    {
+        return this.closed;
+    }
+
+    /**
+     * @param closed see {@link #isClosed()}
+     * @since 1.3.1
+     */
+    public void setClosed(boolean closed)
+    {
+        this.closed = closed;
     }
 }

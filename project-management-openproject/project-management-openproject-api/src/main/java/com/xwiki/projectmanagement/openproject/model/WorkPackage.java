@@ -53,6 +53,12 @@ public class WorkPackage extends BaseOpenProjectObject
     private static final String SUBJECT = "subject";
 
     /**
+     * The key identifying the identifier displayed by OpenProject, e.g. {@code XWIKI-123} on the instances using
+     * project-based semantic identifiers.
+     */
+    private static final String DISPLAY_ID = "displayId";
+
+    /**
      * The key identifying the description of the work package.
      */
     private static final String DESCRIPTION = "description";
@@ -192,6 +198,26 @@ public class WorkPackage extends BaseOpenProjectObject
     public void setSubject(String subject)
     {
         put(SUBJECT, subject);
+    }
+
+    /**
+     * @return the identifier displayed by OpenProject: the key of the work package (e.g. {@code XWIKI-123}) on the
+     *     instances using project-based semantic identifiers, its id otherwise; {@code null} for the OpenProject
+     *     versions that don't provide it
+     * @since 1.3.1
+     */
+    public String getDisplayId()
+    {
+        return (String) get(DISPLAY_ID);
+    }
+
+    /**
+     * @param displayId see {@link #getDisplayId()}
+     * @since 1.3.1
+     */
+    public void setDisplayId(String displayId)
+    {
+        put(DISPLAY_ID, displayId);
     }
 
     /**

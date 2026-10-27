@@ -1,0 +1,10 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Enum displayer test - display a filter that returns no work items, inline.
+.#-----------------------------------------------------
+Fixed issues: {{workItemsEnum sourceParams="client=test" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>Fixed issues: <span class="box warningmessage">There are no work items matching this filter.</span></p>
