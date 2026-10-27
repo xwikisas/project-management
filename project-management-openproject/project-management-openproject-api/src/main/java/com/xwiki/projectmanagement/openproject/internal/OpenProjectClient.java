@@ -24,9 +24,16 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -84,13 +91,18 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final String QUERY_PROPS_QUERY_PARAMETER = "query_props=";
 
-    private static final String URL = "URL";
-
-    private static final String IDS = "ids";
-
     private static final Pattern URL_PATTERN = Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
 
-    private static final Pattern IDS_PATTERN = Pattern.compile("^\\d+(,\\d+)*$");
+    /**
+     * A work package id or, on instances using project-based semantic identifiers, a work package key (e.g.
+     * {@code XWIKI-123}).
+     */
+    private static final String ID_OR_KEY = "(\\d+|[A-Za-z][A-Za-z0-9_]*-\\d+)";
+
+    private static final Pattern IDS_PATTERN =
+        Pattern.compile(String.format("^\\s*%1$s(\\s*,\\s*%1$s)*\\s*$", ID_OR_KEY));
+
+    private static final Pattern IDS_SEPARATOR_PATTERN = Pattern.compile("\\s*,\\s*");
 
     private static final String NO_FILTERS = "[]";
 
@@ -141,6 +153,10 @@ public class OpenProjectClient implements ProjectManagementClient
             int offset = (page / pageSize) + 1;
             String identifier = (String) executionContext.get("identifier");
             OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
+
+            if (identifier != null && IDS_PATTERN.matcher(identifier).matches()) {
+                return handleIds(openProjectApiClient, identifier, page, pageSize, filters, sortEntries);
+            }
 
             if (identifier != null && !identifier.trim().isEmpty()) {
                 return handleIdentifier(openProjectApiClient, identifier.trim(), offset, pageSize, filters,
@@ -249,41 +265,30 @@ public class OpenProjectClient implements ProjectManagementClient
         int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        String filters = "";
-        String sortBy = "";
-        String project = null;
-        String identifierType = detectIdentifierType(identifier);
-
-        switch (identifierType) {
-            case URL:
-                URL url = parseUrl(identifier);
-                String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
-
-                if (urlQueryId != null) {
-                    return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries,
-                        sortEntries);
-                }
-
-                JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
-                project = extractProjectFromPath(url.getPath());
-
-                JsonNode filtersNode = null;
-                JsonNode sortNode = null;
-
-                if (parametersNode != null) {
-                    filtersNode = parametersNode.path("f");
-                    sortNode = parametersNode.path("t");
-                }
-
-                filters = extractFiltersFromQuery(filtersEntries, filtersNode);
-                sortBy = extractSortByString(sortEntries, sortNode);
-                break;
-            case IDS:
-                filters = extractFiltersFromIdentifier(filtersEntries, identifier);
-                sortBy = "";
-                break;
-            default:
+        if (!URL_PATTERN.matcher(identifier).matches()) {
+            throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
         }
+
+        URL url = parseUrl(identifier);
+        String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
+
+        if (urlQueryId != null) {
+            return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries, sortEntries);
+        }
+
+        JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
+        String project = extractProjectFromPath(url.getPath());
+
+        JsonNode filtersNode = null;
+        JsonNode sortNode = null;
+
+        if (parametersNode != null) {
+            filtersNode = parametersNode.path("f");
+            sortNode = parametersNode.path("t");
+        }
+
+        String filters = extractFiltersFromQuery(filtersEntries, filtersNode);
+        String sortBy = extractSortByString(sortEntries, sortNode);
 
         try {
             if (project != null) {
@@ -300,17 +305,109 @@ public class OpenProjectClient implements ProjectManagementClient
         }
     }
 
-    private String detectIdentifierType(String identifier) throws ProjectManagementException
+    /**
+     * Retrieves the work packages listed by the identifier, given by their ids or their keys. OpenProject can't filter
+     * work packages by key, so the keys are first resolved to ids. Unless the livedata sorts them, the work packages
+     * are returned in the order of the identifier: since there can't be more results than listed work packages, they
+     * are all retrieved at once, then ordered and paginated here.
+     */
+    private PaginatedResult<WorkItem> handleIds(OpenProjectApiClient openProjectApiClient, String identifier,
+        int page, int pageSize, List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        throws ProjectManagementException
     {
-        if (URL_PATTERN.matcher(identifier).matches()) {
-            return URL;
+        List<String> ids = resolveIds(openProjectApiClient, IDS_SEPARATOR_PATTERN.split(identifier.trim()));
+        if (ids.isEmpty()) {
+            return new PaginatedResult<>(Collections.emptyList(), page, pageSize, 0);
         }
 
-        if (IDS_PATTERN.matcher(identifier).matches()) {
-            return IDS;
+        Map<String, Object> idFiltersAsJson = Map.of("n", "id", "o", EQUALS, "v", ids);
+        String filters =
+            OpenProjectFilterHandler.mergeFilters(filtersEntries, objectMapper.valueToTree(List.of(idFiltersAsJson)));
+
+        try {
+            if (!sortEntries.isEmpty()) {
+                return OpenProjectConverters.convertPaginatedResult(
+                    openProjectApiClient.getWorkPackages((page / pageSize) + 1, pageSize, filters,
+                        OpenProjectSortingHandler.convertSorting(sortEntries)),
+                    OpenProjectConverters::convertWorkPackageToWorkItem);
+            }
+
+            List<WorkPackage> workPackages =
+                new ArrayList<>(openProjectApiClient.getWorkPackages(1, ids.size(), filters, "").getItems());
+            workPackages.sort(Comparator.comparingInt(workPackage -> ids.indexOf(String.valueOf(workPackage.getId()))));
+            List<WorkPackage> pageItems = workPackages.subList(Math.min(page, workPackages.size()),
+                Math.min(page + pageSize, workPackages.size()));
+
+            return OpenProjectConverters.convertPaginatedResult(
+                new PaginatedResult<>(pageItems, page, pageSize, workPackages.size()),
+                OpenProjectConverters::convertWorkPackageToWorkItem);
+        } catch (WorkPackageRetrievalBadRequestException e) {
+            return handleWorkPackageRetrievalException(e);
+        }
+    }
+
+    /**
+     * Turns the work package keys into ids, dropping the duplicates and the keys of the work packages that don't exist
+     * or that the user can't see, so that they don't prevent the other work packages from being displayed. Each key
+     * requires a request to OpenProject, so they are resolved in parallel (and the client caches them).
+     * <p>
+     * TODO: send the keys directly in the id filter, without resolving them, once OpenProject accepts them there:
+     * https://community.openproject.org/wp/82068 (API v3: allow filtering work packages by their semantic identifier
+     * (e.g. PROJ-42) in the id filter).
+     */
+    private List<String> resolveIds(OpenProjectApiClient openProjectApiClient, String[] idsOrKeys)
+        throws ProjectManagementException
+    {
+        Map<String, CompletableFuture<WorkPackage>> resolutions = new HashMap<>();
+        for (String idOrKey : idsOrKeys) {
+            if (!StringUtils.isNumeric(idOrKey)) {
+                resolutions.computeIfAbsent(idOrKey,
+                    key -> CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, key)));
+            }
         }
 
-        throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
+        Set<String> ids = new LinkedHashSet<>();
+        for (String idOrKey : idsOrKeys) {
+            if (StringUtils.isNumeric(idOrKey)) {
+                ids.add(idOrKey);
+            } else {
+                WorkPackage workPackage = joinResolution(idOrKey, resolutions.get(idOrKey));
+                if (workPackage != null) {
+                    ids.add(String.valueOf(workPackage.getId()));
+                }
+            }
+        }
+        return new ArrayList<>(ids);
+    }
+
+    private static WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
+    {
+        try {
+            return openProjectApiClient.getWorkPackage(key);
+        } catch (ProjectManagementException e) {
+            throw new CompletionException(e);
+        }
+    }
+
+    private WorkPackage joinResolution(String key, CompletableFuture<WorkPackage> resolution)
+        throws ProjectManagementException
+    {
+        try {
+            return resolution.join();
+        } catch (CompletionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof WorkItemRetrievalException
+                && !isAuthenticationOrRightsFailure((WorkItemRetrievalException) cause))
+            {
+                // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
+                logger.warn("Failed to resolve the work package key [{}]: {}", key, cause.getMessage());
+                return null;
+            } else if (cause instanceof ProjectManagementException) {
+                throw (ProjectManagementException) cause;
+            }
+            throw new WorkItemRetrievalException(String.format("Failed to resolve the work package key [%s].", key),
+                cause);
+        }
     }
 
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
@@ -340,17 +437,6 @@ public class OpenProjectClient implements ProjectManagementClient
         throws ProjectManagementException
     {
         return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
-    }
-
-    private String extractFiltersFromIdentifier(List<LiveDataQuery.Filter> filtersList, String isListAsString)
-        throws ProjectManagementException
-    {
-        List<String> idsList = List.of(isListAsString.split(","));
-        Map<String, Object> idFiltersAsJson = Map.of("n", "id", "o", EQUALS, "v", idsList);
-
-        JsonNode idsFilterNode = objectMapper.valueToTree(List.of(idFiltersAsJson));
-
-        return OpenProjectFilterHandler.mergeFilters(filtersList, idsFilterNode);
     }
 
     /**

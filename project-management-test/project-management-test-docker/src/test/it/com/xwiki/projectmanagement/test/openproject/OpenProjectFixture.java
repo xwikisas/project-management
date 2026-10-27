@@ -19,12 +19,21 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
 
 /**
- * Shares a single OpenProject instance, along with its OAuth application, between all the functional test classes
- * running in the same JVM, and makes sure that the XWiki instance under test has an authorized connection to it.
+ * Shares the OpenProject instances, along with their OAuth application, between all the functional test classes
+ * running in the same JVM, and makes sure that the XWiki instance under test has an authorized connection to them.
+ * <p>
+ * Most tests use the same instance, see {@link #ensureReady(TestUtils, TestConfiguration)}. The tests of the "Project
+ * based semantic identifiers" use another one, see {@link #ensureSemanticReady(TestUtils, TestConfiguration)}, since
+ * this setting applies to the whole instance and changes the identifiers of its projects.
  *
  * @version $Id$
  */
@@ -35,9 +44,14 @@ public final class OpenProjectFixture
      */
     public static final String CONNECTION_ID = "test";
 
-    private static OpenProjectInstance instance;
+    /**
+     * The name of the connection to the OpenProject instance using project-based semantic identifiers.
+     */
+    public static final String SEMANTIC_CONNECTION_ID = "semantic";
 
-    private static boolean connectionConfigured;
+    private static final Map<String, OpenProjectInstance> INSTANCES = new HashMap<>();
+
+    private static final Set<String> CONFIGURED_CONNECTIONS = new HashSet<>();
 
     private OpenProjectFixture()
     {
@@ -56,38 +70,78 @@ public final class OpenProjectFixture
     public static synchronized OpenProjectInstance ensureReady(TestUtils setup, TestConfiguration testConfiguration)
         throws Exception
     {
+        OpenProjectInstance instance = INSTANCES.get(CONNECTION_ID);
         if (instance == null) {
-            OpenProjectInstance newInstance = OpenProjectInstance.fromSystemProperties();
-            newInstance.startOpenProject(setup, testConfiguration);
-            newInstance.setupInstance(setup);
-            instance = newInstance;
+            instance = OpenProjectInstance.fromSystemProperties();
+            instance.startOpenProject(setup, testConfiguration);
+            instance.setupInstance(setup);
+            INSTANCES.put(CONNECTION_ID, instance);
         }
-        ensureConnection(setup);
+        ensureConnection(setup, CONNECTION_ID, instance);
         return instance;
     }
 
-    private static void ensureConnection(TestUtils setup)
+    /**
+     * Same as {@link #ensureReady(TestUtils, TestConfiguration)} for an OpenProject instance, always started in a
+     * Docker container, that uses project-based semantic identifiers, with a connection named
+     * {@value #SEMANTIC_CONNECTION_ID}.
+     *
+     * @param setup the test setup, with a user that is allowed to administer the wiki already logged in
+     * @param testConfiguration the configuration of the current test, used to start the OpenProject container
+     * @return the OpenProject instance using semantic identifiers
+     * @throws Exception if the OpenProject instance fails to start
+     */
+    public static synchronized OpenProjectInstance ensureSemanticReady(TestUtils setup,
+        TestConfiguration testConfiguration) throws Exception
+    {
+        OpenProjectInstance instance = INSTANCES.get(SEMANTIC_CONNECTION_ID);
+        if (instance == null) {
+            instance = new OpenProjectInstance("openproject-semantic");
+            instance.startOpenProject(setup, testConfiguration);
+            instance.setupInstance(setup);
+            instance.useSemanticIdentifiers(setup.getDriver());
+            INSTANCES.put(SEMANTIC_CONNECTION_ID, instance);
+        }
+        ensureConnection(setup, SEMANTIC_CONNECTION_ID, instance);
+        return instance;
+    }
+
+    /**
+     * Stop the OpenProject instance using project-based semantic identifiers, to free its resources once the tests
+     * using it are done. It is started again by the next call to
+     * {@link #ensureSemanticReady(TestUtils, TestConfiguration)}.
+     */
+    public static synchronized void stopSemantic()
+    {
+        OpenProjectInstance instance = INSTANCES.remove(SEMANTIC_CONNECTION_ID);
+        CONFIGURED_CONNECTIONS.remove(SEMANTIC_CONNECTION_ID);
+        if (instance != null) {
+            instance.stop();
+        }
+    }
+
+    private static void ensureConnection(TestUtils setup, String connectionId, OpenProjectInstance instance)
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int index = adminPage.getConnectionIndex(CONNECTION_ID);
-        if (index > 0 && connectionConfigured) {
+        int index = adminPage.getConnectionIndex(connectionId);
+        if (index > 0 && CONFIGURED_CONNECTIONS.contains(connectionId)) {
             return;
         }
         if (index > 0) {
             // The connection was left by a previous run and points to another OpenProject instance or OAuth app.
             adminPage.deleteConnection(index);
             adminPage.waitForNotificationSuccessMessage(
-                String.format("Connection %s has been deleted!", CONNECTION_ID));
+                String.format("Connection %s has been deleted!", connectionId));
             adminPage = OpenProjectAdminPage.gotoPage();
         }
 
-        adminPage.addNewConnection(CONNECTION_ID, instance.getBaseUrl(), instance.getClientId(),
+        adminPage.addNewConnection(connectionId, instance.getBaseUrl(), instance.getClientId(),
             instance.getClientSecret());
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", CONNECTION_ID));
+        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", connectionId));
         adminPage.getConnectionsLivedata().getTableLayout()
-            .clickAction(adminPage.getConnectionIndex(CONNECTION_ID), "authorize-connection");
+            .clickAction(adminPage.getConnectionIndex(connectionId), "authorize-connection");
         instance.authorize(setup.getDriver());
         new OpenProjectAdminPage().waitUntilPageIsReady();
-        connectionConfigured = true;
+        CONFIGURED_CONNECTIONS.add(connectionId);
     }
 }

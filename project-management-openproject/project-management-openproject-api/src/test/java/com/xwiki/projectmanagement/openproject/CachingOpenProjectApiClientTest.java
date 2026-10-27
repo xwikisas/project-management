@@ -43,6 +43,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -424,6 +425,23 @@ class CachingOpenProjectApiClientTest
 
         verify(cache).set(anyString(), eq(expectedResult));
         verify(openProjectApiClient).getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING);
+    }
+
+    @Test
+    void workPackageCaching() throws ProjectManagementException
+    {
+        useMapBackedCache(cache);
+        WorkPackage workPackage = new WorkPackage();
+        when(openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(workPackage);
+
+        assertSame(workPackage, cachingOpenProjectApiClient.getWorkPackage("XWIKI-123"));
+        assertSame(workPackage, cachingOpenProjectApiClient.getWorkPackage("XWIKI-123"));
+        // Missing work packages are cached too.
+        assertNull(cachingOpenProjectApiClient.getWorkPackage("XWIKI-456"));
+        assertNull(cachingOpenProjectApiClient.getWorkPackage("XWIKI-456"));
+
+        verify(openProjectApiClient).getWorkPackage("XWIKI-123");
+        verify(openProjectApiClient).getWorkPackage("XWIKI-456");
     }
 
     @Test

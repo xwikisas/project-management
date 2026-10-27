@@ -63,6 +63,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -351,6 +352,42 @@ class DefaultOpenProjectApiClientTest
         assertThat(generatedUri, containsString("pageSize=" + PAGE_SIZE));
         assertThat(generatedUri, containsString("filters=" + FILTERS_STRING));
         assertThat(generatedUri, containsString("sortBy=" + SORT_BY_STRING));
+    }
+
+    @Test
+    void getWorkPackageByKey() throws ProjectManagementException, IOException, InterruptedException
+    {
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{\"id\":1911,\"subject\":\"Fix the bug\"}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        WorkPackage workPackage = openProjectApiClient.getWorkPackage("XWIKI-123");
+
+        assertEquals(1911, workPackage.getId());
+        assertEquals("Fix the bug", workPackage.getSubject());
+        verify(client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(String.format("%s/api/v3/work_packages/XWIKI-123", OPEN_PROJECT_CONNECTION_URL),
+            captor.getValue().uri().toString());
+    }
+
+    @Test
+    void getWorkPackageThatDoesNotExist() throws ProjectManagementException
+    {
+        when(this.response.statusCode()).thenReturn(404);
+        when(this.response.body()).thenReturn("{}");
+
+        assertNull(openProjectApiClient.getWorkPackage("XWIKI-123"));
+    }
+
+    @Test
+    void getWorkPackageWhenTheUserIsRejected()
+    {
+        when(this.response.statusCode()).thenReturn(401);
+        when(this.response.body()).thenReturn("{}");
+
+        WorkItemRetrievalException exception =
+            assertThrows(WorkItemRetrievalException.class, () -> openProjectApiClient.getWorkPackage("XWIKI-123"));
+        assertEquals(401, exception.getStatusCode());
     }
 
     @Test

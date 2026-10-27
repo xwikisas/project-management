@@ -21,8 +21,10 @@ package com.xwiki.projectmanagement.openproject.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -248,6 +250,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         return getWorkPackagePaginatedResult(queryJson.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_RESULTS), offset,
             pageSize);
+    }
+
+    @Override
+    public WorkPackage getWorkPackage(String idOrKey) throws ProjectManagementException
+    {
+        String workPackageUrl = API_URL_WORK_PACKAGES + '/' + URLEncoder.encode(idOrKey, StandardCharsets.UTF_8);
+        try {
+            return createWorkPackageFromJson(getOpenProjectResponse(workPackageUrl, null, null, "", "", ""));
+        } catch (WorkItemRetrievalException e) {
+            // OpenProject answers 404 both for the work packages that don't exist and for those the user can't see.
+            if (Integer.valueOf(HttpURLConnection.HTTP_NOT_FOUND).equals(e.getStatusCode())) {
+                return null;
+            }
+            throw e;
+        }
     }
 
     @Override
