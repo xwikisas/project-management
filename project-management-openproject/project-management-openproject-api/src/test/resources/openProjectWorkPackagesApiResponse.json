@@ -47,8 +47,48 @@
           "self": {
             "href": "/api/v3/work_packages/1",
             "title": "First subject"
+          },
+          "targetVersions": [
+            {
+              "href": "/api/v3/versions/19",
+              "title": "1.6.1"
+            },
+            {
+              "href": "/api/v3/versions/20",
+              "title": "1.7"
+            }
+          ],
+          "category": {
+            "href": "/api/v3/categories/24",
+            "title": "Generic"
+          },
+          "responsible": {
+            "href": null
+          },
+          "customField5": [
+            {
+              "href": "/api/v3/custom_options/1",
+              "title": "Usability"
+            }
+          ],
+          "customField20": {
+            "href": null,
+            "title": null
+          },
+          "update": {
+            "href": "/api/v3/work_packages/1",
+            "method": "patch"
           }
-        }
+        },
+        "estimatedTime": "PT1H30M",
+        "duration": "P3D",
+        "customField10": "JIRA-1",
+        "customField11": {
+          "format": "markdown",
+          "raw": "Long text",
+          "html": "<p>Long text</p>"
+        },
+        "customField12": null
       },
       {
         "derivedStartDate": "2025-08-14",

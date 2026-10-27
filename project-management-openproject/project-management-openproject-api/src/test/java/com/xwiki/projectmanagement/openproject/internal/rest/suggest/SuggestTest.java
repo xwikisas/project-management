@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -270,6 +271,31 @@ public class SuggestTest
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10, null);
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    void getSuggestionsForVersions() throws ProjectManagementException
+    {
+        Version version1 = createVersion(1, "1.2.3");
+        Version version2 = createVersion(2, "2.0");
+        Version version3 = createVersion(3, "1.2.4");
+        Version unnamed = new Version();
+        unnamed.setId(4);
+        when(this.openProjectApiClient.getVersions())
+            .thenReturn(new PaginatedResult<>(List.of(version1, version2, version3, unnamed), 0, 4, 4));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "1.2", 1, null);
+
+        verifySuccessResponse(response, List.of(version1));
+    }
+
+    private static Version createVersion(int id, String name)
+    {
+        Version version = new Version();
+        version.setId(id);
+        version.setName(name);
+        version.setSelf(new Linkable(name, "location" + id));
+        return version;
     }
 
     private void verifySuccessResponse(Response response, List<? extends BaseOpenProjectObject> generatedObjects)

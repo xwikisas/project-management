@@ -58,6 +58,8 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class DefaultWorkItemPropertyDisplayerManager implements WorkItemPropertyDisplayerManager, Initializable
 {
+    private static final String LIST_DISPLAYER = "list";
+
     @Inject
     @Named("plain/1.0")
     private Parser plainParser;
@@ -78,6 +80,9 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         }
         if (propertyDisplayer == null) {
             propertyDisplayer = getDisplayerForProperty(propertyValue.getClass().getName());
+        }
+        if (propertyDisplayer == null && propertyValue instanceof List) {
+            propertyDisplayer = getDisplayerForProperty(LIST_DISPLAYER);
         }
         if (propertyValue instanceof Map && ((Map<?, ?>) propertyValue).containsKey(Linkable.KEY_VALUE) && ((Map<?,
             ?>) propertyValue).containsKey(Linkable.KEY_LOCATION))
@@ -109,7 +114,7 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         WorkItemPropertyDisplayer propertyDisplayer = new ListPropertyDisplayer(this);
         displayers.put(WorkItem.KEY_ASSIGNEES, propertyDisplayer);
         displayers.put(WorkItem.KEY_LABELS, propertyDisplayer);
-        displayers.put("list", propertyDisplayer);
+        displayers.put(LIST_DISPLAYER, propertyDisplayer);
         String format = wikiConfigSource.getProperty("dateformat", DatePropertyDisplayer.DEFAULT_DATE_FORMAT);
         displayers.put(Date.class.getName(), new DatePropertyDisplayer(plainParser, format));
     }

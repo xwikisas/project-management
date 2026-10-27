@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +56,9 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -475,6 +478,49 @@ class OpenProjectClientTest
             anyString());
 
         assertEquals(expectedElements, result.getItems().size());
+    }
+
+    @Test
+    void getWorkItemsWithWorkPackageFields() throws ProjectManagementException
+    {
+        WorkPackageField targetVersions = new WorkPackageField();
+        targetVersions.setKey("targetVersions");
+        targetVersions.setName("Target versions");
+        targetVersions.setFilterKey("targetVersion");
+        targetVersions.setFilterValueType("[]Version");
+        targetVersions.setSortable(true);
+        when(openProjectApiClient.getWorkPackageFields())
+            .thenReturn(new PaginatedResult<>(List.of(targetVersions), 0, 1, 1));
+        Version version = new Version();
+        version.setId(19);
+        version.setName("1.2.3");
+        when(openProjectApiClient.getVersions()).thenReturn(new PaginatedResult<>(List.of(version), 0, 1, 1));
+        WorkPackage workPackage = createWorkPackage(1);
+        Linkable versionLink = new Linkable("1.2.3", "http://open-project-instance/versions/19");
+        workPackage.setFieldValues(Map.of("targetVersions", versionLink));
+        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(workPackage), 1, 10, 1));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10,
+            List.of(new LiveDataQuery.Filter("targetVersion", "contains", "1.2.3")),
+            List.of(new LiveDataQuery.SortEntry("targetVersion", true)));
+
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
+            argThat(actual -> jsonEquals(actual, "[{\"targetVersion\":{\"operator\":\"=\",\"values\":[\"19\"]}}]")),
+            eq("[[\"targetVersions\",\"desc\"]]"));
+        assertEquals(List.of(versionLink), result.getItems().get(0).get("targetVersion"));
+    }
+
+    @Test
+    void getWorkItemsWhenWorkPackageFieldsFail() throws ProjectManagementException
+    {
+        when(openProjectApiClient.getWorkPackageFields()).thenThrow(new ProjectManagementException("Forbidden"));
+
+        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals("Failed to retrieve the work package fields: ProjectManagementException: Forbidden",
+            this.logCapture.getMessage(0));
     }
 
     private PaginatedResult<WorkPackage> generateWorkItems()

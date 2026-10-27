@@ -42,6 +42,7 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 /**
  * Implementation of {@link OpenProjectApiClient} that uses a cache for storing and retrieving entries.
@@ -266,6 +267,18 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
         PaginatedResult<Version> result = (PaginatedResult<Version>) cache.get(cacheKey);
         if (result == null) {
             result = client.getProjectVersions(projectId);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public PaginatedResult<WorkPackageField> getWorkPackageFields() throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey("workPackageFields", 1, Integer.MAX_VALUE, "", "");
+        PaginatedResult<WorkPackageField> result = (PaginatedResult<WorkPackageField>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getWorkPackageFields();
             cache.set(cacheKey, result);
         }
         return result;

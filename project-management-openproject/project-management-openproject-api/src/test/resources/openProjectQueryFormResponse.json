@@ -1,0 +1,479 @@
+{
+  "_type": "Form",
+  "_embedded": {
+    "schema": {
+      "columns": {
+        "_embedded": {
+          "allowedValues": [
+            {
+              "_type": "QueryColumn::Property",
+              "id": "id",
+              "name": "ID"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "subject",
+              "name": "Subject"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "responsible",
+              "name": "Accountable"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "category",
+              "name": "Category"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "targetVersions",
+              "name": "Target versions"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "observedInVersions",
+              "name": "Observed in versions"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "estimatedTime",
+              "name": "Work"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "customField20",
+              "name": "Difficulty"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "customField10",
+              "name": "category"
+            },
+            {
+              "_type": "QueryColumn::Property",
+              "id": "customField5",
+              "name": "Labels"
+            },
+            {
+              "_type": "QueryColumn::RelationToType",
+              "id": "relationsToType7",
+              "name": "Relations to Bug"
+            }
+          ]
+        }
+      },
+      "sortBy": {
+        "_embedded": {
+          "allowedValues": [
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/id"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/id"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/subject"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/subject"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/responsible"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/responsible"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/category"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/category"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/targetVersions"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/targetVersions"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/observedInVersions"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/observedInVersions"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/estimatedTime"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/estimatedTime"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField20"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField20"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField10"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField10"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField5"
+                }
+              }
+            },
+            {
+              "_links": {
+                "column": {
+                  "href": "/api/v3/queries/columns/customField5"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "_embedded": {
+        "filtersSchemas": {
+          "_embedded": {
+            "elements": [
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%26%3D": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/customField5"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      },
+                      "/api/v3/queries/operators/~": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21~": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/customField10"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%26%3D": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]CustomOption"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/customField20"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/%3E%3D": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/%3C%3D": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21%2A": {},
+                      "/api/v3/queries/operators/%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/estimatedTime"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]WorkPackage"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]WorkPackage"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/id"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]User"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]User"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/responsible"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/~": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21~": {
+                        "values": {
+                          "type": "[1]String"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/subject"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]Version"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]Version"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {},
+                      "/api/v3/queries/operators/o": {},
+                      "/api/v3/queries/operators/l": {},
+                      "/api/v3/queries/operators/c": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/targetVersion"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3D": {
+                        "values": {
+                          "type": "[]Version"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21": {
+                        "values": {
+                          "type": "[]Version"
+                        }
+                      },
+                      "/api/v3/queries/operators/%2A": {},
+                      "/api/v3/queries/operators/%21%2A": {},
+                      "/api/v3/queries/operators/o": {},
+                      "/api/v3/queries/operators/l": {},
+                      "/api/v3/queries/operators/c": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/observedInVersion"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

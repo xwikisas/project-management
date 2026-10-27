@@ -27,6 +27,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.Project;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -57,6 +58,22 @@ public final class OpenProjectConverters
         setAssignments(workItem, workPackage);
         setProjectAndPriority(workItem, workPackage);
 
+        return workItem;
+    }
+
+    /**
+     * Converts a WorkPackage object from the OpenProject API to an internal WorkItem object, including the values of
+     * the fields that have no equivalent in the generic work item keys (e.g. the target version or the custom fields).
+     *
+     * @param workPackage the {@link WorkPackage} to convert
+     * @param fields the work package fields of the OpenProject instance that the work package comes from
+     * @return a {@link WorkItem} containing the mapped data
+     * @since 1.3.1
+     */
+    public static WorkItem convertWorkPackageToWorkItem(WorkPackage workPackage, OpenProjectWorkItemFields fields)
+    {
+        WorkItem workItem = convertWorkPackageToWorkItem(workPackage);
+        workItem.putAll(fields.getValues(workPackage));
         return workItem;
     }
 

@@ -37,6 +37,7 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 /**
  * Defines the methods that a OpenProject api client should implement.
@@ -247,6 +248,21 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Retrieving versions from project is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves the fields of the work packages that can be displayed in a work package query, with their name and
+     * the filter matching them. They include the custom fields, whose keys (e.g. {@code customField3}) differ between
+     * instances.
+     *
+     * @return a {@link PaginatedResult} containing the list of {@link WorkPackageField}
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the fields
+     * @since 1.3.1
+     */
+    default PaginatedResult<WorkPackageField> getWorkPackageFields() throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving the work package fields is not supported by this client implementation.");
     }
 
     /**

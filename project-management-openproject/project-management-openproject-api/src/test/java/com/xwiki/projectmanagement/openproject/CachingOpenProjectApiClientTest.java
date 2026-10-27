@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,7 @@ import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -492,6 +494,20 @@ class CachingOpenProjectApiClientTest
             cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
         assertSame(otherResult,
             otherCachingClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
+    }
+
+    @Test
+    void workPackageFieldsCachingTest() throws ProjectManagementException
+    {
+        useMapBackedCache(cache);
+        PaginatedResult<WorkPackageField> expectedResult =
+            new PaginatedResult<>(List.of(new WorkPackageField()), 0, 1, 1);
+        when(openProjectApiClient.getWorkPackageFields()).thenReturn(expectedResult);
+
+        assertSame(expectedResult, cachingOpenProjectApiClient.getWorkPackageFields());
+        assertSame(expectedResult, cachingOpenProjectApiClient.getWorkPackageFields());
+
+        verify(openProjectApiClient, times(1)).getWorkPackageFields();
     }
 
     private static Map<String, PaginatedResult<? extends BaseOpenProjectObject>> useMapBackedCache(
