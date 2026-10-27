@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.xwiki.ckeditor.test.po.CKEditor;
 import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.ckeditor.test.po.MacroDialogSelectModal;
@@ -47,15 +48,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final String PRESET_PARAMETER = "presetId";
 
-    private static final String WATCH_REFRESH_SCRIPT = "window.projManagMacroRefreshed = false;"
-        + "Object.values(CKEDITOR.instances).forEach(editor => {"
-        + "  const listener = editor.on('afterCommandExec', event => {"
-        + "    if (event.data.name === 'xwiki-refresh') {"
-        + "      listener.removeListener();"
-        + "      window.projManagMacroRefreshed = true;"
-        + "    }"
-        + "  });"
-        + "});";
+    private static final String WIDGET_WRAPPER = "[data-cke-widget-wrapper]";
 
     private WYSIWYGEditPage editPage;
 
@@ -284,13 +277,22 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     {
         // A notification triggered by a previous save may still be displayed on top of the modal footer.
         getDriver().waitUntilElementDisappears(By.className("xnotification"));
-        // Submitting the modal makes CKEditor refresh the edited content (render the macros again). The macro widgets
-        // are initialized at the end of the refresh, and saving before that would save their output instead of the
-        // macro calls, so we wait for the refresh to be done.
-        getDriver().executeJavascript(WATCH_REFRESH_SCRIPT);
+        // Submitting the modal makes CKEditor refresh the edited content (render the macros again), replacing the
+        // edited document. The macro widgets are initialized at the end of the refresh, and saving before that would
+        // save their output instead of the macro calls, so we wait for the new document and for its widgets to be
+        // initialized (their wrapper is created before, and gets the widget id when the widget is initialized).
+        CKEditor editor = new CKEditor("content");
+        WebElement[] editedBody = new WebElement[1];
+        editor.executeOnIframe(() -> editedBody[0] = getDriver().findElement(By.tagName("body")));
         getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-footer .btn-primary")).click();
-        getDriver().waitUntilCondition(
-            driver -> Boolean.TRUE.equals(getDriver().executeJavascript("return window.projManagMacroRefreshed;")));
+        editor.executeOnIframe(() -> {
+            getDriver().waitUntilCondition(ExpectedConditions.stalenessOf(editedBody[0]));
+            getDriver().waitUntilCondition(driver -> {
+                List<WebElement> wrappers = getDriver().findElementsWithoutWaiting(By.cssSelector(WIDGET_WRAPPER));
+                return !wrappers.isEmpty()
+                    && wrappers.stream().allMatch(wrapper -> wrapper.getAttribute("data-cke-widget-id") != null);
+            });
+        });
     }
 
     private MacroDialogSelectModal openMacroSelectModal(TestUtils setup)
