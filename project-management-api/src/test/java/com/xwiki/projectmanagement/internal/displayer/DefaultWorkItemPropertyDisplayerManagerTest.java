@@ -129,6 +129,19 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     }
 
     @Test
+    void displayListOfAPropertyWithoutDisplayer()
+    {
+        // e.g. the values of a multi-value custom field
+        List<Block> blocks = this.manager.displayProperty("Observed in",
+            List.of(new Linkable("1.0", URL), new Linkable("2.0", null)), Map.of());
+
+        assertEquals(2, blocks.size());
+        assertInstanceOf(LinkBlock.class,
+            assertInstanceOf(GroupBlock.class, blocks.get(0)).getChildren().get(0));
+        assertWord("2.0", assertInstanceOf(GroupBlock.class, blocks.get(1)).getChildren());
+    }
+
+    @Test
     void displayWithTheDisplayerOfTheValueType()
     {
         Date date = new GregorianCalendar(2024, Calendar.MARCH, 15).getTime();

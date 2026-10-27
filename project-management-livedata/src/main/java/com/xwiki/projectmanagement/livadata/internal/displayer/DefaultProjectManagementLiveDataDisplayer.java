@@ -92,8 +92,9 @@ public class DefaultProjectManagementLiveDataDisplayer implements ProjectManagem
     public void displayProperty(Map.Entry<String, Object> itemProperty, WorkItem workItem, PrintRenderer renderer,
         WorkItemPropertyDisplayerManager displayerManager)
     {
+        // The lists are displayed as HTML, whatever their property, e.g. the values of a multi-value custom field.
         if (displayerManager.getDisplayerForProperty(itemProperty.getKey()) != null
-            || itemProperty.getValue() instanceof Date)
+            || itemProperty.getValue() instanceof Date || itemProperty.getValue() instanceof List)
         {
             setValueFromBlocksDisplayer(itemProperty, renderer, displayerManager,
                 Collections.singletonMap("workItem", workItem));

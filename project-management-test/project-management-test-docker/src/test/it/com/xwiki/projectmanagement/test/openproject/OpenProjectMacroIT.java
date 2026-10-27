@@ -339,6 +339,67 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         }
     }
 
+    @Test
+    @Order(8)
+    void filterAndDisplayTargetVersion(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // The target version is called "version" or "targetVersions", depending on the OpenProject version.
+        String versionColumn = getFirstExistingId("/queries/columns/", "targetVersions", "version");
+        String versionFilter = getFirstExistingId("/queries/filters/", "targetVersion", "version");
+        String versionColumnName = this.openProject.getApiResource("/queries/columns/" + versionColumn)
+            .get("name").asText();
+
+        // The demo version with the most work packages. The macro references it by name, which matches all the
+        // versions with this name.
+        String versionName = null;
+        List<String> expectedSubjects = List.of();
+        JsonNode versions = this.openProject.getApiResource("/versions").get(EMBEDDED).get(ELEMENTS);
+        for (JsonNode version : versions) {
+            String name = version.get("name").asText();
+            List<String> versionIds = StreamSupport.stream(versions.spliterator(), false)
+                .filter(other -> name.equals(other.get("name").asText()))
+                .map(other -> '"' + other.get("id").asText() + '"').collect(Collectors.toList());
+            List<String> subjects = getSubjects(this.openProject.getApiResource("/work_packages?pageSize=100&sortBy="
+                + encode("[[\"id\",\"asc\"]]") + "&filters=" + encode(String.format(
+                    "[{\"%s\":{\"operator\":\"=\",\"values\":[%s]}}]", versionFilter,
+                    String.join(",", versionIds)))));
+            if (subjects.size() > expectedSubjects.size()) {
+                versionName = name;
+                expectedSubjects = subjects;
+            }
+        }
+        assertTrue(versionName != null, "The demo data has no work package with a target version.");
+
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"targetVersion\" "
+            + "properties=\"identifier,summary,targetVersion\" sort=\"identifier:asc\" limit=\"100\" "
+            + "filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"targetVersion~\",~\"constraints~\":"
+            + "[{~\"operator~\":~\"=~\",~\"value~\":~\"%s~\"}]}]}}\"/}}", CONNECTION_ID, versionName));
+        setup.gotoPage(testReference);
+
+        TableLayoutElement ld =
+            new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+        assertEquals(expectedSubjects.size(), ld.countRows());
+        expectedSubjects.forEach(subject -> ld.assertRow(SUBJECT_COLUMN, subject));
+        // The target version column is named after the OpenProject field.
+        ld.assertRow(versionColumnName, versionName);
+    }
+
+    /**
+     * @return the first of the given ids that identifies an existing resource under the given path
+     */
+    private String getFirstExistingId(String path, String... ids) throws Exception
+    {
+        for (String id : ids) {
+            try {
+                this.openProject.getApiResource(path + id);
+                return id;
+            } catch (IllegalStateException e) {
+                // Try the next id.
+            }
+        }
+        throw new IllegalStateException(String.format("None of %s exists under [%s].", List.of(ids), path));
+    }
+
     private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue)
     {
         useSuggestFilter(ld, filteredColumn, selectedValue, true);

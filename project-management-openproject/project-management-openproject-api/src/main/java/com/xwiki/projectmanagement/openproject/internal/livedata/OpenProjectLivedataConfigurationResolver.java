@@ -29,6 +29,8 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.environment.Environment;
@@ -39,6 +41,10 @@ import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 
 /**
  * Retrieves the OpenProject livedata configuration and resolves additional information based on the input
@@ -68,6 +74,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
     @Inject
     private Environment environment;
 
+    @Inject
+    private OpenProjectAccess openProjectAccess;
+
     private String defaultConfigJSON;
 
     @Override
@@ -85,11 +94,37 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             }
             LiveDataConfiguration configuration = stringLiveDataConfigResolver.resolve(defaultConfigJSON);
 
+            maybeAddFieldProperties(configuration, input);
             maybeUpdateSearchURL(configuration, input);
             return configuration;
         } catch (IOException | LiveDataException e) {
             logger.error("Could not read the livedata configuration of the OpenProject client.", e);
             return null;
+        }
+    }
+
+    /**
+     * Adds the properties exposing the work package fields of the instance that the generic properties don't cover,
+     * such as the target version or the custom fields, since they depend on the instance.
+     */
+    private void maybeAddFieldProperties(LiveDataConfiguration configuration, LiveDataConfiguration input)
+    {
+        String instance = getInstance(input);
+        if (StringUtils.isBlank(instance) || configuration.getMeta() == null
+            || configuration.getMeta().getPropertyDescriptors() == null)
+        {
+            return;
+        }
+        OpenProjectApiClient client = this.openProjectAccess.resolve(instance).getClient();
+        if (client == null) {
+            return;
+        }
+        try {
+            configuration.getMeta().getPropertyDescriptors()
+                .addAll(WorkPackageFieldDescriptors.getDescriptors(OpenProjectWorkItemFields.of(client)));
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            this.logger.warn("Failed to retrieve the work package fields of the OpenProject instance [{}]. "
+                + "Root cause: [{}]", instance, ExceptionUtils.getRootCauseMessage(e));
         }
     }
 

@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.Date;
+import java.util.Map;
 
 import com.xwiki.projectmanagement.model.Linkable;
 
@@ -110,6 +111,8 @@ public class WorkPackage extends BaseOpenProjectObject
      * The key identifying the assignee of the work package.
      */
     private static final String ASSIGNEE = "assignee";
+
+    private static final String FIELD_VALUES = "fieldValues";
 
     /**
      * Gets the derived start date of the work package.
@@ -429,6 +432,33 @@ public class WorkPackage extends BaseOpenProjectObject
     public void setAssignee(Linkable assignee)
     {
         put(ASSIGNEE, assignee);
+    }
+
+    /**
+     * Gets the values of the work package fields that this class doesn't model explicitly, such as the target
+     * version, the category or the custom fields.
+     *
+     * @return the field values, keyed by the name of the field in the OpenProject API (e.g. {@code customField3}).
+     *     A field that references other resources (e.g. a version) has a {@link Linkable} value, or a list of
+     *     {@link Linkable} for a multi-value field, the other fields have a {@link String} value
+     * @since 1.3.1
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getFieldValues()
+    {
+        Map<String, Object> fieldValues = (Map<String, Object>) get(FIELD_VALUES);
+        return fieldValues == null ? Map.of() : fieldValues;
+    }
+
+    /**
+     * Sets the values of the work package fields that this class doesn't model explicitly.
+     *
+     * @param fieldValues see {@link #getFieldValues()}
+     * @since 1.3.1
+     */
+    public void setFieldValues(Map<String, Object> fieldValues)
+    {
+        put(FIELD_VALUES, fieldValues);
     }
 
     @Override

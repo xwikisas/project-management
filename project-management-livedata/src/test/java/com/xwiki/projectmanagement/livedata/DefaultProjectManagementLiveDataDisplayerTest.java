@@ -137,6 +137,24 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
+    void testDisplayPropertyWithList()
+    {
+        List<String> values = List.of("1.0", "2.0");
+        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("Observed in", values);
+        WorkItem workItem = new WorkItem();
+
+        // The displayer manager has no displayer for the property, but lists are always displayed.
+        when(defaultDisplayerManager.getDisplayerForProperty("Observed in")).thenReturn(null);
+        when(defaultDisplayerManager.displayProperty("Observed in", values, Map.of("workItem", workItem)))
+            .thenReturn(List.of(new WordBlock("versions")));
+        this.printer.print("<div>1.0</div><div>2.0</div>");
+
+        displayer.displayProperty(property, workItem, renderer, defaultDisplayerManager);
+
+        assertEquals("<div>1.0</div><div>2.0</div>", property.getValue());
+    }
+
+    @Test
     void testDisplayPropertyWithoutDisplayer()
     {
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);

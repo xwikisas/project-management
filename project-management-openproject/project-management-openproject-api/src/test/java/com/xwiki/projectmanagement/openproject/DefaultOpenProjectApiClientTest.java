@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,6 +56,7 @@ import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import utils.OpenProjectTestUtils;
 
@@ -62,10 +64,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -107,6 +111,70 @@ class DefaultOpenProjectApiClientTest
         openProjectApiClient = new DefaultOpenProjectApiClient(OPEN_PROJECT_CONNECTION_URL,
             new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), client);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(this.response);
+    }
+
+    @Test
+    void getWorkPackageFields() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getQueryFormResponse());
+
+        List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
+
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/form", requestCaptor.getValue().uri().toString());
+        assertEquals("POST", requestCaptor.getValue().method());
+
+        // Only the columns holding a property are fields, not the relation columns.
+        assertEquals(List.of("id", "subject", "responsible", "category", "targetVersions", "observedInVersions",
+            "estimatedTime", "customField20", "customField10", "customField5"),
+            fields.stream().map(WorkPackageField::getKey).collect(Collectors.toList()));
+
+        WorkPackageField targetVersions = fields.get(4);
+        assertEquals("Target versions", targetVersions.getName());
+        // The filter of a multi-value field is named in the singular.
+        assertEquals("targetVersion", targetVersions.getFilterKey());
+        assertEquals("[]Version", targetVersions.getFilterValueType());
+        assertEquals(List.of("=", "!", "*", "!*", "o", "l", "c"), targetVersions.getFilterOperators());
+        assertTrue(targetVersions.isSortable());
+        assertFalse(targetVersions.isCustomField());
+
+        WorkPackageField category = fields.get(3);
+        assertNull(category.getFilterKey());
+        assertNull(category.getFilterValueType());
+        assertEquals(List.of(), category.getFilterOperators());
+
+        WorkPackageField labels = fields.get(9);
+        assertEquals("Labels", labels.getName());
+        assertEquals("customField5", labels.getFilterKey());
+        assertTrue(labels.getFilterOperators().contains("&="));
+        assertTrue(labels.isCustomField());
+
+        assertEquals("[1]String", fields.get(8).getFilterValueType());
+    }
+
+    @Test
+    void getWorkPackagesWithFieldValues() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
+
+        Map<String, Object> values =
+            openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0).getFieldValues();
+
+        assertEquals(List.of(new Linkable("1.6.1", OPEN_PROJECT_CONNECTION_URL + "/versions/19"),
+            new Linkable("1.7", OPEN_PROJECT_CONNECTION_URL + "/versions/20")), values.get("targetVersions"));
+        // The categories and the custom options have no page in OpenProject.
+        assertEquals(new Linkable("Generic", null), values.get("category"));
+        assertEquals(List.of(new Linkable("Usability", null)), values.get("customField5"));
+        assertEquals("1.5h", values.get("estimatedTime"));
+        assertEquals("3d", values.get("duration"));
+        assertEquals("JIRA-1", values.get("customField10"));
+        assertEquals("Long text", values.get("customField11"));
+        // The empty values and the links without a title, i.e. the actions, are ignored.
+        assertFalse(values.containsKey("customField12"));
+        assertFalse(values.containsKey("customField20"));
+        assertFalse(values.containsKey("responsible"));
+        assertFalse(values.containsKey("update"));
     }
 
     @Test

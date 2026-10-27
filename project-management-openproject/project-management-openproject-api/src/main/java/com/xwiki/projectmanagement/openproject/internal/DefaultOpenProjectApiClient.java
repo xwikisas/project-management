@@ -62,6 +62,7 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static javax.ws.rs.HttpMethod.GET;
 import static javax.ws.rs.HttpMethod.POST;
@@ -134,6 +135,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String API_URL_WORK_PACKAGES = "/api/v3/work_packages";
 
     private static final String API_URL_FORM_WORK_PACKAGES = "/api/v3/work_packages/form";
+
+    private static final String API_URL_FORM_QUERIES = "/api/v3/queries/form";
 
     private static final String API_URL_FORM_EDIT_WORK_PACKAGE = "/api/v3/work_packages/%s/form";
 
@@ -376,8 +379,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public JsonNode getWorkPackagesFormResponse(String jsonBody) throws ProjectManagementException
     {
+        return getFormResponse(API_URL_FORM_WORK_PACKAGES, jsonBody);
+    }
+
+    @Override
+    public PaginatedResult<WorkPackageField> getWorkPackageFields() throws ProjectManagementException
+    {
+        // The form of an empty query describes the columns and filters available to the global work package queries,
+        // custom fields included.
+        List<WorkPackageField> fields =
+            WorkPackageFieldsParser.parseQueryForm(getFormResponse(API_URL_FORM_QUERIES, "{}"));
+        return new PaginatedResult<>(fields, 0, fields.size(), fields.size());
+    }
+
+    private JsonNode getFormResponse(String urlPart, String jsonBody) throws ProjectManagementException
+    {
         try {
-            URI uri = new URI(connectionUrl + API_URL_FORM_WORK_PACKAGES);
+            URI uri = new URI(connectionUrl + urlPart);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -387,11 +405,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             return objectMapper.readTree(body);
         } catch (URISyntaxException e) {
             throw new ProjectManagementException(
-                String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE,
-                    connectionUrl + API_URL_FORM_WORK_PACKAGES), e);
+                String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, connectionUrl + urlPart), e);
         } catch (IOException | InterruptedException e) {
             throw new ProjectManagementException(
-                String.format(COMMUNICATING_ISSUE_MESSAGE, connectionUrl + API_URL_FORM_WORK_PACKAGES), e);
+                String.format(COMMUNICATING_ISSUE_MESSAGE, connectionUrl + urlPart), e);
         }
     }
 
@@ -776,6 +793,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         workPackage.setType(element.path("_type").asText());
 
         workPackage.setSubject(element.path(OP_RESPONSE_SUBJECT).asText());
+
+        workPackage.setFieldValues(WorkPackageFieldsParser.parseFieldValues(element, connectionUrl));
 
         return workPackage;
     }

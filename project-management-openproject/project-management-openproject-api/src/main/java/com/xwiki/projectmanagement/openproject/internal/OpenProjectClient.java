@@ -42,6 +42,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
@@ -69,6 +70,7 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
@@ -153,23 +155,27 @@ public class OpenProjectClient implements ProjectManagementClient
             int offset = (page / pageSize) + 1;
             String identifier = (String) executionContext.get("identifier");
             OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
 
             if (identifier != null && IDS_PATTERN.matcher(identifier).matches()) {
-                return handleIds(openProjectApiClient, identifier, page, pageSize, filters, sortEntries);
+                return handleIds(openProjectApiClient, fields, identifier, page, pageSize, mappedFilters,
+                    mappedSortEntries);
             }
 
             if (identifier != null && !identifier.trim().isEmpty()) {
-                return handleIdentifier(openProjectApiClient, identifier.trim(), offset, pageSize, filters,
-                    sortEntries);
+                return handleIdentifier(openProjectApiClient, fields, identifier.trim(), offset, pageSize,
+                    mappedFilters, mappedSortEntries);
             }
 
-            String filtersString = OpenProjectFilterHandler.convertFilters(filters);
-            String sortByString = OpenProjectSortingHandler.convertSorting(sortEntries);
+            String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
+            String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
             PaginatedResult<WorkPackage> workPackagesPaginatedResult =
                 openProjectApiClient.getWorkPackages(offset, pageSize, filtersString, sortByString);
 
             return OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
-                OpenProjectConverters::convertWorkPackageToWorkItem);
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
         } catch (WorkItemRetrievalException e) {
             // Report authentication and rights failures, so that the caller can tell the user what to do.
             if (isAuthenticationOrRightsFailure(e)) {
@@ -261,8 +267,9 @@ public class OpenProjectClient implements ProjectManagementClient
         return openProjectApiClient;
     }
 
-    private PaginatedResult<WorkItem> handleIdentifier(OpenProjectApiClient openProjectApiClient, String identifier,
-        int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+    private PaginatedResult<WorkItem> handleIdentifier(OpenProjectApiClient openProjectApiClient,
+        OpenProjectWorkItemFields fields, String identifier, int offset, int pageSize,
+        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         if (!URL_PATTERN.matcher(identifier).matches()) {
@@ -273,7 +280,8 @@ public class OpenProjectClient implements ProjectManagementClient
         String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
 
         if (urlQueryId != null) {
-            return handleSavedQuery(openProjectApiClient, urlQueryId, offset, pageSize, filtersEntries, sortEntries);
+            return handleSavedQuery(openProjectApiClient, fields, urlQueryId, offset, pageSize, filtersEntries,
+                sortEntries);
         }
 
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
@@ -294,12 +302,12 @@ public class OpenProjectClient implements ProjectManagementClient
             if (project != null) {
                 return OpenProjectConverters.convertPaginatedResult(
                     openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sortBy),
-                    OpenProjectConverters::convertWorkPackageToWorkItem);
+                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
             }
 
             return OpenProjectConverters.convertPaginatedResult(
                 openProjectApiClient.getWorkPackages(offset, pageSize, filters, sortBy),
-                OpenProjectConverters::convertWorkPackageToWorkItem);
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
         }
@@ -311,8 +319,9 @@ public class OpenProjectClient implements ProjectManagementClient
      * are returned in the order of the identifier: since there can't be more results than listed work packages, they
      * are all retrieved at once, then ordered and paginated here.
      */
-    private PaginatedResult<WorkItem> handleIds(OpenProjectApiClient openProjectApiClient, String identifier,
-        int page, int pageSize, List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+    private PaginatedResult<WorkItem> handleIds(OpenProjectApiClient openProjectApiClient,
+        OpenProjectWorkItemFields fields, String identifier, int page, int pageSize,
+        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         List<String> ids = resolveIds(openProjectApiClient, IDS_SEPARATOR_PATTERN.split(identifier.trim()));
@@ -329,7 +338,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 return OpenProjectConverters.convertPaginatedResult(
                     openProjectApiClient.getWorkPackages((page / pageSize) + 1, pageSize, filters,
                         OpenProjectSortingHandler.convertSorting(sortEntries)),
-                    OpenProjectConverters::convertWorkPackageToWorkItem);
+                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
             }
 
             List<WorkPackage> workPackages =
@@ -340,7 +349,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
             return OpenProjectConverters.convertPaginatedResult(
                 new PaginatedResult<>(pageItems, page, pageSize, workPackages.size()),
-                OpenProjectConverters::convertWorkPackageToWorkItem);
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);
         }
@@ -410,6 +419,17 @@ public class OpenProjectClient implements ProjectManagementClient
         }
     }
 
+    private OpenProjectWorkItemFields getWorkItemFields(OpenProjectApiClient openProjectApiClient)
+    {
+        try {
+            return OpenProjectWorkItemFields.of(openProjectApiClient);
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            // The work items can still be displayed, without the fields that the generic properties don't cover.
+            logger.warn("Failed to retrieve the work package fields: {}", ExceptionUtils.getRootCauseMessage(e));
+            return OpenProjectWorkItemFields.empty();
+        }
+    }
+
     private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
     {
         logger.warn("Failed to retrieve work packages: {}", e.getMessage());
@@ -449,9 +469,9 @@ public class OpenProjectClient implements ProjectManagementClient
      * The filters of the query are read from its results link. The link is normally retrieved once, before the macro
      * got executed, and passed through the source parameters; it is retrieved here only when it is missing.
      */
-    private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient, String queryId,
-        int offset, int pageSize, List<LiveDataQuery.Filter> filtersEntries,
-        List<LiveDataQuery.SortEntry> sortEntries)
+    private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient,
+        OpenProjectWorkItemFields fields, String queryId, int offset, int pageSize,
+        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
@@ -460,7 +480,7 @@ public class OpenProjectClient implements ProjectManagementClient
             if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
                 return OpenProjectConverters.convertPaginatedResult(
                     openProjectApiClient.getQueryWorkPackages(queryId, offset, pageSize, sortBy),
-                    OpenProjectConverters::convertWorkPackageToWorkItem
+                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
                 );
             }
 
@@ -476,13 +496,13 @@ public class OpenProjectClient implements ProjectManagementClient
             if (project != null) {
                 return OpenProjectConverters.convertPaginatedResult(
                     openProjectApiClient.getProjectWorkPackages(project, offset, pageSize, filters, sorting),
-                    OpenProjectConverters::convertWorkPackageToWorkItem
+                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
                 );
             }
 
             return OpenProjectConverters.convertPaginatedResult(
                 openProjectApiClient.getWorkPackages(offset, pageSize, filters, sorting),
-                OpenProjectConverters::convertWorkPackageToWorkItem
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
             );
         } catch (WorkPackageRetrievalBadRequestException e) {
             return handleWorkPackageRetrievalException(e);

@@ -76,6 +76,8 @@ public class Suggest extends XWikiResource
 
     private static final String USERS = "users";
 
+    private static final String VERSIONS = "versions";
+
     private static final String WORK_PACKAGE_TYPE_PROPERTY = "type";
 
     private static final String WORK_PACKAGE_SUBJECT_PROPERTY = "subject";
@@ -128,32 +130,7 @@ public class Suggest extends XWikiResource
         List<Map<String, String>> response;
 
         try {
-            switch (suggest) {
-                case ID:
-                    response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
-                    break;
-                case PRIORITIES:
-                    response = getPrioritiesSuggestions(openProjectApiClient);
-                    break;
-                case STATUSES:
-                    response = getStatusesSuggestions(openProjectApiClient);
-                    break;
-                case PROJECTS:
-                    response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
-                    break;
-                case TYPES:
-                    response = getTypesSuggestions(openProjectApiClient);
-                    break;
-                case PARENT:
-                    response = getParentsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
-                    break;
-                case USERS:
-                    response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
-                    break;
-                default:
-                    response = Collections.emptyList();
-                    break;
-            }
+            response = getSuggestions(openProjectApiClient, suggest, lowerSearch, pageSize, selectedItem);
         } catch (ProjectManagementException e) {
             // The exception message can hold the OpenProject URL and the body of its error response, which are only
             // meant for the administrators: log them and send a generic message to the client.
@@ -162,6 +139,42 @@ public class Suggest extends XWikiResource
             return Response.serverError().entity("Failed to retrieve the suggestions from OpenProject.").build();
         }
         return Response.ok(response).build();
+    }
+
+    private List<Map<String, String>> getSuggestions(OpenProjectApiClient openProjectApiClient, String suggest,
+        String lowerSearch, int pageSize, Integer selectedItem) throws ProjectManagementException
+    {
+        List<Map<String, String>> response;
+        switch (suggest) {
+            case ID:
+                response = getIdentifiersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
+                break;
+            case PRIORITIES:
+                response = getPrioritiesSuggestions(openProjectApiClient);
+                break;
+            case STATUSES:
+                response = getStatusesSuggestions(openProjectApiClient);
+                break;
+            case PROJECTS:
+                response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
+                break;
+            case TYPES:
+                response = getTypesSuggestions(openProjectApiClient);
+                break;
+            case PARENT:
+                response = getParentsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
+                break;
+            case USERS:
+                response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
+                break;
+            case VERSIONS:
+                response = getVersionsSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                break;
+            default:
+                response = Collections.emptyList();
+                break;
+        }
+        return response;
     }
 
     private List<Map<String, String>> getIdentifiersSuggestions(OpenProjectApiClient openProjectApiClient,
@@ -254,6 +267,16 @@ public class Suggest extends XWikiResource
             filter = buildFilter(NAME, searchString);
         }
         return getSuggestions(openProjectApiClient.getUsers(1, pageSize, filter).getItems());
+    }
+
+    private List<Map<String, String>> getVersionsSuggestions(OpenProjectApiClient openProjectApiClient,
+        String searchString, int pageSize) throws ProjectManagementException
+    {
+        // The versions API can't be filtered on the name, but all the versions are retrieved at once and cached.
+        return getSuggestions(openProjectApiClient.getVersions().getItems().stream()
+            .filter(version -> version.getName() != null && version.getName().toLowerCase().contains(searchString))
+            .limit(pageSize)
+            .collect(Collectors.toList()));
     }
 
     private List<Map<String, String>> getSuggestions(
