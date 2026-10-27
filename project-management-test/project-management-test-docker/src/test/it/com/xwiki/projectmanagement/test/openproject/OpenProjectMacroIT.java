@@ -23,6 +23,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import javax.naming.OperationNotSupportedException;
 
@@ -35,6 +37,8 @@ import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
@@ -60,14 +64,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 public class OpenProjectMacroIT extends AbstractOpenProjectIT
 {
-    /**
-     * The saved "Milestones" query of the demo project, which only filters on the milestone type. The project has 3
-     * milestones: "Start of project", "Conference" and "End of project". The id is the one given by the demo data of
-     * OpenProject 16.
-     */
-    private static final String MILESTONES_QUERY_URL = "/projects/demo-project/work_packages?query_id=2";
-
-    // Ids given by the demo data of OpenProject 16.
+    // The demo data changes between OpenProject versions, so the expected results are computed from the OpenProject
+    // API, except for these ids, which are the same in all the versions we test.
 
     private static final String DEMO_PROJECT_ID = "1";
 
@@ -80,6 +78,18 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private static final String ADMIN_USER_ID = "4";
 
     private static final String NORMAL_PRIORITY_ID = "8";
+
+    private static final String DEMO_PROJECT_PATH = "/projects/demo-project";
+
+    /**
+     * The API filters matching the tasks in progress.
+     */
+    private static final String TASKS_IN_PROGRESS_FILTERS = "[{\"type\":{\"operator\":\"=\",\"values\":[\""
+        + TASK_TYPE_ID + "\"]}},{\"status\":{\"operator\":\"=\",\"values\":[\"" + IN_PROGRESS_STATUS_ID + "\"]}}]";
+
+    private static final String ELEMENTS = "elements";
+
+    private static final String EMBEDDED = "_embedded";
 
     /**
      * The {@code query_props} of an OpenProject work package list URL showing the tasks in progress, sorted by id in
@@ -191,7 +201,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
     @Test
     @Order(4)
-    void macroParameterFilterTest(TestUtils setup, TestReference testReference)
+    void macroParameterFilterTest(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.createPage(testReference,
             String.format("{{openproject instance=\"%s\" id=\"macroParameterFilterTest\"/}}", CONNECTION_ID));
@@ -227,12 +237,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         page = new ViewPageWithOpenProjectMacro();
         macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
-        assertEquals("Entries 1 - 25 out of 36", getPaginationEntriesText(macros.get(0)));
+        // Without filters, OpenProject lists the closed work packages too.
+        int total = this.openProject.getApiResource("/work_packages?pageSize=1&filters=" + encode("[]"))
+            .get("total").asInt();
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(25, total), total),
+            getPaginationEntriesText(macros.get(0)));
     }
 
     @Test
     @Order(5)
-    void useOpenProjUrl(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    void useOpenProjUrl(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.deletePage(testReference);
         OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
@@ -240,28 +254,38 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WYSIWYGEditPage editPage = macroModal.getEditPage();
         // Create a filter.
         macroModal.clickMore();
-        macroModal.setMacroParameter("identifier", getTasksInProgressUrl("/projects/demo-project/work_packages",
+        macroModal.setMacroParameter("identifier", getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages",
             "asc", "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\""));
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
-        assertEquals(2, ld.countRows());
+        assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
 
+        // The tasks in progress of all the projects, the most recent first.
         macroModal = new OpenProjectMacroEditModal(setup, testReference);
         editPage = macroModal.getEditPage();
         macroModal.setMacroParameter("identifier", getTasksInProgressUrl("/work_packages", "desc",
             "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\",\"project\""));
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
-        assertEquals(3, ld.countRows());
-        assertEquals("20", ld.getCell("ID", 1).getText());
+        List<String> taskIds = getTasksInProgressIds("");
+        assertEquals(taskIds.size(), ld.countRows());
+        assertEquals(taskIds.get(0), ld.getCell("ID", 1).getText());
     }
 
     @Test
     @Order(6)
-    void useSavedQueryUrl(TestUtils setup, TestReference testReference)
-        throws OperationNotSupportedException
+    void useSavedQueryUrl(TestUtils setup, TestReference testReference) throws Exception
     {
-        String savedQueryUrl = this.openProject.getBaseUrl() + MILESTONES_QUERY_URL;
+        // The saved "Milestones" query of the demo project, which only filters on the milestone type.
+        JsonNode queries = this.openProject.getApiResource("/queries?filters="
+            + encode("[{\"project\":{\"operator\":\"=\",\"values\":[\"" + DEMO_PROJECT_ID + "\"]}}]"));
+        int queryId = StreamSupport.stream(queries.get(EMBEDDED).get(ELEMENTS).spliterator(), false)
+            .filter(query -> "Milestones".equals(query.get("name").asText())).findFirst().orElseThrow()
+            .get("id").asInt();
+        List<String> milestones = getSubjects(
+            this.openProject.getApiResource("/queries/" + queryId).get(EMBEDDED).get("results"));
+        String savedQueryUrl =
+            this.openProject.getBaseUrl() + DEMO_PROJECT_PATH + "/work_packages?query_id=" + queryId;
 
         setup.deletePage(testReference);
         OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
@@ -272,26 +296,24 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         macroModal.setMacroParameter("identifier", savedQueryUrl);
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
-        assertEquals(3, ld.countRows());
+        assertEquals(milestones.size(), ld.countRows());
+        milestones.forEach(milestone -> ld.assertRow(SUBJECT_COLUMN, milestone));
 
-        ld.assertRow(SUBJECT_COLUMN, "Start of project");
-        ld.assertRow(SUBJECT_COLUMN, "Conference");
-        ld.assertRow(SUBJECT_COLUMN, "End of project");
-
-        ld.filterColumn(SUBJECT_COLUMN, "end");
+        String lastMilestone = milestones.get(milestones.size() - 1);
+        ld.filterColumn(SUBJECT_COLUMN, lastMilestone);
         assertEquals(1, ld.countRows());
-        ld.assertRow(SUBJECT_COLUMN, "End of project");
+        ld.assertRow(SUBJECT_COLUMN, lastMilestone);
     }
 
     @Test
     @Order(7)
-    void showPublicDataToGuests(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    void showPublicDataToGuests(TestUtils setup, TestReference testReference) throws Exception
     {
         // The demo project is public and OpenProject doesn't require users to log in, so anonymous users can see its
         // work packages.
         setup.createPage(testReference,
             String.format("{{openproject instance=\"%s\" id=\"showPublicData\" identifier=\"%s\"/}}", CONNECTION_ID,
-                getTasksInProgressUrl("/projects/demo-project/work_packages", "asc",
+                getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc",
                     "\"id\",\"subject\",\"type\",\"status\"")));
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         int connectionIndex = adminPage.getConnectionIndex(CONNECTION_ID);
@@ -308,7 +330,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             setup.gotoPage(testReference);
             TableLayoutElement ld =
                 new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
-            assertEquals(2, ld.countRows());
+            assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
             // The type is displayed in upper case.
             assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
         } finally {
@@ -342,7 +364,30 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private String getTasksInProgressUrl(String path, String sortOrder, String columns)
     {
         String queryProps = String.format(TASKS_IN_PROGRESS_QUERY_PROPS, columns, sortOrder);
-        return this.openProject.getBaseUrl() + path + "?query_props="
-            + URLEncoder.encode(queryProps, StandardCharsets.UTF_8);
+        return this.openProject.getBaseUrl() + path + "?query_props=" + encode(queryProps);
+    }
+
+    /**
+     * @param projectPath the path of the project ({@code /projects/<identifier>}), or an empty string for all the
+     *     projects
+     * @return the ids of the tasks in progress, the most recent first
+     */
+    private List<String> getTasksInProgressIds(String projectPath) throws Exception
+    {
+        JsonNode workPackages = this.openProject.getApiResource(projectPath + "/work_packages?pageSize=100&sortBy="
+            + encode("[[\"id\",\"desc\"]]") + "&filters=" + encode(TASKS_IN_PROGRESS_FILTERS));
+        return StreamSupport.stream(workPackages.get(EMBEDDED).get(ELEMENTS).spliterator(), false)
+            .map(workPackage -> workPackage.get("id").asText()).collect(Collectors.toList());
+    }
+
+    private static List<String> getSubjects(JsonNode workPackages)
+    {
+        return StreamSupport.stream(workPackages.get(EMBEDDED).get(ELEMENTS).spliterator(), false)
+            .map(workPackage -> workPackage.get("subject").asText()).collect(Collectors.toList());
+    }
+
+    private static String encode(String value)
+    {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

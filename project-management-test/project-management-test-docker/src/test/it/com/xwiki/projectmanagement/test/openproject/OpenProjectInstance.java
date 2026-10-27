@@ -19,8 +19,13 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.TimeoutException;
@@ -39,6 +44,9 @@ import org.xwiki.test.docker.internal.junit5.DockerTestUtils;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.XWikiWebDriver;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Defines the behaviour of a OpenProject instance. It offers methods for starting an instance, setting it up (login,
@@ -84,7 +92,8 @@ public class OpenProjectInstance
 
     private static final String PASSWORD_OLD = "admin";
 
-    private static final String PASSWORD_NEW = "adminadminadmin";
+    // OpenProject requires lowercase, uppercase, numeric and special characters in passwords.
+    private static final String PASSWORD_NEW = "Admin-admin-1";
 
     private static final String NETWORK_ALIAS = "openproject";
 
@@ -106,6 +115,12 @@ public class OpenProjectInstance
     protected String clientSecret;
 
     protected String baseUrl;
+
+    /**
+     * The URL of the instance as seen by the tests, used to call its API. It differs from {@link #baseUrl} when
+     * OpenProject runs in a container.
+     */
+    protected String apiBaseUrl;
 
     /**
      * @return an {@link ExternalOpenProjectInstance} configured from the {@code openproject.*} system properties when
@@ -133,8 +148,11 @@ public class OpenProjectInstance
      */
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
-        GenericContainer<?> openProject = new GenericContainer<>(DockerImageName.parse("openproject/openproject:16"))
-            .withEnv("OPENPROJECT_SECRET_KEY_BASE", "secret")
+        GenericContainer<?> openProject =
+            new GenericContainer<>(DockerImageName.parse("openproject/openproject:17.9.4"))
+            // OpenProject refuses to start with a weak key. Each run starts from an empty database, so a new key can be
+            // generated for each run.
+            .withEnv("SECRET_KEY_BASE", RandomStringUtils.randomAlphanumeric(128))
             .withEnv("OPENPROJECT_HTTPS", "false")
             .withEnv("OPENPROJECT_DEFAULT__LANGUAGE", "en")
             // Let anonymous users see the public projects, to test showing the public data to XWiki users who haven't
@@ -161,6 +179,8 @@ public class OpenProjectInstance
         // bridge (Linux only).
         this.baseUrl = testConfiguration.getServletEngine().isOutsideDocker()
             ? "http://172.17.0.1:" + openProject.getMappedPort(80) : "http://" + NETWORK_ALIAS;
+        // The tests themselves run outside Docker.
+        this.apiBaseUrl = "http://" + openProject.getHost() + ':' + openProject.getMappedPort(80);
         LOGGER.info("The OpenProject container is available at [{}].", this.baseUrl);
 
         // The container answers on its mapped port before the browser container can resolve its network alias.
@@ -217,7 +237,8 @@ public class OpenProjectInstance
         userNameElem.sendKeys(userName);
         passElem.sendKeys(currentPassword);
 
-        WebElement submitElem = driver.findElement(By.cssSelector(".user-login--form .-primary"));
+        WebElement submitElem =
+            driver.findElement(By.cssSelector("[data-test-selector='user-login--form'] button[type='submit']"));
         submitElem.click();
         waitPageLoad(driver);
     }
@@ -274,6 +295,30 @@ public class OpenProjectInstance
             throw new IllegalStateException("Can't retrieve the container URL without having started it.");
         }
         return baseUrl;
+    }
+
+    /**
+     * Get a resource of the OpenProject API (v3) as an anonymous user, e.g. to compute the expected results of a test
+     * from the demo data, which changes between OpenProject versions. Anonymous users see the public demo projects,
+     * since the instance doesn't require users to log in.
+     *
+     * @param path the path of the resource, relative to {@code /api/v3}, with its query string (already encoded)
+     * @return the JSON response
+     * @throws Exception if the request fails or OpenProject doesn't answer with a success
+     */
+    public JsonNode getApiResource(String path) throws Exception
+    {
+        if (this.apiBaseUrl == null) {
+            throw new IllegalStateException("Can't call the API without having started the instance.");
+        }
+        URI uri = URI.create(this.apiBaseUrl + "/api/v3" + path);
+        HttpResponse<String> response =
+            HttpClient.newHttpClient().send(HttpRequest.newBuilder(uri).build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                String.format("Failed to get [%s]: %s %s", uri, response.statusCode(), response.body()));
+        }
+        return new ObjectMapper().readTree(response.body());
     }
 
     private void changePassword(XWikiWebDriver driver)
