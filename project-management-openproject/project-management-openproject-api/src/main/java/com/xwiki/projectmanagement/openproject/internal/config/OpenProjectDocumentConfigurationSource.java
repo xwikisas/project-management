@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.configuration.internal.AbstractDocumentConfigurationSource;
 import org.xwiki.model.EntityType;
@@ -37,6 +38,9 @@ import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
+import org.xwiki.security.authorization.AuthorizationManager;
+import org.xwiki.security.authorization.Right;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -45,7 +49,8 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
- * Extracts data from the OpenProjectConnection Class.
+ * Extracts data from the OpenProjectConnection Class. Only the connection objects stored on pages whose author has
+ * administration right on the wiki are taken into account.
  *
  * @version $Id$
  * @since 1.0
@@ -81,6 +86,16 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
 
     @Inject
     private EntityReferenceResolver<String> referenceResolver;
+
+    @Inject
+    private AuthorizationManager authorizationManager;
+
+    @Inject
+    @Named("document")
+    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
+
+    @Inject
+    private Logger logger;
 
     @Override
     protected DocumentReference getDocumentReference()
@@ -123,7 +138,7 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 DocumentReference docRef = new DocumentReference(entityReference);
                 XWikiDocument xwikiDocument = xContext.getWiki().getDocument(docRef, xContext);
                 BaseObject baseObject = xwikiDocument.getXObject(getClassReference());
-                if (baseObject == null) {
+                if (baseObject == null || !isAuthorAdmin(xwikiDocument)) {
                     continue;
                 }
                 String connectionName = baseObject.getStringValue("connectionName");
@@ -140,5 +155,18 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
         } catch (QueryException e) {
             throw new XWikiException("Query creation error", e);
         }
+    }
+
+    private boolean isAuthorAdmin(XWikiDocument document)
+    {
+        DocumentReference author =
+            this.documentUserSerializer.serialize(document.getAuthors().getEffectiveMetadataAuthor());
+        boolean isAdmin = this.authorizationManager.hasAccess(Right.ADMIN, author,
+            document.getDocumentReference().getWikiReference());
+        if (!isAdmin) {
+            this.logger.warn("Ignoring the OpenProject connection stored on [{}] because its author [{}] doesn't have "
+                + "administration right on the wiki.", document.getDocumentReference(), author);
+        }
+        return isAdmin;
     }
 }
