@@ -36,6 +36,7 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
@@ -50,6 +51,8 @@ import org.xwiki.rest.XWikiResource;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceResolver;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -191,6 +194,11 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
 
     private static final String LINE_BREAK = "\n";
 
+    /**
+     * The macro inserted in the pages.
+     */
+    private static final String INSERTED_MACRO_ID = "openproject";
+
     @Inject
     private ContentParser contentParser;
 
@@ -199,6 +207,10 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
 
     @Inject
     private ContextualAuthorizationManager authorizationManager;
+
+    @Inject
+    @Named("document")
+    private UserReferenceResolver<DocumentReference> userReferenceResolver;
 
     private final ConcurrentMap<DocumentReference, ReentrantLock> documentLocks =
         new ConcurrentHashMap<>();
@@ -212,7 +224,8 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
             if (!authorizationManager.hasAccess(Right.EDIT, documentReference)) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            XWikiDocument document = context.getWiki().getDocument(documentReference, context);
+            // Work on a copy of the cached document.
+            XWikiDocument document = context.getWiki().getDocument(documentReference, context).clone();
 
             maybeEarlyExit(document, macroInsertion);
 
@@ -230,6 +243,7 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
                 String newContent = insertAndGetContent(selectionSearch, macroInsertion);
                 if (!document.getContent().equals(newContent)) {
                     document.setContent(newContent);
+                    setAuthors(document, context);
                     context.getWiki().saveDocument(document, "Inserted OpenProject mention.", true, context);
                 }
             } finally {
@@ -243,6 +257,15 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
             throw new RuntimeException(e);
         }
         return Response.ok().build();
+    }
+
+    private void setAuthors(XWikiDocument document, XWikiContext context)
+    {
+        UserReference currentUser = this.userReferenceResolver.resolve(context.getUserReference());
+        DocumentAuthors authors = document.getAuthors();
+        authors.setContentAuthor(currentUser);
+        authors.setEffectiveMetadataAuthor(currentUser);
+        authors.setOriginalMetadataAuthor(currentUser);
     }
 
     private SelectionSearch findSelectionLine(MacroInsertion selection, String docContent)
@@ -340,6 +363,11 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
 
         if (StringUtils.isEmpty(macroInsertion.getMacroId())) {
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST).build());
+        }
+
+        if (!INSERTED_MACRO_ID.equals(macroInsertion.getMacroId())) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                .entity(String.format("Only the [%s] macro can be inserted.", INSERTED_MACRO_ID)).build());
         }
     }
 
