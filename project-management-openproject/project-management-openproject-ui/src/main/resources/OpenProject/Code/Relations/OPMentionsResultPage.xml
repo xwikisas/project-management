@@ -43,11 +43,17 @@
   #if (!$offset || $offset &lt; 0)
     #set ($offset = 0)
   #end
-  #if ($request.docRef)
-    #set ($pageUniqueId = $services.urlshortener.createShortenedURL($services.model.resolveDocument($request.docRef)))
+  #if ("$!request.docRef" != '')
+    ## Only read the id of the page, the relations UI extension creates it when displaying the page.
+    #set ($mentionedDoc = $xwiki.getDocument($services.model.resolveDocument($request.docRef)))
+    #set ($pageUniqueId = "$!mentionedDoc.getObject('URLShortener.Code.URLShortenerClass').getValue('pageID')")
   #end
-  #set ($filter = $services.openproject.filterBuilder.addFilter('identifier', '=', "$!pageUniqueId").build())
-  #set ($items = $services.openproject.getMentioningWorkPackages($request.instance, $offset, 10, $filter))
+  #if ("$!pageUniqueId" == '')
+    #set ($items = { 'items': [], 'pageSize': 0, 'totalItems': 0, 'offset': 0 })
+  #else
+    #set ($filter = $services.openproject.filterBuilder.addFilter('identifier', '=', $pageUniqueId).build())
+    #set ($items = $services.openproject.getMentioningWorkPackages($request.instance, $offset, 10, $filter))
+  #end
     #if (!$items)
       #set ($items = { 'items': [], 'pageSize': 0, 'totalItems': 0, 'offset': 0 })
       #set ($noEndpoint = true)
