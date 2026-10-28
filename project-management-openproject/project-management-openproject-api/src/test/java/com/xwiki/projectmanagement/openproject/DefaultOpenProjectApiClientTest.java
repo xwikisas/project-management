@@ -344,7 +344,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "@attacker.example/api/v3/users", ".attacker.example/api/v3/users",
+    @ValueSource(strings = { "@other.example/api/v3/users", ".other.example/api/v3/users",
         ":8080/api/v3/users", "/api/v3/projects/1/../../../users", "/api/v3/%2e%2E/users" })
     void requestsOnlyTargetTheConfiguredInstance(String path) throws Exception
     {
