@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.script.ModelScriptService;
+import org.xwiki.rendering.block.RawBlock;
 import org.xwiki.rendering.configuration.ExtendedRenderingConfiguration;
 import org.xwiki.rendering.internal.macro.script.PermissionCheckerListener;
 import org.xwiki.rendering.internal.util.XWikiSyntaxEscaper;
@@ -34,6 +35,7 @@ import org.xwiki.rendering.internal.macro.velocity.VelocityMacroPermissionPolicy
 import org.xwiki.rendering.macro.MacroCategoryManager;
 import org.xwiki.rendering.script.RenderingScriptService;
 import org.xwiki.rendering.syntax.Syntax;
+import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.template.script.TemplateScriptService;
 import org.xwiki.test.LogLevel;
@@ -43,6 +45,8 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.page.HTML50ComponentList;
 import org.xwiki.test.page.PageTest;
 import org.xwiki.test.page.XWikiSyntax21ComponentList;
+import org.xwiki.uiextension.UIExtension;
+import org.xwiki.uiextension.script.UIExtensionScriptService;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 
@@ -51,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -123,6 +128,37 @@ class SpacePageMarkerSheetPageTest extends PageTest
     void displayTheRelationOfANewSpace() throws Exception
     {
         String client = "client\"{{/html}}<b class=\"injected\">client</b>";
+
+        Document document = renderNewSpace(client);
+
+        assertTrue(document.select(".injected").isEmpty(), document.html());
+        assertEquals(1, document.select(".proj-manag-relation").size(), document.html());
+        assertEquals(client, document.selectFirst(".proj-manag-relation").attr("data-client"));
+        // The UI extensions are not available in this test.
+        assertTrue(this.logCapture.getMessage(0).startsWith("Left side ($extensions.size())"));
+    }
+
+    @Test
+    void displayTheRelationParametersExtensionInsideTheHTMLMacro() throws Exception
+    {
+        // The rendered extension starts an HTML macro, which would make the HTML macro it is inserted in end later.
+        UIExtensionScriptService uixScriptService = mock(UIExtensionScriptService.class);
+        UIExtension extension = mock(UIExtension.class);
+        when(extension.execute()).thenReturn(new RawBlock("{{html}}<p class=\"extension\">params</p>",
+            Syntax.HTML_5_0));
+        when(uixScriptService.getExtensions("com.xwiki.projectmanagement.client.relations.params"))
+            .thenReturn(List.of(extension));
+        this.componentManager.registerComponent(ScriptService.class, "uix", uixScriptService);
+
+        Document document = renderNewSpace("client");
+
+        assertEquals("params", document.selectFirst(".proj-manag-relation .extension").text(), document.html());
+        assertTrue(document.selectFirst(".proj-manag-relation").text().contains("{{html}}"), document.html());
+        assertFalse(document.body().text().contains("{{/html}}"), document.html());
+    }
+
+    private Document renderNewSpace(String client) throws Exception
+    {
         XWikiDocument page = new XWikiDocument(PAGE);
         page.setSyntax(Syntax.XWIKI_2_1);
         page.newXObject(new DocumentReference(WIKI, CODE_SPACE, "SpacePageMarkerClass"), this.context)
@@ -132,13 +168,7 @@ class SpacePageMarkerSheetPageTest extends PageTest
 
         this.context.setAction("view");
         this.context.setDoc(page);
-        Document document = renderHTMLPage(page);
-
-        assertTrue(document.select(".injected").isEmpty(), document.html());
-        assertTrue(document.select(".proj-manag-relation").size() == 1, document.html());
-        assertEquals(client, document.selectFirst(".proj-manag-relation").attr("data-client"));
-        // The UI extensions are not available in this test.
-        assertTrue(this.logCapture.getMessage(0).startsWith("Left side ($extensions.size())"));
+        return renderHTMLPage(page);
     }
 
     private String displayPageWrittenBy(DocumentReference author) throws Exception
