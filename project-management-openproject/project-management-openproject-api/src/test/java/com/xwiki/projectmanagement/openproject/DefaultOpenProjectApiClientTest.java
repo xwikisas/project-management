@@ -455,6 +455,21 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getAvatarAndGetOtherResponseCodeWithLongBody() throws Exception
+    {
+        HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
+            inputStreamResponse);
+        when(inputStreamResponse.statusCode()).thenReturn(500);
+        when(inputStreamResponse.body()).thenReturn(new StringInputStream("a".repeat(5000)));
+
+        WorkItemRetrievalException exception =
+            assertThrows(WorkItemRetrievalException.class, () -> openProjectApiClient.getUserAvatar("1"));
+        assertEquals("Failed to get the user avatar with code [500] and message [" + "a".repeat(1024) + "]",
+            exception.getMessage());
+    }
+
+    @Test
     void getAvatarAndGetOtherResponseCode() throws ProjectManagementException, IOException, InterruptedException
     {
         HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);

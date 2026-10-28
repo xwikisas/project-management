@@ -217,6 +217,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final Set<String> AVATAR_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "image/gif",
         "image/webp", "image/bmp", "image/avif", "image/x-icon", "image/vnd.microsoft.icon");
 
+    /**
+     * The maximum number of bytes of the body of a failed avatar request kept in the error message.
+     */
+    private static final int MAX_AVATAR_ERROR_MESSAGE_LENGTH = 1024;
+
     private final HttpClient client;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -612,7 +617,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                     throw new WorkItemRetrievalException(
                         String.format("Failed to get the user avatar with code [%s] and "
                                 + "message [%s]", response.statusCode(),
-                            new String(in.readAllBytes(), StandardCharsets.UTF_8)));
+                            new String(in.readNBytes(MAX_AVATAR_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
                 }
             }
             String contentType = getAvatarContentType(response.headers().firstValue(CONTENT_TYPE).orElse(""));
