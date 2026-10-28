@@ -125,7 +125,7 @@ public class HandleWorkPackagesTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "@attacker.example/api/v3/projects/1", "/api/v3/projects/1?x=",
+    @ValueSource(strings = { "@other.example/api/v3/projects/1", "/api/v3/projects/1?x=",
         "/api/v3/projects/1/../../users", "/api/v3/users/1", "api/v3/projects/1" })
     void getAvailableAssigneesWithInvalidProject(String project) throws ProjectManagementException
     {
