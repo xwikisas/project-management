@@ -48,8 +48,8 @@ public interface OpenProjectSpaceResource
      * @param workPackage the OpenProject work package id that will be attached to the created pages.
      * @param title the title of the new space.
      * @return 200 together with a list of {@link org.xwiki.rest.model.jaxb.Page}, representing the created pages. 401
-     *     if the user does not have edit rights on the space. 403 if the page already exists. 406 if the requested wiki
-     *     does not have the OpenProject integration UI installed.
+     *     if the user does not have view and edit rights on the given document. 409 if the page already exists. 406 if
+     *     the requested wiki does not have the OpenProject integration UI installed.
      * @throws XWikiRestException if any other problem occurs in the process of space creation.
      */
     @POST

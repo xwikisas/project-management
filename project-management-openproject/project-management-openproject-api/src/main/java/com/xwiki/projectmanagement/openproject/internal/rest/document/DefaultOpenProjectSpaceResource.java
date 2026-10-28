@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
 import org.xwiki.model.reference.LocalDocumentReference;
+import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.refactoring.internal.ModelBridge;
 import org.xwiki.refactoring.job.CreateRequest;
@@ -79,8 +81,10 @@ import com.xwiki.urlshortener.URLShortenerManager;
 @Named("com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectSpaceResource")
 public class DefaultOpenProjectSpaceResource extends XWikiResource implements OpenProjectSpaceResource
 {
+    private static final String WEB_HOME = "WebHome";
+
     private static final LocalDocumentReference OPEN_PROJECT_TEMPLATE =
-        new LocalDocumentReference(Arrays.asList("OpenProject", "Code", "Template"), "WebHome");
+        new LocalDocumentReference(Arrays.asList("OpenProject", "Code", "Template"), WEB_HOME);
 
     @Inject
     protected ModelFactory factory;
@@ -125,7 +129,9 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         XWikiContext context = getXWikiContext();
         XWiki xWiki = context.getWiki();
         try {
-            if (!authorizationManager.hasAccess(Right.EDIT)) {
+            if (!authorizationManager.hasAccess(Right.VIEW, docRef) || !authorizationManager.hasAccess(Right.EDIT,
+                docRef))
+            {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
             DocumentReference templateProviderReference =
@@ -134,6 +140,7 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             if (invalidTargetResponse != null) {
                 return invalidTargetResponse;
             }
+            List<DocumentReference> childrenToCreate = getChildrenToCreate(docRef, templateProviderReference, context);
 
             XWikiDocument document = context.getWiki().getDocument(docRef, context);
             document.readFromTemplate(templateProviderReference, context);
@@ -150,16 +157,13 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             Job childrenCreateJob = startCreateJob(docRef, templateProviderReference);
             childrenCreateJob.join();
 
-            List<DocumentReference> createdPages =
-                this.modelBridge.getDocumentReferences(docRef.getLastSpaceReference());
-
-            List<Page> restCreatedPages = createdPages.stream()
+            List<Page> restCreatedPages = getCreatedPages(docRef, childrenToCreate, context).stream()
                 .map(page ->
                 {
                     try {
                         Page restPage = factory.toRestPage(uriInfo.getBaseUri(), uriInfo.getAbsolutePath(),
                             new Document(xWiki.getDocument(page, context), context), false, false, false, false, false);
-                        if (withId) {
+                        if (Boolean.TRUE.equals(withId)) {
                             String id = urlShortenerManager.createShortenedURL(page);
                             restPage.setId(id);
                         }
@@ -175,6 +179,41 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             return RestErrorResponses.errorResponse(getLogger(),
                 String.format("Failed to create the OpenProject template at [%s].", documentReference), e);
         }
+    }
+
+    /**
+     * Computes the pages that the create job will copy from the template children, i.e. those that don't exist yet.
+     */
+    private List<DocumentReference> getChildrenToCreate(DocumentReference docRef, DocumentReference templateReference,
+        XWikiContext context) throws XWikiException
+    {
+        List<DocumentReference> children = new ArrayList<>();
+        if (!WEB_HOME.equals(docRef.getName())) {
+            return children;
+        }
+        SpaceReference templateSpace = templateReference.getLastSpaceReference();
+        SpaceReference targetSpace = docRef.getLastSpaceReference();
+        for (DocumentReference templatePage : this.modelBridge.getDocumentReferences(templateSpace)) {
+            DocumentReference child = templatePage.replaceParent(templateSpace, targetSpace);
+            if (!child.equals(docRef) && !context.getWiki().exists(child, context)) {
+                children.add(child);
+            }
+        }
+        return children;
+    }
+
+    private List<DocumentReference> getCreatedPages(DocumentReference docRef, List<DocumentReference> childrenToCreate,
+        XWikiContext context) throws XWikiException
+    {
+        List<DocumentReference> createdPages = new ArrayList<>();
+        createdPages.add(docRef);
+        for (DocumentReference child : childrenToCreate) {
+            // The create job skips the children that the current user is not allowed to create.
+            if (context.getWiki().exists(child, context) && this.authorizationManager.hasAccess(Right.VIEW, child)) {
+                createdPages.add(child);
+            }
+        }
+        return createdPages;
     }
 
     private Response checkTarget(DocumentReference docRef, DocumentReference templateReference, XWikiContext context)
