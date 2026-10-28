@@ -233,4 +233,31 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         adminPage.deleteConnection(adminPage.getConnectionIndex(name));
         adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", name));
     }
+
+    @Test
+    @Order(7)
+    void codePagesCanOnlyBeEditedByAdministrators(TestUtils setup) throws Exception
+    {
+        String userName = "CodeEditor";
+        setup.createUser(userName, "pass", null);
+
+        String rights = setup.executeWiki(String.join("\n",
+            "{{velocity}}",
+            "#set ($user = $services.model.resolveDocument('XWiki." + userName + "'))",
+            "#foreach ($page in ['OpenProject.Code.Template.WebHome', "
+                + "'OpenProject.Code.Template.Project Specifications.WebHome', 'OpenProject.Code.TemplateProvider', "
+                + "'OpenProject.Code.StylingSetupJob', 'OpenProject.Code.StyleSheets.main', 'Main.WebHome'])",
+            "#set ($reference = $services.model.resolveDocument($page))",
+            "$page=$services.security.authorization.hasAccess('edit', $user, $reference)"
+                + "/$services.security.authorization.hasAccess('view', $user, $reference)",
+            "#end",
+            "{{/velocity}}"), Syntax.XWIKI_2_1);
+
+        // Remove the markup around the result.
+        String result = rights.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
+        assertEquals("OpenProject.Code.Template.WebHome=false/true "
+            + "OpenProject.Code.Template.Project Specifications.WebHome=false/true "
+            + "OpenProject.Code.TemplateProvider=false/true OpenProject.Code.StylingSetupJob=false/true "
+            + "OpenProject.Code.StyleSheets.main=false/true Main.WebHome=true/true", result);
+    }
 }
