@@ -68,8 +68,8 @@
   #set ($extensions = $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.params"))
   #if ($extensions.size() > 0)
     ## We will probably have only one.
-    #set ($content = $services.rendering.render($extensions.get(0).execute(), 'html/5.0'))
-    $content
+    ## The rendered extension may be inserted in an HTML macro: make sure it can't close that macro.
+    $services.rendering.render($extensions.get(0).execute(), 'html/5.0').replace('{{', '&#123;&#123;')
   #else
     <div class="proj-manag-relation-client-params">
       <dt#if ($hasEdit && $mode=='view') class="editableProperty"#end data-property="${className}[${relationObj.number}].clientParams" data-property-type="object">
@@ -101,7 +101,7 @@
 #macro (displayRelationObject $relationObj $hideRemove $customHeader $hideClient)
 #set ($client = ${relationObj.getValue('client')})
 #set ($translatedClient = "#getTranslation('clients', $client)")
-<div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})">
+<div class="proj-manag-relation xform" data-client="$!escapetool.xml($client)" data-params="$escapetool.xml(${relationObj.getValue('clientParams')})">
   <h2>
     #if ($customHeader)
       $escapetool.xml($customHeader)
@@ -110,7 +110,7 @@
     #end
     #if ($hideRemove)
     #else
-      <a href="$doc.getURL('objectremove', "form_token=$!{services.csrf.getToken()}&classname=${escapetool.url($className)}&classid=${relationObj.number}&xredirect=${escapetool.url($doc.getURL('view', 'viewer=projectmanagementrelations'))}")" class="xobject-action delete" title="$services.localization.render('core.editors.object.removeObject.tooltip')">$services.icon.renderHTML('cross')</a>
+      <a href="$escapetool.xml($doc.getURL('objectremove', "form_token=$!{services.csrf.getToken()}&classname=${escapetool.url($className)}&classid=${relationObj.number}&xredirect=${escapetool.url($doc.getURL('view', 'viewer=projectmanagementrelations'))}"))" class="xobject-action delete" title="$services.localization.render('core.editors.object.removeObject.tooltip')">$services.icon.renderHTML('cross')</a>
     #end
   </h2>
   <div id="proj-manag-relation-left" class="col-xs-12 col-sm-6">

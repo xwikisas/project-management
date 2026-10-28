@@ -160,11 +160,10 @@ require(['jquery', 'xwiki-propertize'], function ($) {
           }
           try {
             let clientParams = JSON.parse(clientParamsJSON);
-            let displayValue = "";
+            valueContainer.empty();
             Object.entries(clientParams).forEach(param =&gt; {
-              displayValue += `&lt;p&gt;${param[0]} -&gt; ${param[1]}&lt;/p&gt;`;
+              valueContainer.append($('&lt;p/&gt;').text(`${param[0]} -&gt; ${param[1]}`));
             });
-            valueContainer.html(displayValue);
           } catch (e) {
             new XWiki.widgets.Notification('Client params are not a valid JSON.', 'error');
           }

@@ -64,9 +64,10 @@
     #if ($indexOfSlash &gt;= 0)
       #set ($id = $item.linkable.location.substring($indexOfSlash + 1))
     #end
+    #set ($workPackageURL = "$!services.openproject.getConnectionUrl($request.instance)/work_packages/$escapetool.url($id)/activity")
     #set ($rowItem = {
-      'identifier.value': "&lt;a target='_blank' href='${services.openproject.getConnectionUrl($request.instance)}/work_packages/$id/activity'&gt;$id&lt;/a&gt;",
-      'summary.value': $item.linkable.value
+      'identifier.value': "&lt;a target='_blank' href='$escapetool.xml($workPackageURL)'&gt;$escapetool.xml($id)&lt;/a&gt;",
+      'summary.value': $escapetool.xml($item.linkable.value)
     })
     #set ($discard = $map.rows.add($rowItem))
   #end
