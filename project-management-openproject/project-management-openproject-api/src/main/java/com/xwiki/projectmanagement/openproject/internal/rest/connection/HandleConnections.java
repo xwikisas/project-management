@@ -105,10 +105,13 @@ public class HandleConnections extends XWikiResource
         return processConnection(wikiName, spaceName, pageName, openProjectConnection, false);
     }
 
-    private void checkAccessRights() throws XWikiException
+    private void checkAccessRights(DocumentReference documentReference) throws XWikiException
     {
         DocumentReference currentUserRef = getXWikiContext().getUserReference();
-        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, getXWikiContext().getWikiReference())) {
+        // The connection page must be saved on a wiki that the current user administers.
+        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, getXWikiContext().getWikiReference())
+            || !authorizationManager.hasAccess(Right.ADMIN, currentUserRef, documentReference.getWikiReference()))
+        {
             throw new XWikiException(
                 XWikiException.MODULE_XWIKI_ACCESS,
                 XWikiException.ERROR_XWIKI_ACCESS_DENIED,
@@ -126,9 +129,9 @@ public class HandleConnections extends XWikiResource
     )
     {
         try {
-            checkAccessRights();
             DocumentReference documentReference =
                 new DocumentReference(pageName, getSpaceReference(spaceName, wikiName));
+            checkAccessRights(documentReference);
             handleConnectionsService.handleConnection(openProjectConnection, documentReference);
 
             if (isNewConnection) {
