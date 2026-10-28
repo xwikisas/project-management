@@ -89,7 +89,6 @@
     #set ($connectionName = $escapetool.xml($result.get("connectionName")))
     #set ($serverURL = $escapetool.xml($result.get("serverURL")))
     #set ($clientId = $escapetool.xml($result.get("clientId")))
-    #set ($clientSecret = $escapetool.xml($result.get("clientSecret")))
     #set ($showPublicData = "$!result.getValue('showPublicData')" == '1')
     #set ($connectionNameHtml = "&lt;span class='text-muted'&gt;$connectionName&lt;/span&gt;")
     #set ($serverURLHtml = "&lt;a href='$serverURL' target='_blank'&gt;$!result.get('serverURL')&lt;/a&gt;")
@@ -107,7 +106,6 @@
       data-connection-name=$connectionName
       data-server-url=$serverURL
       data-client-id=$clientId
-      data-client-secret=$clientSecret
       data-show-public-data=$showPublicData
       data-edit-document-reference=$documentReference
     &gt;$services.icon.renderHTML('pencil')&lt;/span&gt;&lt;/a&gt;&lt;a
