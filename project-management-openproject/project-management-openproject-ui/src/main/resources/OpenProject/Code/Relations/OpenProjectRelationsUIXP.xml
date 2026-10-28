@@ -198,11 +198,11 @@
           }
           try {
             let clientParams = JSON.parse(clientParamsJSON);
-            let displayValue = "";
+            valueContainer.empty();
             Object.entries(clientParams).forEach(param =&gt; {
-              displayValue += `&lt;p&gt;&lt;b&gt;${param[0]}&lt;/b&gt;: ${param[1]}&lt;/p&gt;`;
+              valueContainer.append($('&lt;p/&gt;').append($('&lt;b/&gt;').text(param[0]), ': ',
+                document.createTextNode(String(param[1]))));
             });
-            valueContainer.html(displayValue);
             root.closest('.proj-manag-relation').data('params', clientParams);
           } catch (e) {
             new XWiki.widgets.Notification('Client params are not a valid JSON.', 'error');
@@ -523,7 +523,16 @@
     <property>
       <content>{{velocity}}
 #set ($clientParams = $relationOwnerDoc.getObject('ProjectManagement.Code.RelationClass').getValue('clientParams'))
-#set ($opInstance = $jsontool.fromString($clientParams).instance)
+#set ($clientParamsMap = $jsontool.fromString($clientParams))
+#set ($opInstance = '')
+#if ($clientParamsMap.instance)
+  ## Only use the instance if it is a configured connection.
+  #foreach ($connection in $services.openproject.getConnectionOptions())
+    #if ($connection.value == "$clientParamsMap.instance")
+      #set ($opInstance = $connection.value)
+    #end
+  #end
+#end
 
 {{html}}
   &lt;dt&gt;
@@ -550,7 +559,7 @@
         "id": "identifier.value",
         "filter": {
           "id": "list",
-          "searchURL": "${request.contextPath}/rest/wikis/${services.wiki.currentWikiId}/openproject/instance/${opInstance}/suggest/id?search={encodedQuery}"
+          "searchURL": "${request.contextPath}/rest/wikis/$escapetool.url($services.wiki.currentWikiId)/openproject/instance/$escapetool.url($opInstance).replace('+', '%20')/suggest/id?search={encodedQuery}"
          },
          "filterable": false,
          "sortable": false,

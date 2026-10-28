@@ -17,7 +17,7 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#set($titleToDisplay = $services.localization.render('projectmanagement.relations.viewer.title', ["<a href='$doc.getURL()'>$escapetool.xml($doc.plainTitle)</a>"]))
+#set($titleToDisplay = $services.localization.render('projectmanagement.relations.viewer.title', ["<a href='$escapetool.xml($doc.getURL())'>$escapetool.xml($doc.plainTitle)</a>"]))
 #template('contentheader.vm')
 #template('projectmanagementrelationscommon.vm')
 ## Display the sections.
