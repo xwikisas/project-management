@@ -45,10 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public abstract class AbstractOpenProjectIT
 {
     /**
-     * The scheduler UI needs programming rights.
+     * The scheduler UI needs programming rights, and so do the scripts executed by the tests to read the client
+     * secret of a connection.
      */
-    public static final String PRCHECKER_EXCLUDE_PROPERTY =
-        "xwikiPropertiesAdditionalProperties=test.prchecker.excludePattern=xwiki:Scheduler\\.WebHome";
+    public static final String PRCHECKER_EXCLUDE_PROPERTY = "xwikiPropertiesAdditionalProperties="
+        + "test.prchecker.excludePattern=xwiki:(Scheduler\\.WebHome|Test\\.Execute\\..*)";
 
     /**
      * Add the Scheduler plugin used by the Style sync job and the jsrx and ssrx plugins used by the app.
