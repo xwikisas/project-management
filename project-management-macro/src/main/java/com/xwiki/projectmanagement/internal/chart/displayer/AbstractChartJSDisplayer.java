@@ -49,7 +49,10 @@ import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 import org.xwiki.rendering.renderer.printer.WikiPrinter;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.SerializableString;
+import com.fasterxml.jackson.core.io.CharacterEscapes;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.ChartPeriod;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
@@ -91,7 +94,12 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     private static final String UNSET = "UNSET";
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    /**
+     * The chart data is passed as the content of the chartjs macro, written in wiki syntax and then parsed: the curly
+     * brackets of the values (e.g. labels) are escaped so that they can't end the macro content.
+     */
+    private final ObjectMapper mapper =
+        new ObjectMapper(new JsonFactory().setCharacterEscapes(new MacroContentCharacterEscapes()));
 
     @Inject
     @Named("xwiki/2.1")
@@ -256,5 +264,34 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             PARAM_METRIC, Arrays.asList(PARAM_METRIC_COUNT, PARAM_METRIC_ACCUMULATE),
             PARAM_PERIOD, Arrays.stream(ChartPeriod.values()).map(Enum::name).collect(Collectors.toList())
         );
+    }
+
+    /**
+     * Escapes the curly brackets of the JSON string values, in addition to the standard JSON escapes.
+     */
+    private static final class MacroContentCharacterEscapes extends CharacterEscapes
+    {
+        private static final long serialVersionUID = 1L;
+
+        private final int[] asciiEscapes;
+
+        MacroContentCharacterEscapes()
+        {
+            this.asciiEscapes = standardAsciiEscapesForJSON();
+            this.asciiEscapes['{'] = ESCAPE_STANDARD;
+            this.asciiEscapes['}'] = ESCAPE_STANDARD;
+        }
+
+        @Override
+        public int[] getEscapeCodesForAscii()
+        {
+            return this.asciiEscapes;
+        }
+
+        @Override
+        public SerializableString getEscapeSequence(int ch)
+        {
+            return null;
+        }
     }
 }
