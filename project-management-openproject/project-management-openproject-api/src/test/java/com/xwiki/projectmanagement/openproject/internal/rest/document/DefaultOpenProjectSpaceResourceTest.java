@@ -33,6 +33,7 @@ import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.WikiReference;
+import org.xwiki.refactoring.internal.ModelBridge;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
@@ -48,12 +49,15 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -69,6 +73,9 @@ class DefaultOpenProjectSpaceResourceTest
 
     private static final DocumentReference TEMPLATE_REFERENCE =
         new DocumentReference("xwiki", List.of("OpenProject", "Code", "Template"), "WebHome");
+
+    private static final DocumentReference TEMPLATE_CHILD_REFERENCE =
+        new DocumentReference("xwiki", List.of("OpenProject", "Code", "Template", "Child"), "WebHome");
 
     @InjectMockComponents
     private DefaultOpenProjectSpaceResource resource;
@@ -89,6 +96,12 @@ class DefaultOpenProjectSpaceResourceTest
     @MockComponent
     private Provider<XWikiContext> xcontextProvider;
 
+    @MockComponent
+    private ModelBridge modelBridge;
+
+    @MockComponent
+    private AdminAuthorChecker adminAuthorChecker;
+
     private XWikiContext context;
 
     @Mock
@@ -96,6 +109,12 @@ class DefaultOpenProjectSpaceResourceTest
 
     @Mock
     private XWikiDocument document;
+
+    @Mock
+    private XWikiDocument templateDocument;
+
+    @Mock
+    private XWikiDocument templateChildDocument;
 
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
@@ -118,6 +137,28 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.xwiki.exists(TEMPLATE_REFERENCE, this.context)).thenReturn(true);
         when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenReturn(this.document);
         when(this.document.getAuthors()).thenReturn(mock(DocumentAuthors.class));
+        when(this.modelBridge.getDocumentReferences(TEMPLATE_REFERENCE.getLastSpaceReference()))
+            .thenReturn(List.of(TEMPLATE_REFERENCE, TEMPLATE_CHILD_REFERENCE));
+        when(this.xwiki.getDocument(TEMPLATE_REFERENCE, this.context)).thenReturn(this.templateDocument);
+        when(this.xwiki.getDocument(TEMPLATE_CHILD_REFERENCE, this.context)).thenReturn(this.templateChildDocument);
+        when(this.adminAuthorChecker.isLastSavedByAdmin(this.templateDocument)).thenReturn(true);
+        when(this.adminAuthorChecker.isLastSavedByAdmin(this.templateChildDocument)).thenReturn(true);
+    }
+
+    @Test
+    void createSpaceWhenTemplatePageWasNotSavedByAdmin() throws Exception
+    {
+        when(this.adminAuthorChecker.isLastSavedByAdmin(this.templateChildDocument)).thenReturn(false);
+
+        Response response = this.resource.createSpace("Space.WebHome", false, null, null, null, "Title");
+
+        assertEquals(409, response.getStatus());
+        assertEquals("The OpenProject template must be saved by an administrator.", response.getEntity());
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+        verify(this.document, never()).readFromTemplate(any(DocumentReference.class), any(XWikiContext.class));
+        assertEquals("Not creating the OpenProject space because the template page [xwiki:OpenProject.Code.Template."
+            + "Child.WebHome] wasn't last saved by a user with administration right on the wiki.",
+            this.logCapture.getMessage(0));
     }
 
     @Test
