@@ -31,7 +31,6 @@ import javax.inject.Named;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.model.reference.DocumentReference;
@@ -52,6 +51,7 @@ import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
+import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectDocumentResource;
 import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
@@ -132,7 +132,8 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
 
             return putPageAndReturn(docRef, page, minorRevision, create);
         } catch (XWikiException e) {
-            return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
+            return RestErrorResponses.errorResponse(getLogger(),
+                String.format("Failed to save the page [%s].", documentReference), e);
         }
     }
 
@@ -164,8 +165,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
             return Response.ok(page).build();
         } catch (URLShortenerException e) {
             getLogger().error("Failed to create the shortened url for document [{}].", docRef, e);
-            return Response.serverError().entity(String.format("Could not create a unique id for the page. Cause [%s].",
-                ExceptionUtils.getRootCauseMessage(e))).build();
+            return Response.serverError().entity("Could not create a unique id for the page.").build();
         }
     }
 
@@ -257,8 +257,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
             return page;
         } catch (XWikiException e) {
             throw new WebApplicationException(
-                Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                    .build());
+                RestErrorResponses.errorResponse(getLogger(), "Failed to retrieve the page.", e));
         }
     }
 
@@ -286,8 +285,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
             idResponse = urlShortenerManager.createShortenedURL(docRef);
         } catch (Exception e) {
             getLogger().error("Failed to initialize the shortened url for document [{}].", docRef, e);
-            return Response.serverError().entity(String.format("Could not attach a unique id to the page. Cause [%s].",
-                ExceptionUtils.getRootCauseMessage(e))).build();
+            return Response.serverError().entity("Could not attach a unique id to the page.").build();
         }
 
         if (createResponse.getStatus() >= 400) {
@@ -306,8 +304,7 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                     false, false, false, false, false);
                 status = Response.Status.ACCEPTED.getStatusCode();
             } catch (XWikiException e) {
-                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ExceptionUtils.getStackTrace(e))
-                    .build();
+                return RestErrorResponses.errorResponse(getLogger(), "Failed to retrieve the saved page.", e);
             }
         }
         createdPage.setId(idResponse);

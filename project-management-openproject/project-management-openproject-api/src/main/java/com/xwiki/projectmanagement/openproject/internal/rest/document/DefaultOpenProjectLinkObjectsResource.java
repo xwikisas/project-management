@@ -30,7 +30,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.SpaceReference;
@@ -47,6 +46,7 @@ import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectLinkObjectsResource;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
@@ -102,7 +102,7 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
         } catch (WebApplicationException e) {
             return Response.fromResponse(e.getResponse()).build();
         } catch (Exception e) {
-            return Response.serverError().entity(ExceptionUtils.getRootCauseMessage(e)).build();
+            return RestErrorResponses.errorResponse(getLogger(), "Failed to link the page.", e);
         }
     }
 
@@ -123,6 +123,9 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
 
             com.xpn.xwiki.api.Object xwikiObject = doc.getObject(ProjectManagementRelation.CLASS_FULLNAME, CLIENT,
                 OPENPROJECT);
+            if (xwikiObject == null) {
+                throw new WebApplicationException(Response.Status.NOT_FOUND);
+            }
 
             com.xpn.xwiki.objects.BaseObject baseObject =
                 getBaseObject(doc, ProjectManagementRelation.CLASS_FULLNAME, xwikiObject.getNumber());
@@ -131,8 +134,11 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
             }
 
             return this.factory.toRestObject(this.uriInfo.getBaseUri(), doc, baseObject, false, false);
+        } catch (WebApplicationException e) {
+            throw e;
         } catch (Exception e) {
-            throw new WebApplicationException(Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build());
+            throw new WebApplicationException(
+                RestErrorResponses.errorResponse(getLogger(), "Failed to retrieve the link of the page.", e));
         }
     }
 
