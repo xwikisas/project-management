@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -199,6 +200,11 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
      */
     private static final String INSERTED_MACRO_ID = "openproject";
 
+    /**
+     * The macro parameter names are written as is in the page content.
+     */
+    private static final Pattern MACRO_PARAMETER_NAME = Pattern.compile("[a-zA-Z0-9_]+");
+
     @Inject
     private ContentParser contentParser;
 
@@ -368,6 +374,18 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
         if (!INSERTED_MACRO_ID.equals(macroInsertion.getMacroId())) {
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
                 .entity(String.format("Only the [%s] macro can be inserted.", INSERTED_MACRO_ID)).build());
+        }
+
+        checkMacroParameters(macroInsertion);
+    }
+
+    private void checkMacroParameters(MacroInsertion macroInsertion)
+    {
+        if (macroInsertion.getMacroParameters() != null && macroInsertion.getMacroParameters().keySet().stream()
+            .anyMatch(name -> name == null || !MACRO_PARAMETER_NAME.matcher(name).matches()))
+        {
+            throw new WebApplicationException(
+                Response.status(Response.Status.BAD_REQUEST).entity("Invalid macro parameter name.").build());
         }
     }
 
