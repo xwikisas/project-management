@@ -373,10 +373,11 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
     $(document).on("click", ".edit-button", function () {
       $("#handleConnectionModal").modal("show");
       $("#handleConnectionModal-label").text(l10n.get("updateConnection"));
-      const connectionName = $(this).data("connection-name");
-      const serverURL = $(this).data("server-url");
-      const clientId = $(this).data("client-id");
-      const documentReference = $(this).data("edit-document-reference");
+      // Read the attributes as strings, without any type conversion.
+      const connectionName = $(this).attr("data-connection-name");
+      const serverURL = $(this).attr("data-server-url");
+      const clientId = $(this).attr("data-client-id");
+      const documentReference = $(this).attr("data-edit-document-reference");
       $("#connection-name").val(connectionName);
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
@@ -421,8 +422,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
 
     $(document).on("click", ".delete-button", function () {
       $("#deleteConnectionModal").modal("show");
-      const connectionName = $(this).data("connection-name");
-      const deleteDocumentReference = $(this).data("delete-document-reference");
+      const connectionName = $(this).attr("data-connection-name");
+      const deleteDocumentReference = $(this).attr("data-delete-document-reference");
       $("#delete-connection-document-reference").val(deleteDocumentReference);
       $("#delete-connection-name").val(connectionName);
       $("#delete-connection-confirmation-message").text(
@@ -452,8 +453,9 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         $("#openproject_connections").data("liveData").updateEntries();
         $("#deleteConnectionModal").modal("hide");
 
+        // The notification message is HTML.
         new XWiki.widgets.Notification(
-          l10n.get("delete.deleted", connectionName),
+          l10n.get("delete.deleted", connectionName).escapeHTML(),
           "done"
         );
       } catch (e) {
@@ -510,13 +512,14 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         $("#openproject_connections").data("liveData").updateEntries();
         $("#handleConnectionModal").modal("hide");
 
+        // The notification message is HTML.
         new XWiki.widgets.Notification(
-          l10n.get("save.saved", connectionName),
+          l10n.get("save.saved", connectionName).escapeHTML(),
           "done"
         );
       } catch (e) {
         new XWiki.widgets.Notification(
-          e.responseText ?? l10n.get("save.errorOccurred", connectionName),
+          (e.responseText ?? l10n.get("save.errorOccurred", connectionName)).escapeHTML(),
           "error"
         );
       }
