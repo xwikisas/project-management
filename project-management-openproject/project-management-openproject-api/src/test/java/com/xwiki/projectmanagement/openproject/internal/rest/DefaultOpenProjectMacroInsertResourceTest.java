@@ -29,10 +29,12 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.block.XDOM;
@@ -54,15 +56,18 @@ import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -111,7 +116,13 @@ class DefaultOpenProjectMacroInsertResourceTest
     private XWikiDocument document;
 
     @Mock
+    private DocumentAuthors cachedAuthors;
+
+    @Mock
     private DocumentAuthors authors;
+
+    @Mock
+    private UserReference currentUserReference;
 
     @BeforeComponent
     void beforeComponent()
@@ -126,35 +137,62 @@ class DefaultOpenProjectMacroInsertResourceTest
     {
         when(this.context.getWiki()).thenReturn(this.xwiki);
         when(this.context.getUserReference()).thenReturn(CURRENT_USER);
+        when(this.userReferenceResolver.resolve(CURRENT_USER)).thenReturn(this.currentUserReference);
         when(this.authorizationManager.hasAccess(Right.EDIT, DOCUMENT_REFERENCE)).thenReturn(true);
         when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenReturn(this.cachedDocument);
         when(this.cachedDocument.clone()).thenReturn(this.document);
-        when(this.document.getSyntax()).thenReturn(Syntax.XWIKI_2_1);
-        when(this.document.getContent()).thenReturn(CONTENT);
-        when(this.document.getAuthors()).thenReturn(this.authors);
+        // The cached document and its copy describe the same page, last saved by another user.
+        mockPage(this.cachedDocument, this.cachedAuthors);
+        mockPage(this.document, this.authors);
 
         when(this.contentParser.parse(anyString(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> new XDOM(
             List.of(new ParagraphBlock(List.<Block>of(new WordBlock("Hello"), new WordBlock("world"))))));
         when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.PLAIN_1_0))).thenReturn(CONTENT);
-        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1)))
-            .thenReturn("{{openproject identifier=\"1\"/}}" + CONTENT);
+        // Render the inserted macro (the first block of the line) followed by the rest of the line.
+        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> {
+            List<Block> blocks = invocation.getArgument(0);
+            MacroBlock macro = (MacroBlock) blocks.get(0).getChildren().get(0);
+            return String.format("{{%s %s/}}%s", macro.getId(), macro.getParameters(), CONTENT);
+        });
+    }
+
+    private void mockPage(XWikiDocument page, DocumentAuthors pageAuthors)
+    {
+        when(page.getSyntax()).thenReturn(Syntax.XWIKI_2_1);
+        when(page.getContent()).thenReturn(CONTENT);
+        when(page.getAuthors()).thenReturn(pageAuthors);
     }
 
     @Test
     void insertIntoPageSavesAsCurrentUser() throws Exception
     {
-        UserReference currentUserReference = mock(UserReference.class);
-        when(this.userReferenceResolver.resolve(CURRENT_USER)).thenReturn(currentUserReference);
-
         Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
 
         assertEquals(200, response.getStatus());
-        verify(this.document).setContent("{{openproject identifier=\"1\"/}}" + CONTENT + "\n");
-        verify(this.authors).setContentAuthor(currentUserReference);
-        verify(this.authors).setEffectiveMetadataAuthor(currentUserReference);
-        verify(this.authors).setOriginalMetadataAuthor(currentUserReference);
-        verify(this.xwiki).saveDocument(this.document, "Inserted OpenProject mention.", true, this.context);
+        ArgumentCaptor<XWikiDocument> savedDocument = ArgumentCaptor.forClass(XWikiDocument.class);
+        verify(this.xwiki).saveDocument(savedDocument.capture(), eq("Inserted OpenProject mention."), eq(true),
+            same(this.context));
+        // The saved page is written by the current user, whatever the previous authors of the page were.
+        DocumentAuthors savedAuthors = savedDocument.getValue().getAuthors();
+        verify(savedAuthors).setContentAuthor(this.currentUserReference);
+        verify(savedAuthors).setEffectiveMetadataAuthor(this.currentUserReference);
+        verify(savedAuthors).setOriginalMetadataAuthor(this.currentUserReference);
+        verify(savedDocument.getValue()).setContent("{{openproject {identifier=1}/}}" + CONTENT + "\n");
+        // The cached document isn't modified.
+        assertSame(this.document, savedDocument.getValue());
         verify(this.cachedDocument, never()).setContent(anyString());
+        verifyNoInteractions(this.cachedAuthors);
+    }
+
+    @Test
+    void insertIntoPageWithoutEditRight() throws Exception
+    {
+        when(this.authorizationManager.hasAccess(Right.EDIT, DOCUMENT_REFERENCE)).thenReturn(false);
+
+        Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
+
+        assertEquals(401, response.getStatus());
+        verifyNoSave();
     }
 
     @Test
@@ -165,7 +203,27 @@ class DefaultOpenProjectMacroInsertResourceTest
 
         assertEquals(400, exception.getResponse().getStatus());
         assertEquals("Only the [openproject] macro can be inserted.", exception.getResponse().getEntity());
+        verifyNoSave();
+    }
+
+    @Test
+    void insertIntoPageWithInvalidParameterName() throws Exception
+    {
+        MacroInsertion insertion = createInsertion("openproject");
+        insertion.setMacroParameters(Map.of("identifier=\"1\"/}}text{{openproject name", "1"));
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.insetIntoPage("xwiki", "Space", "Page", insertion));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals("Invalid macro parameter name.", exception.getResponse().getEntity());
+        verifyNoSave();
+    }
+
+    private void verifyNoSave() throws Exception
+    {
         verify(this.document, never()).setContent(anyString());
+        verify(this.cachedDocument, never()).setContent(anyString());
         verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), anyBoolean(),
             any(XWikiContext.class));
     }
