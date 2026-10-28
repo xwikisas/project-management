@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.rest.document;
 
 import java.util.List;
+import java.util.Locale;
 
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -143,6 +144,7 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.xwiki.getDocument(TEMPLATE_CHILD_REFERENCE, this.context)).thenReturn(this.templateChildDocument);
         when(this.adminAuthorChecker.isLastSavedByAdmin(this.templateDocument)).thenReturn(true);
         when(this.adminAuthorChecker.isLastSavedByAdmin(this.templateChildDocument)).thenReturn(true);
+        when(this.templateChildDocument.getDocumentReferenceWithLocale()).thenReturn(TEMPLATE_CHILD_REFERENCE);
     }
 
     @Test
@@ -158,6 +160,26 @@ class DefaultOpenProjectSpaceResourceTest
         verify(this.document, never()).readFromTemplate(any(DocumentReference.class), any(XWikiContext.class));
         assertEquals("Not creating the OpenProject space because the template page [xwiki:OpenProject.Code.Template."
             + "Child.WebHome] wasn't last saved by a user with administration right on the wiki.",
+            this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void createSpaceWhenTemplateTranslationWasNotSavedByAdmin() throws Exception
+    {
+        DocumentReference translationReference = new DocumentReference(TEMPLATE_CHILD_REFERENCE, Locale.FRENCH);
+        XWikiDocument translation = mock(XWikiDocument.class);
+        when(translation.getDocumentReferenceWithLocale()).thenReturn(translationReference);
+        when(this.templateChildDocument.getTranslationLocales(this.context)).thenReturn(List.of(Locale.FRENCH));
+        when(this.xwiki.getDocument(translationReference, this.context)).thenReturn(translation);
+        when(this.adminAuthorChecker.isLastSavedByAdmin(translation)).thenReturn(false);
+
+        Response response = this.resource.createSpace("Space.WebHome", false, null, null, null, "Title");
+
+        assertEquals(409, response.getStatus());
+        assertEquals("The OpenProject template must be saved by an administrator.", response.getEntity());
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+        assertEquals("Not creating the OpenProject space because the template page [xwiki:OpenProject.Code.Template."
+            + "Child.WebHome(fr)] wasn't last saved by a user with administration right on the wiki.",
             this.logCapture.getMessage(0));
     }
 
