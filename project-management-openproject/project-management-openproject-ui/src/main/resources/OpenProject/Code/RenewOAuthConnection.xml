@@ -40,7 +40,17 @@
 #if ($services.csrf.isTokenValid($request.token))
   #set ($connectionName = $request.getParameter("connectionName"))
   #set ($redirectUrl = $request.getParameter("redirectUrl"))
-  #if ("$redirectUrl" != "" &amp;&amp; "$connectionName" != "")
+  ## Only redirect to a page of this server: either a path, or an URL starting with the URL of this server.
+  #set ($redirectUrl = "$!redirectUrl")
+  #set ($requestURL = "$!request.requestURL")
+  #set ($serverURLEnd = $requestURL.indexOf('/', $mathtool.add($requestURL.indexOf('://'), 3)))
+  #set ($isLocalRedirect = false)
+  #if ($redirectUrl.startsWith('/') &amp;&amp; !$redirectUrl.startsWith('//') &amp;&amp; !$redirectUrl.startsWith('/\'))
+    #set ($isLocalRedirect = true)
+  #elseif ($serverURLEnd &gt; 0 &amp;&amp; $redirectUrl.startsWith($requestURL.substring(0, $mathtool.add($serverURLEnd, 1))))
+    #set ($isLocalRedirect = true)
+  #end
+  #if ("$!redirectUrl" != "" &amp;&amp; "$!connectionName" != "" &amp;&amp; $isLocalRedirect)
     $services.oauth2client.authorize($connectionName, $redirectUrl)
   #end
 #end

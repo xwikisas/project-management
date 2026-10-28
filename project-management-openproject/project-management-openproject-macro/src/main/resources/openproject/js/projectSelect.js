@@ -78,7 +78,8 @@ require(['jquery'], function ($) {
         return;
       }
 
-      let projectsREST = `${XWiki.contextPath}/rest/wikis/${XWiki.currentWiki}/openproject/instance/${instance}/suggest/projects`;
+      let projectsREST = `${XWiki.contextPath}/rest/wikis/${encodeURIComponent(XWiki.currentWiki)}/openproject/instance/`
+        + `${encodeURIComponent(instance)}/suggest/projects`;
       $.getJSON(projectsREST, {search: text, selectedItem: input.val()})
         .then(function (results) {
           hideTokenWarning(input);
