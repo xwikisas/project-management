@@ -85,7 +85,7 @@ class RenewOAuthConnectionPageTest extends PageTest
 
     @ParameterizedTest
     @ValueSource(strings = { "https://www.example.org/", "//www.example.org/", "/\\www.example.org/",
-        "http://localhost:8080.example.org/", "javascript:alert(1)" })
+        "http://localhost:8080.example.org/", "http://localhost:8080@www.example.org/", "javascript:alert(1)" })
     void dontRedirectToAnotherServer(String redirectURL) throws Exception
     {
         this.request.put("redirectUrl", redirectURL);
