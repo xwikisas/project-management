@@ -25,15 +25,20 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
+import org.xwiki.security.authorization.AuthorizationManager;
+import org.xwiki.security.authorization.Right;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
@@ -44,7 +49,8 @@ import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
- * Default implementation of {@link PresetsManager}. Retrieves the presets from xwiki pages.
+ * Default implementation of {@link PresetsManager}. Retrieves the presets from xwiki pages. Only the presets stored on
+ * pages whose author has administration right on the wiki are taken into account.
  *
  * @version $Id$
  * @since 1.3.0
@@ -61,6 +67,16 @@ public class DefaultPresetsManager implements PresetsManager
 
     @Inject
     private Provider<XWikiContext> contextProvider;
+
+    @Inject
+    private AuthorizationManager authorizationManager;
+
+    @Inject
+    @Named("document")
+    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
+
+    @Inject
+    private Logger logger;
 
     @Override
     public List<Preset> getPresets(Boolean chart, int offset, int limit)
@@ -121,13 +137,9 @@ public class DefaultPresetsManager implements PresetsManager
                     .createQuery(
                         String.format("from doc.object('%s') as obj where obj.id = :presetid", Preset.CLASS_NAME),
                         Query.XWQL)
-                    .setLimit(1)
                     .bindValue("presetid", id)
                     .execute();
-            if (presets.isEmpty()) {
-                return null;
-            }
-            return getPresetObject(presets.get(0));
+            return presets.stream().map(this::getPresetObject).filter(Objects::nonNull).findFirst().orElse(null);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
@@ -160,12 +172,25 @@ public class DefaultPresetsManager implements PresetsManager
         try {
             XWikiDocument document = xWiki.getDocument(ref, context);
             BaseObject baseObject = document.getXObject(Preset.REFERENCE);
-            if (baseObject == null) {
+            if (baseObject == null || !isAuthorAdmin(document)) {
                 return null;
             }
             return new Preset(baseObject);
         } catch (XWikiException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private boolean isAuthorAdmin(XWikiDocument document)
+    {
+        DocumentReference author =
+            this.documentUserSerializer.serialize(document.getAuthors().getEffectiveMetadataAuthor());
+        boolean isAdmin = this.authorizationManager.hasAccess(Right.ADMIN, author,
+            document.getDocumentReference().getWikiReference());
+        if (!isAdmin) {
+            this.logger.warn("Ignoring the preset stored on [{}] because its author [{}] doesn't have administration "
+                + "right on the wiki.", document.getDocumentReference(), author);
+        }
+        return isAdmin;
     }
 }
