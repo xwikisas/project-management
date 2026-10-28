@@ -28,6 +28,8 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -53,6 +55,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -104,6 +107,33 @@ public class HandleWorkPackagesTest
         Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, null);
         assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
         verifyNoInteractions(this.openProjectApiClient);
+    }
+
+    @Test
+    void getAvailableAssignees() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getAvailableUsers(anyString(), anyInt(), anyInt(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(), 0, PAGE_SIZE, 0));
+
+        Response response =
+            this.handleWorkPackages.getAvailableAssignees(WIKI, INSTANCE, "/api/v3/projects/demo-1", "", PAGE_SIZE,
+                null);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        verify(this.openProjectApiClient).getAvailableUsers("/api/v3/projects/demo-1/available_assignees", 0,
+            PAGE_SIZE, "");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "@attacker.example/api/v3/projects/1", "/api/v3/projects/1?x=",
+        "/api/v3/projects/1/../../users", "/api/v3/users/1", "api/v3/projects/1" })
+    void getAvailableAssigneesWithInvalidProject(String project) throws ProjectManagementException
+    {
+        Response response =
+            this.handleWorkPackages.getAvailableAssignees(WIKI, INSTANCE, project, "", PAGE_SIZE, null);
+
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+        verify(this.openProjectApiClient, never()).getAvailableUsers(anyString(), anyInt(), anyInt(), anyString());
     }
 
     @Test

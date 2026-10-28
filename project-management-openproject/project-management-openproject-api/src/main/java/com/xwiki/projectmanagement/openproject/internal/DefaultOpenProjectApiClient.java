@@ -33,10 +33,12 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
@@ -142,6 +144,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String PATCH = "PATCH";
 
+    private static final String DOT = ".";
+
     private static final String API_URL_TYPES = "/api/v3/types";
 
     private static final String API_URL_STATUSES = "/api/v3/statuses";
@@ -238,7 +242,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String filters, String sortBy)
         throws ProjectManagementException
     {
-        String projectWorkPackagesUrl = String.format("%s/projects/%s/work_packages", API_URL_PART, project);
+        String projectWorkPackagesUrl =
+            String.format("%s/projects/%s/work_packages", API_URL_PART, encodePathSegment(project));
         JsonNode mainNode = getOpenProjectResponse(projectWorkPackagesUrl, offset, pageSize, filters, sortBy, "");
         return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
     }
@@ -248,7 +253,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String sortBy) throws ProjectManagementException
     {
         // The filters are left out on purpose, sending them would replace the ones defined by the query.
-        String queryUrl = String.format(API_URL_QUERY, queryId);
+        String queryUrl = String.format(API_URL_QUERY, encodePathSegment(queryId));
         JsonNode queryJson = getOpenProjectResponse(queryUrl, offset, pageSize, "", sortBy, "");
 
         return getWorkPackagePaginatedResult(queryJson.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_RESULTS), offset,
@@ -258,7 +263,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public WorkPackage getWorkPackage(String idOrKey) throws ProjectManagementException
     {
-        String workPackageUrl = API_URL_WORK_PACKAGES + '/' + URLEncoder.encode(idOrKey, StandardCharsets.UTF_8);
+        String workPackageUrl = API_URL_WORK_PACKAGES + '/' + encodePathSegment(idOrKey);
         try {
             return createWorkPackageFromJson(getOpenProjectResponse(workPackageUrl, null, null, "", "", ""));
         } catch (WorkItemRetrievalException e) {
@@ -273,7 +278,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public String getQueryResultsUrl(String queryId) throws ProjectManagementException
     {
-        JsonNode queryJson = getOpenProjectResponse(String.format(API_URL_QUERY, queryId), null, null, "", "", "");
+        String queryUrl = String.format(API_URL_QUERY, encodePathSegment(queryId));
+        JsonNode queryJson = getOpenProjectResponse(queryUrl, null, null, "", "", "");
         return queryJson.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_RESULTS).path(HREF).asText();
     }
 
@@ -395,7 +401,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private JsonNode getFormResponse(String urlPart, String jsonBody) throws ProjectManagementException
     {
         try {
-            URI uri = new URI(connectionUrl + urlPart);
+            URI uri = createInstanceUri(urlPart);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -577,20 +583,20 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
     {
-        String uriStr = connectionUrl + String.format("/api/v3/users/%s/avatar", userId);
-        URI uri;
+        String urlPart = String.format("/api/v3/users/%s/avatar", encodePathSegment(userId));
+        String uriStr = connectionUrl + urlPart;
         try {
-            uri = new URI(uriStr);
+            URI uri = createInstanceUri(urlPart);
             HttpRequest request =
                 createAuthorizedGetHttpRequest(uri);
             HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() != 200) {
-                if (response.statusCode() == 404) {
-                    throw new WorkItemNotFoundException(
-                        String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
-                }
                 try (InputStream in = response.body()) {
+                    if (response.statusCode() == 404) {
+                        throw new WorkItemNotFoundException(
+                            String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
+                    }
                     throw new WorkItemRetrievalException(
                         String.format("Failed to get the user avatar with code [%s] and "
                                 + "message [%s]", response.statusCode(),
@@ -642,7 +648,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         String uriStr = connectionUrl + url;
         try {
-            URI uri = new URI(uriStr);
+            URI uri = createInstanceUri(url);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -662,10 +668,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody) throws ProjectManagementException
     {
-        String urlPart = String.format(API_URL_FORM_EDIT_WORK_PACKAGE, workPackageId);
+        String urlPart = String.format(API_URL_FORM_EDIT_WORK_PACKAGE, encodePathSegment(workPackageId));
         String urlString = connectionUrl + urlPart;
         try {
-            URI uri = new URI(urlString);
+            URI uri = createInstanceUri(urlPart);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -687,7 +693,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         String uriStr = connectionUrl + url;
         try {
-            URI uri = new URI(uriStr);
+            URI uri = createInstanceUri(url);
             HttpRequest request = createAuthorizedPatchRequest(uri, jsonBody);
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -716,7 +722,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         String uri = connectionUrl + urlPart;
         try {
-            URIBuilder uriBuilder = new URIBuilder(uri);
+            URIBuilder uriBuilder = new URIBuilder(createInstanceUri(urlPart));
             if (offset != null) {
                 uriBuilder.setParameter(OP_OFFSET, String.valueOf(offset));
             }
@@ -901,6 +907,57 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
         paginatedResult.setTotalItems(totalNumberOfWorkPackages);
         return paginatedResult;
+    }
+
+    /**
+     * Builds the URI of a request to the OpenProject instance. The requests carry the credentials of the current user,
+     * so they must only target the configured instance, whatever the given path holds (it can come from the response
+     * of the instance or from the parameters of the request handled by XWiki).
+     *
+     * @param urlPart the path (and optional query) of the request, relative to the URL of the instance
+     * @return the URI of the request
+     * @throws URISyntaxException if the resulting URI is invalid or doesn't target the configured instance
+     */
+    private URI createInstanceUri(String urlPart) throws URISyntaxException
+    {
+        String uriString = connectionUrl + (urlPart == null ? "" : urlPart);
+        URI uri = new URI(uriString);
+        URI instanceUri = new URI(connectionUrl);
+        if (!isSameOrigin(uri, instanceUri) || hasDotSegment(uri.getRawPath())) {
+            throw new URISyntaxException(uriString, "The URL doesn't target the configured OpenProject instance");
+        }
+        return uri;
+    }
+
+    private static boolean isSameOrigin(URI uri, URI instanceUri)
+    {
+        boolean sameHost = uri.getHost() != null && uri.getHost().equalsIgnoreCase(instanceUri.getHost());
+        boolean sameScheme = StringUtils.equalsIgnoreCase(uri.getScheme(), instanceUri.getScheme());
+        return sameHost && sameScheme && uri.getPort() == instanceUri.getPort()
+            && Objects.equals(uri.getRawUserInfo(), instanceUri.getRawUserInfo());
+    }
+
+    private static boolean hasDotSegment(String rawPath)
+    {
+        if (rawPath == null) {
+            return false;
+        }
+        for (String segment : rawPath.split("/")) {
+            String decodedSegment = segment.replace("%2e", DOT).replace("%2E", DOT);
+            if (DOT.equals(decodedSegment) || "..".equals(decodedSegment)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param value a value inserted in the path of a request, e.g. an identifier
+     * @return the value encoded to be used as a single path segment
+     */
+    private static String encodePathSegment(String value)
+    {
+        return URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private HttpRequest createAuthorizedRequest(

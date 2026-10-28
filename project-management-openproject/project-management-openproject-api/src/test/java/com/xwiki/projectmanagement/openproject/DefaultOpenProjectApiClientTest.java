@@ -38,6 +38,8 @@ import java.util.stream.Collectors;
 import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -72,6 +74,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -337,6 +341,56 @@ class DefaultOpenProjectApiClientTest
 
         assertEquals("application/octet-stream", userAvatar.getContentType());
         assertNotNull(userAvatar.getStreamingOutput());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "@attacker.example/api/v3/users", ".attacker.example/api/v3/users",
+        ":8080/api/v3/users", "/api/v3/projects/1/../../../users", "/api/v3/%2e%2E/users" })
+    void requestsOnlyTargetTheConfiguredInstance(String path) throws Exception
+    {
+        assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getAvailableUsers(path, OFFSET, PAGE_SIZE, ""));
+        assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getAvailableProjects(path, OFFSET, PAGE_SIZE, ""));
+        assertThrows(ProjectManagementException.class, () -> openProjectApiClient.createWorkPackage(path, "{}"));
+        assertThrows(ProjectManagementException.class, () -> openProjectApiClient.updateWorkPackage(path, "{}"));
+
+        verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void valuesAreEncodedInTheRequestPath() throws Exception
+    {
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{\"_type\":\"Form\"}");
+        when(this.response.headers()).thenReturn(
+            HttpHeaders.of(Map.of("Content-Type", List.of("image/png")), (a, b) -> true));
+
+        openProjectApiClient.getProjectWorkPackages("demo/../users?a=b c", null, null, "", "");
+        openProjectApiClient.getQueryWorkPackages("1#x", null, null, "");
+        openProjectApiClient.getWorkPackageFormResponse("1/../../users", "{}");
+        openProjectApiClient.getUserAvatar("1?x");
+        openProjectApiClient.getWorkPackage("A/B");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client, times(5)).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(List.of(
+            OPEN_PROJECT_CONNECTION_URL + "/api/v3/projects/demo%2F..%2Fusers%3Fa%3Db%20c/work_packages",
+            OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/1%23x",
+            OPEN_PROJECT_CONNECTION_URL + "/api/v3/work_packages/1%2F..%2F..%2Fusers/form",
+            OPEN_PROJECT_CONNECTION_URL + "/api/v3/users/1%3Fx/avatar",
+            OPEN_PROJECT_CONNECTION_URL + "/api/v3/work_packages/A%2FB"),
+            captor.getAllValues().stream().map(request -> request.uri().toString()).collect(Collectors.toList()));
+    }
+
+    @Test
+    void pathSegmentsMadeOfDotsAreRejected() throws Exception
+    {
+        assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getProjectWorkPackages("..", null, null, "", ""));
+        assertThrows(ProjectManagementException.class, () -> openProjectApiClient.getUserAvatar("."));
+
+        verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
     @Test
