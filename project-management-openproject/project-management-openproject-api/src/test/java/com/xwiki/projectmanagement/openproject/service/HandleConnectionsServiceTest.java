@@ -132,7 +132,7 @@ public class HandleConnectionsServiceTest
 
     private final DocumentReference documentReference = new DocumentReference(
         WIKI_NAME,
-        List.of("ProjectManagement", "Code"),
+        List.of("OpenProject", "Code", "OpenProjectConfigurations"),
         "FirstConnection"
     );
 
@@ -255,6 +255,21 @@ public class HandleConnectionsServiceTest
         assertEquals("currentSecret", configObj.getStringValue("clientSecret"));
         assertEquals("currentSecret", oidcObj.getStringValue("clientSecret"));
         verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @Test
+    void handleConnectionRefusesPageOutsideConnectionsSpace() throws Exception
+    {
+        DocumentReference outsideReference = new DocumentReference(WIKI_NAME, List.of("Space"), "Connection");
+        when(this.compactSerializer.serialize(outsideReference)).thenReturn("Space.Connection");
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection, outsideReference));
+
+        assertEquals("The connection can't be saved on the page [Space.Connection]: the connections must be saved in "
+            + "the [OpenProject.Code.OpenProjectConfigurations] space.", exception.getMessage());
+        verify(xwiki, never()).getDocument(eq(outsideReference), any(XWikiContext.class));
+        verify(xwiki, never()).saveDocument(any(), any(), any());
     }
 
     @Test

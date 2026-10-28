@@ -35,6 +35,7 @@ import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReferenceSerializer;
+import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
@@ -78,6 +79,8 @@ public class HandleConnectionsService
 
     private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
 
+    private static final String OPEN_PROJECT_CONFIGURATIONS = "OpenProjectConfigurations";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
@@ -110,22 +113,31 @@ public class HandleConnectionsService
     private Logger logger;
 
     /**
-     * Creates a new OpenProject connection configuration document in XWiki, or updates an existing one. Only the
-     * connections stored on pages whose author has administration right on the wiki are taken into account when
-     * checking if the connection name is already used, and an existing page can be updated only if its author has
-     * administration right on the wiki. When updating an existing connection, an empty client secret keeps the
-     * current one, so that the client secret doesn't need to be sent back to the browser.
+     * Creates a new OpenProject connection configuration document in XWiki, or updates an existing one. The document
+     * must be in the {@code OpenProject.Code.OpenProjectConfigurations} space, whose pages only the administrators
+     * can view. Only the connections stored on pages whose author has administration right on the wiki are taken into
+     * account when checking if the connection name is already used, and an existing page can be updated only if its
+     * author has administration right on the wiki. When updating an existing connection, an empty client secret keeps
+     * the current one, so that the client secret doesn't need to be sent back to the browser.
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ProjectManagementException if a configuration with the same name already exists, if the existing page
-     *     can't be updated, if no client secret is provided for a new connection, if the query failed or the document
-     *     retrieval/creation fails.
+     * @throws ProjectManagementException if the document is not in the connections space, if a configuration with
+     *     the same name already exists, if the existing page can't be updated, if no client secret is provided for a
+     *     new connection, if the query failed or the document retrieval/creation fails.
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference)
         throws ProjectManagementException
     {
+        SpaceReference connectionsSpace = new SpaceReference(documentReference.getWikiReference().getName(),
+            OPEN_PROJECT, CODE, OPEN_PROJECT_CONFIGURATIONS);
+        if (!documentReference.hasParent(connectionsSpace)) {
+            throw new ProjectManagementException(String.format("The connection can't be saved on the page [%s]: the "
+                + "connections must be saved in the [OpenProject.Code.OpenProjectConfigurations] space.",
+                this.compactSerializer.serialize(documentReference)));
+        }
+
         XWikiContext context = this.xcontextProvider.get();
         try {
             XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
