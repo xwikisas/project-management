@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -38,8 +39,8 @@ public final class RestErrorResponses
     }
 
     /**
-     * Logs the given failure and builds an error response holding only the given message. A failure caused by missing
-     * rights is turned into a response with the {@code 401} status and no entity.
+     * Logs the given failure and builds an error response holding only the given message, as plain text. A failure
+     * caused by missing rights is turned into a response with the {@code 401} status and no entity.
      *
      * @param logger the logger to use
      * @param message the message describing the failed operation, sent to the client
@@ -54,7 +55,7 @@ public final class RestErrorResponses
         }
 
         logger.error(message, e);
-        return Response.serverError().entity(message).build();
+        return Response.serverError().type(MediaType.TEXT_PLAIN_TYPE).entity(message).build();
     }
 
     private static boolean isAccessDenied(Throwable e)
