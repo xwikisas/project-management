@@ -40,6 +40,8 @@ import com.xwiki.projectmanagement.openproject.internal.service.HandleConnection
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
@@ -57,8 +59,7 @@ public class HandleConnectionsTest
     @MockComponent
     private XWikiContext xContext;
 
-    @Mock
-    private WikiReference wikiReference;
+    private final WikiReference wikiReference = new WikiReference(WIKI_NAME);
 
     @Mock
     private DocumentReference userReference;
@@ -127,6 +128,22 @@ public class HandleConnectionsTest
 
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), createResponse.getStatus());
         assertEquals(Response.Status.FORBIDDEN.getStatusCode(), updateResponse.getStatus());
+    }
+
+    @Test
+    void handleConnectionOnWikiNotAdministeredIsForbidden() throws ProjectManagementException
+    {
+        when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, new WikiReference("otherWiki")))
+            .thenReturn(false);
+
+        Response createResponse = handleConnections.createConnection("otherWiki", SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+        Response updateResponse = handleConnections.updateConnection("otherWiki", SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), createResponse.getStatus());
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), updateResponse.getStatus());
+        verify(this.handleConnectionsService, never()).handleConnection(any(), any());
     }
 
     @Test
