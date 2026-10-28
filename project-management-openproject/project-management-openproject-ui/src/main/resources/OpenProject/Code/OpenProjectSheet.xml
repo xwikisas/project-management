@@ -95,7 +95,8 @@
                 &lt;/strong&gt;
               &lt;/label&gt;
               &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))&lt;/p&gt;
-              &lt;input id="client-secret" class="form-control" name="client-secret" type="text"&gt;
+              &lt;input id="client-secret" class="form-control" name="client-secret" type="password" autocomplete="new-password"
+                data-keep-placeholder="$escapetool.xml($services.localization.render('openproject.config.clientSecretKeep'))"&gt;
             &lt;/div&gt;
             &lt;div class="form-group"&gt;
               &lt;label class="h5" for="show-public-data"&gt;
@@ -373,12 +374,12 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const connectionName = $(this).data("connection-name");
       const serverURL = $(this).data("server-url");
       const clientId = $(this).data("client-id");
-      const clientSecret = $(this).data("client-secret");
       const documentReference = $(this).data("edit-document-reference");
       $("#connection-name").val(connectionName);
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
-      $("#client-secret").val(clientSecret);
+      // The current client secret is not sent to the browser: leaving the field empty keeps it.
+      $("#client-secret").val("").attr("placeholder", $("#client-secret").data("keep-placeholder"));
       $("#show-public-data").prop("checked", $(this).data("show-public-data") === true);
       $("#document-reference").val(documentReference);
       $("#connection-action").val("edit");
@@ -390,7 +391,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#connection-name").val("");
       $("#server-url").val("");
       $("#client-id").val("");
-      $("#client-secret").val("");
+      $("#client-secret").val("").removeAttr("placeholder");
       $("#show-public-data").prop("checked", false);
 
       const connectionsSpace = XWiki.Model.resolve(
@@ -467,7 +468,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const documentReference = $("#document-reference").val();
       const connectionAction = $("#connection-action").val();
 
-      if (!connectionName || !serverURL || !clientId || !clientSecret) {
+      if (!connectionName || !serverURL || !clientId || (!clientSecret &amp;&amp; connectionAction == "create")) {
         return new XWiki.widgets.Notification(
           l10n.get("fillInAllFields"),
           "error"
