@@ -60,7 +60,7 @@
   &lt;dd&gt;
     &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_id"
       name="ProjectManagement.Code.Presets.PresetClass_0_id"
-      value="$services.projectmanagement.presets.getNextPresetId()"/&gt;
+      value="$!escapetool.xml($services.projectmanagement.presets.getNextPresetId())"/&gt;
   &lt;dd&gt;
 #end
 ## Name
@@ -77,9 +77,13 @@
     ##docDisplay('name', $context.action)
 &lt;dd&gt;
 #end
-#set ($isMultiple = $request.isMultiple)
-#if ("$!isMultiple" == '')
- #set ($isMultiple = $obj.getValue('isMultiple'))
+#set ($isMultiple = "$!request.isMultiple")
+#if ($isMultiple == '')
+ #set ($isMultiple = "$!obj.getValue('isMultiple')")
+#end
+## Only keep the values of a boolean property.
+#if ($isMultiple != '1')
+  #set ($isMultiple = '0')
 #end
 #if ($xcontext.action == 'view')
 &lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.isMultiple'))&lt;/dt&gt;
@@ -89,7 +93,7 @@
 #else
   &lt;input type="hidden" id="ProjectManagement.Code.Presets.PresetClass_0_isMultiple"
     name="ProjectManagement.Code.Presets.PresetClass_0_isMultiple"
-    value="$!isMultiple"/&gt;
+    value="$escapetool.xml($isMultiple)"/&gt;
     ##docDisplay('name', $context.action)
 #end
 ## Filter parameter that is displayed using a FILTER BUILDER.
