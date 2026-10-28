@@ -335,12 +335,25 @@ class DefaultOpenProjectApiClientTest
     void getAvatarTest() throws ProjectManagementException
     {
         when(response.statusCode()).thenReturn(200);
-        HttpHeaders headers = HttpHeaders.of(Collections.emptyMap(), (a, b) -> true);
+        HttpHeaders headers = HttpHeaders.of(Map.of("Content-Type", List.of("Image/PNG; charset=binary")),
+            (a, b) -> true);
         when(response.headers()).thenReturn(headers);
         UserAvatar userAvatar = openProjectApiClient.getUserAvatar("test");
 
-        assertEquals("application/octet-stream", userAvatar.getContentType());
+        assertEquals("image/png", userAvatar.getContentType());
         assertNotNull(userAvatar.getStreamingOutput());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "text/html", "image/svg+xml", "application/octet-stream", "text/plain;image/png" })
+    void getAvatarWithUnsupportedContentType(String contentType)
+    {
+        when(response.statusCode()).thenReturn(200);
+        Map<String, List<String>> headerValues = contentType.isEmpty() ? Map.of()
+            : Map.of("Content-Type", List.of(contentType));
+        when(response.headers()).thenReturn(HttpHeaders.of(headerValues, (a, b) -> true));
+
+        assertThrows(WorkItemRetrievalException.class, () -> openProjectApiClient.getUserAvatar("test"));
     }
 
     @ParameterizedTest

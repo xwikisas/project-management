@@ -33,7 +33,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
@@ -204,6 +206,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
      * responding blocks the thread rendering the page forever.
      */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
+
+    /**
+     * The image types the avatars are served with. Other types, e.g. SVG or HTML, are not served from the wiki.
+     */
+    private static final Set<String> AVATAR_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "image/gif",
+        "image/webp", "image/bmp", "image/avif", "image/x-icon", "image/vnd.microsoft.icon");
 
     private final HttpClient client;
 
@@ -603,9 +611,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                             new String(in.readAllBytes(), StandardCharsets.UTF_8)));
                 }
             }
-            String contentType = response.headers()
-                .firstValue(CONTENT_TYPE)
-                .orElse("application/octet-stream");
+            String contentType = getAvatarContentType(response.headers().firstValue(CONTENT_TYPE).orElse(""));
+            if (contentType == null) {
+                try (InputStream ignored = response.body()) {
+                    throw new WorkItemRetrievalException(
+                        String.format("The avatar of user [%s] has an unsupported content type [%s].", userId,
+                            response.headers().firstValue(CONTENT_TYPE).orElse("")));
+                }
+            }
 
             StreamingOutput streamingOutput = output -> {
                 try (InputStream in = response.body()) {
@@ -622,6 +635,16 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
                 e);
         }
+    }
+
+    /**
+     * @param contentTypeHeader the content type returned by OpenProject for an avatar
+     * @return the content type to serve the avatar with, or {@code null} when it isn't a supported raster image type
+     */
+    private static String getAvatarContentType(String contentTypeHeader)
+    {
+        String mediaType = StringUtils.substringBefore(contentTypeHeader, ";").trim().toLowerCase(Locale.ROOT);
+        return AVATAR_CONTENT_TYPES.contains(mediaType) ? mediaType : null;
     }
 
     @Override
