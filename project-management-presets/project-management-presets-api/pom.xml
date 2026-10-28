@@ -29,7 +29,7 @@
   <artifactId>project-management-presets-api</artifactId>
 
   <properties>
-    <xwiki.jacoco.instructionRatio>0.86</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.89</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <!-- Needed for the class initializer and the manager.  -->
