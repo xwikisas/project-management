@@ -298,19 +298,9 @@ class DefaultOpenProjectSpaceResourceTest
             .thenReturn(List.of(DOCUMENT_REFERENCE, childReference, existingReference, otherReference));
 
         when(this.xwiki.getDocument(childReference, this.context)).thenReturn(mock(XWikiDocument.class));
-        UriInfo uriInfo = mock(UriInfo.class);
-        when(uriInfo.getBaseUri()).thenReturn(new URI("http://localhost/xwiki/rest"));
-        ReflectionUtils.setFieldValue(this.resource, "uriInfo", uriInfo);
-        when(this.modelFactory.toRestPage(any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
-            anyBoolean())).thenAnswer(invocation -> new Page());
         when(this.urlShortenerManager.createShortenedURL(DOCUMENT_REFERENCE)).thenReturn("homeId");
         when(this.urlShortenerManager.createShortenedURL(childReference)).thenReturn("childId");
-
-        ReflectionUtils.setFieldValue(this.resource, "componentManager", this.componentManager);
-        RequestFactory requestFactory = mock(RequestFactory.class);
-        when(this.refactoringScriptService.getRequestFactory()).thenReturn(requestFactory);
-        when(requestFactory.createCreateRequest(any())).thenReturn(new CreateRequest());
-        when(this.refactoringScriptService.create(any(CreateRequest.class))).thenReturn(mock(Job.class));
+        mockCreateJobAndRestPages();
 
         Response response = this.resource.createSpace("Space.WebHome", true, null, null, null, "Title");
 
@@ -327,5 +317,47 @@ class DefaultOpenProjectSpaceResourceTest
         verify(this.urlShortenerManager, never()).createShortenedURL(deniedReference);
         verify(this.xwiki, never()).getDocument(eq(existingReference), any(XWikiContext.class));
         verify(this.xwiki, never()).getDocument(eq(otherReference), any(XWikiContext.class));
+    }
+
+    @Test
+    void createSpaceOnNonSpaceHomePageReturnsOnlyThatPage() throws Exception
+    {
+        DocumentReference pageReference = new DocumentReference("xwiki", List.of("Space"), "Page");
+        when(this.resolver.resolve("Space.Page", new WikiReference("xwiki"))).thenReturn(pageReference);
+        when(this.authorizationManager.hasAccess(Right.VIEW, pageReference)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, pageReference)).thenReturn(true);
+        when(this.xwiki.getDocument(pageReference, this.context)).thenReturn(this.document);
+        // Pages that already exist in the space of the created page.
+        DocumentReference otherReference = new DocumentReference("xwiki", List.of("Space"), "Other");
+        DocumentReference nestedReference = new DocumentReference("xwiki", List.of("Space", "Nested"), "WebHome");
+        when(this.modelBridge.getDocumentReferences(pageReference.getLastSpaceReference()))
+            .thenReturn(List.of(pageReference, otherReference, nestedReference));
+        when(this.urlShortenerManager.createShortenedURL(pageReference)).thenReturn("pageId");
+        mockCreateJobAndRestPages();
+
+        Response response = this.resource.createSpace("Space.Page", true, null, null, null, "Title");
+
+        assertEquals(200, response.getStatus());
+        List<?> pages = (List<?>) response.getEntity();
+        assertEquals(1, pages.size());
+        assertEquals("pageId", ((Page) pages.get(0)).getId());
+        verify(this.urlShortenerManager, times(1)).createShortenedURL(any());
+        verify(this.xwiki, never()).getDocument(eq(otherReference), any(XWikiContext.class));
+        verify(this.xwiki, never()).getDocument(eq(nestedReference), any(XWikiContext.class));
+    }
+
+    private void mockCreateJobAndRestPages() throws Exception
+    {
+        UriInfo uriInfo = mock(UriInfo.class);
+        when(uriInfo.getBaseUri()).thenReturn(new URI("http://localhost/xwiki/rest"));
+        ReflectionUtils.setFieldValue(this.resource, "uriInfo", uriInfo);
+        when(this.modelFactory.toRestPage(any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
+            anyBoolean())).thenAnswer(invocation -> new Page());
+
+        ReflectionUtils.setFieldValue(this.resource, "componentManager", this.componentManager);
+        RequestFactory requestFactory = mock(RequestFactory.class);
+        when(this.refactoringScriptService.getRequestFactory()).thenReturn(requestFactory);
+        when(requestFactory.createCreateRequest(any())).thenReturn(new CreateRequest());
+        when(this.refactoringScriptService.create(any(CreateRequest.class))).thenReturn(mock(Job.class));
     }
 }
