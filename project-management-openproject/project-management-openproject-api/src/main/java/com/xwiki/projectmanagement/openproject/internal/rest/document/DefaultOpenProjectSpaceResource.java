@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -195,8 +196,8 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
     }
 
     /**
-     * The template pages are copied with the current user as author, so they must have been written by an
-     * administrator.
+     * The template pages (with their translations) are copied with the current user as author, so they must have
+     * been written by an administrator.
      */
     private boolean isTemplateLastSavedByAdmin(DocumentReference templateReference, XWikiContext context)
         throws XWikiException
@@ -204,11 +205,27 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         for (DocumentReference templatePage : this.modelBridge.getDocumentReferences(
             templateReference.getLastSpaceReference())) {
             XWikiDocument templateDocument = context.getWiki().getDocument(templatePage, context);
-            if (!this.adminAuthorChecker.isLastSavedByAdmin(templateDocument)) {
-                getLogger().warn("Not creating the OpenProject space because the template page [{}] wasn't last "
-                    + "saved by a user with administration right on the wiki.", templatePage);
+            if (!isLastSavedByAdmin(templateDocument)) {
                 return false;
             }
+            for (Locale locale : templateDocument.getTranslationLocales(context)) {
+                if (!isLastSavedByAdmin(
+                    context.getWiki().getDocument(new DocumentReference(templatePage, locale), context)))
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isLastSavedByAdmin(XWikiDocument templateDocument)
+    {
+        if (!this.adminAuthorChecker.isLastSavedByAdmin(templateDocument)) {
+            getLogger().warn("Not creating the OpenProject space because the template page [{}] wasn't last "
+                + "saved by a user with administration right on the wiki.",
+                templateDocument.getDocumentReferenceWithLocale());
+            return false;
         }
         return true;
     }
