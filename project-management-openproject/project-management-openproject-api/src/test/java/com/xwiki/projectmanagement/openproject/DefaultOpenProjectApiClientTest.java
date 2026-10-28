@@ -389,8 +389,28 @@ class DefaultOpenProjectApiClientTest
         assertThrows(ProjectManagementException.class,
             () -> openProjectApiClient.getProjectWorkPackages("..", null, null, "", ""));
         assertThrows(ProjectManagementException.class, () -> openProjectApiClient.getUserAvatar("."));
+        assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getAvailableUsers("/api/v3/..;/users", OFFSET, PAGE_SIZE, ""));
 
         verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void requestsStayUnderThePathOfTheConfiguredInstance() throws Exception
+    {
+        DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient("https://example.org/openproject",
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client);
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{}");
+
+        assertThrows(ProjectManagementException.class,
+            () -> apiClient.getAvailableUsers("x/api/v3/users", OFFSET, PAGE_SIZE, ""));
+        verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+
+        apiClient.getAvailableUsers("/api/v3/users", null, null, "");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals("https://example.org/openproject/api/v3/users", captor.getValue().uri().toString());
     }
 
     @Test

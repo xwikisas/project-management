@@ -146,6 +146,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String DOT = ".";
 
+    private static final String SLASH = "/";
+
+    private static final String SEMICOLON = ";";
+
     private static final String API_URL_TYPES = "/api/v3/types";
 
     private static final String API_URL_STATUSES = "/api/v3/statuses";
@@ -923,10 +927,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String uriString = connectionUrl + (urlPart == null ? "" : urlPart);
         URI uri = new URI(uriString);
         URI instanceUri = new URI(connectionUrl);
-        if (!isSameOrigin(uri, instanceUri) || hasDotSegment(uri.getRawPath())) {
+        if (!isSameOrigin(uri, instanceUri) || !isUnderInstancePath(uri, instanceUri)
+            || hasDotSegment(uri.getRawPath()))
+        {
             throw new URISyntaxException(uriString, "The URL doesn't target the configured OpenProject instance");
         }
         return uri;
+    }
+
+    /**
+     * The instance can be served under a path, e.g. {@code https://example.org/openproject}: the requests must stay
+     * under this path.
+     */
+    private static boolean isUnderInstancePath(URI uri, URI instanceUri)
+    {
+        String instancePath = StringUtils.removeEnd(Objects.toString(instanceUri.getRawPath(), ""), SLASH);
+        String path = Objects.toString(uri.getRawPath(), "");
+        return instancePath.isEmpty() || path.equals(instancePath) || path.startsWith(instancePath + SLASH);
     }
 
     private static boolean isSameOrigin(URI uri, URI instanceUri)
@@ -942,8 +959,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         if (rawPath == null) {
             return false;
         }
-        for (String segment : rawPath.split("/")) {
-            String decodedSegment = segment.replace("%2e", DOT).replace("%2E", DOT);
+        for (String segment : rawPath.split(SLASH)) {
+            // Some servers ignore the parameters of a path segment, e.g. "..;x" is handled as "..".
+            String decodedSegment =
+                StringUtils.substringBefore(segment, SEMICOLON).replace("%2e", DOT).replace("%2E", DOT);
             if (DOT.equals(decodedSegment) || "..".equals(decodedSegment)) {
                 return true;
             }
