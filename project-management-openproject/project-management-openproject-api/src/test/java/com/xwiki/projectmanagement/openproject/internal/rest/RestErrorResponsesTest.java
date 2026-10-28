@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,7 @@ class RestErrorResponsesTest
 
         assertEquals(500, response.getStatus());
         assertEquals("Failed to save.", response.getEntity());
+        assertEquals(MediaType.TEXT_PLAIN_TYPE, response.getMetadata().getFirst("Content-Type"));
         verify(this.logger).error("Failed to save.", exception);
     }
 
