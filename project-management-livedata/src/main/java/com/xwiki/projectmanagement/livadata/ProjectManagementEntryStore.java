@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.livadata;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,8 +121,14 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         ld.getEntries().addAll(workItems.getItems());
         ld.setCount(workItems.getTotalItems());
         // PREPARE THE RESULTS FOR THE LIVEDATA - TURN THE LINKABLES TO PROPERTIES OF THE WORK ITEM -----------
+        // The displayers replace the linkables by their HTML display, so keep their locations to expose them as raw
+        // URLs, e.g. for the actions that open the work item.
+        List<Map<String, Object>> locations = getLocations(workItems.getItems());
         applyDisplayers(workItems.getItems(), clientId);
         flatten(ld);
+        for (int i = 0; i < locations.size(); i++) {
+            ld.getEntries().get(i).putAll(locations.get(i));
+        }
 
         return ld;
     }
@@ -142,6 +149,23 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
             logger.warn("Failed to find the project management livedata displayer with hint [{}].",
                 clientId);
         }
+    }
+
+    private static List<Map<String, Object>> getLocations(List<WorkItem> workItems)
+    {
+        List<Map<String, Object>> locations = new ArrayList<>();
+        for (WorkItem workItem : workItems) {
+            Map<String, Object> itemLocations = new HashMap<>();
+            for (String linkWorkItemProperty : LINK_PROPERTIES) {
+                Object property = workItem.get(linkWorkItemProperty);
+                if (property instanceof Map && ((Map<?, ?>) property).get(Linkable.KEY_LOCATION) != null) {
+                    itemLocations.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
+                        ((Map<?, ?>) property).get(Linkable.KEY_LOCATION));
+                }
+            }
+            locations.add(itemLocations);
+        }
+        return locations;
     }
 
     // TODO: Have a more generic method of flattening a work item.
