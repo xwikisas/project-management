@@ -19,13 +19,22 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.apache.commons.httpclient.UsernamePasswordCredentials;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.ObjectReference;
+import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -33,6 +42,8 @@ import org.xwiki.test.ui.TestUtils;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -55,6 +66,8 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     private static final String AUTHORIZED_COLUMN = "Authorized?";
 
     private static final String SAVED_MESSAGE = "Connection %s has been saved!";
+
+    private static final String CONNECTIONS_SPACE = "OpenProject.Code.OpenProjectConfigurations";
 
     @Test
     @Order(1)
@@ -147,5 +160,82 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 
         adminPage.setWorkPackageSearchMarker("!!");
         assertEquals("", adminPage.getWorkPackageSearchMarkerValidationMessage());
+    }
+
+    @Test
+    @Order(6)
+    void connectionPageIsOnlyAvailableToAdministrators(TestUtils setup) throws Exception
+    {
+        String name = "restricted";
+        String clientSecret = "initialSecret";
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", clientSecret);
+        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
+        // The form explains that the client secret is not displayed when editing a connection.
+        assertEquals("", adminPage.getNewConnectionClientSecretHint());
+        assertEquals("The current client secret is not displayed, but it is still set. Leave this field empty to keep "
+            + "it, or enter a new value to replace it.",
+            adminPage.getEditConnectionClientSecretHint(adminPage.getConnectionIndex(name)));
+        // Leaving the client secret empty keeps the current one.
+        adminPage.updateConnection(adminPage.getConnectionIndex(name), name, this.openProject.getBaseUrl(), "someid",
+            "");
+        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
+
+        // Reading the client secret from a script requires programming right (see PRCHECKER_EXCLUDE_PROPERTY).
+        UsernamePasswordCredentials credentials = setup.setDefaultCredentials(TestUtils.SUPER_ADMIN_CREDENTIALS);
+        String connectionInfo;
+        try {
+            connectionInfo = setup.executeWiki(String.join("\n",
+                "{{velocity}}",
+                "#set ($statement = 'from doc.object(OpenProject.Code.OpenProjectConnectionClass) as connection "
+                    + "where connection.connectionName = :name')",
+                "#foreach ($reference in $services.query.xwql($statement).bindValue('name', '" + name + "').execute())",
+                "#set ($connectionDocument = $xwiki.getDocument($reference))",
+                "$reference|$connectionDocument.getObject('OpenProject.Code.OpenProjectConnectionClass')"
+                    + ".getValue('clientSecret')|$connectionDocument.getObject('XWiki.OIDC.ClientConfigurationClass')"
+                    + ".getValue('clientSecret')",
+                "#end",
+                "{{/velocity}}"), Syntax.XWIKI_2_1);
+        } finally {
+            setup.setDefaultCredentials(credentials);
+        }
+        // Remove the paragraph markup around the result.
+        String[] connection = connectionInfo.replaceAll("<[^>]+>", "").trim().split("\\|");
+        assertEquals(3, connection.length);
+        assertEquals(CONNECTIONS_SPACE, connection[0].substring(0, connection[0].lastIndexOf('.')));
+        assertEquals(clientSecret, connection[1]);
+        assertEquals(clientSecret, connection[2]);
+
+        DocumentReference connectionReference = new DocumentReference("xwiki",
+            List.of("OpenProject", "Code", "OpenProjectConfigurations"),
+            connection[0].substring(CONNECTIONS_SPACE.length() + 1));
+        // The client secret is not returned by the REST API.
+        org.xwiki.rest.model.jaxb.Object connectionObject =
+            setup.rest().get(new ObjectReference("OpenProject.Code.OpenProjectConnectionClass[0]",
+                connectionReference));
+        assertNotEquals(clientSecret, TestUtils.RestTestUtils.getProperty("clientSecret", connectionObject, false)
+            .getValue());
+
+        // Guests can't view the connection page. Use a client without the session of the administrator.
+        HttpClient guestClient = HttpClient.newHttpClient();
+        // The URL of the REST API as seen from the tests, which may differ from the one seen by the browser.
+        String webAppURL = StringUtils.removeEnd(StringUtils.removeEnd(setup.rest().getBaseURL(), "/"), "rest");
+        String pageName = connectionReference.getName();
+        HttpResponse<String> response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
+            + "rest/wikis/xwiki/spaces/OpenProject/spaces/Code/spaces/OpenProjectConfigurations/pages/" + pageName
+            + "/objects/OpenProject.Code.OpenProjectConnectionClass/0")).build(), HttpResponse.BodyHandlers.ofString());
+        assertEquals(401, response.statusCode());
+        assertFalse(response.body().contains(clientSecret));
+        // Guests are redirected to the login page.
+        response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
+            + "bin/view/OpenProject/Code/OpenProjectConfigurations/" + pageName + "?xpage=xml")).build(),
+            HttpResponse.BodyHandlers.ofString());
+        assertEquals(302, response.statusCode());
+        assertTrue(response.headers().firstValue("Location").orElse("").contains("/login/"));
+        assertFalse(response.body().contains(clientSecret));
+
+        adminPage = OpenProjectAdminPage.gotoPage();
+        adminPage.deleteConnection(adminPage.getConnectionIndex(name));
+        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", name));
     }
 }

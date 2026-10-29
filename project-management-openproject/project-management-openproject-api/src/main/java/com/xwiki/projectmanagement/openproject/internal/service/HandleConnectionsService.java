@@ -27,6 +27,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
@@ -34,6 +35,7 @@ import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReferenceSerializer;
+import org.xwiki.model.reference.SpaceReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
@@ -77,6 +79,8 @@ public class HandleConnectionsService
 
     private static final String OPEN_PROJECT_CONNECTION_CLASS = "OpenProjectConnectionClass";
 
+    private static final String OPEN_PROJECT_CONFIGURATIONS = "OpenProjectConfigurations";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
@@ -109,20 +113,31 @@ public class HandleConnectionsService
     private Logger logger;
 
     /**
-     * Creates a new OpenProject connection configuration document in XWiki, or updates an existing one. Only the
-     * connections stored on pages whose author has administration right on the wiki are taken into account when
-     * checking if the connection name is already used, and an existing page can be updated only if its author has
-     * administration right on the wiki.
+     * Creates a new OpenProject connection configuration document in XWiki, or updates an existing one. The document
+     * must be in the {@code OpenProject.Code.OpenProjectConfigurations} space, whose pages only the administrators
+     * can view. Only the connections stored on pages whose author has administration right on the wiki are taken into
+     * account when checking if the connection name is already used, and an existing page can be updated only if its
+     * author has administration right on the wiki. When updating an existing connection, an empty client secret keeps
+     * the current one, so that the client secret doesn't need to be sent back to the browser.
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ProjectManagementException if a configuration with the same name already exists, if the existing page
-     *     can't be updated, if the query failed or the document retrieval/creation fails.
+     * @throws ProjectManagementException if the document is not in the connections space, if a configuration with
+     *     the same name already exists, if the existing page can't be updated, if no client secret is provided for a
+     *     new connection, if the query failed or the document retrieval/creation fails.
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference)
         throws ProjectManagementException
     {
+        SpaceReference connectionsSpace = new SpaceReference(documentReference.getWikiReference().getName(),
+            OPEN_PROJECT, CODE, OPEN_PROJECT_CONFIGURATIONS);
+        if (!documentReference.hasParent(connectionsSpace)) {
+            throw new ProjectManagementException(String.format("The connection can't be saved on the page [%s]: the "
+                + "connections must be saved in the [OpenProject.Code.OpenProjectConfigurations] space.",
+                this.compactSerializer.serialize(documentReference)));
+        }
+
         XWikiContext context = this.xcontextProvider.get();
         try {
             XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
@@ -138,7 +153,9 @@ public class HandleConnectionsService
                         openProjectConnection.getConnectionName()));
             }
 
-            handleConnectionObjects(openProjectConnection, doc, context);
+            String clientSecret = getClientSecret(openProjectConnection, doc);
+
+            handleConnectionObjects(openProjectConnection, clientSecret, doc, context);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
         }
@@ -177,6 +194,27 @@ public class HandleConnectionsService
         return false;
     }
 
+    private String getClientSecret(OpenProjectConnection openProjectConnection, XWikiDocument doc)
+        throws ProjectManagementException
+    {
+        String clientSecret = openProjectConnection.getClientSecret();
+        if (StringUtils.isBlank(clientSecret)) {
+            // Keep the client secret currently stored on the page, if any.
+            BaseObject currentObject = doc.getXObject(getConnectionClassReference(doc));
+            clientSecret = currentObject != null ? currentObject.getStringValue(CLIENT_SECRET) : null;
+            if (StringUtils.isEmpty(clientSecret)) {
+                throw new ProjectManagementException("The client secret is required.");
+            }
+        }
+        return clientSecret;
+    }
+
+    private DocumentReference getConnectionClassReference(XWikiDocument doc)
+    {
+        return new DocumentReference(doc.getDocumentReference().getWikiReference().getName(),
+            Arrays.asList(OPEN_PROJECT, CODE), OPEN_PROJECT_CONNECTION_CLASS);
+    }
+
     private boolean isAuthorAdmin(XWikiDocument document)
     {
         DocumentReference author =
@@ -185,21 +223,18 @@ public class HandleConnectionsService
             document.getDocumentReference().getWikiReference());
     }
 
-    private void handleConnectionObjects(OpenProjectConnection openProjectConnection, XWikiDocument doc,
-        XWikiContext context) throws XWikiException
+    private void handleConnectionObjects(OpenProjectConnection openProjectConnection, String clientSecret,
+        XWikiDocument doc, XWikiContext context) throws XWikiException
     {
         String wikiName = doc.getDocumentReference().getWikiReference().getName();
 
         setDocMetaData(context, doc);
 
-        DocumentReference configClassRef =
-            new DocumentReference(wikiName, Arrays.asList(OPEN_PROJECT, CODE),
-                OPEN_PROJECT_CONNECTION_CLASS);
-        BaseObject configObj = doc.getXObject(configClassRef, true, context);
+        BaseObject configObj = doc.getXObject(getConnectionClassReference(doc), true, context);
         configObj.setStringValue(CONNECTION_NAME, openProjectConnection.getConnectionName());
         configObj.setStringValue(SERVER_URL, openProjectConnection.getServerURL());
         configObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
-        configObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
+        configObj.setStringValue(CLIENT_SECRET, clientSecret);
         configObj.setStringValue(INSTANCE_ID, retrieveInstanceId(openProjectConnection.getServerURL()));
         configObj.setIntValue("showPublicData", openProjectConnection.isShowPublicData() ? 1 : 0);
 
@@ -211,7 +246,7 @@ public class HandleConnectionsService
         oidcObj.setStringValue("authorizationEndpoint", openProjectConnection.getServerURL() + "/oauth/authorize");
         oidcObj.setStringValue("tokenEndpoint", openProjectConnection.getServerURL() + "/oauth/token");
         oidcObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
-        oidcObj.setStringValue(CLIENT_SECRET, openProjectConnection.getClientSecret());
+        oidcObj.setStringValue(CLIENT_SECRET, clientSecret);
         oidcObj.setStringValue("tokenEndpointMethod", "client_secret_basic");
         oidcObj.setIntValue("skipped", 0);
         oidcObj.setStringValue("scope", "api_v3");

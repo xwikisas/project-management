@@ -132,7 +132,7 @@ public class HandleConnectionsServiceTest
 
     private final DocumentReference documentReference = new DocumentReference(
         WIKI_NAME,
-        List.of("ProjectManagement", "Code"),
+        List.of("OpenProject", "Code", "OpenProjectConfigurations"),
         "FirstConnection"
     );
 
@@ -141,6 +141,12 @@ public class HandleConnectionsServiceTest
         List.of("Space"),
         "OtherConnection"
     );
+
+    private static final DocumentReference CONNECTION_CLASS_REFERENCE =
+        new DocumentReference(WIKI_NAME, Arrays.asList("OpenProject", "Code"), "OpenProjectConnectionClass");
+
+    private static final DocumentReference OIDC_CLASS_REFERENCE =
+        new DocumentReference(WIKI_NAME, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");
 
     private final DocumentReference adminReference = new DocumentReference(WIKI_NAME, "XWiki", "Admin");
 
@@ -226,6 +232,57 @@ public class HandleConnectionsServiceTest
         handleConnectionsService.handleConnection(openProjectConnection, documentReference);
 
         verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @Test
+    void handleConnectionKeepsCurrentClientSecretWhenEmpty() throws Exception
+    {
+        when(this.doc.isNew()).thenReturn(false);
+        documentAuthors.setEffectiveMetadataAuthor(mockAuthor(adminReference));
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+        BaseObject currentObject = new BaseObject();
+        currentObject.setStringValue("clientSecret", "currentSecret");
+        when(this.doc.getXObject(CONNECTION_CLASS_REFERENCE)).thenReturn(currentObject);
+        BaseObject configObj = new BaseObject();
+        BaseObject oidcObj = new BaseObject();
+        when(this.doc.getXObject(eq(CONNECTION_CLASS_REFERENCE), eq(true), eq(xContext))).thenReturn(configObj);
+        when(this.doc.getXObject(eq(OIDC_CLASS_REFERENCE), eq(true), eq(xContext))).thenReturn(oidcObj);
+        openProjectConnection.setClientSecret("");
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+
+        assertEquals("currentSecret", configObj.getStringValue("clientSecret"));
+        assertEquals("currentSecret", oidcObj.getStringValue("clientSecret"));
+        verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @Test
+    void handleConnectionRefusesPageOutsideConnectionsSpace() throws Exception
+    {
+        DocumentReference outsideReference = new DocumentReference(WIKI_NAME, List.of("Space"), "Connection");
+        when(this.compactSerializer.serialize(outsideReference)).thenReturn("Space.Connection");
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection, outsideReference));
+
+        assertEquals("The connection can't be saved on the page [Space.Connection]: the connections must be saved in "
+            + "the [OpenProject.Code.OpenProjectConfigurations] space.", exception.getMessage());
+        verify(xwiki, never()).getDocument(eq(outsideReference), any(XWikiContext.class));
+        verify(xwiki, never()).saveDocument(any(), any(), any());
+    }
+
+    @Test
+    void handleConnectionRequiresClientSecretForNewConnection() throws Exception
+    {
+        when(this.query.execute()).thenReturn(List.of());
+        openProjectConnection.setClientSecret(" ");
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection, documentReference));
+
+        assertEquals("The client secret is required.", exception.getMessage());
+        verify(xwiki, never()).saveDocument(any(), any(), any());
     }
 
     private void mockOtherConnectionDocument(DocumentReference author) throws Exception

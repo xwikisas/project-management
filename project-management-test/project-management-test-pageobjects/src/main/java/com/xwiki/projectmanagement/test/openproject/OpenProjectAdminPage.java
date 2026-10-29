@@ -118,6 +118,33 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
+     * Open the form editing a connection, read the hint displayed under its client secret field, and close the form
+     * without saving.
+     *
+     * @param index the index of the connection from the livedata. It starts at 1.
+     * @return the hint displayed under the client secret field, or an empty string when there is none
+     * @since 1.3.1
+     */
+    public String getEditConnectionClientSecretHint(int index)
+    {
+        getConnectionsLivedata().getTableLayout().clickAction(index, "edit-connection");
+        return getClientSecretHintAndCloseModal();
+    }
+
+    /**
+     * Open the form creating a connection, read the hint displayed under its client secret field, and close the form
+     * without saving.
+     *
+     * @return the hint displayed under the client secret field, or an empty string when there is none
+     * @since 1.3.1
+     */
+    public String getNewConnectionClientSecretHint()
+    {
+        addNewConnectionBtn.click();
+        return getClientSecretHintAndCloseModal();
+    }
+
+    /**
      * Trigger the color sync job by pressing the "Sync" button.
      *
      * @return the view page of the Job Scheduler.
@@ -278,6 +305,18 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     {
         syncColorsBtn.click();
         return new ViewPage();
+    }
+
+    private String getClientSecretHintAndCloseModal()
+    {
+        By modalSelector = By.id("handleConnectionModal");
+        getDriver().waitUntilElementIsVisible(modalSelector);
+        WebElement modal = getDriver().findElement(modalSelector);
+        WebElement hint = modal.findElement(By.id("client-secret-keep-hint"));
+        String hintText = hint.isDisplayed() ? hint.getText() : "";
+        modal.findElement(By.cssSelector(".modal-footer [data-dismiss='modal']")).click();
+        getDriver().waitUntilElementDisappears(modalSelector);
+        return hintText;
     }
 
     private void fillAndSendConnectionModal(String name, String clientUrl, String clientID, String clientSecret)

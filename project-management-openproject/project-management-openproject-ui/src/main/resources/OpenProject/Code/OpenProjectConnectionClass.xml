@@ -61,18 +61,20 @@
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </clientId>
     <clientSecret>
+      <algorithm/>
       <customDisplay/>
       <disabled>0</disabled>
       <hint/>
       <name>clientSecret</name>
       <number>4</number>
-      <picker>1</picker>
+      <picker>0</picker>
       <prettyName>Client Secret</prettyName>
       <size>30</size>
+      <storageType>Clear</storageType>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
       <validationRegExp/>
-      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      <classType>com.xpn.xwiki.objects.classes.PasswordClass</classType>
     </clientSecret>
     <connectionName>
       <customDisplay/>
