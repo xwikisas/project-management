@@ -43,6 +43,8 @@ public class OpenProjectMacroElement extends BaseElement
 {
     private static final int LOAD_TIMEOUT = 30;
 
+    private static final By VIEW_MODAL = By.id("openproject-item-view-modal");
+
     private final WebElement self;
 
     /**
@@ -206,6 +208,44 @@ public class OpenProjectMacroElement extends BaseElement
     {
         waitUntilRendered();
         return getTexts(self.findElements(By.tagName("del")));
+    }
+
+    /**
+     * Click the View action of a work package of the Live Data table, and wait for the work package to be displayed
+     * in a modal.
+     *
+     * @param row the row index, starting from 1
+     * @return the work package displayed by the modal
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.3.1
+     */
+    public OpenProjectSingleDisplayer viewWorkPackage(int row) throws OperationNotSupportedException
+    {
+        // The OpenProject View action isn't named, so TableLayoutElement#clickAction can't find it.
+        waitForTableLayout();
+        self.findElements(By.cssSelector(".liveData tbody tr")).get(row - 1).findElement(By.className("action_view"))
+            .click();
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            // The modal body is replaced when the modal is displayed, then the work package is rendered
+            // asynchronously.
+            getDriver().waitUntilElementIsVisible(VIEW_MODAL);
+            return new OpenProjectSingleDisplayer(getDriver().findElement(VIEW_MODAL)).waitUntilReady();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+    }
+
+    /**
+     * Close the modal opened by {@link #viewWorkPackage(int)}.
+     *
+     * @since 1.3.1
+     */
+    public void closeWorkPackageView()
+    {
+        getDriver().findElement(VIEW_MODAL).findElement(By.cssSelector(".modal-header .close")).click();
+        getDriver().waitUntilElementDisappears(VIEW_MODAL);
     }
 
     private void waitUntilRendered()

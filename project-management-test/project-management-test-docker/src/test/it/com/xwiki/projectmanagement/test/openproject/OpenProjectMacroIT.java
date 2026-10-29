@@ -120,6 +120,15 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertTrue(macro.hasLinkInCell("ID", 1));
         assertTrue(macro.hasLinkInCell(SUBJECT_COLUMN, 1));
         assertTrue(macro.hasLinkInCell("Assignee", 1));
+
+        // The View action displays the work package of the row it was clicked on.
+        TableLayoutElement ld = macro.waitForTableLayout();
+        for (int row : List.of(2, 1)) {
+            String subject = ld.getCell(SUBJECT_COLUMN, row).getText();
+            String header = macro.viewWorkPackage(row).getHeaderText();
+            assertTrue(header.contains(subject), String.format("[%s] doesn't contain [%s]", header, subject));
+            macro.closeWorkPackageView();
+        }
     }
 
     @Test

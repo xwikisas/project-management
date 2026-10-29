@@ -144,6 +144,8 @@ public class AsyncMacroCallResource extends XWikiResource
         liveDataConfiguration.getQuery().setFilters(Arrays.asList(new LiveDataQuery.Filter("identifier",
             "=", workPackageId)));
         String content = jsonMapper.writeValueAsString(liveDataConfiguration);
+        // The work items displayers read the filters from the parameters, the Live Data one from the content.
+        parameters.setFilters(content);
 
         MacroTransformationContext context = new MacroTransformationContext();
         asyncRenderer.initialize(displayerMacro, parameters, content, context, null);
