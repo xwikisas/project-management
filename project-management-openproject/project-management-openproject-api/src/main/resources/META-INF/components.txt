@@ -4,6 +4,7 @@ com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
 com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver
 com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClientFactory
 com.xwiki.projectmanagement.openproject.internal.UserTokenChecker
+com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker
 com.xwiki.projectmanagement.openproject.internal.mentions.DefaultOpenProjectMentionsResource
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionSchedulingListener

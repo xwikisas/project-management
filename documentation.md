@@ -804,6 +804,7 @@ POST /openproject/spaces
 | **401 Unauthorized**          | —                                                                           | The authenticated user does not have edit permissions.                                                                |
 | **403 Forbidden**             | `"Document already exists."`                                                | A page already exists at the target location.                                                                         |
 | **406 Not Acceptable**        | `"The requested wiki does not have the OpenProject application installed."` | The OpenProject template is not available in the target wiki.                                                         |
+| **409 Conflict**              | `"The OpenProject template must be saved by an administrator."`             | A page of the OpenProject template (`OpenProject.Code.Template`) was last saved by a user who isn't a wiki admin.     |
 | **500 Internal Server Error** | Error message                                                               | Something went wrong during page creation.                                                                            |
 
 ---

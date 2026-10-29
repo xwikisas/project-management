@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -61,6 +62,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectSpaceResource;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
@@ -105,6 +107,9 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
     @Inject
     private OpenProjectConfiguration openProjectConfiguration;
 
+    @Inject
+    private AdminAuthorChecker adminAuthorChecker;
+
     @Override
     public Response createSpace(String documentReference, Boolean withId, String instance, Integer project,
         Integer workPackage, String title) throws XWikiRestException
@@ -125,12 +130,9 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             }
             DocumentReference templateProviderReference =
                 new DocumentReference(OPEN_PROJECT_TEMPLATE, docRef.getWikiReference());
-            if (!xWiki.exists(templateProviderReference, context)) {
-                return Response.status(Response.Status.NOT_ACCEPTABLE)
-                    .entity("The requested wiki does not have the OpenProject application installed.").build();
-            }
-            if (xWiki.exists(docRef, context)) {
-                return Response.status(Response.Status.CONFLICT).entity("Document already exists.").build();
+            Response invalidTargetResponse = checkTarget(docRef, templateProviderReference, context);
+            if (invalidTargetResponse != null) {
+                return invalidTargetResponse;
             }
 
             XWikiDocument document = context.getWiki().getDocument(docRef, context);
@@ -141,6 +143,8 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             maybeAddRelationObj(document, configuredInstance, workPackage, project);
             document.getAuthors().setCreator(userReference);
             document.getAuthors().setEffectiveMetadataAuthor(userReference);
+            document.getAuthors().setOriginalMetadataAuthor(userReference);
+            document.getAuthors().setContentAuthor(userReference);
             xWiki.saveDocument(document, context);
 
             Job childrenCreateJob = startCreateJob(docRef, templateProviderReference);
@@ -171,6 +175,59 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             return RestErrorResponses.errorResponse(getLogger(),
                 String.format("Failed to create the OpenProject template at [%s].", documentReference), e);
         }
+    }
+
+    private Response checkTarget(DocumentReference docRef, DocumentReference templateReference, XWikiContext context)
+        throws XWikiException
+    {
+        XWiki xWiki = context.getWiki();
+        if (!xWiki.exists(templateReference, context)) {
+            return Response.status(Response.Status.NOT_ACCEPTABLE)
+                .entity("The requested wiki does not have the OpenProject application installed.").build();
+        }
+        if (xWiki.exists(docRef, context)) {
+            return Response.status(Response.Status.CONFLICT).entity("Document already exists.").build();
+        }
+        if (!isTemplateLastSavedByAdmin(templateReference, context)) {
+            return Response.status(Response.Status.CONFLICT)
+                .entity("The OpenProject template must be saved by an administrator.").build();
+        }
+        return null;
+    }
+
+    /**
+     * The template pages (with their translations) are copied with the current user as author, so they must have
+     * been written by an administrator.
+     */
+    private boolean isTemplateLastSavedByAdmin(DocumentReference templateReference, XWikiContext context)
+        throws XWikiException
+    {
+        for (DocumentReference templatePage : this.modelBridge.getDocumentReferences(
+            templateReference.getLastSpaceReference())) {
+            XWikiDocument templateDocument = context.getWiki().getDocument(templatePage, context);
+            if (!isLastSavedByAdmin(templateDocument)) {
+                return false;
+            }
+            for (Locale locale : templateDocument.getTranslationLocales(context)) {
+                if (!isLastSavedByAdmin(
+                    context.getWiki().getDocument(new DocumentReference(templatePage, locale), context)))
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isLastSavedByAdmin(XWikiDocument templateDocument)
+    {
+        if (!this.adminAuthorChecker.isLastSavedByAdmin(templateDocument)) {
+            getLogger().warn("Not creating the OpenProject space because the template page [{}] wasn't last "
+                + "saved by a user with administration right on the wiki.",
+                templateDocument.getDocumentReferenceWithLocale());
+            return false;
+        }
+        return true;
     }
 
     private String findConfigurationWithInstance(String instance)
