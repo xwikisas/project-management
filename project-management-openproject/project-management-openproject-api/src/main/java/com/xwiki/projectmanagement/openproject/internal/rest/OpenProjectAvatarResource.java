@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -56,6 +57,11 @@ import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 @Singleton
 public class OpenProjectAvatarResource extends XWikiResource
 {
+    /**
+     * The OpenProject users are identified by a number.
+     */
+    private static final Pattern USER_ID_PATTERN = Pattern.compile("\\d+");
+
     @Inject
     private OpenProjectAccess openProjectAccess;
 
@@ -83,9 +89,17 @@ public class OpenProjectAvatarResource extends XWikiResource
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
 
+        if (userId == null || !USER_ID_PATTERN.matcher(userId).matches()) {
+            return getDefaultAvatar();
+        }
+
         try {
             UserAvatar userAvatar = openProjectApiClient.getUserAvatar(userId);
-            return Response.ok(userAvatar.getStreamingOutput(), userAvatar.getContentType()).build();
+            return Response.ok(userAvatar.getStreamingOutput(), userAvatar.getContentType())
+                // The content comes from the OpenProject instance: make sure browsers only handle it as an image.
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Security-Policy", "default-src 'none'; sandbox")
+                .build();
         } catch (WorkItemNotFoundException ignored) {
             // If the user doesn't have an avatar set the API returns 404 when trying to retrieve it.
         } catch (WorkItemRetrievalException e) {
@@ -94,7 +108,11 @@ public class OpenProjectAvatarResource extends XWikiResource
         } catch (ProjectManagementException e) {
             getLogger().error("Failed to retrive the avatar for user [{}] due to network or server issues.", userId, e);
         }
-        return Response.seeOther(new URI(skinAccessBridge.getSkinFile("icons/xwiki/noavatar.png"))).build();
+        return getDefaultAvatar();
+    }
 
+    private Response getDefaultAvatar() throws URISyntaxException
+    {
+        return Response.seeOther(new URI(skinAccessBridge.getSkinFile("icons/xwiki/noavatar.png"))).build();
     }
 }

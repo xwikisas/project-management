@@ -33,7 +33,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
@@ -208,6 +210,17 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
      * responding blocks the thread rendering the page forever.
      */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
+
+    /**
+     * The image types the avatars are served with. Other types, e.g. SVG or HTML, are not served from the wiki.
+     */
+    private static final Set<String> AVATAR_CONTENT_TYPES = Set.of("image/png", "image/jpeg", "image/gif",
+        "image/webp", "image/bmp", "image/avif", "image/x-icon", "image/vnd.microsoft.icon");
+
+    /**
+     * The maximum number of bytes of the body of a failed avatar request kept in the error message.
+     */
+    private static final int MAX_AVATAR_ERROR_MESSAGE_LENGTH = 1024;
 
     private final HttpClient client;
 
@@ -604,12 +617,17 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                     throw new WorkItemRetrievalException(
                         String.format("Failed to get the user avatar with code [%s] and "
                                 + "message [%s]", response.statusCode(),
-                            new String(in.readAllBytes(), StandardCharsets.UTF_8)));
+                            new String(in.readNBytes(MAX_AVATAR_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
                 }
             }
-            String contentType = response.headers()
-                .firstValue(CONTENT_TYPE)
-                .orElse("application/octet-stream");
+            String contentType = getAvatarContentType(response.headers().firstValue(CONTENT_TYPE).orElse(""));
+            if (contentType == null) {
+                try (InputStream ignored = response.body()) {
+                    throw new WorkItemRetrievalException(
+                        String.format("The avatar of user [%s] has an unsupported content type [%s].", userId,
+                            response.headers().firstValue(CONTENT_TYPE).orElse("")));
+                }
+            }
 
             StreamingOutput streamingOutput = output -> {
                 try (InputStream in = response.body()) {
@@ -626,6 +644,16 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
                 e);
         }
+    }
+
+    /**
+     * @param contentTypeHeader the content type returned by OpenProject for an avatar
+     * @return the content type to serve the avatar with, or {@code null} when it isn't a supported raster image type
+     */
+    private static String getAvatarContentType(String contentTypeHeader)
+    {
+        String mediaType = StringUtils.substringBefore(contentTypeHeader, SEMICOLON).trim().toLowerCase(Locale.ROOT);
+        return AVATAR_CONTENT_TYPES.contains(mediaType) ? mediaType : null;
     }
 
     @Override

@@ -46,6 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,31 +78,45 @@ class OpenProjectAvatarResourceTest
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
         UserAvatar userAvatar = new UserAvatar(mock(StreamingOutput.class), "test");
-        when(openProjectApiClient.getUserAvatar("user")).thenReturn(userAvatar);
+        when(openProjectApiClient.getUserAvatar("42")).thenReturn(userAvatar);
 
-        Response response = avatarResource.getAvatar("wiki", "test", "user");
+        Response response = avatarResource.getAvatar("wiki", "test", "42");
 
         assertEquals(200, response.getStatus());
         assertEquals(userAvatar.getStreamingOutput(), response.getEntity());
         assertEquals(String.format("[%s/*]", userAvatar.getContentType()),
             response.getMetadata().get("Content-Type").toString());
+        assertEquals("nosniff", response.getMetadata().getFirst("X-Content-Type-Options"));
+        assertEquals("default-src 'none'; sandbox", response.getMetadata().getFirst("Content-Security-Policy"));
+    }
+
+    @Test
+    void getAvatarWithInvalidUserId() throws Exception
+    {
+        when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
+        when(skinAccessBridge.getSkinFile(any())).thenReturn("/get/icons/xwiki/noavatar.png");
+
+        Response response = avatarResource.getAvatar("wiki", "test", "../../attachments/1/content");
+
+        assertEquals(303, response.getStatus());
+        verify(openProjectApiClient, never()).getUserAvatar(any());
     }
 
     @Test
     public void getAvatarThatDoesNotExistOrFailToRetrieveTest() throws ProjectManagementException, URISyntaxException
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
-        when(openProjectApiClient.getUserAvatar("user")).thenThrow(new ProjectManagementException(""));
+        when(openProjectApiClient.getUserAvatar("42")).thenThrow(new ProjectManagementException(""));
         String noavatarPath = "/get/icons/xwiki/noavatar.png";
         when(skinAccessBridge.getSkinFile(any())).thenReturn(noavatarPath);
-        Response response = avatarResource.getAvatar("wiki", "test", "user");
+        Response response = avatarResource.getAvatar("wiki", "test", "42");
 
         assertEquals(303, response.getStatus());
         verify(skinAccessBridge).getSkinFile("icons/xwiki/noavatar.png");
         Object uri = response.getMetadata().getFirst("Location");
         assertInstanceOf(URI.class, uri);
         assertEquals(noavatarPath, ((URI) uri).getPath());
-        assertEquals("Failed to retrive the avatar for user [user] due to network or server issues.",
+        assertEquals("Failed to retrive the avatar for user [42] due to network or server issues.",
             this.logCapture.getMessage(0));
     }
 
@@ -110,7 +125,7 @@ class OpenProjectAvatarResourceTest
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.notConnected());
 
-        Response response = avatarResource.getAvatar("wiki", "test", "user");
+        Response response = avatarResource.getAvatar("wiki", "test", "42");
 
         assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
     }
