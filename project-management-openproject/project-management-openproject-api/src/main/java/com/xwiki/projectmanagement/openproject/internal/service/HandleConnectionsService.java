@@ -32,12 +32,16 @@ import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
+import org.xwiki.security.authorization.AuthorizationManager;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
@@ -88,63 +92,103 @@ public class HandleConnectionsService
     private EntityReferenceSerializer<String> compactSerializer;
 
     @Inject
+    @Named("document")
+    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
+
+    @Inject
+    @Named("current")
+    private DocumentReferenceResolver<String> documentReferenceResolver;
+
+    @Inject
+    private AuthorizationManager authorizationManager;
+
+    @Inject
     private OpenProjectApiClientFactory openProjectApiClientFactory;
 
     @Inject
     private Logger logger;
 
     /**
-     * Creates a new OpenProject connection configuration document in XWiki.
+     * Creates a new OpenProject connection configuration document in XWiki, or updates an existing one. Only the
+     * connections stored on pages whose author has administration right on the wiki are taken into account when
+     * checking if the connection name is already used, and an existing page can be updated only if its author has
+     * administration right on the wiki.
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ProjectManagementException if a configuration with the same name already exists.
-     * @throws ProjectManagementException if the query failed or the document retrieval/creation fails.
+     * @throws ProjectManagementException if a configuration with the same name already exists, if the existing page
+     *     can't be updated, if the query failed or the document retrieval/creation fails.
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference)
         throws ProjectManagementException
     {
-        List<String> result;
+        XWikiContext context = this.xcontextProvider.get();
         try {
-            result = queryManager.createQuery(
-                    "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
-                        + "where doc.fullName = obj.name "
-                        + "and obj.className = :className "
-                        + "and obj.id = configName.id.id "
-                        + "and configName.id.name = :configFieldName "
-                        + "and configName.value = :config "
-                        + "and doc.fullName <> :serializedDocRef", Query.HQL)
-                .bindValue(
-                    "className",
-                    String.format("%s.%s.%s", OPEN_PROJECT, CODE, OPEN_PROJECT_CONNECTION_CLASS)
-                )
-                .bindValue("configFieldName", CONNECTION_NAME)
-                .bindValue("config", openProjectConnection.getConnectionName())
-                .bindValue("serializedDocRef", compactSerializer.serialize(documentReference))
-                .setWiki(this.xcontextProvider.get().getWikiId())
-                .execute();
+            XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            if (!doc.isNew() && !isAuthorAdmin(doc)) {
+                throw new ProjectManagementException(String.format("The page [%s] can't be updated because it was "
+                    + "last modified by a user without administration right on the wiki. Delete the connection and "
+                    + "create it again.", this.compactSerializer.serialize(documentReference)));
+            }
 
-            if (!result.isEmpty()) {
+            if (isConnectionNameUsed(openProjectConnection.getConnectionName(), documentReference, context)) {
                 throw new ProjectManagementException(
                     String.format("Connection %s already exists. Use another connection name.",
                         openProjectConnection.getConnectionName()));
             }
 
-            handleConnectionObjects(openProjectConnection, documentReference);
+            handleConnectionObjects(openProjectConnection, doc, context);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
         }
     }
 
-    private void handleConnectionObjects(OpenProjectConnection openProjectConnection,
-        DocumentReference documentReference) throws XWikiException
+    private boolean isConnectionNameUsed(String connectionName, DocumentReference documentReference,
+        XWikiContext context) throws QueryException, XWikiException
     {
-        String wikiName = documentReference.getWikiReference().getName();
-        XWikiContext context = this.xcontextProvider.get();
-        XWikiDocument doc;
+        List<String> result = queryManager.createQuery(
+                "select obj.name from XWikiDocument doc, BaseObject obj, StringProperty configName "
+                    + "where doc.fullName = obj.name "
+                    + "and obj.className = :className "
+                    + "and obj.id = configName.id.id "
+                    + "and configName.id.name = :configFieldName "
+                    + "and configName.value = :config "
+                    + "and doc.fullName <> :serializedDocRef", Query.HQL)
+            .bindValue(
+                "className",
+                String.format("%s.%s.%s", OPEN_PROJECT, CODE, OPEN_PROJECT_CONNECTION_CLASS)
+            )
+            .bindValue("configFieldName", CONNECTION_NAME)
+            .bindValue("config", connectionName)
+            .bindValue("serializedDocRef", compactSerializer.serialize(documentReference))
+            .setWiki(documentReference.getWikiReference().getName())
+            .execute();
 
-        doc = context.getWiki().getDocument(documentReference, context);
+        // The connections stored on pages whose author doesn't have administration right on the wiki are not used, so
+        // they don't prevent from using their name.
+        for (String documentName : result) {
+            DocumentReference otherReference =
+                this.documentReferenceResolver.resolve(documentName, documentReference.getWikiReference());
+            if (isAuthorAdmin(context.getWiki().getDocument(otherReference, context))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAuthorAdmin(XWikiDocument document)
+    {
+        DocumentReference author =
+            this.documentUserSerializer.serialize(document.getAuthors().getEffectiveMetadataAuthor());
+        return this.authorizationManager.hasAccess(Right.ADMIN, author,
+            document.getDocumentReference().getWikiReference());
+    }
+
+    private void handleConnectionObjects(OpenProjectConnection openProjectConnection, XWikiDocument doc,
+        XWikiContext context) throws XWikiException
+    {
+        String wikiName = doc.getDocumentReference().getWikiReference().getName();
 
         setDocMetaData(context, doc);
 
