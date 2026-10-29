@@ -26,11 +26,14 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -44,11 +47,13 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -70,6 +75,8 @@ class StylingSetupManagerTest
 {
     private static final String CONNECTION_NAME = "main";
 
+    private static final DocumentReference USER = new DocumentReference("wiki", "XWiki", "Admin");
+
     @InjectMockComponents
     private StylingSetupManager stylingSetupManager;
 
@@ -89,6 +96,9 @@ class StylingSetupManagerTest
     @MockComponent
     private Provider<XWikiContext> contextProvider;
 
+    @MockComponent
+    private AdminAuthorChecker adminAuthorChecker;
+
     @Mock
     private XWikiContext xcontext;
 
@@ -104,11 +114,19 @@ class StylingSetupManagerTest
     @Mock
     private OpenProjectApiClient client;
 
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @BeforeEach
     void setUp() throws Exception
     {
         when(this.contextProvider.get()).thenReturn(this.xcontext);
         when(this.xcontext.getWiki()).thenReturn(this.xwiki);
+        when(this.xcontext.getUserReference()).thenReturn(USER);
+        when(this.xcontext.getWikiReference()).thenReturn(USER.getWikiReference());
+        when(this.adminAuthorChecker.isAdmin(USER, USER.getWikiReference())).thenReturn(true);
+        when(this.adminAuthorChecker.isLastSavedByAdmin(this.stylesDocument)).thenReturn(true);
+        when(this.stylesDocument.clone()).thenReturn(this.stylesDocument);
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(Collections.singletonList(
             new OpenProjectConnection(CONNECTION_NAME, "https://openproject.example.org", "id", "secret", "inst")));
         DocumentReference stylesReference = new DocumentReference("wiki", "OpenProject", CONNECTION_NAME);
@@ -137,7 +155,49 @@ class StylingSetupManagerTest
         this.stylingSetupManager.setupInstanceStyles();
 
         verify(this.styleObject).set(eq("code"), anyString(), same(this.xcontext));
+        verify(this.styleObject).setIntValue("parse", 0);
         verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
+        verify(this.xwiki, never()).deleteDocument(any(XWikiDocument.class), any(XWikiContext.class));
+    }
+
+    @Test
+    void setupInstanceStylesWhenNotAdmin() throws Exception
+    {
+        when(this.adminAuthorChecker.isAdmin(USER, USER.getWikiReference())).thenReturn(false);
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verifyNoInteractions(this.client);
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+    }
+
+    @Test
+    void setupInstanceStylesWhenStylesPageWasNotSavedByAdmin() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        when(this.adminAuthorChecker.isLastSavedByAdmin(this.stylesDocument)).thenReturn(false);
+        XWikiDocument newStylesDocument = mock(XWikiDocument.class);
+        when(newStylesDocument.clone()).thenReturn(newStylesDocument);
+        when(newStylesDocument.isNew()).thenReturn(true);
+        when(newStylesDocument.getAuthors()).thenReturn(mock(DocumentAuthors.class));
+        BaseObject newStyleObject = mock(BaseObject.class);
+        when(newStylesDocument.getXObject(any(EntityReference.class), eq(true), same(this.xcontext)))
+            .thenReturn(newStyleObject);
+        when(this.xwiki.getDocument(any(DocumentReference.class), same(this.xcontext)))
+            .thenReturn(this.stylesDocument, newStylesDocument);
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verify(this.xwiki).deleteDocument(this.stylesDocument, this.xcontext);
+        verify(this.xwiki, never()).saveDocument(same(this.stylesDocument), anyString(), any(XWikiContext.class));
+        verify(newStyleObject).set(eq("code"), anyString(), same(this.xcontext));
+        verify(newStyleObject).setIntValue("parse", 0);
+        verify(this.xwiki).saveDocument(newStylesDocument, "Updated styles.", this.xcontext);
+        assertEquals("Replacing the styles page [wiki:OpenProject.main] since it wasn't last saved by a user with "
+            + "administration right on the wiki.", this.logCapture.getMessage(0));
     }
 
     @Test

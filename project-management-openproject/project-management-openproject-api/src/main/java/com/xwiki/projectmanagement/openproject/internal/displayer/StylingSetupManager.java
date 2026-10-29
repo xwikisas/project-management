@@ -52,6 +52,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
@@ -75,6 +76,8 @@ public class StylingSetupManager
     private static final String SPACE_XWIKI = "XWiki";
 
     private static final String PROP_CODE = "code";
+
+    private static final String PROP_PARSE = "parse";
 
     private static final EntityReference OPEN_PROJECT_SSX_EXTENSIONS =
         new LocalDocumentReference(Arrays.asList("OpenProject", "Code", "StyleSheets"), "WebHome");
@@ -113,12 +116,21 @@ public class StylingSetupManager
     @Named("ssx")
     private SkinExtension ssx;
 
+    @Inject
+    private AdminAuthorChecker adminAuthorChecker;
+
     /**
-     * Generate the styling for the configured OpenProject instances.
+     * Generate the styling for the configured OpenProject instances. Nothing is done when the current user doesn't
+     * have administration right on the current wiki, since the styles are saved as the current user.
      */
     public void setupInstanceStyles()
     {
         XWikiContext context = contextProvider.get();
+        if (!this.adminAuthorChecker.isAdmin(context.getUserReference(), context.getWikiReference())) {
+            LOGGER.debug("Skipping the styling update since the current user [{}] isn't an administrator.",
+                context.getUserReference());
+            return;
+        }
         List<String> instanceIds = null;
         instanceIds =
             opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
@@ -245,7 +257,15 @@ public class StylingSetupManager
         UserReferenceResolver<DocumentReference> userRefResolver)
         throws XWikiException
     {
-        XWikiDocument stylesDoc = context.getWiki().getDocument(stylesDocRef, context);
+        // Work on a copy of the cached document.
+        XWikiDocument stylesDoc = context.getWiki().getDocument(stylesDocRef, context).clone();
+        if (!stylesDoc.isNew() && !this.adminAuthorChecker.isLastSavedByAdmin(stylesDoc)) {
+            // The page is saved as the current user below: only keep what an administrator wrote.
+            LOGGER.warn("Replacing the styles page [{}] since it wasn't last saved by a user with administration "
+                + "right on the wiki.", stylesDocRef);
+            context.getWiki().deleteDocument(stylesDoc, context);
+            stylesDoc = context.getWiki().getDocument(stylesDocRef, context).clone();
+        }
         BaseObject styleObj = stylesDoc.getXObject(STYLESHEET_EXTENSION, STYLESHEET_EXTENSION_PROP_NAME,
             STYLESHEET_EXTENSION_VAL_NAME, false);
         if (styleObj == null) {
@@ -253,7 +273,7 @@ public class StylingSetupManager
             styleObj = stylesDoc.getXObject(STYLESHEET_EXTENSION, true, context);
         }
         String existingCode = styleObj.getLargeStringValue(PROP_CODE);
-        if (stringBuilder.toString().equals(existingCode)) {
+        if (stringBuilder.toString().equals(existingCode) && styleObj.getIntValue(PROP_PARSE) == 0) {
             LOGGER.debug("Existing stylesheet is equal to the generated one.");
             return;
         }
@@ -267,6 +287,8 @@ public class StylingSetupManager
         stylesDoc.setHidden(true);
         LOGGER.debug("Setting the stylesheet code to [{}].", stringBuilder.toString());
         styleObj.set(PROP_CODE, stringBuilder.toString(), context);
+        // The generated code contains values received from OpenProject: it must not be evaluated.
+        styleObj.setIntValue(PROP_PARSE, 0);
         context.getWiki().saveDocument(stylesDoc, "Updated styles.", context);
     }
 }
