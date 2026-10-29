@@ -31,6 +31,7 @@ import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.csrf.CSRFToken;
 import org.xwiki.localization.ContextualLocalizationManager;
@@ -149,7 +150,7 @@ public class UserTokenChecker
             String redirectUrl =
                 xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
                     + "?connectionName="
-                    + connectionName
+                    + URLEncoder.encode(StringUtils.defaultString(connectionName), StandardCharsets.UTF_8)
                     + "&redirectUrl="
                     + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
                     + "&token="

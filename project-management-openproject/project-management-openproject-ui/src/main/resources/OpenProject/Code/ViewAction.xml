@@ -150,7 +150,9 @@ require(['jquery', 'xwiki-l10n!openproject-action-view'], function ($, l10n) {
 &lt;/div&gt;
 `;
   let showAsyncWorkItemModal = function (workPackageId, instance, resolve, reject) {
-    let restUrl = XWiki.contextPath + `/rest/wikis/${XWiki.currentWiki}/openproject/async/displayer/workItemsSingle/instance/${instance}/workpackage/${workPackageId}?outputSyntax=plain`;
+    let restUrl = XWiki.contextPath + `/rest/wikis/${encodeURIComponent(XWiki.currentWiki)}`
+      + `/openproject/async/displayer/workItemsSingle/instance/${encodeURIComponent(instance)}`
+      + `/workpackage/${encodeURIComponent(workPackageId)}?outputSyntax=plain`;
     let notification = new XWiki.widgets.Notification(l10n.get('inprogress'), 'inprogress');
     $.get(restUrl).done(function (response) {
       let modal = $('#openproject-item-view-modal');

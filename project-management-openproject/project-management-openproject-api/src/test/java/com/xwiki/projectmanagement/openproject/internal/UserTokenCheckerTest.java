@@ -155,6 +155,18 @@ class UserTokenCheckerTest
     }
 
     @Test
+    void connectLinkEncodesTheConnectionName()
+    {
+        List<Block> result = this.checker.getWarningBlock("a&redirectUrl=https://example.org/#",
+            OpenProjectAccessStatus.NOT_CONNECTED, this.macroContext);
+
+        LinkBlock link = (LinkBlock) result.get(0).getChildren().get(1);
+        assertEquals("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection"
+            + "?connectionName=a%26redirectUrl%3Dhttps%3A%2F%2Fexample.org%2F%23"
+            + "&redirectUrl=%2Fxwiki%2Fbin%2Fview%2FSome%2FPage&token=csrf+token", link.getReference().getReference());
+    }
+
+    @Test
     void warningWithoutConnectLinkForGuests()
     {
         when(this.xcontext.getUserReference()).thenReturn(null);
