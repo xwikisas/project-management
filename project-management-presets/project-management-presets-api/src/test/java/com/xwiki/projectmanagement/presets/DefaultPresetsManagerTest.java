@@ -22,21 +22,30 @@ package com.xwiki.projectmanagement.presets;
 import java.util.Collections;
 import java.util.List;
 
+import javax.inject.Named;
 import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
 import org.xwiki.query.QueryManager;
+import org.xwiki.security.authorization.AuthorizationManager;
+import org.xwiki.security.authorization.Right;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
@@ -54,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +75,14 @@ public class DefaultPresetsManagerTest
     private static final String DEFAULT_CLIENT_ID = "openproject";
 
     private static final DocumentReference DEFAULT_PRESET_REF = new DocumentReference("xwiki", "Preset", "MyPreset");
+
+    private static final String OTHER_PRESET_ID = "Space.OtherPreset";
+
+    private static final DocumentReference OTHER_PRESET_REF = new DocumentReference("xwiki", "Space", "OtherPreset");
+
+    private static final DocumentReference ADMIN_REF = new DocumentReference("xwiki", "XWiki", "Admin");
+
+    private static final DocumentReference USER_REF = new DocumentReference("xwiki", "XWiki", "User");
 
     @InjectMockComponents
     private DefaultPresetsManager presetsManager;
@@ -90,6 +108,16 @@ public class DefaultPresetsManagerTest
     @Mock
     private Query query;
 
+    @MockComponent
+    private AuthorizationManager authorizationManager;
+
+    @MockComponent
+    @Named("document")
+    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @BeforeEach
     void setUp() throws Exception
     {
@@ -98,7 +126,12 @@ public class DefaultPresetsManagerTest
         when(this.resolver.resolve(DEFAULT_PRESET_ID)).thenReturn(DEFAULT_PRESET_REF);
         when(this.xWiki.getDocument(DEFAULT_PRESET_REF, this.context)).thenReturn(this.document);
         BaseObject baseObject = new BaseObject();
+        baseObject.setStringValue("name", "default");
         when(this.document.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject);
+        when(this.document.getDocumentReference()).thenReturn(DEFAULT_PRESET_REF);
+        mockAuthor(this.document, ADMIN_REF);
+        when(this.authorizationManager.hasAccess(Right.ADMIN, ADMIN_REF, DEFAULT_PRESET_REF.getWikiReference()))
+            .thenReturn(true);
 
         when(this.queryManager.createQuery(any(), any())).thenReturn(query);
         when(this.query.setOffset(anyInt())).thenReturn(this.query);
@@ -214,5 +247,66 @@ public class DefaultPresetsManagerTest
         ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
         verify(this.queryManager).createQuery(argument.capture(), any());
         assertThat(argument.getValue(), containsString(contains));
+    }
+
+    @Test
+    void getPresetIgnoresPresetWhoseAuthorIsNotAdmin() throws Exception
+    {
+        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
+        when(this.query.execute()).thenReturn(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+
+        Preset preset = this.presetsManager.getPreset(10);
+
+        assertEquals("default", preset.getName());
+        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
+            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getPresetReturnsNullWhenOnlyPresetAuthorIsNotAdmin() throws Exception
+    {
+        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
+        when(this.query.execute()).thenReturn(List.of(OTHER_PRESET_ID));
+
+        assertNull(this.presetsManager.getPreset(10));
+        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
+            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getClientPresetsIgnoresPresetsWhoseAuthorIsNotAdmin() throws Exception
+    {
+        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
+        when(this.query.execute()).thenReturn(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+
+        List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, false, 0, 10);
+
+        assertEquals(1, presets.size());
+        assertEquals("default", presets.get(0).getName());
+        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
+            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+    }
+
+    private XWikiDocument mockPresetDocument(String serializedReference, DocumentReference reference,
+        DocumentReference author, String name) throws Exception
+    {
+        XWikiDocument presetDocument = mock(XWikiDocument.class);
+        when(this.resolver.resolve(serializedReference)).thenReturn(reference);
+        when(this.xWiki.getDocument(reference, this.context)).thenReturn(presetDocument);
+        BaseObject baseObject = new BaseObject();
+        baseObject.setStringValue("name", name);
+        when(presetDocument.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject);
+        when(presetDocument.getDocumentReference()).thenReturn(reference);
+        mockAuthor(presetDocument, author);
+        return presetDocument;
+    }
+
+    private void mockAuthor(XWikiDocument document, DocumentReference author)
+    {
+        DocumentAuthors authors = mock(DocumentAuthors.class);
+        UserReference userReference = mock(UserReference.class);
+        when(document.getAuthors()).thenReturn(authors);
+        when(authors.getEffectiveMetadataAuthor()).thenReturn(userReference);
+        when(this.documentUserSerializer.serialize(userReference)).thenReturn(author);
     }
 }
