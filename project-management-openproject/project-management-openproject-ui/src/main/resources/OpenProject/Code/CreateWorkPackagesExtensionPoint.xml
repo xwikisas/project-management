@@ -275,13 +275,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       tableKeys = Object.keys(tableKeys[0] || {});
 
       tableKeys.forEach(key =&gt; {
-        tableSelect.append(`&lt;option value="${key}"&gt;${key}&lt;/option&gt;`);
+        tableSelect.append($("&lt;option&gt;", { value: key, text: key }));
       });
 
       Object.entries(openProjectResponse).forEach(([key, value]) =&gt; {
-        opSelect.append(
-          `&lt;option value="${key}"&gt;${value.label}&lt;/option&gt;`
-        );
+        opSelect.append($("&lt;option&gt;", { value: key, text: value.label }));
       });
 
       tableSelect.add(opSelect).on("change", updateMapping);
