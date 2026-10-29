@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -117,6 +118,11 @@ public class HandleWorkPackages extends XWikiResource
     private static final String PARENT_SUGGEST_ENDPOINT = "suggest/parent";
 
     private static final String AVAILABLE_ASSIGNEES_PATH = "/available_assignees";
+
+    /**
+     * The href of an OpenProject project, e.g. {@code /api/v3/projects/12}.
+     */
+    private static final Pattern PROJECT_HREF_PATTERN = Pattern.compile("^(/[\\w-]+)*/api/v3/projects/[\\w-]+$");
 
     private static final String NO_AUTHENTICATION_ERROR_MESSAGE =
         "You must authenticate to the OpenProject instance from XWiki before creating or editing a work package.";
@@ -251,6 +257,9 @@ public class HandleWorkPackages extends XWikiResource
 
         if (project == null || project.isEmpty()) {
             return Response.ok(new ArrayList<>()).build();
+        }
+        if (!PROJECT_HREF_PATTERN.matcher(project).matches()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity("Invalid project.").build();
         }
 
         if (selected != null) {
