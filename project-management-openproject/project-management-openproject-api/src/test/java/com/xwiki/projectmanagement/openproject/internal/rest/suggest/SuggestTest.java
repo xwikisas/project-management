@@ -128,6 +128,54 @@ public class SuggestTest
     }
 
     @Test
+    void getSuggestionsForIdentifierWhenSearchingAnId() throws ProjectManagementException
+    {
+        WorkPackage byId = createWorkPackage(11, "Eleventh");
+        WorkPackage bySubject = createWorkPackage(5, "Fix the 11 failing tests");
+        PaginatedResult<WorkPackage> idResult = new PaginatedResult<>();
+        idResult.setItems(List.of(byId));
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(bySubject, byId));
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenReturn(idResult);
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("11", "5"),
+            responseEntity.stream().map(suggestion -> suggestion.get("value")).collect(Collectors.toList()));
+    }
+
+    @Test
+    void getSuggestionsForIdentifierWhenSearchedIdFails() throws ProjectManagementException
+    {
+        WorkPackage bySubject = createWorkPackage(5, "Fix the 11 failing tests");
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(bySubject));
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenThrow(new ProjectManagementException("Invalid filter"));
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("5"),
+            responseEntity.stream().map(suggestion -> suggestion.get("value")).collect(Collectors.toList()));
+    }
+
+    private static WorkPackage createWorkPackage(int id, String subject)
+    {
+        WorkPackage workPackage = new WorkPackage();
+        workPackage.setId(id);
+        workPackage.setName(subject);
+        workPackage.setSelf(new Linkable(String.valueOf(id), "location" + id));
+        return workPackage;
+    }
+
+    @Test
     public void getSuggestionsForPrioritiesTest() throws ProjectManagementException
     {
         PaginatedResult<Priority> priorityPaginatedResult = new PaginatedResult<>();

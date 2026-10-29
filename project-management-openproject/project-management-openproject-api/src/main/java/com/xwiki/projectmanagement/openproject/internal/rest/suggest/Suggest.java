@@ -20,9 +20,11 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -47,6 +49,7 @@ import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 /**
  * Rest endpoint that suggests ids based on some query string.
@@ -181,12 +184,23 @@ public class Suggest extends XWikiResource
         String searchString,
         int pageSize, Integer selectedItem) throws ProjectManagementException
     {
+        List<WorkPackage> workPackages = new ArrayList<>();
         String filter = getSelectedIdFilter(selectedItem, searchString);
         if (StringUtils.isEmpty(filter)) {
+            // OpenProject combines the filters with AND, so the work package whose id is typed is fetched separately,
+            // and suggested first.
+            if (StringUtils.isNumeric(searchString)) {
+                workPackages.addAll(getWorkPackageById(openProjectApiClient, searchString));
+            }
             filter = buildFilter(WORK_PACKAGE_SUBJECT_PROPERTY, searchString);
         }
-        return openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems()
-            .stream()
+        for (WorkPackage workPackage : openProjectApiClient.getWorkPackages(1, pageSize, filter, "").getItems()) {
+            if (workPackages.stream().noneMatch(item -> Objects.equals(item.getId(), workPackage.getId()))) {
+                workPackages.add(workPackage);
+            }
+        }
+        return workPackages.stream()
+            .limit(pageSize)
             .map(
                 obj -> createSuggestion(
                     String.valueOf(obj.getId()),
@@ -196,6 +210,20 @@ public class Suggest extends XWikiResource
                 )
             )
             .collect(Collectors.toList());
+    }
+
+    private List<WorkPackage> getWorkPackageById(OpenProjectApiClient openProjectApiClient, String id)
+    {
+        try {
+            return openProjectApiClient.getWorkPackages(1, 1, buildFilter(ID, FilterBuilder.Operator.EQUALS, id), "")
+                .getItems();
+        } catch (ProjectManagementException e) {
+            // The typed number isn't necessarily the id of an existing work package: still suggest the work packages
+            // whose subject contains it.
+            this.slf4Jlogger.debug("Failed to retrieve the work package with id [{}]. Root cause: [{}]", id,
+                ExceptionUtils.getRootCauseMessage(e));
+            return Collections.emptyList();
+        }
     }
 
     private List<Map<String, String>> getPrioritiesSuggestions(OpenProjectApiClient openProjectApiClient)
