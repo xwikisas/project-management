@@ -46,7 +46,7 @@ setTimeout(function () {
         });
       });
       // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);
-      builder.instances.values().forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
+      builder.instances.forEach(builder => builder.element.on('constraintsUpdated', updateFilterInput));
       let initBuilder = function () {
         let initialFilter = $('.proj-manag-filter').val();
         if (!initialFilter) {
@@ -65,7 +65,7 @@ setTimeout(function () {
         }
 
         let i = 0;
-        builder.instances.values().forEach(bld => {
+        builder.instances.forEach(bld => {
           let filterCfg = filterCfgs[i];
           i++;
           bld.setTitle("Dataset #" + i);
@@ -88,7 +88,7 @@ setTimeout(function () {
           builder.inializeBuilder($(this))
         });
         let i = 1;
-        builder.instances.values().forEach(builder => {
+        builder.instances.forEach(builder => {
           builder.clean();
           builder.init();
           builder.setTitle("Dataset #" + i);
@@ -105,7 +105,7 @@ setTimeout(function () {
           return;
         }
         livedataCfgs.clear();
-        builder.instances.values().forEach(builder => builder.clean());
+        builder.instances.forEach(builder => builder.clean());
         builder.instances.clear();
         $('.proj-manag-constraint-builder').each(function () {
           $(this).remove();
@@ -115,7 +115,7 @@ setTimeout(function () {
         e.preventDefault();
         setTimeout(() => {
           let i = 1;
-          builder.instances.values().forEach(bld => {
+          builder.instances.forEach(bld => {
             bld.setTitle("Dataset #" + (i++));
           })
         }, 0);
