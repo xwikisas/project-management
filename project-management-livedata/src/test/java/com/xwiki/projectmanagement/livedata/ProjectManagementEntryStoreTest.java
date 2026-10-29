@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -97,6 +98,29 @@ public class ProjectManagementEntryStoreTest
         assertEquals(1, result.getEntries().size());
         // Work Item was flattened.
         assertEquals("1", result.getEntries().get(0).get("identifier.value"));
+        assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
+    }
+
+    @Test
+    void getQueryKeepsLocationsOfDisplayedLinkables() throws WorkItemException, LiveDataException
+    {
+        String clientId = "testclient";
+        PaginatedResult<WorkItem> workItemResult = new PaginatedResult<>();
+        workItemResult.setTotalItems(1);
+        WorkItem wi = new WorkItem();
+        wi.setIdentifier(new Linkable("1", "http://xwiki.com/1"));
+        workItemResult.getItems().add(wi);
+
+        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenReturn(workItemResult);
+        // The displayer replaces the linkable by its HTML display.
+        doAnswer(invocation -> {
+            wi.put(WorkItem.KEY_IDENTIFIER, "<a href=\"http://xwiki.com/1\">1</a>");
+            return null;
+        }).when(defaultDisplayer).display(any());
+
+        LiveData result = entryStore.get(createQuery(clientId));
+
+        assertEquals("<a href=\"http://xwiki.com/1\">1</a>", result.getEntries().get(0).get(WorkItem.KEY_IDENTIFIER));
         assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
     }
 
