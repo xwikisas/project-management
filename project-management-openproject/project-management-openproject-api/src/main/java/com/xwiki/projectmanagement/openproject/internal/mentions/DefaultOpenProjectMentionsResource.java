@@ -28,7 +28,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
@@ -46,6 +45,7 @@ import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.internal.rest.BaseOpenProjectWikiSearchResource;
+import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.rest.mentions.OpenProjectMentionResource;
 import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
@@ -114,7 +114,7 @@ public class DefaultOpenProjectMentionsResource extends BaseOpenProjectWikiSearc
             return getMentions(documentReference, filterInstance, start, number, withPrettyNames);
         } catch (URLShortenerException e) {
             throw new WebApplicationException(
-                Response.serverError().entity(ExceptionUtils.getRootCauseMessage(e)).build());
+                RestErrorResponses.errorResponse(getLogger(), "Failed to resolve the page id.", e));
         }
     }
 
@@ -160,7 +160,7 @@ public class DefaultOpenProjectMentionsResource extends BaseOpenProjectWikiSearc
             return objects;
         } catch (XWikiException e) {
             throw new WebApplicationException(
-                Response.serverError().entity(ExceptionUtils.getRootCauseMessage(e)).build());
+                RestErrorResponses.errorResponse(getLogger(), "Failed to retrieve the mentions of the page.", e));
         }
     }
 

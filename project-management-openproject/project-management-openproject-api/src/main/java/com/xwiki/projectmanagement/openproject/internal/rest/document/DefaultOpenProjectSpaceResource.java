@@ -31,7 +31,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.job.Job;
@@ -62,6 +61,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectSpaceResource;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 import com.xwiki.urlshortener.URLShortenerException;
@@ -168,8 +168,8 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
 
             return Response.ok(restCreatedPages).build();
         } catch (XWikiException | InterruptedException | ComponentLookupException e) {
-            getLogger().error("Failed to create the OpenProject template at [{}].", documentReference, e);
-            return Response.serverError().entity(ExceptionUtils.getStackTrace(e)).build();
+            return RestErrorResponses.errorResponse(getLogger(),
+                String.format("Failed to create the OpenProject template at [%s].", documentReference), e);
         }
     }
 
