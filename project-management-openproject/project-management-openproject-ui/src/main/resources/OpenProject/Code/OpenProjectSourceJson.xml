@@ -85,14 +85,20 @@
   })
 
   #foreach ($result in $results)
-    #set ($documentReference = $result.getDocumentReference())
-    #set ($connectionName = $escapetool.xml($result.get("connectionName")))
-    #set ($serverURL = $escapetool.xml($result.get("serverURL")))
-    #set ($clientId = $escapetool.xml($result.get("clientId")))
+    #set ($documentReference = $services.model.serialize($result.getDocumentReference(), 'default'))
+    #set ($connectionName = "$!result.getValue('connectionName')")
+    #set ($serverURL = "$!result.getValue('serverURL')")
+    #set ($clientId = "$!result.getValue('clientId')")
     #set ($showPublicData = "$!result.getValue('showPublicData')" == '1')
-    #set ($connectionNameHtml = "&lt;span class='text-muted'&gt;$connectionName&lt;/span&gt;")
-    #set ($serverURLHtml = "&lt;a href='$serverURL' target='_blank'&gt;$!result.get('serverURL')&lt;/a&gt;")
-    #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$clientId&lt;/span&gt;")
+    #set ($connectionNameHtml = "&lt;span class='text-muted'&gt;$escapetool.xml($connectionName)&lt;/span&gt;")
+    ## Only link to web addresses.
+    #set ($lowerCaseServerURL = $serverURL.toLowerCase())
+    #if ($lowerCaseServerURL.startsWith('http://') || $lowerCaseServerURL.startsWith('https://'))
+      #set ($serverURLHtml = "&lt;a href='$escapetool.xml($serverURL)' target='_blank'&gt;$escapetool.xml($serverURL)&lt;/a&gt;")
+    #else
+      #set ($serverURLHtml = "&lt;span&gt;$escapetool.xml($serverURL)&lt;/span&gt;")
+    #end
+    #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$escapetool.xml($clientId)&lt;/span&gt;")
     #set ($clientSecretHtml = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
     #set ($isAuthorizedToOP = $services.openproject.isUserAuthorized($connectionName))
     #set ($authLink = $xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $escapetool.url({
@@ -103,25 +109,26 @@
       class='edit-button action'
       href='#'
       name='edit-connection'
-      data-connection-name=$connectionName
-      data-server-url=$serverURL
-      data-client-id=$clientId
-      data-show-public-data=$showPublicData
-      data-edit-document-reference=$documentReference
-    &gt;$services.icon.renderHTML('pencil')&lt;/span&gt;&lt;/a&gt;&lt;a
+      data-connection-name='$escapetool.xml($connectionName)'
+      data-server-url='$escapetool.xml($serverURL)'
+      data-client-id='$escapetool.xml($clientId)'
+      data-show-public-data='$showPublicData'
+      data-edit-document-reference='$escapetool.xml($documentReference)'
+    &gt;$services.icon.renderHTML('pencil')&lt;/a&gt;&lt;a
       class='delete-button action'
       name='delete-connection'
       href='#'
-      data-connection-name=$connectionName
-      data-delete-document-reference=$documentReference
-    &gt;$services.icon.renderHTML('trash')&lt;/span&gt;&lt;/a&gt;")
+      data-connection-name='$escapetool.xml($connectionName)'
+      data-delete-document-reference='$escapetool.xml($documentReference)'
+    &gt;$services.icon.renderHTML('trash')&lt;/a&gt;")
     #if (!$isAuthorizedToOP)
       #set ($actionsHTML = "${actionsHTML}&lt;a
       class='op-auth-button action'
       name='authorize-connection'
-      href=$authLink
-    &gt;$services.icon.renderHTML('unlock')&lt;/a&gt;&lt;/div&gt;")
+      href='$escapetool.xml($authLink)'
+    &gt;$services.icon.renderHTML('unlock')&lt;/a&gt;")
     #end
+    #set ($actionsHTML = "${actionsHTML}&lt;/div&gt;")
     #set($discard = $json.rows.add({
       "connectionName" : $connectionNameHtml,
       "serverURL" : $serverURLHtml,
