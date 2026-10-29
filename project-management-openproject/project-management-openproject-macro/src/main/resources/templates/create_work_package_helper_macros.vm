@@ -24,13 +24,13 @@
     <p>$escapetool.xml($services.localization.render('openproject.createworkpackage.unavailableConnection'))</p>
   </div>
   #else
-  <label for="$selectConnectionId">$escapetool.xml($services.localization.render('openproject.createworkpackage.connectionLabel'))</label>
+  <label for="$escapetool.xml($selectConnectionId)">$escapetool.xml($services.localization.render('openproject.createworkpackage.connectionLabel'))</label>
   <select id="$selectConnectionId" name="connection" class="form-control">
     #if($connectionOptions.size() > 1)
     <option value="" disabled selected>$escapetool.xml($services.localization.render('openproject.createworkpackage.selectConnectionPlaceholder'))</option>
     #end
     #foreach ($option in $connectionOptions)
-    <option value="$option.value">$escapetool.xml($option.name)</option>
+    <option value="$escapetool.xml($option.value)">$escapetool.xml($option.name)</option>
     #end
   </select>
   #end
@@ -43,7 +43,7 @@
   #set($params = "redirectUrl=$redirect&token=$token")
   <div class="box warningmessage">
     <p>$escapetool.xml($services.localization.render('openproject.createworkpackage.incorrectTokenMessage'))
-      <a href="$xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params)">
+      <a href="$escapetool.xml($xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $params))">
         $escapetool.xml($services.localization.render('openproject.createworkpackage.incorrectTokenMessage.link'))
       </a>
     </p>

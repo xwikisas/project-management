@@ -86,7 +86,7 @@
           &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
             #if($connectionOptions.size() == 1) disabled #end&gt;
             #foreach ($option in $connectionOptions)
-            &lt;option value="$option.value" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
+            &lt;option value="$escapetool.xml($option.value)" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
             #end
           &lt;/select&gt;
           #if ($connectionOptions.size() == 1)
