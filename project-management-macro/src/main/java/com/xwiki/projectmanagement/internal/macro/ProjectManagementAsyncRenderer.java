@@ -23,6 +23,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import javax.inject.Inject;
+
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.async.internal.block.AbstractBlockAsyncRenderer;
@@ -34,6 +37,7 @@ import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.rendering.util.ErrorBlockGenerator;
 
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 
@@ -46,6 +50,16 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 @Component(roles = ProjectManagementAsyncRenderer.class)
 public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 {
+    private static final String ERROR_MESSAGE_ID = "projectmanagement.macro.async.error";
+
+    private static final String ERROR_MESSAGE = "Failed to display the work items.";
+
+    @Inject
+    private Logger logger;
+
+    @Inject
+    private ErrorBlockGenerator errorBlockGenerator;
+
     private Macro<ProjectManagementAsyncMacroParams> workItemsDisplayer;
 
     private ProjectManagementAsyncMacroParams parameters;
@@ -103,8 +117,14 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
             }
             return new CompositeBlock(result);
-        } catch (MacroExecutionException e) {
-            throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
+        } catch (MacroExecutionException | RuntimeException e) {
+            if (!async) {
+                throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
+            }
+            // The result of an asynchronous rendering is sent as is to the client: keep the details in the logs.
+            this.logger.error(ERROR_MESSAGE, e);
+            return new CompositeBlock(this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID,
+                ERROR_MESSAGE, "See the server logs for more details."));
         }
     }
 

@@ -45,7 +45,8 @@ public class TestProjManagementMacro extends AbstractProjectManagementMacro<Proj
     @Override
     public void processParameters(ProjectManagementMacroParameters parameters)
     {
-        addToSourceParams(parameters, "smth", "smth2");
+        addToSourceParams(parameters, "smth",
+            parameters.getIdentifier() == null ? "smth2" : parameters.getIdentifier());
         addToSourceParams(parameters, "smth3", "smth4");
     }
 
