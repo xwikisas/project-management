@@ -32,9 +32,9 @@ import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
+import org.xwiki.query.QueryFilter;
 import org.xwiki.query.QueryManager;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.Right;
@@ -44,13 +44,14 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Default implementation of {@link PresetsManager}. Retrieves the presets from xwiki pages. Only the presets stored on
- * pages whose author has administration right on the wiki are taken into account.
+ * pages whose author has administration right on the wiki are taken into account. The listed presets are limited to
+ * the ones the current user can view, and a preset is resolved by its id only if the current content author can view
+ * it.
  *
  * @version $Id$
  * @since 1.3.0
@@ -63,7 +64,12 @@ public class DefaultPresetsManager implements PresetsManager
     private QueryManager queryManager;
 
     @Inject
-    private DocumentReferenceResolver<String> resolver;
+    @Named("document")
+    private QueryFilter documentFilter;
+
+    @Inject
+    @Named("viewable")
+    private QueryFilter viewableFilter;
 
     @Inject
     private Provider<XWikiContext> contextProvider;
@@ -88,8 +94,9 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " where obj.isMultiple = 0";
             }
-            List<String> presets =
+            List<DocumentReference> presets =
                 queryManager.createQuery(String.format(query, Preset.CLASS_NAME), Query.XWQL)
+                    .addFilter(this.documentFilter).addFilter(this.viewableFilter)
                     .setOffset(offset).setLimit(limit).execute();
             if (presets.isEmpty()) {
                 return Collections.emptyList();
@@ -110,11 +117,13 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " and obj.isMultiple = 0";
             }
-            List<String> presets =
+            List<DocumentReference> presets =
                 queryManager
                     .createQuery(
                         String.format(query, Preset.CLASS_NAME),
                         Query.XWQL)
+                    .addFilter(this.documentFilter)
+                    .addFilter(this.viewableFilter)
                     .setLimit(limit)
                     .setOffset(offset)
                     .bindValue("client", client)
@@ -132,14 +141,19 @@ public class DefaultPresetsManager implements PresetsManager
     public Preset getPreset(Integer id)
     {
         try {
-            List<String> presets =
+            // No viewable filter here: the preset is resolved for the current content author (e.g. the author of the
+            // page holding a macro that uses it), not for the current user. The first valid preset with this id is
+            // the one used, whoever resolves it.
+            List<DocumentReference> presets =
                 queryManager
                     .createQuery(
                         String.format("from doc.object('%s') as obj where obj.id = :presetid", Preset.CLASS_NAME),
                         Query.XWQL)
+                    .addFilter(this.documentFilter)
                     .bindValue("presetid", id)
                     .execute();
-            return presets.stream().map(this::getPresetObject).filter(Objects::nonNull).findFirst().orElse(null);
+            return presets.stream().map(this::getPresetDocument).filter(Objects::nonNull).findFirst()
+                .filter(this::canContentAuthorView).map(this::toPreset).orElse(null);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
@@ -164,21 +178,42 @@ public class DefaultPresetsManager implements PresetsManager
         }
     }
 
-    private Preset getPresetObject(String serializedDocumentReference)
+    private Preset getPresetObject(DocumentReference ref)
+    {
+        XWikiDocument document = getPresetDocument(ref);
+        return document != null ? toPreset(document) : null;
+    }
+
+    private XWikiDocument getPresetDocument(DocumentReference ref)
     {
         XWikiContext context = contextProvider.get();
         XWiki xWiki = context.getWiki();
-        DocumentReference ref = resolver.resolve(serializedDocumentReference);
         try {
             XWikiDocument document = xWiki.getDocument(ref, context);
-            BaseObject baseObject = document.getXObject(Preset.REFERENCE);
-            if (baseObject == null || !isAuthorAdmin(document)) {
+            if (document.getXObject(Preset.REFERENCE) == null || !isAuthorAdmin(document)) {
                 return null;
             }
-            return new Preset(baseObject);
+            return document;
         } catch (XWikiException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private Preset toPreset(XWikiDocument document)
+    {
+        return new Preset(document.getXObject(Preset.REFERENCE));
+    }
+
+    private boolean canContentAuthorView(XWikiDocument document)
+    {
+        DocumentReference contentAuthor = this.contextProvider.get().getAuthorReference();
+        boolean canView =
+            this.authorizationManager.hasAccess(Right.VIEW, contentAuthor, document.getDocumentReference());
+        if (!canView) {
+            this.logger.debug("Ignoring the preset stored on [{}] because the current content author [{}] can't "
+                + "view it.", document.getDocumentReference(), contentAuthor);
+        }
+        return canView;
     }
 
     private boolean isAuthorAdmin(XWikiDocument document)
