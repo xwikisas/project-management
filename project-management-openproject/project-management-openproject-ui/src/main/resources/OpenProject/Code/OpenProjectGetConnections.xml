@@ -38,8 +38,16 @@
   <hidden>true</hidden>
   <content>
 {{velocity}}
-#if ($xcontext.action == 'get' &amp;&amp; $services.security.authorization.hasAccess('view'))
-  #jsonResponse($services.openproject.getConnectionOptions())
+## Same rule as the OpenProject dashboard, which lists the connections to the users who can view it, except guests.
+#set ($dashboardReference = $services.model.resolveDocument('OpenProject.WebHome'))
+#set ($canViewConnections = "$!xcontext.userReference" != ''
+  &amp;&amp; $services.security.authorization.hasAccess('view', $dashboardReference))
+#if ($xcontext.action == 'get')
+  #if ($canViewConnections)
+    #jsonResponse($services.openproject.getConnectionOptions())
+  #else
+    #set ($discard = $response.setStatus(403))
+  #end
 #end
 {{/velocity}}
 </content>
