@@ -147,7 +147,7 @@
         this.addButton = new Element('button', {
           class: 'btn btn-primary'
         });
-        this.addButton.innerHTML = l10n.get('confirm');
+        this.addButton.textContent = l10n.get('confirm');
 
         var container = $('&lt;div&gt;&lt;/div&gt;')
           .attr('id', 'proj-manag-preset-popup')
