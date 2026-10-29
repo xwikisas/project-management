@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.displayer;
 
 import java.util.Collections;
+import java.util.List;
 
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -27,6 +28,7 @@ import javax.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
@@ -158,6 +160,39 @@ class StylingSetupManagerTest
         verify(this.styleObject).setIntValue("parse", 0);
         verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
         verify(this.xwiki, never()).deleteDocument(any(XWikiDocument.class), any(XWikiContext.class));
+    }
+
+    @Test
+    void setupInstanceStylesWithInvalidValues() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        Status status = new Status();
+        status.setName("New");
+        status.setColor("#Ff0000");
+        Status invalidStatus = new Status();
+        invalidStatus.setName("Closed");
+        invalidStatus.setColor("red} body {display: none");
+        when(this.client.getStatuses()).thenReturn(new PaginatedResult<>(List.of(status, invalidStatus), 1, 2, 2));
+        Type type = new Type();
+        String typeName = "My x}body{a:b} .y";
+        type.setName(typeName);
+        type.setColor("#00ff0080");
+        Type invalidType = new Type();
+        invalidType.setName("Task");
+        invalidType.setColor("#00ff00; background-image: url(https://example.org)");
+        when(this.client.getTypes()).thenReturn(new PaginatedResult<>(List.of(type, invalidType), 1, 2, 2));
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(this.styleObject).set(eq("code"), code.capture(), same(this.xcontext));
+        assertEquals(".openproject-property-status-New-main::before {\n"
+            + "\tbackground: #Ff0000;\tborder: 1px solid color-mix(in srgb, #Ff0000 85%, black 15%);\n}\n"
+            + ".openproject-property-type-" + IdGenerator.generate(typeName) + "-main {\n"
+            + "\tcolor: #00ff0080;\n}\n"
+            + "a.fc-event.openproject-color-type-Myx\\7d body\\7b a\\3a b\\7d \\2e y {\n"
+            + "\tbackground-color: #00ff0080;\n}\n", code.getValue());
     }
 
     @Test

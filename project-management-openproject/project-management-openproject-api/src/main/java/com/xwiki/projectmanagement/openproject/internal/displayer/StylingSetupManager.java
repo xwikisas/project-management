@@ -200,7 +200,8 @@ public class StylingSetupManager
         List<Type> types = apiClient.getTypes().getItems();
         LOGGER.debug("Retrieved [{}] types.", types.size());
         for (Type type : types) {
-            if (type.getColor() == null || type.getColor().isEmpty()) {
+            if (!StyleValues.isValidColor(type.getColor()) || type.getName() == null) {
+                LOGGER.debug("Skipping the type [{}] with color [{}].", type.getName(), type.getColor());
                 continue;
             }
             stringBuilder.append(".openproject-property-type-");
@@ -219,7 +220,8 @@ public class StylingSetupManager
     private void composeTypeColorStyle(Type type, StringBuilder stringBuilder)
     {
         stringBuilder.append("a.fc-event.openproject-color-type-");
-        stringBuilder.append(type.getName().replaceAll("\\s+", ""));
+        // The calendar events get the type name without the white spaces as class name.
+        stringBuilder.append(StyleValues.escapeClassNamePart(type.getName().replaceAll("\\s+", "")));
         stringBuilder.append(BRACKET_START);
         stringBuilder.append("\tbackground-color: ");
         stringBuilder.append(type.getColor());
@@ -233,7 +235,8 @@ public class StylingSetupManager
         List<Status> statuses = apiClient.getStatuses().getItems();
         LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
         for (Status status : statuses) {
-            if (status.getColor() == null || status.getColor().isEmpty()) {
+            if (!StyleValues.isValidColor(status.getColor()) || status.getName() == null) {
+                LOGGER.debug("Skipping the status [{}] with color [{}].", status.getName(), status.getColor());
                 continue;
             }
             stringBuilder.append(".openproject-property-status-");
