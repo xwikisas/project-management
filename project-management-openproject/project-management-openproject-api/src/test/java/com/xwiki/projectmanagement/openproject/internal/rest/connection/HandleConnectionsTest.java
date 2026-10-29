@@ -78,12 +78,46 @@ public class HandleConnectionsTest
 
     private static final String PAGE_NAME = "page";
 
+    private static final DocumentReference PAGE_REFERENCE = new DocumentReference(WIKI_NAME, SPACE_NAME, PAGE_NAME);
+
     @BeforeEach
     public void setUp()
     {
         when(this.xContext.getUserReference()).thenReturn(userReference);
         when(this.xContext.getWikiReference()).thenReturn(wikiReference);
         when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, PAGE_REFERENCE)).thenReturn(true);
+    }
+
+    @Test
+    void handleConnectionWithoutEditRightOnPageIsForbidden() throws ProjectManagementException
+    {
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, PAGE_REFERENCE)).thenReturn(false);
+
+        Response createResponse = handleConnections.createConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+        Response updateResponse = handleConnections.updateConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), createResponse.getStatus());
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), updateResponse.getStatus());
+        verify(this.handleConnectionsService, never()).handleConnection(any(), any());
+    }
+
+    @Test
+    void handleConnectionChecksRightsOnTargetWikiNotContextWiki() throws ProjectManagementException
+    {
+        WikiReference otherWiki = new WikiReference("otherWiki");
+        DocumentReference otherPage = new DocumentReference("otherWiki", SPACE_NAME, PAGE_NAME);
+        when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(false);
+        when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, otherWiki)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, otherPage)).thenReturn(true);
+
+        Response createResponse = handleConnections.createConnection("otherWiki", SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.CREATED.getStatusCode(), createResponse.getStatus());
+        verify(this.handleConnectionsService).handleConnection(openProjectConnection, otherPage);
     }
 
     @Test

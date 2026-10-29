@@ -108,14 +108,15 @@ public class HandleConnections extends XWikiResource
     private void checkAccessRights(DocumentReference documentReference) throws XWikiException
     {
         DocumentReference currentUserRef = getXWikiContext().getUserReference();
-        // The connection page must be saved on a wiki that the current user administers.
-        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, getXWikiContext().getWikiReference())
-            || !authorizationManager.hasAccess(Right.ADMIN, currentUserRef, documentReference.getWikiReference()))
+        // The connection page must be saved on a wiki that the current user administers, whatever the wiki the request
+        // is sent to, and the current user must be allowed to edit it.
+        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, documentReference.getWikiReference())
+            || !authorizationManager.hasAccess(Right.EDIT, currentUserRef, documentReference))
         {
             throw new XWikiException(
                 XWikiException.MODULE_XWIKI_ACCESS,
                 XWikiException.ERROR_XWIKI_ACCESS_DENIED,
-                "You need Admin rights to perform this operation."
+                "You need Admin rights on the wiki and Edit right on the page to perform this operation."
             );
         }
     }

@@ -19,8 +19,11 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.service;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -118,13 +121,15 @@ public class HandleConnectionsService
      * can view. Only the connections stored on pages whose author has administration right on the wiki are taken into
      * account when checking if the connection name is already used, and an existing page can be updated only if its
      * author has administration right on the wiki. When updating an existing connection, an empty client secret keeps
-     * the current one, so that the client secret doesn't need to be sent back to the browser.
+     * the current one, so that the client secret doesn't need to be sent back to the browser. The server URL must be
+     * an absolute HTTP or HTTPS URL. The current user becomes the author of the saved connection objects, while the
+     * creator and the content author of an existing page are kept, since its content isn't modified.
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
      * @throws ProjectManagementException if the document is not in the connections space, if a configuration with
      *     the same name already exists, if the existing page can't be updated, if no client secret is provided for a
-     *     new connection, if the query failed or the document retrieval/creation fails.
+     *     new connection, if the server URL is not valid, if the query failed or the document retrieval/creation fails.
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference)
@@ -137,6 +142,8 @@ public class HandleConnectionsService
                 + "connections must be saved in the [OpenProject.Code.OpenProjectConfigurations] space.",
                 this.compactSerializer.serialize(documentReference)));
         }
+
+        checkServerURL(openProjectConnection.getServerURL());
 
         XWikiContext context = this.xcontextProvider.get();
         try {
@@ -158,6 +165,22 @@ public class HandleConnectionsService
             handleConnectionObjects(openProjectConnection, clientSecret, doc, context);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
+        }
+    }
+
+    private void checkServerURL(String serverURL) throws ProjectManagementException
+    {
+        boolean valid = false;
+        try {
+            URI uri = new URI(Objects.toString(serverURL, ""));
+            valid = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                && StringUtils.isNotEmpty(uri.getHost());
+        } catch (URISyntaxException e) {
+            // Not a valid URL.
+        }
+        if (!valid) {
+            throw new ProjectManagementException(String.format("The server URL [%s] is not valid: it must be an "
+                + "absolute HTTP or HTTPS URL, e.g. [https://openproject.example.com].", serverURL));
         }
     }
 
@@ -281,9 +304,13 @@ public class HandleConnectionsService
         UserReference currentUser = userReferenceResolver.resolve(context.getUserReference());
         doc.setHidden(true);
         DocumentAuthors documentAuthors = doc.getAuthors();
-        documentAuthors.setCreator(currentUser);
+        // The current user writes the connection objects, so they become the metadata author. The content of an
+        // existing page is not modified, so its content author (and its creator) are kept.
+        if (doc.isNew()) {
+            documentAuthors.setCreator(currentUser);
+            documentAuthors.setContentAuthor(currentUser);
+        }
         documentAuthors.setEffectiveMetadataAuthor(currentUser);
-        documentAuthors.setContentAuthor(currentUser);
         documentAuthors.setOriginalMetadataAuthor(currentUser);
     }
 }

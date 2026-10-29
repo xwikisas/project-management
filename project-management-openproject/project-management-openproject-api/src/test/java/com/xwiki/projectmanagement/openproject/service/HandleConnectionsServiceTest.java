@@ -27,6 +27,9 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.internal.document.DefaultDocumentAuthors;
@@ -64,6 +67,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
@@ -176,7 +180,7 @@ public class HandleConnectionsServiceTest
         when(doc.getAuthors()).thenReturn(documentAuthors);
 
         openProjectConnection =
-            new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret", "instanceId");
+            new OpenProjectConnection("connectionName", "https://openproject.example.com", "clientId", "clientSecret", "instanceId");
     }
 
     @Test
@@ -254,6 +258,61 @@ public class HandleConnectionsServiceTest
 
         assertEquals("currentSecret", configObj.getStringValue("clientSecret"));
         assertEquals("currentSecret", oidcObj.getStringValue("clientSecret"));
+        verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @Test
+    void handleConnectionKeepsCreatorAndContentAuthorOfExistingPage() throws Exception
+    {
+        when(this.doc.isNew()).thenReturn(false);
+        documentAuthors.setEffectiveMetadataAuthor(mockAuthor(adminReference));
+        UserReference creator = mock(UserReference.class);
+        documentAuthors.setCreator(creator);
+        UserReference contentAuthor = mock(UserReference.class);
+        documentAuthors.setContentAuthor(contentAuthor);
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+
+        assertEquals(creator, documentAuthors.getCreator());
+        assertEquals(contentAuthor, documentAuthors.getContentAuthor());
+        assertEquals(userReference, documentAuthors.getEffectiveMetadataAuthor());
+        assertEquals(userReference, documentAuthors.getOriginalMetadataAuthor());
+        verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = { "serverUrl", "openproject.example.com", "file:///etc/passwd",
+        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/", "http://", "https:///path", "http://open project" })
+    void handleConnectionRefusesInvalidServerURL(String serverURL) throws Exception
+    {
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+        openProjectConnection.setServerURL(serverURL);
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection, documentReference));
+
+        assertEquals(String.format("The server URL [%s] is not valid: it must be an absolute HTTP or HTTPS URL, e.g. "
+            + "[https://openproject.example.com].", serverURL), exception.getMessage());
+        verify(this.openProjectApiClientFactory, never()).builder();
+        verifyNoInteractions(this.openProjectApiClient);
+        verify(xwiki, never()).saveDocument(any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject" })
+    void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
+    {
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+        openProjectConnection.setServerURL(serverURL);
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+
+        verify(this.openProjectApiClientBuilder).serverUrl(serverURL);
         verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
     }
 
