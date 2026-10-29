@@ -109,6 +109,30 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void filtersOnAProjectWithSpecialCharacters() throws Exception
+    {
+        this.parameters.setProject("a\"b\\");
+        when(this.apiClient.getMemberships(null, 20,
+            "[{\"project\":{\"operator\":\"=\",\"values\":[\"a\\\"b\\\\\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        assertEquals("No members found.\n View all members",
+            text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
+    void filtersOnTheProjectEvenWhenItIsNotSet() throws Exception
+    {
+        this.parameters.setProject(null);
+        when(this.apiClient.getMemberships(null, 20,
+            "[{\"project\":{\"operator\":\"=\",\"values\":[\"null\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        assertEquals("No members found.\n View all members",
+            text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void failsWhenTheMembersCannotBeRetrieved() throws Exception
     {
         ProjectManagementException cause = new ProjectManagementException("unreachable");

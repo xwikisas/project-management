@@ -47,6 +47,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectMembersMacroParameters;
@@ -66,8 +67,6 @@ public class OpenProjectProjectMembersMacro
 {
     private static final String CLASS = "class";
 
-    private static final String MEMBERS_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
-
     private static final String VIEW_ALL_MEMBERS_URL = "%s/projects/%s/members";
 
     /**
@@ -86,7 +85,9 @@ public class OpenProjectProjectMembersMacro
         throws MacroExecutionException
     {
         String project = parameters.getProject();
-        String filters = String.format(MEMBERS_FILTER, project);
+        // Always filter on the project, even when it's not set, so that the members of all projects are not listed.
+        String filters = FilterBuilder.get()
+            .addFilter("project", FilterBuilder.Operator.EQUALS, Collections.singletonList(project)).build();
         List<User> members;
         try {
             members = apiClient.getMemberships(null, parameters.getCount(), filters).getItems();

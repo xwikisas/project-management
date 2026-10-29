@@ -186,6 +186,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void filtersByProjectWithSpecialCharacters() throws Exception
+    {
+        this.parameters.setProject("a\"]}},{\"x\":{\"operator\":\"!\",\"values\":[\"\\");
+        this.parameters.setDays(0);
+
+        assertEquals("[{\"project\":{\"operator\":\"=\",\"values\":"
+            + "[\"a\\\"]}},{\\\"x\\\":{\\\"operator\\\":\\\"!\\\",\\\"values\\\":[\\\"\\\\\"]}}]",
+            executeAndGetFilters());
+    }
+
+    @Test
     void doesNotFilterWithoutProjectNorDays() throws Exception
     {
         this.parameters.setProject(" ");
