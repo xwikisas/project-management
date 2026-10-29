@@ -40,7 +40,9 @@
 {{velocity}}
 #set ($obj = $doc.getObject("OpenProject.Code.SpacePageMarkerClass"))
 #if ("$!obj" == '' || "$!obj.getValue('marker')" != 'root' || !$doc.isNew())
-  $doc.content
+  ## Display the page content with the rights of its author, not with the rights of this sheet.
+  #set ($reference = $services.model.serialize($doc.documentReference, 'default'))
+  {{include reference="$services.rendering.escape($reference, 'xwiki/2.1')" author="target"/}}
 #else
   #template('projectmanagementrelationscommon.vm')
   {{html clean=false}}
