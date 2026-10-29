@@ -180,7 +180,8 @@ public class HandleConnectionsServiceTest
         when(doc.getAuthors()).thenReturn(documentAuthors);
 
         openProjectConnection =
-            new OpenProjectConnection("connectionName", "https://openproject.example.com", "clientId", "clientSecret", "instanceId");
+            new OpenProjectConnection("connectionName", "https://openproject.example.com", "clientId", "clientSecret",
+                "instanceId");
     }
 
     @Test
@@ -285,7 +286,8 @@ public class HandleConnectionsServiceTest
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = { "serverUrl", "openproject.example.com", "file:///etc/passwd",
-        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/", "http://", "https:///path", "http://open project" })
+        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/", "http://", "https:///path",
+        "http://open project", " https://openproject.example.com" })
     void handleConnectionRefusesInvalidServerURL(String serverURL) throws Exception
     {
         when(this.query.execute()).thenReturn(List.of());
@@ -303,7 +305,8 @@ public class HandleConnectionsServiceTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject" })
+    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject",
+        "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com/" })
     void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
     {
         when(this.query.execute()).thenReturn(List.of());
