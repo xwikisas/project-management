@@ -20,8 +20,8 @@ package com.xwiki.projectmanagement.livadata;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -123,12 +123,11 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         // PREPARE THE RESULTS FOR THE LIVEDATA - TURN THE LINKABLES TO PROPERTIES OF THE WORK ITEM -----------
         // The displayers replace the linkables by their HTML display, so keep their locations to expose them as raw
         // URLs, e.g. for the actions that open the work item.
-        List<Map<String, Object>> locations = getLocations(workItems.getItems());
+        Map<WorkItem, Map<String, Object>> locations = getLocations(workItems.getItems());
         applyDisplayers(workItems.getItems(), clientId);
         flatten(ld);
-        for (int i = 0; i < locations.size(); i++) {
-            ld.getEntries().get(i).putAll(locations.get(i));
-        }
+        // The entries are the work items themselves.
+        locations.forEach(Map::putAll);
 
         return ld;
     }
@@ -151,9 +150,10 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         }
     }
 
-    private static List<Map<String, Object>> getLocations(List<WorkItem> workItems)
+    private static Map<WorkItem, Map<String, Object>> getLocations(List<WorkItem> workItems)
     {
-        List<Map<String, Object>> locations = new ArrayList<>();
+        // The work items are maps whose content changes when they are displayed, so they are matched by identity.
+        Map<WorkItem, Map<String, Object>> locations = new IdentityHashMap<>();
         for (WorkItem workItem : workItems) {
             Map<String, Object> itemLocations = new HashMap<>();
             for (String linkWorkItemProperty : LINK_PROPERTIES) {
@@ -163,7 +163,7 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
                         ((Map<?, ?>) property).get(Linkable.KEY_LOCATION));
                 }
             }
-            locations.add(itemLocations);
+            locations.put(workItem, itemLocations);
         }
         return locations;
     }
