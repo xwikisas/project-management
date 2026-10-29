@@ -62,6 +62,15 @@ public class OpenProjectSingleDisplayer extends BaseElement
     }
 
     /**
+     * @return the displayed description of the work package
+     * @since 1.3.1
+     */
+    public FormattedTextElement getFormattedDescription()
+    {
+        return new FormattedTextElement(getDescription());
+    }
+
+    /**
      * @return the header container that contains information such as the work package id, name and link.
      */
     public WebElement getHeader()
