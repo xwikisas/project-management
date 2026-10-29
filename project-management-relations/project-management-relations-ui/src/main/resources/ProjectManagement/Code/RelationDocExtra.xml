@@ -126,7 +126,15 @@
     </property>
     <property>
       <code>require(['jquery', 'xwiki-selectize'], function ($) {
-  console.debug('yellow');
+  // Only link to web pages.
+  let getSafeHref = function (href) {
+    try {
+      let url = new URL(href, window.location.href);
+      return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+    } catch (e) {
+      return '';
+    }
+  };
   setTimeout(function () {
     $('.proj-manag-relation').each(function () {
       let root = $(this);
@@ -142,8 +150,10 @@
         const callback = (mutationList, observer) =&gt; {
           observer.disconnect();
           let clientParams = root.data('params') &amp;&amp; root.data('params');
-          let workItemREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/workitems";
-          let projectsREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/projects";
+          let workItemREST = XWiki.contextPath + "/rest/wikis/" + encodeURIComponent(XWiki.currentWiki)
+            + "/projectmanagement/" + encodeURIComponent(client) + "/workitems";
+          let projectsREST = XWiki.contextPath + "/rest/wikis/" + encodeURIComponent(XWiki.currentWiki)
+            + "/projectmanagement/" + encodeURIComponent(client) + "/projects";
           if (valueContainer.find(':input').length &gt; 0) {
             return;
           }
@@ -160,7 +170,7 @@
           if (dataType == 'project') {
             url = projectsREST;
           }
-          $.getJSON(url + "/" + entityId, clientParams)
+          $.getJSON(url + "/" + encodeURIComponent(entityId), clientParams)
             .done(function (response) {
               let anchor = '';
               let href = '';
@@ -171,7 +181,12 @@
                 anchor = response.summary.value;
                 href = response.summary.location;
               }
-              valueContainer.html($('&lt;a/&gt;').attr('href', href).text(anchor));
+              let link = $('&lt;a/&gt;').text(anchor);
+              href = getSafeHref(href);
+              if (href) {
+                link.attr('href', href);
+              }
+              valueContainer.empty().append(link);
             })
             .fail(function (_jqxhr, textStatus, error) {
               new XWiki.widgets.Notification('Failed to load the entity information.', 'error');
@@ -197,8 +212,10 @@
             return;
           }
           let clientParams = root.data('params') &amp;&amp; root.data('params');
-          let workItemREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/workitems";
-          let projectsREST = XWiki.contextPath + "/rest/wikis/" + XWiki.currentWiki + "/projectmanagement/" + client + "/projects";
+          let workItemREST = XWiki.contextPath + "/rest/wikis/" + encodeURIComponent(XWiki.currentWiki)
+            + "/projectmanagement/" + encodeURIComponent(client) + "/workitems";
+          let projectsREST = XWiki.contextPath + "/rest/wikis/" + encodeURIComponent(XWiki.currentWiki)
+            + "/projectmanagement/" + encodeURIComponent(client) + "/projects";
           let url = workItemREST;
           let dataType = propRoot.find('dd').data('prop') || 'workPackage';
           if (dataType == 'project') {
@@ -428,6 +445,10 @@
   #end
   $escapetool.xml($translation)
 #end
+#macro (displayExtension $uix)
+  ## The rendered extension is inserted in the HTML macro below: make sure it can't close that macro.
+  $services.rendering.render($uix.execute(), 'html/5.0').replace('{{', '&amp;#123;&amp;#123;')
+#end
 ## Get all xobjects.
 {{/velocity}}
 
@@ -448,12 +469,12 @@
     #if (!$isOwner)
       #set($relationOwnerDoc = $xwiki.getDocument($relationObj.documentReference))
       #set ($message = "#getTranslation($client, 'notowner', ['%1%', '%2%', '%3%'])")
-      #set ($message = $message.replace('%1%', "&lt;a href='$escapetool.xml($relationOwnerDoc.getURL('view', 'viewer=projectmanagementrelations'))'&gt;$services.model.serialize($relationOwnerDoc.documentReference)&lt;/a&gt;"))
-      #set ($message = $message.replace('%2%', "&lt;a href='$doc.getURL('view', 'viewer=projectmanagementrelations')'&gt;").replace('%3%', "&lt;/a&gt;"))
+      #set ($message = $message.replace('%1%', "&lt;a href='$escapetool.xml($relationOwnerDoc.getURL('view', 'viewer=projectmanagementrelations'))'&gt;$escapetool.xml($services.model.serialize($relationOwnerDoc.documentReference))&lt;/a&gt;"))
+      #set ($message = $message.replace('%2%', "&lt;a href='$escapetool.xml($doc.getURL('view', 'viewer=projectmanagementrelations'))'&gt;").replace('%3%', "&lt;/a&gt;"))
       &lt;div class="box infomessage"&gt;$message&lt;/div&gt;
     #end
     #set ($discard = $relationOwnerDoc.use($relationObj.getXobject()))
-    &lt;div class="proj-manag-relation xform" data-client="$client" data-params="$escapetool.xml(${relationObj.getClientParams()})"&gt;
+    &lt;div class="proj-manag-relation xform" data-client="$!escapetool.xml($client)" data-params="$escapetool.xml(${relationObj.getClientParams()})"&gt;
       &lt;h2&gt;#getTranslation('clients', $client)&lt;/h2&gt;
       &lt;div id="proj-manag-relation-left" class="col-xs-12 col-sm-6"&gt;
         &lt;dl&gt;
@@ -475,8 +496,7 @@
           &lt;/div&gt;
           #if ($client)
             #foreach($uix in $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.left"))
-              #set ($content = $services.rendering.render($uix.execute(), 'html/5.0'))
-              $content
+              #displayExtension($uix)
             #end
           #end
         &lt;/dl&gt;
@@ -488,8 +508,7 @@
         &lt;dl&gt;
           #if ($client)
             #foreach($uix in $services.uix.getExtensions("com.xwiki.projectmanagement.${client}.relations.right"))
-              #set ($content = $services.rendering.render($uix.execute(), 'html/5.0'))
-              $content
+              #displayExtension($uix)
             #end
           #end
         &lt;/dl&gt;
