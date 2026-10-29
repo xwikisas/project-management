@@ -116,8 +116,22 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
             "[{\"project\":{\"operator\":\"=\",\"values\":[\"a\\\"b\\\\\"]}}]"))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
 
-        assertEquals("No members found.\n View all members",
-            text(this.macro.execute(this.parameters, "", this.context)));
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("No members found.\n View all members", text(result));
+        assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/a%22b%5C/members"), links(result));
+    }
+
+    @Test
+    void linksToTheMembersOfAProjectWithReservedURLCharacters() throws Exception
+    {
+        this.parameters.setProject("a/b c?d#e");
+        when(this.apiClient.getMemberships(null, 20,
+            "[{\"project\":{\"operator\":\"=\",\"values\":[\"a/b c?d#e\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/a%2Fb%20c%3Fd%23e/members"),
+            links(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test

@@ -139,6 +139,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void linksToAProjectWithReservedURLCharacters() throws Exception
+    {
+        this.parameters.setProject("a/b c?d#e\"");
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals(List.of("View project dashboard -> " + SERVER_URL + "/projects/a%2Fb%20c%3Fd%23e%22"),
+            links(result));
+    }
+
+    @Test
     void displaysNoTimeEntry() throws Exception
     {
         List<Block> result = this.macro.execute(this.parameters, "", this.context);

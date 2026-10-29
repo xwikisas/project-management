@@ -67,8 +67,6 @@ public class OpenProjectProjectMembersMacro
 {
     private static final String CLASS = "class";
 
-    private static final String VIEW_ALL_MEMBERS_URL = "%s/projects/%s/members";
-
     /**
      * Default constructor.
      */
@@ -97,7 +95,7 @@ public class OpenProjectProjectMembersMacro
         }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
-        String viewAllUrl = String.format(VIEW_ALL_MEMBERS_URL, serverUrl, project);
+        String viewAllUrl = getProjectURL(serverUrl, project) + "/members";
 
         return Collections.singletonList(
             new GroupBlock(buildMembersBlocks(members, viewAllUrl), Collections.emptyMap()));

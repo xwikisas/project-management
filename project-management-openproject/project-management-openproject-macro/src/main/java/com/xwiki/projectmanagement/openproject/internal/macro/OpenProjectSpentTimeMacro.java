@@ -117,7 +117,7 @@ public class OpenProjectSpentTimeMacro
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
         boolean hasProject = isNotBlank(parameters.getProject());
         String linkUrl = hasProject
-            ? String.format("%s/projects/%s", serverUrl, parameters.getProject())
+            ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
         String linkLabel = hasProject ? "View project dashboard" : "View time entries";
 
