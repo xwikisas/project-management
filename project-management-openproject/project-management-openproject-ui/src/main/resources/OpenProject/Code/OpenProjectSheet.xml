@@ -94,7 +94,9 @@
                   $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
                 &lt;/strong&gt;
               &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))&lt;/p&gt;
+              &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))
+                &lt;span id="client-secret-keep-hint" hidden&gt;$escapetool.xml($services.localization.render('openproject.config.clientSecretKeepHint'))&lt;/span&gt;
+              &lt;/p&gt;
               &lt;input id="client-secret" class="form-control" name="client-secret" type="password" autocomplete="new-password"
                 data-keep-placeholder="$escapetool.xml($services.localization.render('openproject.config.clientSecretKeep'))"&gt;
             &lt;/div&gt;
@@ -379,7 +381,11 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       // The current client secret is not sent to the browser: leaving the field empty keeps it.
-      $("#client-secret").val("").attr("placeholder", $("#client-secret").data("keep-placeholder"));
+      $("#client-secret").val("").attr({
+        "placeholder": $("#client-secret").data("keep-placeholder"),
+        "aria-describedby": "client-secret-keep-hint"
+      });
+      $("#client-secret-keep-hint").prop("hidden", false);
       $("#show-public-data").prop("checked", $(this).data("show-public-data") === true);
       $("#document-reference").val(documentReference);
       $("#connection-action").val("edit");
@@ -391,7 +397,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#connection-name").val("");
       $("#server-url").val("");
       $("#client-id").val("");
-      $("#client-secret").val("").removeAttr("placeholder");
+      $("#client-secret").val("").removeAttr("placeholder aria-describedby");
+      $("#client-secret-keep-hint").prop("hidden", true);
       $("#show-public-data").prop("checked", false);
 
       const connectionsSpace = XWiki.Model.resolve(

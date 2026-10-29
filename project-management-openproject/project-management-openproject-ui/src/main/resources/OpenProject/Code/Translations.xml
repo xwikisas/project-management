@@ -45,6 +45,7 @@ openproject.config.clientIdDescription.second=Start the setup &amp; copy the Ope
 openproject.config.clientSecret=Client Secret
 openproject.config.clientSecretDescription=Copy the Client Secret from the OAuth application in OpenProject under Authentication &gt; OAuth Applications.
 openproject.config.clientSecretKeep=Leave empty to keep the current client secret.
+openproject.config.clientSecretKeepHint=The current client secret is not displayed, but it is still set. Leave this field empty to keep it, or enter a new value to replace it.
 openproject.config.showPublicData=Show public data to users without an OpenProject account
 openproject.config.showPublicDataDescription=Guests and users who haven't connected their OpenProject account see the data that OpenProject shows to anonymous users, instead of a message asking them to connect. OpenProject must accept anonymous requests (e.g. "Login required" disabled in its authentication settings).
 openproject.config.connectionName=Connection Name
