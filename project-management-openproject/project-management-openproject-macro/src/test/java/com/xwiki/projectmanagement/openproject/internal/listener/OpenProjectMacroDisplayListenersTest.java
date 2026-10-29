@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.listener;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -110,6 +111,18 @@ class OpenProjectMacroDisplayListenersTest
         when(this.xcontext.getDoc()).thenReturn(this.document);
         when(this.document.getDocumentReference()).thenReturn(DASHBOARD);
         when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(this.dashboardConfig);
+        configuredConnections("dashboard");
+    }
+
+    private void configuredConnections(String... names)
+    {
+        List<OpenProjectConnection> connections = new ArrayList<>();
+        for (String name : names) {
+            OpenProjectConnection connection = mock(OpenProjectConnection.class);
+            when(connection.getConnectionName()).thenReturn(name);
+            connections.add(connection);
+        }
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(connections);
     }
 
     private void fireEvent(Object data)
@@ -262,10 +275,7 @@ class OpenProjectMacroDisplayListenersTest
     @Test
     void fallsBackOnTheFirstConfiguredConnection() throws Exception
     {
-        OpenProjectConnection first = mock(OpenProjectConnection.class);
-        when(first.getConnectionName()).thenReturn("first");
-        OpenProjectConnection second = mock(OpenProjectConnection.class);
-        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of(first, second));
+        configuredConnections("first", "second");
         when(this.openProjectAccess.resolve("first")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         Project project = new Project();
         project.setId(42);
@@ -275,6 +285,24 @@ class OpenProjectMacroDisplayListenersTest
 
         assertEquals("first", this.parameters.getInstance());
         // Without a selected project, the first project of the effective connection is used.
+        assertEquals("42", this.parameters.getProject());
+    }
+
+    @Test
+    void fallsBackOnTheFirstConfiguredConnectionWhenTheSelectedOneWasDeleted() throws Exception
+    {
+        configuredConnections("first", "second");
+        selectedConnection("deleted");
+        // The project of the deleted connection.
+        selectedProject("12");
+        when(this.openProjectAccess.resolve("first")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        Project project = new Project();
+        project.setId(42);
+        when(this.apiClient.getProjects(1, 1, "")).thenReturn(new PaginatedResult<>(List.of(project), 1, 1, 1));
+
+        fireEvent(this.parameters);
+
+        assertEquals("first", this.parameters.getInstance());
         assertEquals("42", this.parameters.getProject());
     }
 

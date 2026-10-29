@@ -76,6 +76,11 @@
   #if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
     #set ($effectiveConnection = $connectionOptions.get(0).value)
   #end
+  ## The selected project belongs to the selected connection.
+  #if ("$!effectiveConnection" != "$!selectedConnection")
+    #set ($selectedProject = '')
+    #set ($selectedProjectLabel = '')
+  #end
   #set ($tokenValid = false)
   #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.isUserAuthorized($effectiveConnection))
     #set ($tokenValid = true)

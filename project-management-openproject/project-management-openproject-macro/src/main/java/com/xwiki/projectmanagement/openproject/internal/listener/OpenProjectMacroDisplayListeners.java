@@ -161,13 +161,17 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
             return;
         }
 
+        String effectiveConnection = getEffectiveConnection(configObject);
+        // The selected project belongs to the selected connection, so it's ignored when that connection was deleted.
         String selectedProject = configObject.getStringValue(SELECTED_PROJECT_PROPERTY);
-        if (StringUtils.isNotBlank(selectedProject)) {
+        if (StringUtils.isNotBlank(selectedProject)
+            && effectiveConnection.equals(configObject.getStringValue(SELECTED_CONNECTION_PROPERTY)))
+        {
             parameters.setProject(selectedProject);
             return;
         }
 
-        String firstProject = getFirstProjectId(getEffectiveConnection(configObject));
+        String firstProject = getFirstProjectId(effectiveConnection);
         if (StringUtils.isNotBlank(firstProject)) {
             parameters.setProject(firstProject);
         }
@@ -175,16 +179,19 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     private String getEffectiveConnection(BaseObject configObject)
     {
+        List<OpenProjectConnection> connections = openProjectConfiguration.getOpenProjectConnections();
+        if (connections == null || connections.isEmpty()) {
+            return "";
+        }
+        // Fall back on the first connection when none is selected or when the selected one was deleted, like the
+        // dashboard page does, so that the macros use the connection displayed in the picker.
         String selectedConnection = configObject.getStringValue(SELECTED_CONNECTION_PROPERTY);
-        if (StringUtils.isNotBlank(selectedConnection)) {
+        if (StringUtils.isNotBlank(selectedConnection)
+            && connections.stream().anyMatch(connection -> selectedConnection.equals(connection.getConnectionName())))
+        {
             return selectedConnection;
         }
-
-        List<OpenProjectConnection> connections = openProjectConfiguration.getOpenProjectConnections();
-        if (connections != null && !connections.isEmpty()) {
-            return connections.get(0).getConnectionName();
-        }
-        return "";
+        return connections.get(0).getConnectionName();
     }
 
     private String getFirstProjectId(String connection)
