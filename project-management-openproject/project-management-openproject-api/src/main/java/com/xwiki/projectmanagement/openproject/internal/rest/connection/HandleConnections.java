@@ -69,8 +69,8 @@ public class HandleConnections extends XWikiResource
      * @param pageName the name of the page where the connection configuration will be stored
      * @param openProjectConnection the {@link OpenProjectConnection} to store
      * @return 201 if the creation was successful; 400 if the connection data or the page is not valid; 403 if the
-     *     current user is not allowed to save the connection; 409 if a connection with the same name exists; 500 if
-     *     any other error was encountered.
+     *     current user is not allowed to save the connection; 409 if a connection with the same name exists or if
+     *     the page already exists and can't be updated; 500 if any other error was encountered.
      */
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
