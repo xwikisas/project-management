@@ -208,7 +208,7 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
         }
         if (!StringUtils.isEmpty(link.getInstance())) {
             createProperty(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
-                "{ \"instance\": \"" + link.getInstance() + "\" }", properties);
+                RelationClientParams.ofInstance(link.getInstance()), properties);
         }
         if (!StringUtils.isEmpty(link.getWorkPackage())) {
             createProperty(ProjectManagementRelation.FIELD_WORK_ITEM, link.getWorkPackage(), properties);

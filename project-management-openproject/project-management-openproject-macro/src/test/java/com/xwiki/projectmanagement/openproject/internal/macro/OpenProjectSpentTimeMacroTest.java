@@ -139,6 +139,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void linksToAProjectWithReservedURLCharacters() throws Exception
+    {
+        this.parameters.setProject("a/b c?d#e\"");
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals(List.of("View project dashboard -> " + SERVER_URL + "/projects/a%2Fb%20c%3Fd%23e%22"),
+            links(result));
+    }
+
+    @Test
     void displaysNoTimeEntry() throws Exception
     {
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
@@ -183,6 +194,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setDays(0);
 
         assertEquals("[{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}]", executeAndGetFilters());
+    }
+
+    @Test
+    void filtersByProjectWithSpecialCharacters() throws Exception
+    {
+        this.parameters.setProject("a\"]}},{\"x\":{\"operator\":\"!\",\"values\":[\"\\");
+        this.parameters.setDays(0);
+
+        assertEquals("[{\"project\":{\"operator\":\"=\",\"values\":"
+            + "[\"a\\\"]}},{\\\"x\\\":{\\\"operator\\\":\\\"!\\\",\\\"values\\\":[\\\"\\\\\"]}}]",
+            executeAndGetFilters());
     }
 
     @Test

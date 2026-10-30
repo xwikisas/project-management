@@ -294,7 +294,7 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         BaseObject relation = document.getXObject(ProjectManagementRelation.CLASS_REFERENCE, true, getXWikiContext());
         if (!StringUtils.isEmpty(instance)) {
             relation.setLargeStringValue(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
-                "{\"instance\":\"" + instance + "\"}");
+                RelationClientParams.ofInstance(instance));
         }
         if (workPackage != null) {
             relation.setStringValue(ProjectManagementRelation.FIELD_WORK_ITEM, String.valueOf(workPackage));
