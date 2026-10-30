@@ -20,8 +20,8 @@
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -55,6 +56,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
@@ -70,7 +72,7 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 public class OpenProjectSpentTimeMacro
     extends AbstractOpenProjectDirectMacro<OpenProjectSpentTimeMacroParameters>
 {
-    private static final String CREATED_AT_PROPERTY = "created_at";
+    private static final String SPENT_ON_PROPERTY = "spent_on";
 
     private static final String BETWEEN_DATES_OPERATOR = "<>d";
 
@@ -90,6 +92,9 @@ public class OpenProjectSpentTimeMacro
     @Named("wiki")
     private ConfigurationSource wikiConfigSource;
 
+    @Inject
+    private Provider<Clock> clockProvider;
+
     /**
      * Default constructor.
      */
@@ -105,7 +110,8 @@ public class OpenProjectSpentTimeMacro
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        String filters = buildFilters(parameters.getProject(), parameters.getDays());
+        boolean hasProject = hasProject(parameters.getProject());
+        String filters = buildFilters(hasProject ? parameters.getProject() : null, parameters.getDays());
 
         List<TimeEntry> entries;
         try {
@@ -115,7 +121,6 @@ public class OpenProjectSpentTimeMacro
         }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
-        boolean hasProject = isNotBlank(parameters.getProject());
         String linkUrl = hasProject
             ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
@@ -127,7 +132,7 @@ public class OpenProjectSpentTimeMacro
 
     private String buildFilters(String project, int days)
     {
-        boolean hasProject = isNotBlank(project);
+        boolean hasProject = project != null;
         if (!hasProject && days <= 0) {
             return EMPTY_FILTER;
         }
@@ -136,16 +141,12 @@ public class OpenProjectSpentTimeMacro
             filterBuilder.addFilter("project", FilterBuilder.Operator.EQUALS, project);
         }
         if (days > 0) {
-            String endDate = LocalDate.now().plusDays(1).toString();
-            String startDate = LocalDate.now().minusDays(days).toString();
-            filterBuilder.addFilter(CREATED_AT_PROPERTY, BETWEEN_DATES_OPERATOR, List.of(startDate, endDate));
+            // The days on which the time was spent, not the days on which it was logged.
+            LastDaysPeriod period = new LastDaysPeriod(days, this.clockProvider.get());
+            filterBuilder.addFilter(SPENT_ON_PROPERTY, BETWEEN_DATES_OPERATOR,
+                List.of(period.getFirstDay().toString(), period.getLastDay().toString()));
         }
         return filterBuilder.build();
-    }
-
-    private static boolean isNotBlank(String value)
-    {
-        return value != null && !value.isBlank();
     }
 
     private List<Block> buildContent(List<TimeEntry> entries, String linkLabel, String linkUrl)
@@ -237,10 +238,12 @@ public class OpenProjectSpentTimeMacro
         Linkable workPackage = entry.getWorkPackage();
         Linkable project = entry.getProjectLink();
 
-        String wpLabel = workPackage.getValue();
-        Block wpLink = buildLinkBlock(wpLabel, workPackage.getLocation());
-
         Block projectLink = buildLinkBlock(project.getValue(), project.getLocation());
+        // The time can be logged on the project itself, without work package.
+        if (workPackage == null) {
+            return List.of(projectLink);
+        }
+        Block wpLink = buildLinkBlock(workPackage.getValue(), workPackage.getLocation());
         return List.of(projectLink, new SpaceBlock(), new SpecialSymbolBlock('/'), new SpaceBlock(), wpLink);
     }
 

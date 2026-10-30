@@ -22,77 +22,98 @@ package com.xwiki.projectmanagement.presets.internal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-
-import javax.inject.Named;
-import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
-import org.xwiki.model.reference.LocalDocumentReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
+import org.xwiki.query.QueryExecutor;
 import org.xwiki.query.QueryFilter;
 import org.xwiki.query.QueryManager;
+import org.xwiki.query.internal.DefaultQuery;
 import org.xwiki.query.internal.DocumentQueryFilter;
 import org.xwiki.query.internal.ViewableQueryFilter;
-import org.xwiki.security.authorization.AuthorizationManager;
-import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
-import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
-import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
-import org.xwiki.user.UserReference;
-import org.xwiki.user.UserReferenceSerializer;
+import org.xwiki.test.mockito.MockitoComponentManager;
+import org.xwiki.user.UserReferenceResolver;
 
-import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xpn.xwiki.test.MockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.projectmanagement.presets.Preset;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ComponentTest
+/**
+ * Unit tests for {@link DefaultPresetsManager}, on preset pages stored in the wiki.
+ *
+ * @version $Id$
+ */
+@OldcoreTest
+@ReferenceComponentList
 @ComponentList({ DocumentQueryFilter.class, ViewableQueryFilter.class })
 class DefaultPresetsManagerTest
 {
-    private static final String DEFAULT_PRESET_ID = "Preset.MyPreset";
+    private static final String PRESET_OBJECTS = "from doc.object('ProjectManagement.Code.Presets.PresetClass') as obj";
 
-    private static final String DEFAULT_CLIENT_ID = "openproject";
+    private static final String NORMAL_PRESETS = PRESET_OBJECTS + " where obj.isMultiple = 0";
 
-    private static final DocumentReference DEFAULT_PRESET_REF = new DocumentReference("xwiki", "Preset", "MyPreset");
+    private static final String CHART_PRESETS = PRESET_OBJECTS + " where obj.isMultiple = 1";
 
-    private static final String OTHER_PRESET_ID = "Space.OtherPreset";
+    private static final String NORMAL_CLIENT_PRESETS =
+        PRESET_OBJECTS + " where obj.client = :client and obj.isMultiple = 0";
 
-    private static final DocumentReference OTHER_PRESET_REF = new DocumentReference("xwiki", "Space", "OtherPreset");
+    private static final String CHART_CLIENT_PRESETS =
+        PRESET_OBJECTS + " where obj.client = :client and obj.isMultiple = 1";
 
-    private static final DocumentReference ADMIN_REF = new DocumentReference("xwiki", "XWiki", "Admin");
+    private static final String PRESET_BY_ID = PRESET_OBJECTS + " where obj.id = :presetid";
 
-    private static final DocumentReference USER_REF = new DocumentReference("xwiki", "XWiki", "User");
+    private static final String MAX_ID = "select max(obj.id) from Document as doc, "
+        + "doc.object('ProjectManagement.Code.Presets.PresetClass') as obj where obj.id is not null";
 
-    private static final DocumentReference CONTENT_AUTHOR_REF = new DocumentReference("xwiki", "XWiki", "Author");
+    private static final String CLIENT = "openproject";
+
+    private static final Map<String, Object> CLIENT_PARAMETER = Map.of("client", CLIENT);
+
+    private static final Map<String, Object> ID_PARAMETER = Map.of("presetid", 10);
+
+    private static final DocumentReference DEFAULT_PRESET = new DocumentReference("xwiki", "Preset", "MyPreset");
+
+    private static final DocumentReference OTHER_PRESET = new DocumentReference("xwiki", "Space", "OtherPreset");
+
+    private static final DocumentReference ADMIN = new DocumentReference("xwiki", "XWiki", "Admin");
+
+    private static final DocumentReference USER = new DocumentReference("xwiki", "XWiki", "User");
+
+    private static final DocumentReference CONTENT_AUTHOR = new DocumentReference("xwiki", "XWiki", "Author");
+
+    private static final String NOT_ADMIN_WARNING = "Ignoring the preset stored on [xwiki:Space.OtherPreset] because "
+        + "its author [xwiki:XWiki.User] doesn't have administration right on the wiki.";
+
+    @InjectMockitoOldcore
+    private MockitoOldcore oldcore;
+
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @InjectMockComponents
     private DefaultPresetsManager presetsManager;
@@ -100,312 +121,313 @@ class DefaultPresetsManagerTest
     @MockComponent
     private QueryManager queryManager;
 
-    @MockComponent
-    @Named("current")
-    private DocumentReferenceResolver<String> resolver;
-
-    @MockComponent
-    private ContextualAuthorizationManager contextualAuthorizationManager;
-
-    @MockComponent
-    private Provider<XWikiContext> contextProvider;
-
-    @Mock
-    private XWikiContext context;
-
-    @Mock
-    private XWiki xWiki;
-
-    @Mock
-    private XWikiDocument document;
-
-    @Mock
-    private Query query;
-
-    @MockComponent
-    private AuthorizationManager authorizationManager;
-
-    @MockComponent
-    @Named("document")
-    private UserReferenceSerializer<DocumentReference> documentUserSerializer;
-
-    private final List<QueryFilter> queryFilters = new ArrayList<>();
-
-    private List<Object> queryResults = Collections.singletonList(DEFAULT_PRESET_ID);
-
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.contextProvider.get()).thenReturn(this.context);
-        when(this.context.getWiki()).thenReturn(this.xWiki);
-        when(this.resolver.resolve(DEFAULT_PRESET_ID)).thenReturn(DEFAULT_PRESET_REF);
-        when(this.xWiki.getDocument(DEFAULT_PRESET_REF, this.context)).thenReturn(this.document);
-        BaseObject baseObject = new BaseObject();
-        baseObject.setStringValue("name", "default");
-        when(this.document.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject);
-        when(this.document.getDocumentReference()).thenReturn(DEFAULT_PRESET_REF);
-        mockAuthor(this.document, ADMIN_REF);
-        when(this.authorizationManager.hasAccess(Right.ADMIN, ADMIN_REF, DEFAULT_PRESET_REF.getWikiReference()))
+        XWikiContext context = this.oldcore.getXWikiContext();
+        context.setUserReference(USER);
+        // The current content author is the author of the page holding the macro that uses the preset.
+        XWikiDocument macroPage = new XWikiDocument(new DocumentReference("xwiki", "Space", "MacroPage"));
+        macroPage.setContentAuthorReference(CONTENT_AUTHOR);
+        context.setDoc(macroPage);
+
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.ADMIN, ADMIN, new WikiReference("xwiki")))
             .thenReturn(true);
-
-        when(this.context.getAuthorReference()).thenReturn(CONTENT_AUTHOR_REF);
-        when(this.authorizationManager.hasAccess(eq(Right.VIEW), eq(CONTENT_AUTHOR_REF), any())).thenReturn(true);
-        when(this.contextualAuthorizationManager.hasAccess(eq(Right.VIEW), any())).thenReturn(true);
-
-        when(this.queryManager.createQuery(any(), any())).thenReturn(query);
-        when(this.query.setOffset(anyInt())).thenReturn(this.query);
-        when(this.query.setLimit(anyInt())).thenReturn(this.query);
-        when(this.query.bindValue(any(), any())).thenReturn(this.query);
-        when(this.query.addFilter(any())).thenAnswer(invocation -> {
-            this.queryFilters.add(invocation.getArgument(0));
-            return this.query;
-        });
-        // Apply the filters added to the query, like the query executor does.
-        when(this.query.execute()).thenAnswer(invocation -> {
-            List<Object> results = new ArrayList<>(this.queryResults);
-            for (QueryFilter filter : this.queryFilters) {
-                results = filter.filterResults(results);
-            }
-            return results;
-        });
+        savePreset(DEFAULT_PRESET, ADMIN, "default");
     }
 
-    private void mockQueryResults(List<Object> results)
+    private void savePreset(DocumentReference reference, DocumentReference author, String name) throws Exception
     {
-        this.queryResults = results;
+        XWikiContext context = this.oldcore.getXWikiContext();
+        XWikiDocument document = new XWikiDocument(reference);
+        UserReferenceResolver<DocumentReference> userResolver =
+            this.componentManager.getInstance(UserReferenceResolver.TYPE_DOCUMENT_REFERENCE, "document");
+        document.getAuthors().setEffectiveMetadataAuthor(userResolver.resolve(author));
+        BaseObject preset = document.newXObject(Preset.REFERENCE, context);
+        preset.setIntValue(Preset.FIELD_ID, 10);
+        preset.setStringValue(Preset.FIELD_NAME, name);
+        preset.setStringValue(Preset.FIELD_CLIENT, CLIENT);
+        this.oldcore.getSpyXWiki().saveDocument(document, context);
+        // By default, both the current user and the current content author can view the preset.
+        setViewableByCurrentUser(reference, true);
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.VIEW, CONTENT_AUTHOR, reference))
+            .thenReturn(true);
+    }
+
+    private void setViewableByCurrentUser(DocumentReference reference, boolean viewable)
+    {
+        when(this.oldcore.getMockContextualAuthorizationManager().hasAccess(Right.VIEW, reference))
+            .thenReturn(viewable);
+    }
+
+    /**
+     * Answers the given statement with the given rows (page names, as selected by the document filter), but only when
+     * it is executed with the given parameters and pagination. Like the store's query executor, the result filters
+     * added to the query are applied to the rows.
+     */
+    private void stubQuery(String statement, Map<String, Object> parameters, int offset, int limit,
+        Object... rows) throws QueryException
+    {
+        when(this.queryManager.createQuery(statement, Query.XWQL))
+            .thenReturn(new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+            {
+                @Override
+                @SuppressWarnings("unchecked")
+                public <T> List<T> execute(Query query)
+                {
+                    if (!parameters.equals(query.getNamedParameters()) || query.getOffset() != offset
+                        || query.getLimit() != limit)
+                    {
+                        return Collections.emptyList();
+                    }
+                    List<Object> results = new ArrayList<>(List.of(rows));
+                    for (QueryFilter filter : query.getFilters()) {
+                        results = filter.filterResults(results);
+                    }
+                    return (List<T>) results;
+                }
+            }));
+    }
+
+    private void stubFailingQuery(String statement) throws QueryException
+    {
+        when(this.queryManager.createQuery(statement, Query.XWQL))
+            .thenReturn(new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+            {
+                @Override
+                public <T> List<T> execute(Query query) throws QueryException
+                {
+                    throw new QueryException("Store failure", query, null);
+                }
+            }));
+    }
+
+    private static List<String> names(List<Preset> presets)
+    {
+        return presets.stream().map(Preset::getName).collect(Collectors.toList());
     }
 
     @Test
-    void getNormalPresets() throws QueryException
+    void getNormalPresets() throws Exception
     {
-        List<Preset> presets = this.presetsManager.getPresets(false, 0, 10);
-        assertQueryContains("isMultiple = 0");
-        assertEquals(1, presets.size());
+        stubQuery(NORMAL_PRESETS, Map.of(), 20, 10, "Preset.MyPreset");
+
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 20, 10)));
     }
 
     @Test
-    void getChartPresets() throws QueryException
+    void getChartPresets() throws Exception
     {
-        List<Preset> presets = this.presetsManager.getPresets(true, 0, 10);
-        assertQueryContains("isMultiple = 1");
-        assertEquals(1, presets.size());
+        stubQuery(CHART_PRESETS, Map.of(), 20, 10, "Preset.MyPreset");
+
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(true, 20, 10)));
     }
 
     @Test
-    void getPresetsWhenNoneExist() throws QueryException
+    void getPresetsWhenNoneExist() throws Exception
     {
-        mockQueryResults(Collections.emptyList());
-        List<Preset> presets = this.presetsManager.getPresets(true, 0, 10);
-        assertEquals(0, presets.size());
+        stubQuery(CHART_PRESETS, Map.of(), 0, 10);
+
+        assertEquals(List.of(), this.presetsManager.getPresets(true, 0, 10));
     }
 
     @Test
-    void getPresetsWhenTheQueryFails() throws QueryException
+    void getPresetsWhenTheQueryFails() throws Exception
     {
-        when(this.query.execute()).thenThrow(QueryException.class);
+        stubFailingQuery(CHART_PRESETS);
+
         RuntimeException exception =
             assertThrows(RuntimeException.class, () -> this.presetsManager.getPresets(true, 0, 10));
         assertInstanceOf(QueryException.class, exception.getCause());
     }
 
     @Test
-    void getNormalClientPresets() throws QueryException
+    void getNormalClientPresets() throws Exception
     {
-        List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, false, 0, 10);
-        assertQueryContains("isMultiple = 0");
-        verify(this.query).bindValue(any(), eq(DEFAULT_CLIENT_ID));
-        assertEquals(1, presets.size());
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 20, 10, "Preset.MyPreset");
+
+        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, false, 20, 10)));
     }
 
     @Test
-    void getChartClientPresets() throws QueryException
+    void getChartClientPresets() throws Exception
     {
-        List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, true, 0, 10);
-        assertQueryContains("isMultiple = 1");
-        verify(this.query).bindValue(any(), eq(DEFAULT_CLIENT_ID));
-        assertEquals(1, presets.size());
+        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 20, 10, "Preset.MyPreset");
+
+        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, true, 20, 10)));
     }
 
     @Test
-    void getPresetById()
+    void getClientPresetsWhenNoneExist() throws Exception
     {
-        Preset preset = this.presetsManager.getPreset(10);
-        verify(this.query).bindValue(any(String.class), eq(10));
-        assertNotNull(preset);
+        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10);
+
+        assertEquals(List.of(), this.presetsManager.getClientPresets(CLIENT, true, 0, 10));
     }
 
     @Test
-    void getPresetReturnsNullWhenNotFound() throws QueryException
+    void getClientPresetsWhenTheQueryFails() throws Exception
     {
-        mockQueryResults(Collections.emptyList());
-        Preset preset = this.presetsManager.getPreset(10);
-        verify(this.query).bindValue(any(String.class), eq(10));
-        assertNull(preset);
-    }
+        stubFailingQuery(NORMAL_CLIENT_PRESETS);
 
-    @Test
-    void getPresetWhenTheQueryFails() throws QueryException
-    {
-        when(this.query.execute()).thenThrow(QueryException.class);
         RuntimeException exception =
-            assertThrows(RuntimeException.class, () -> this.presetsManager.getPreset(10));
+            assertThrows(RuntimeException.class, () -> this.presetsManager.getClientPresets(CLIENT, false, 0, 10));
         assertInstanceOf(QueryException.class, exception.getCause());
     }
 
     @Test
-    void getNextIdIncrementsTheMaxExistingId() throws QueryException
+    void getPresetById() throws Exception
     {
-        int maxExistingId = 10;
-        mockQueryResults(Collections.singletonList(maxExistingId));
-        Integer id = this.presetsManager.getNextId();
-        assertEquals(maxExistingId + 1, id);
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Preset.MyPreset");
+
+        Preset preset = this.presetsManager.getPreset(10);
+
+        assertEquals("default", preset.getName());
+        assertEquals(10, preset.getId());
+        assertEquals(CLIENT, preset.getClient());
     }
 
     @Test
-    void getNextIdWithNoExistingPreset() throws QueryException
+    void getPresetReturnsNullWhenNotFound() throws Exception
     {
-        mockQueryResults(Collections.emptyList());
-        Integer id = this.presetsManager.getNextId();
-        assertEquals(1, id);
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0);
+
+        assertNull(this.presetsManager.getPreset(10));
     }
 
     @Test
-    void getNextIdWhenTheQueryFails() throws QueryException
+    void getPresetReturnsNullWhenThePageHasNoPresetObject() throws Exception
     {
-        when(this.query.execute()).thenThrow(QueryException.class);
+        this.oldcore.getSpyXWiki().saveDocument(new XWikiDocument(OTHER_PRESET), this.oldcore.getXWikiContext());
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Space.OtherPreset");
+
+        assertNull(this.presetsManager.getPreset(10));
+    }
+
+    @Test
+    void getPresetWhenTheQueryFails() throws Exception
+    {
+        stubFailingQuery(PRESET_BY_ID);
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> this.presetsManager.getPreset(10));
+        assertInstanceOf(QueryException.class, exception.getCause());
+    }
+
+    @Test
+    void getNextIdIncrementsTheMaxExistingId() throws Exception
+    {
+        stubQuery(MAX_ID, Map.of(), 0, 0, 10);
+
+        assertEquals(11, this.presetsManager.getNextId());
+    }
+
+    @Test
+    void getNextIdWithNoExistingPreset() throws Exception
+    {
+        stubQuery(MAX_ID, Map.of(), 0, 0);
+
+        assertEquals(1, this.presetsManager.getNextId());
+    }
+
+    @Test
+    void getNextIdWhenTheQueryFails() throws Exception
+    {
+        stubFailingQuery(MAX_ID);
+
         RuntimeException exception = assertThrows(RuntimeException.class, () -> this.presetsManager.getNextId());
         assertInstanceOf(QueryException.class, exception.getCause());
-    }
-
-    private void assertQueryContains(String contains) throws QueryException
-    {
-        ArgumentCaptor<String> argument = ArgumentCaptor.forClass(String.class);
-        verify(this.queryManager).createQuery(argument.capture(), any());
-        assertThat(argument.getValue(), containsString(contains));
     }
 
     @Test
     void getPresetIgnoresPresetWhoseAuthorIsNotAdmin() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
-        mockQueryResults(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+        savePreset(OTHER_PRESET, USER, "other");
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
-        Preset preset = this.presetsManager.getPreset(10);
-
-        assertEquals("default", preset.getName());
-        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
-            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+        assertEquals("default", this.presetsManager.getPreset(10).getName());
+        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
     }
 
     @Test
     void getPresetReturnsNullWhenOnlyPresetAuthorIsNotAdmin() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
-        mockQueryResults(List.of(OTHER_PRESET_ID));
+        savePreset(OTHER_PRESET, USER, "other");
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Space.OtherPreset");
 
         assertNull(this.presetsManager.getPreset(10));
-        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
-            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getPresetsIgnoresPresetsWhoseAuthorIsNotAdmin() throws Exception
+    {
+        savePreset(OTHER_PRESET, USER, "other");
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 10, "Space.OtherPreset", "Preset.MyPreset");
+
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 0, 10)));
+        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
     }
 
     @Test
     void getClientPresetsIgnoresPresetsWhoseAuthorIsNotAdmin() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, USER_REF, "other");
-        mockQueryResults(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+        savePreset(OTHER_PRESET, USER, "other");
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10, "Space.OtherPreset", "Preset.MyPreset");
 
-        List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, false, 0, 10);
-
-        assertEquals(1, presets.size());
-        assertEquals("default", presets.get(0).getName());
-        assertEquals("Ignoring the preset stored on [xwiki:Space.OtherPreset] because its author [xwiki:XWiki.User] "
-            + "doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, false, 0, 10)));
+        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
     }
 
     @Test
     void getPresetsOnlyReturnsPresetsTheCurrentUserCanView() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, ADMIN_REF, "other");
-        when(this.authorizationManager.hasAccess(Right.ADMIN, ADMIN_REF, OTHER_PRESET_REF.getWikiReference()))
-            .thenReturn(true);
-        when(this.contextualAuthorizationManager.hasAccess(Right.VIEW, OTHER_PRESET_REF)).thenReturn(false);
-        mockQueryResults(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+        savePreset(OTHER_PRESET, ADMIN, "other");
+        setViewableByCurrentUser(OTHER_PRESET, false);
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 10, "Space.OtherPreset", "Preset.MyPreset");
 
-        List<Preset> presets = this.presetsManager.getPresets(false, 0, 10);
-
-        assertEquals(List.of("default"), presets.stream().map(Preset::getName).collect(Collectors.toList()));
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 0, 10)));
     }
 
     @Test
     void getClientPresetsOnlyReturnsPresetsTheCurrentUserCanView() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, ADMIN_REF, "other");
-        when(this.authorizationManager.hasAccess(Right.ADMIN, ADMIN_REF, OTHER_PRESET_REF.getWikiReference()))
-            .thenReturn(true);
-        when(this.contextualAuthorizationManager.hasAccess(Right.VIEW, DEFAULT_PRESET_REF)).thenReturn(false);
-        mockQueryResults(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+        savePreset(OTHER_PRESET, ADMIN, "other");
+        setViewableByCurrentUser(DEFAULT_PRESET, false);
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10, "Space.OtherPreset", "Preset.MyPreset");
 
-        List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, false, 0, 10);
-
-        assertEquals(List.of("other"), presets.stream().map(Preset::getName).collect(Collectors.toList()));
+        assertEquals(List.of("other"), names(this.presetsManager.getClientPresets(CLIENT, false, 0, 10)));
     }
 
     @Test
-    void getPresetReturnsNullWhenTheContentAuthorCannotViewIt()
+    void getPresetReturnsNullWhenTheContentAuthorCannotViewIt() throws Exception
     {
-        when(this.authorizationManager.hasAccess(Right.VIEW, CONTENT_AUTHOR_REF, DEFAULT_PRESET_REF))
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.VIEW, CONTENT_AUTHOR, DEFAULT_PRESET))
             .thenReturn(false);
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Preset.MyPreset");
 
         assertNull(this.presetsManager.getPreset(10));
     }
 
     @Test
-    void getPresetDoesNotDependOnTheCurrentUserRights()
+    void getPresetDoesNotDependOnTheCurrentUserRights() throws Exception
     {
-        when(this.contextualAuthorizationManager.hasAccess(eq(Right.VIEW), any())).thenReturn(false);
+        setViewableByCurrentUser(DEFAULT_PRESET, false);
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Preset.MyPreset");
 
-        Preset preset = this.presetsManager.getPreset(10);
-
-        assertNotNull(preset);
-        assertEquals("default", preset.getName());
+        assertEquals("default", this.presetsManager.getPreset(10).getName());
     }
 
     @Test
     void getPresetDoesNotFallBackOnAnotherPresetWhenTheContentAuthorCannotViewTheFirstOne() throws Exception
     {
-        mockPresetDocument(OTHER_PRESET_ID, OTHER_PRESET_REF, ADMIN_REF, "other");
-        when(this.authorizationManager.hasAccess(Right.ADMIN, ADMIN_REF, OTHER_PRESET_REF.getWikiReference()))
-            .thenReturn(true);
-        when(this.authorizationManager.hasAccess(Right.VIEW, CONTENT_AUTHOR_REF, OTHER_PRESET_REF))
+        savePreset(OTHER_PRESET, ADMIN, "other");
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.VIEW, CONTENT_AUTHOR, OTHER_PRESET))
             .thenReturn(false);
-        mockQueryResults(List.of(OTHER_PRESET_ID, DEFAULT_PRESET_ID));
+        stubQuery(PRESET_BY_ID, ID_PARAMETER, 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
         assertNull(this.presetsManager.getPreset(10));
-    }
-
-    private XWikiDocument mockPresetDocument(String serializedReference, DocumentReference reference,
-        DocumentReference author, String name) throws Exception
-    {
-        XWikiDocument presetDocument = mock(XWikiDocument.class);
-        when(this.resolver.resolve(serializedReference)).thenReturn(reference);
-        when(this.xWiki.getDocument(reference, this.context)).thenReturn(presetDocument);
-        BaseObject baseObject = new BaseObject();
-        baseObject.setStringValue("name", name);
-        when(presetDocument.getXObject(any(LocalDocumentReference.class))).thenReturn(baseObject);
-        when(presetDocument.getDocumentReference()).thenReturn(reference);
-        mockAuthor(presetDocument, author);
-        return presetDocument;
-    }
-
-    private void mockAuthor(XWikiDocument document, DocumentReference author)
-    {
-        DocumentAuthors authors = mock(DocumentAuthors.class);
-        UserReference userReference = mock(UserReference.class);
-        when(document.getAuthors()).thenReturn(authors);
-        when(authors.getEffectiveMetadataAuthor()).thenReturn(userReference);
-        when(this.documentUserSerializer.serialize(userReference)).thenReturn(author);
     }
 }

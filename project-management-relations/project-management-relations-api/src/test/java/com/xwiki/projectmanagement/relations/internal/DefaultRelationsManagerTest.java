@@ -19,234 +19,310 @@
  */
 package com.xwiki.projectmanagement.relations.internal;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
-
-import javax.inject.Named;
-import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.query.Query;
 import org.xwiki.query.QueryException;
+import org.xwiki.query.QueryExecutor;
 import org.xwiki.query.QueryManager;
+import org.xwiki.query.internal.DefaultQuery;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
-import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xpn.xwiki.test.MockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link DefaultRelationsManager}.
+ * Unit tests for {@link DefaultRelationsManager}, on pages stored in the wiki.
  *
  * @version $Id$
  */
-@ComponentTest
+@OldcoreTest
+@ReferenceComponentList
 class DefaultRelationsManagerTest
 {
-    private static final DocumentReference PAGE = new DocumentReference("wiki", List.of("A", "B"), "WebHome");
+    private static final String RELATIONS = "from doc.object('ProjectManagement.Code.RelationClass') as obj ";
 
-    private static final DocumentReference ANCESTOR = new DocumentReference("wiki", "A", "WebHome");
+    // Only the space home pages of the parent spaces are ancestors: the other pages of these spaces (e.g. A.B.Child
+    // or A.Sibling for A.B.WebHome) are children or siblings.
+    private static final String ANCESTORS = RELATIONS + "where doc.space in (:ancestorList) and doc.name = 'WebHome'";
+
+    private static final String ANCESTORS_WITH_RELATIONS = ANCESTORS + " order by length(doc.space) desc";
+
+    private static final String ANCESTORS_WITH_CLIENT_RELATION =
+        ANCESTORS + " and obj.client = :client order by length(doc.space) desc";
+
+    private static final DocumentReference PAGE = new DocumentReference("xwiki", List.of("A", "B"), "WebHome");
+
+    private static final DocumentReference ANCESTOR = new DocumentReference("xwiki", "A", "WebHome");
+
+    private static final String SUBWIKI = "subwiki";
+
+    private static final DocumentReference SUBWIKI_PAGE = new DocumentReference(SUBWIKI, List.of("A", "B"), "WebHome");
+
+    private static final DocumentReference SUBWIKI_ANCESTOR = new DocumentReference(SUBWIKI, "A", "WebHome");
+
+    private static final List<String> ANCESTOR_SPACES = List.of("A", "A.B");
 
     private static final String CLIENT = "openproject";
 
-    @RegisterExtension
-    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+    private static final String OTHER_CLIENT = "other";
+
+    @InjectMockitoOldcore
+    private MockitoOldcore oldcore;
 
     @InjectMockComponents
     private DefaultRelationsManager relationsManager;
 
     @MockComponent
-    private Provider<XWikiContext> contextProvider;
-
-    @MockComponent
     private QueryManager queryManager;
 
-    @MockComponent
-    private DocumentReferenceResolver<String> documentReferenceResolver;
-
-    @MockComponent
-    @Named("local")
-    private EntityReferenceSerializer<String> serializer;
-
-    private XWikiContext context;
-
-    private XWiki wiki;
-
-    private XWikiDocument page;
-
-    private Query query;
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @BeforeEach
     void setUp() throws Exception
     {
-        this.context = mock(XWikiContext.class);
-        this.wiki = mock(XWiki.class);
-        when(this.contextProvider.get()).thenReturn(this.context);
-        when(this.context.getWiki()).thenReturn(this.wiki);
+        // The store finds nothing for the queries not stubbed by the test.
+        when(this.queryManager.createQuery(anyString(), eq(Query.XWQL)))
+            .thenAnswer(invocation -> answer(invocation.getArgument(0), Map.of()));
+    }
 
-        this.page = mockDocument(PAGE);
+    /**
+     * Saves the given page with one relation per given client, each relation having the page space and its client as
+     * work item (e.g. {@code B-openproject}).
+     */
+    private XWikiDocument savePage(DocumentReference reference, String... clients) throws Exception
+    {
+        XWikiContext context = this.oldcore.getXWikiContext();
+        XWikiDocument document = new XWikiDocument(reference);
+        for (String client : clients) {
+            BaseObject relation = document.newXObject(ProjectManagementRelation.CLASS_REFERENCE, context);
+            relation.setStringValue(ProjectManagementRelation.FIELD_CLIENT, client);
+            relation.setStringValue(ProjectManagementRelation.FIELD_WORK_ITEM,
+                reference.getLastSpaceReference().getName() + "-" + client);
+        }
+        this.oldcore.getSpyXWiki().saveDocument(document, context);
+        return document;
+    }
 
-        this.query = mock(Query.class);
-        when(this.queryManager.createQuery(anyString(), eq(Query.XWQL))).thenReturn(this.query);
-        when(this.query.bindValue(anyString(), any())).thenReturn(this.query);
-        when(this.query.setLimit(1)).thenReturn(this.query);
-        when(this.query.execute()).thenReturn(List.of());
+    /**
+     * Answers the ancestor lookup query with the given rows (local page references of the main wiki), but only when it
+     * is executed on the main wiki with the given parameters and limited to one result.
+     */
+    private void stubAncestorQuery(String statement, Map<String, Object> parameters, String... rows)
+        throws QueryException
+    {
+        when(this.queryManager.createQuery(statement, Query.XWQL)).thenReturn(answer(statement, parameters, rows));
+    }
+
+    private Query answer(String statement, Map<String, Object> parameters, String... rows)
+    {
+        return answer(statement, "xwiki", parameters, rows);
+    }
+
+    private Query answer(String statement, String pagesWiki, Map<String, Object> parameters, String... rows)
+    {
+        return new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+        {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> List<T> execute(Query query)
+            {
+                // A query is executed on the current wiki unless another wiki is set.
+                String wiki = query.getWiki() != null ? query.getWiki()
+                    : DefaultRelationsManagerTest.this.oldcore.getXWikiContext().getWikiId();
+                if (!pagesWiki.equals(wiki) || !parameters.equals(query.getNamedParameters())
+                    || query.getLimit() != 1)
+                {
+                    return Collections.emptyList();
+                }
+                return (List<T>) List.of(rows);
+            }
+        });
+    }
+
+    private void stubFailingQuery(String statement) throws QueryException
+    {
+        when(this.queryManager.createQuery(statement, Query.XWQL))
+            .thenReturn(new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+            {
+                @Override
+                public <T> List<T> execute(Query query) throws QueryException
+                {
+                    throw new QueryException("error", query, null);
+                }
+            }));
+    }
+
+    private static List<String> workItems(List<ProjectManagementRelation> relations)
+    {
+        return relations.stream().map(ProjectManagementRelation::getWorkItem).collect(Collectors.toList());
     }
 
     @Test
-    void getRelationsOfThePage()
+    void getRelationsOfThePage() throws Exception
     {
-        BaseObject relation = relationObject(PAGE);
-        when(this.page.getXObjects(ProjectManagementRelation.CLASS_REFERENCE)).thenReturn(List.of(relation));
+        savePage(PAGE, CLIENT, OTHER_CLIENT);
 
-        assertEquals(List.of(relation), xobjects(this.relationsManager.getRelations(PAGE, true)));
+        assertEquals(List.of("B-openproject", "B-other"),
+            workItems(this.relationsManager.getRelations(PAGE, true)));
     }
 
     @Test
-    void getRelationsWithoutRelationsAndWithoutAncestorLookup()
+    void getRelationsWithoutRelationsAndWithoutAncestorLookup() throws Exception
     {
+        savePage(ANCESTOR, CLIENT);
+        stubAncestorQuery(ANCESTORS_WITH_RELATIONS, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome");
+
         assertEquals(List.of(), this.relationsManager.getRelations(PAGE, false));
     }
 
     @Test
-    void getRelationsWhenNoAncestorHasRelations()
+    void getRelationsWhenNoAncestorHasRelations() throws Exception
     {
+        stubAncestorQuery(ANCESTORS_WITH_RELATIONS, Map.of("ancestorList", ANCESTOR_SPACES));
+
         assertEquals(List.of(), this.relationsManager.getRelations(PAGE, true));
     }
 
     @Test
     void getRelationsOfTheClosestAncestorWithRelations() throws Exception
     {
-        when(this.query.execute()).thenReturn(List.of("A.WebHome"));
-        when(this.documentReferenceResolver.resolve("A.WebHome")).thenReturn(ANCESTOR);
-        XWikiDocument ancestor = mockDocument(ANCESTOR);
-        BaseObject relation = relationObject(ANCESTOR);
-        when(ancestor.getXObjects(ProjectManagementRelation.CLASS_REFERENCE)).thenReturn(List.of(relation));
+        savePage(ANCESTOR, CLIENT);
+        stubAncestorQuery(ANCESTORS_WITH_RELATIONS, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome");
 
-        assertEquals(List.of(relation), xobjects(this.relationsManager.getRelations(PAGE, true)));
+        assertEquals(List.of("A-openproject"), workItems(this.relationsManager.getRelations(PAGE, true)));
     }
 
     @Test
-    void getRelationsSkipsTheRemovedObjects()
+    void getRelationsOfTheAncestorInTheSubwikiOfThePage() throws Exception
     {
-        // The lists of xobjects keep a null entry in place of each removed object.
-        BaseObject relation = relationObject(PAGE);
-        when(this.page.getXObjects(ProjectManagementRelation.CLASS_REFERENCE))
-            .thenReturn(Arrays.asList(null, relation));
+        this.oldcore.getXWikiContext().setWikiId(SUBWIKI);
+        savePage(SUBWIKI_ANCESTOR, CLIENT);
+        // The main wiki has a page with the same local reference.
+        savePage(ANCESTOR, OTHER_CLIENT);
+        when(this.queryManager.createQuery(ANCESTORS_WITH_RELATIONS, Query.XWQL)).thenReturn(
+            answer(ANCESTORS_WITH_RELATIONS, SUBWIKI, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome"));
 
-        assertEquals(List.of(relation), xobjects(this.relationsManager.getRelations(PAGE, true)));
+        assertEquals(List.of("A-openproject"), workItems(this.relationsManager.getRelations(SUBWIKI_PAGE, true)));
+    }
+
+    @Test
+    void getClientRelationOfTheAncestorInTheWikiOfThePageFromAnotherWiki() throws Exception
+    {
+        // The current wiki is the main wiki, but the page is in a subwiki.
+        savePage(SUBWIKI_ANCESTOR, CLIENT);
+        savePage(ANCESTOR, CLIENT);
+        when(this.queryManager.createQuery(ANCESTORS_WITH_CLIENT_RELATION, Query.XWQL))
+            .thenReturn(answer(ANCESTORS_WITH_CLIENT_RELATION, SUBWIKI,
+                Map.of("ancestorList", ANCESTOR_SPACES, "client", CLIENT), "A.WebHome"));
+
+        ProjectManagementRelation relation = this.relationsManager.getClientRelation(SUBWIKI_PAGE, CLIENT, true);
+
+        assertEquals(SUBWIKI_ANCESTOR, relation.getXobject().getDocumentReference());
+    }
+
+    @Test
+    void getRelationsSkipsTheRemovedObjects() throws Exception
+    {
+        XWikiDocument page = savePage(PAGE, OTHER_CLIENT, CLIENT);
+        // The list of xobjects keeps a null entry in place of each removed object.
+        page.removeXObject(page.getXObject(ProjectManagementRelation.CLASS_REFERENCE, 0));
+        this.oldcore.getSpyXWiki().saveDocument(page, this.oldcore.getXWikiContext());
+
+        assertEquals(List.of("B-openproject"), workItems(this.relationsManager.getRelations(PAGE, true)));
     }
 
     @Test
     void getRelationsOfTheAncestorWhenAllTheRelationsOfThePageWereRemoved() throws Exception
     {
-        when(this.page.getXObjects(ProjectManagementRelation.CLASS_REFERENCE)).thenReturn(Arrays.asList(null, null));
-        when(this.query.execute()).thenReturn(List.of("A.WebHome"));
-        when(this.documentReferenceResolver.resolve("A.WebHome")).thenReturn(ANCESTOR);
-        XWikiDocument ancestor = mockDocument(ANCESTOR);
-        BaseObject relation = relationObject(ANCESTOR);
-        when(ancestor.getXObjects(ProjectManagementRelation.CLASS_REFERENCE)).thenReturn(List.of(relation));
+        XWikiDocument page = savePage(PAGE, CLIENT);
+        page.removeXObjects(ProjectManagementRelation.CLASS_REFERENCE);
+        this.oldcore.getSpyXWiki().saveDocument(page, this.oldcore.getXWikiContext());
+        savePage(ANCESTOR, OTHER_CLIENT);
+        stubAncestorQuery(ANCESTORS_WITH_RELATIONS, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome");
 
-        assertEquals(List.of(relation), xobjects(this.relationsManager.getRelations(PAGE, true)));
+        assertEquals(List.of("A-other"), workItems(this.relationsManager.getRelations(PAGE, true)));
     }
 
     @Test
     void getRelationsWhenTheAncestorLookupFails() throws Exception
     {
-        when(this.query.execute()).thenThrow(new QueryException("error", this.query, null));
+        stubFailingQuery(ANCESTORS_WITH_RELATIONS);
 
         assertEquals(List.of(), this.relationsManager.getRelations(PAGE, true));
-        assertEquals("Failed to retrieve the relation objects for the document [wiki:A.B.WebHome].",
+        assertEquals("Failed to retrieve the relation objects for the document [xwiki:A.B.WebHome].",
             this.logCapture.getMessage(0));
     }
 
     @Test
-    void getClientRelationOfThePage()
+    void getClientRelationOfThePage() throws Exception
     {
-        BaseObject relation = relationObject(PAGE);
-        when(this.page.getXObject(ProjectManagementRelation.CLASS_REFERENCE, ProjectManagementRelation.FIELD_CLIENT,
-            CLIENT, false)).thenReturn(relation);
+        savePage(PAGE, OTHER_CLIENT, CLIENT);
 
-        assertSame(relation, this.relationsManager.getClientRelation(PAGE, CLIENT, true).getXobject());
+        assertEquals("B-openproject", this.relationsManager.getClientRelation(PAGE, CLIENT, true).getWorkItem());
     }
 
     @Test
-    void getClientRelationWithoutRelationAndWithoutAncestorLookup()
+    void getClientRelationWithoutRelationAndWithoutAncestorLookup() throws Exception
     {
+        savePage(PAGE, OTHER_CLIENT);
+        savePage(ANCESTOR, CLIENT);
+        stubAncestorQuery(ANCESTORS_WITH_CLIENT_RELATION, Map.of("ancestorList", ANCESTOR_SPACES, "client", CLIENT),
+            "A.WebHome");
+
         assertNull(this.relationsManager.getClientRelation(PAGE, CLIENT, false));
     }
 
     @Test
-    void getClientRelationWhenNoAncestorHasOne()
+    void getClientRelationWhenNoAncestorHasOne() throws Exception
     {
+        stubAncestorQuery(ANCESTORS_WITH_CLIENT_RELATION, Map.of("ancestorList", ANCESTOR_SPACES, "client", CLIENT));
+
         assertNull(this.relationsManager.getClientRelation(PAGE, CLIENT, true));
-        verify(this.query).bindValue("client", CLIENT);
     }
 
     @Test
     void getClientRelationOfTheClosestAncestorWithOneForTheClient() throws Exception
     {
-        when(this.query.execute()).thenReturn(List.of("A.WebHome"));
-        when(this.documentReferenceResolver.resolve("A.WebHome")).thenReturn(ANCESTOR);
-        XWikiDocument ancestor = mockDocument(ANCESTOR);
+        savePage(PAGE, OTHER_CLIENT);
         // The ancestor also has a relation for another client, before the one of the requested client.
-        when(ancestor.getXObject(ProjectManagementRelation.CLASS_REFERENCE)).thenReturn(relationObject(ANCESTOR));
-        BaseObject relation = relationObject(ANCESTOR);
-        when(ancestor.getXObject(ProjectManagementRelation.CLASS_REFERENCE, ProjectManagementRelation.FIELD_CLIENT,
-            CLIENT, false)).thenReturn(relation);
+        savePage(ANCESTOR, OTHER_CLIENT, CLIENT);
+        stubAncestorQuery(ANCESTORS_WITH_CLIENT_RELATION, Map.of("ancestorList", ANCESTOR_SPACES, "client", CLIENT),
+            "A.WebHome");
 
-        assertSame(relation, this.relationsManager.getClientRelation(PAGE, CLIENT, true).getXobject());
+        assertEquals("A-openproject", this.relationsManager.getClientRelation(PAGE, CLIENT, true).getWorkItem());
     }
 
     @Test
     void getClientRelationWhenTheAncestorLookupFails() throws Exception
     {
-        when(this.query.execute()).thenThrow(new QueryException("error", this.query, null));
+        stubFailingQuery(ANCESTORS_WITH_CLIENT_RELATION);
 
         assertNull(this.relationsManager.getClientRelation(PAGE, CLIENT, true));
-        assertEquals("Failed to retrieve the relation object for the document [wiki:A.B.WebHome].",
+        assertEquals("Failed to retrieve the relation object for the document [xwiki:A.B.WebHome].",
             this.logCapture.getMessage(0));
-    }
-
-    private XWikiDocument mockDocument(DocumentReference reference) throws Exception
-    {
-        XWikiDocument document = mock(XWikiDocument.class);
-        when(document.getDocumentReference()).thenReturn(reference);
-        when(this.wiki.getDocument(reference, this.context)).thenReturn(document);
-        return document;
-    }
-
-    private BaseObject relationObject(DocumentReference owner)
-    {
-        BaseObject relation = new BaseObject();
-        relation.setDocumentReference(owner);
-        return relation;
-    }
-
-    private List<BaseObject> xobjects(List<ProjectManagementRelation> relations)
-    {
-        return relations.stream().map(ProjectManagementRelation::getXobject).collect(Collectors.toList());
     }
 }

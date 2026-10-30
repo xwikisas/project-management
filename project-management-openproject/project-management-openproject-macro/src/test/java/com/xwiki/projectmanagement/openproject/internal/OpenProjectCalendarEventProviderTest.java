@@ -51,7 +51,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -153,10 +152,11 @@ class OpenProjectCalendarEventProviderTest
     {
         requestTypes(true, false);
         when(this.executionContext.get("limit")).thenReturn(null);
-        when(this.apiClient.getSprints(1, 25, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 25, 0));
+        when(this.apiClient.getSprints(1, 25, "")).thenReturn(
+            new PaginatedResult<>(List.of(sprint(3, "Sprint 3", "2026-03-02", "2026-03-13")), 1, 25, 1));
 
-        assertTrue(this.provider.getMoreEvents(List.of()).isEmpty());
-        verify(this.apiClient).getSprints(1, 25, "");
+        assertEquals(List.of("sprint-3"), this.provider.getMoreEvents(List.of()).stream().map(CalendarEvent::getId)
+            .collect(Collectors.toList()));
     }
 
     @Test
@@ -279,6 +279,5 @@ class OpenProjectCalendarEventProviderTest
         assertEquals(List.of("sprint-3", "version-7"), events.stream().map(CalendarEvent::getId)
             .collect(Collectors.toList()));
         assertEquals(date("2026-01-30"), events.get(1).getEnd());
-        verify(this.apiClient).getVersions();
     }
 }

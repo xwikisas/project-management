@@ -1,0 +1,11 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Single displayer test - display a work item whose values hold wiki syntax, HTML and javascript: locations: they
+.# are displayed as text, never interpreted.
+.#-----------------------------------------------------
+{{test workItemsDisplayer="workItemsSingle" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"Hostile<b>~"}]}]}}"/}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>**bold** &#123;&#123;html}}&lt;script&gt;alert('summary')&lt;/script&gt;&#123;&#123;/html}} [[link&gt;&gt;javascript:alert(1)]]</p></div><div class="work-item-header-id"><p>Test work item <span class="wikiexternallink"><a data-xwiki-translated-attribute-href="javascript:alert('identifier')">#Hostile&lt;b&gt;</a></span></p></div></div><div class="row"><div class="col-md-12"><p>Work Item from project:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Type:</td><td class="work-item-property-value">&lt;img src=x onerror=alert('type')&gt;</td></tr><tr><td class="work-item-property-name">Custom field:</td><td class="work-item-property-value">&#123;&#123;html}}&lt;script&gt;alert('custom')&lt;/script&gt;&#123;&#123;/html}}</td></tr></table></div><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Creator:</td><td class="work-item-property-value"><span class="wikiexternallink"><a target="_blank" rel="noopener noreferrer" data-xwiki-translated-attribute-href="javascript:alert('creator')">&lt;i&gt;Creator&lt;/i&gt;</a></span></td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">Description</div><p>&lt;script&gt;alert('description')&lt;/script&gt; &#123;&#123;velocity}}$xcontext&#123;&#123;/velocity}}</p></div></div>

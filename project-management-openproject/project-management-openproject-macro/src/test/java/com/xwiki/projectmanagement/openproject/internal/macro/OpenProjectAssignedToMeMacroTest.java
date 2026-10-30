@@ -20,16 +20,20 @@
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link OpenProjectAssignedToMeMacro}.
@@ -44,6 +48,12 @@ class OpenProjectAssignedToMeMacroTest
 
     @MockComponent
     private OpenProjectIdentifierResolver identifierResolver;
+
+    @MockComponent
+    private OpenProjectAccess openProjectAccess;
+
+    @Mock
+    private OpenProjectApiClient apiClient;
 
     @Test
     void processParametersFiltersTheWorkPackagesAssignedToTheCurrentUser()
@@ -63,14 +73,18 @@ class OpenProjectAssignedToMeMacroTest
     }
 
     @Test
-    void asyncProcessParametersDoesNotResolveSavedQueries()
+    void asyncProcessParametersDoesNotResolveSavedQueries() throws Exception
     {
         OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
+        parameters.setInstance("main");
         parameters.setIdentifier("saved");
+        // The parent macro would add the URL of the results of this saved query.
+        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
         this.macro.asyncProcessParameters(parameters);
 
         assertNull(parameters.getSourceParameters());
-        verifyNoInteractions(this.identifierResolver);
     }
 }

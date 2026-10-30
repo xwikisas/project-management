@@ -73,5 +73,22 @@
       "location": "http://xwiki.com/id/3"
     },
     "resolved": false
+  },
+  {
+    "identifier": {
+      "value": "Hostile<b>",
+      "location": "javascript:alert('identifier')"
+    },
+    "summary": {
+      "value": "**bold** {{html}}<script>alert('summary')</script>{{/html}} [[link>>javascript:alert(1)]]",
+      "location": "javascript:alert('summary')"
+    },
+    "description": "<script>alert('description')</script> {{velocity}}$xcontext{{/velocity}}",
+    "type": "<img src=x onerror=alert('type')>",
+    "creator": {
+      "value": "<i>Creator</i>",
+      "location": "javascript:alert('creator')"
+    },
+    "customField": "{{html}}<script>alert('custom')</script>{{/html}}"
   }
 ]

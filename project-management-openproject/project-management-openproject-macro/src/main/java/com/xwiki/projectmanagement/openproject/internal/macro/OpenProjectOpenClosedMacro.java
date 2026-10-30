@@ -19,19 +19,14 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -43,6 +38,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
@@ -60,6 +56,9 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
 {
     @Inject
     private ContextualLocalizationManager l10n;
+
+    @Inject
+    private Provider<Clock> clockProvider;
 
     /**
      * Default constructor.
@@ -92,7 +91,7 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     {
         if (parameters instanceof OpenProjectOpenClosedMacroParameters) {
             int days = ((OpenProjectOpenClosedMacroParameters) parameters).getDays();
-            String value = getBetweenValue(days);
+            String value = new LastDaysPeriod(days, this.clockProvider.get()).toDateTimeInterval();
             for (List<LiveDataQuery.Filter> filterSet : filters) {
                 filterSet.add(new LiveDataQuery.Filter(WorkItem.KEY_CREATION_DATE, "between", value));
             }
@@ -106,18 +105,5 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     {
         // When there are more work packages than the limit, leave out the oldest ones rather than the newest.
         return List.of(new LiveDataQuery.SortEntry(WorkItem.KEY_CREATION_DATE, true));
-    }
-
-    private String getBetweenValue(int days)
-    {
-        ZoneOffset offset = ZoneId.systemDefault().getRules().getOffset(Instant.now());
-
-        OffsetDateTime end = LocalDate.now().atTime(LocalTime.MAX).atOffset(offset);
-
-        OffsetDateTime start = end.minusDays(days).with(LocalTime.MIDNIGHT);
-
-        String result = start.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) + "/"
-            + end.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-        return result;
     }
 }

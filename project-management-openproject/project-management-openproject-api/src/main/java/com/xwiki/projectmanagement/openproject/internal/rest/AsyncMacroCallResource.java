@@ -20,9 +20,6 @@
 
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -41,8 +38,6 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
-import org.xwiki.livedata.LiveDataConfiguration;
-import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
@@ -58,7 +53,6 @@ import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import org.xwiki.wiki.manager.WikiManagerException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
@@ -81,12 +75,6 @@ public class AsyncMacroCallResource extends XWikiResource
      */
     private static final Pattern WORK_PACKAGE_ID_PATTERN = Pattern.compile("\\d+");
 
-    private static final String CLIENT_ID = "openproject";
-
-    private static final String LIVE_DATA_SOURCE = "projectmanagement";
-
-    private static final String PROPERTIES = "identifier,type,summary,description,startDate,assignees";
-
     private static final String ERROR_MESSAGE = "Failed to display the work package.";
 
     @Inject
@@ -100,8 +88,6 @@ public class AsyncMacroCallResource extends XWikiResource
 
     @Inject
     private WikiDescriptorManager wikiDescriptorManager;
-
-    private final ObjectMapper jsonMapper = new ObjectMapper();
 
     /**
      * @param wiki the wiki that contains the OpenProject instance.
@@ -179,30 +165,12 @@ public class AsyncMacroCallResource extends XWikiResource
         Macro<ProjectManagementAsyncMacroParams> displayerMacro =
             this.componentManager.getInstance(Macro.class, displayer.getMacroHint());
 
-        ProjectManagementMacroParameters parameters = new ProjectManagementMacroParameters();
-        parameters.setWorkItemsDisplayer(displayer);
-        // The Live Data displayers get the work items from the project management Live Data source, and need
-        // properties known to OpenProject, unlike the generic default ones.
-        parameters.setSource(LIVE_DATA_SOURCE);
-        parameters.setProperties(PROPERTIES);
-        // TODO: Would be nicer if we retrieved the translation prefix from the json configuration.
-        parameters.setSourceParameters(String.format("instance=%s&client=%s&translationPrefix=%s", encode(instance),
-            CLIENT_ID, encode(CLIENT_ID + '.')));
-        LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
-        liveDataConfiguration.setQuery(new LiveDataQuery());
-        liveDataConfiguration.getQuery().setFilters(List.of(new LiveDataQuery.Filter("identifier",
-            "=", workPackageId)));
-        String filters = this.jsonMapper.writeValueAsString(liveDataConfiguration);
-        // The work items displayers read the filters from the parameters, the Live Data one from the content.
-        parameters.setFilters(filters);
+        ProjectManagementMacroParameters parameters =
+            WorkPackageDisplayerParameters.create(displayer, instance, workPackageId);
 
         MacroTransformationContext context = new MacroTransformationContext();
-        asyncRenderer.initialize(displayerMacro, parameters, filters, context, null);
+        // The Live Data displayer reads the filters from the content.
+        asyncRenderer.initialize(displayerMacro, parameters, parameters.getFilters(), context, null);
         return asyncRenderer;
-    }
-
-    private static String encode(String value)
-    {
-        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

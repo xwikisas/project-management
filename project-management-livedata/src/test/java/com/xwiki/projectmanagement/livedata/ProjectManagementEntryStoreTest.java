@@ -19,21 +19,25 @@
  */
 package com.xwiki.projectmanagement.livedata;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
-import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveData;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.rendering.renderer.PrintRenderer;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
+import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -45,9 +49,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -69,8 +70,8 @@ class ProjectManagementEntryStoreTest
     @MockComponent
     private ProjectManagementLiveDataDisplayer defaultDisplayer;
 
-    @MockComponent
-    private ComponentManager componentManager;
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @MockComponent
     private ProjectManagementClientExecutionContext clientContext;
@@ -96,13 +97,8 @@ class ProjectManagementEntryStoreTest
 
         // The offset of the Live Data is passed as is.
         when(projectManagementManager.getWorkItems(clientId, 20, 10, filters, sortEntries)).thenReturn(workItemResult);
-        when(componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)).thenReturn(false);
 
         LiveData result = entryStore.get(query);
-
-        // Work item was modified in order to have a nice display.
-        verify(componentManager).hasComponent(ProjectManagementLiveDataDisplayer.class, clientId);
-        verify(defaultDisplayer).display(argThat(list -> list.contains(wi)));
 
         assertEquals(21, result.getCount());
         assertEquals(1, result.getEntries().size());
@@ -112,26 +108,26 @@ class ProjectManagementEntryStoreTest
     }
 
     @Test
-    void getQueryKeepsLocationsOfDisplayedLinkables() throws WorkItemException, LiveDataException
+    void getQueryWithClientDisplayer() throws Exception
     {
         String clientId = "testclient";
         PaginatedResult<WorkItem> workItemResult = new PaginatedResult<>();
         workItemResult.setTotalItems(1);
         WorkItem wi = new WorkItem();
-        wi.setIdentifier(new Linkable("1", "http://xwiki.com/1"));
+        Linkable identifier = new Linkable("1", "http://xwiki.com/1");
+        wi.setIdentifier(identifier);
         workItemResult.getItems().add(wi);
-
         when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenReturn(workItemResult);
-        // The displayer replaces the linkable by its HTML display.
-        doAnswer(invocation -> {
-            wi.put(WorkItem.KEY_IDENTIFIER, "<a href=\"http://xwiki.com/1\">1</a>");
-            return null;
-        }).when(defaultDisplayer).display(any());
+        this.componentManager.registerComponent(ProjectManagementLiveDataDisplayer.class, clientId,
+            new LinkDisplayer());
 
         LiveData result = entryStore.get(createQuery(clientId));
 
+        // The entry shows the display of the client displayer and still exposes the location of the linkable.
         assertEquals("<a href=\"http://xwiki.com/1\">1</a>", result.getEntries().get(0).get(WorkItem.KEY_IDENTIFIER));
         assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
+        // The work item of the client is left unchanged.
+        assertEquals(Map.of(WorkItem.KEY_IDENTIFIER, identifier), wi);
     }
 
     @Test
@@ -171,6 +167,31 @@ class ProjectManagementEntryStoreTest
         Map<String, Object> entry = Map.of(WorkItem.KEY_SUMMARY, "summary");
         assertThrows(UnsupportedOperationException.class, () -> entryStore.save(entry));
         assertThrows(UnsupportedOperationException.class, () -> entryStore.remove("1"));
+    }
+
+    /**
+     * Displays the linkables as HTML links, like the displayers of the real clients.
+     */
+    private static final class LinkDisplayer implements ProjectManagementLiveDataDisplayer
+    {
+        @Override
+        public void display(Collection<WorkItem> workItems)
+        {
+            for (WorkItem workItem : workItems) {
+                workItem.entrySet().forEach(property -> displayProperty(property, workItem, null, null));
+            }
+        }
+
+        @Override
+        public void displayProperty(Map.Entry<String, Object> itemProperty, WorkItem workItem, PrintRenderer renderer,
+            WorkItemPropertyDisplayerManager displayerManager)
+        {
+            if (itemProperty.getValue() instanceof Linkable) {
+                Linkable linkable = (Linkable) itemProperty.getValue();
+                itemProperty.setValue(String.format("<a href=\"%s\">%s</a>", linkable.getLocation(),
+                    linkable.getValue()));
+            }
+        }
     }
 
     private static LiveDataQuery createQuery(String clientId)

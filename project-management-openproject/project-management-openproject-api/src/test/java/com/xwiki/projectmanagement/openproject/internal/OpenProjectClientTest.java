@@ -19,10 +19,13 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -30,8 +33,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import org.mockito.MockedStatic;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.opentest4j.AssertionFailedError;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.ComponentList;
@@ -44,6 +49,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -52,9 +58,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
-import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
-import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
+import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
@@ -66,18 +71,21 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
 /**
  * Unit tests for {@link OpenProjectClient}.
+ * <p>
+ * Each test stubs the OpenProject API with the exact request it expects and asserts the work items that come out of
+ * it. Any other request to the work packages or projects endpoints fails the test with the request that was sent.
  *
  * @version $Id$
  */
@@ -85,9 +93,6 @@ import static org.mockito.Mockito.when;
 @ComponentList(OpenProjectIdentifierResolver.class)
 class OpenProjectClientTest
 {
-    @RegisterExtension
-    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
-
     private static final String QUERY_ID = "27";
 
     private static final String SAVED_QUERY_IDENTIFIER = "http://open-project-instance/work_packages?query_id=27";
@@ -107,6 +112,21 @@ class OpenProjectClientTest
     private static final String MERGED_FILTERS = "[{\"status\":{\"operator\":\"o\",\"values\":[]}},"
         + "{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]";
 
+    private static final String NO_FILTERS = "[]";
+
+    private static final String NO_SORTING = "[]";
+
+    private static final String IDENTIFIER = "identifier";
+
+    /**
+     * The requests that the tests must stub explicitly: they return the work items, or tell where they come from.
+     */
+    private static final Set<String> CHECKED_REQUESTS = Set.of("getWorkPackages", "getProjectWorkPackages",
+        "getQueryWorkPackages", "getQueryResultsUrl", "getProjects");
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @InjectMockComponents
     private OpenProjectClient openProjectClient;
 
@@ -116,150 +136,180 @@ class OpenProjectClientTest
     @MockComponent
     private ProjectManagementClientExecutionContext executionContext;
 
-    @MockComponent
     private OpenProjectApiClient openProjectApiClient;
 
-    private static final Integer NUMBER_OF_WORK_PACKAGES = 10;
-
     @BeforeEach
-    void setUp() throws ProjectManagementException
+    void setUp()
     {
-        when(executionContext.get("instance")).thenReturn("");
-        when(openProjectAccess.resolve(any()))
+        this.openProjectApiClient =
+            mock(OpenProjectApiClient.class, withSettings().defaultAnswer(OpenProjectClientTest::unexpectedRequest));
+        when(this.executionContext.get("instance")).thenReturn("");
+        when(this.openProjectAccess.resolve(any()))
             .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenReturn(
-            generateWorkItems());
-        when(openProjectApiClient.getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
-            anyString())).thenReturn(generateWorkItems());
-        when(openProjectApiClient.getQueryWorkPackages(anyString(), anyInt(), anyInt(), anyString())).thenReturn(
-            generateWorkItems());
     }
 
     @Test
-    void getWorkItemsWithSavedQueryAndNoLivedataFilters() throws ProjectManagementException
+    void getWorkItemsWithoutIdentifier() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
-            .thenReturn(SAVED_QUERY_RESULTS_URL);
+        doReturn(workPackages(1, 2)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
-
-        // The query applies its own filters and sorting.
-        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 10, "");
-        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
-        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("1", "2"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
     }
 
     @Test
     void getWorkItemsConvertsTheOffsetToAnOpenProjectPage() throws ProjectManagementException
     {
-        openProjectClient.getWorkItems(0, 20, List.of(), List.of());
-        openProjectClient.getWorkItems(40, 20, List.of(), List.of());
-        // An offset in the middle of a page retrieves the page that holds it.
-        openProjectClient.getWorkItems(25, 10, List.of(), List.of());
+        doReturn(workPackages(1)).when(this.openProjectApiClient).getWorkPackages(1, 20, NO_FILTERS, NO_SORTING);
+        doReturn(workPackages(41)).when(this.openProjectApiClient).getWorkPackages(3, 20, NO_FILTERS, NO_SORTING);
+        doReturn(workPackages(21)).when(this.openProjectApiClient).getWorkPackages(3, 10, NO_FILTERS, NO_SORTING);
 
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(20), anyString(), anyString());
-        verify(openProjectApiClient).getWorkPackages(eq(3), eq(20), anyString(), anyString());
-        verify(openProjectApiClient).getWorkPackages(eq(3), eq(10), anyString(), anyString());
+        assertEquals(List.of("1"), getIds(this.openProjectClient.getWorkItems(0, 20, List.of(), List.of())));
+        assertEquals(List.of("41"), getIds(this.openProjectClient.getWorkItems(40, 20, List.of(), List.of())));
+        // An offset in the middle of a page retrieves the page that holds it.
+        assertEquals(List.of("21"), getIds(this.openProjectClient.getWorkItems(25, 10, List.of(), List.of())));
+    }
+
+    @Test
+    void getWorkItemsWithIdentifierAsUrl() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages");
+        doReturn(workPackages(3)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        assertEquals(List.of("3"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+    }
+
+    @Test
+    void getWorkItemsWithIdentifierAndProject() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER))
+            .thenReturn("http://open-project-instance/projects/first-project/work_packages");
+        doReturn(workPackages(4)).when(this.openProjectApiClient)
+            .getProjectWorkPackages("first-project", 1, 10, NO_FILTERS, NO_SORTING);
+
+        assertEquals(List.of("4"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+    }
+
+    @Test
+    void getWorkItemsWithIdentifierHoldingFiltersAndSorting() throws ProjectManagementException
+    {
+        String queryProps = "{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}],\"t\":\"id:desc\"}";
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages?query_props="
+            + URLEncoder.encode(queryProps, StandardCharsets.UTF_8));
+        // The livedata filters and sorting are added to the ones of the URL.
+        doReturn(workPackages(5)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(10), argThat(
+            jsonFilters(MERGED_FILTERS)), eq("[[\"subject\",\"asc\"],[\"id\",\"desc\"]]"));
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()),
+            List.of(new LiveDataQuery.SortEntry("summary", false)));
+
+        assertEquals(List.of("5"), getIds(result));
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryAndNoLivedataFilters() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+            .thenReturn(SAVED_QUERY_RESULTS_URL);
+        // The query applies its own filters and sorting, without its results link being read.
+        doReturn(workPackages(1, 2)).when(this.openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 10, "");
+
+        assertEquals(List.of("1", "2"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @Test
     void getWorkItemsWithSavedQueryConvertsTheOffsetToAnOpenProjectPage() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        doReturn(workPackages(31)).when(this.openProjectApiClient).getQueryWorkPackages(QUERY_ID, 3, 15, "");
 
-        openProjectClient.getWorkItems(30, 15, List.of(), List.of());
-
-        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 3, 15, "");
+        assertEquals(List.of("31"), getIds(this.openProjectClient.getWorkItems(30, 15, List.of(), List.of())));
     }
 
     @Test
     void getWorkItemsWithSavedQueryAndLivedataSortingButNoFilters() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        doReturn(workPackages(6)).when(this.openProjectApiClient)
+            .getQueryWorkPackages(QUERY_ID, 1, 10, "[[\"subject\",\"asc\"]]");
 
-        openProjectClient.getWorkItems(0, 10, List.of(), List.of(new LiveDataQuery.SortEntry("summary", false)));
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(),
+            List.of(new LiveDataQuery.SortEntry("summary", false)));
 
-        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 10, "[[\"subject\",\"asc\"]]");
-        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
+        assertEquals(List.of("6"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithSavedQueryAndStoredResultsUrl() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        // The results link was retrieved before the macro execution, so the query isn't read again.
+        when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
             .thenReturn(SAVED_QUERY_RESULTS_URL);
+        // The query is bound to a project, which keeps its scope.
+        doReturn(workPackages(7)).when(this.openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT),
+            eq(1), eq(10), argThat(jsonFilters(MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
 
         PaginatedResult<WorkItem> result =
-            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
-        // The results link was retrieved before the macro execution, so the query isn't read again.
-        verify(openProjectApiClient, never()).getQueryResultsUrl(anyString());
-        verify(openProjectApiClient, never()).getQueryWorkPackages(anyString(), anyInt(), anyInt(), anyString());
-
-        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10),
-            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
-        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("7"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithGlobalSavedQueryAndLivedataFilters() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
             .thenReturn(GLOBAL_SAVED_QUERY_RESULTS_URL);
+        doReturn(workPackages(8)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(10),
+            argThat(jsonFilters(MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
 
         PaginatedResult<WorkItem> result =
-            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
-            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
-        verify(openProjectApiClient, never()).getProjectWorkPackages(anyString(), anyInt(), anyInt(), anyString(),
-            anyString());
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("8"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithSavedQueryWithoutStoredResultsUrl() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(openProjectApiClient.getQueryResultsUrl(QUERY_ID)).thenReturn(SAVED_QUERY_RESULTS_URL);
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        doReturn(SAVED_QUERY_RESULTS_URL).when(this.openProjectApiClient).getQueryResultsUrl(QUERY_ID);
+        doReturn(workPackages(9)).when(this.openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT),
+            eq(1), eq(10), argThat(jsonFilters(MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
 
-        openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+        PaginatedResult<WorkItem> result =
+            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
-        verify(openProjectApiClient).getQueryResultsUrl(QUERY_ID);
-        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10),
-            argThat(actual -> jsonArraysEqualIgnoringOrder(actual, MERGED_FILTERS)), eq(SAVED_QUERY_SORT_BY));
+        assertEquals(List.of("9"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithSavedQueryAndLivedataSorting() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
             .thenReturn(SAVED_QUERY_RESULTS_URL);
+        // The livedata sorting replaces the one of the query.
+        doReturn(workPackages(10)).when(this.openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT),
+            eq(1), eq(10), argThat(jsonFilters(MERGED_FILTERS)), eq("[[\"subject\",\"desc\"]]"));
 
-        openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()),
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()),
             List.of(new LiveDataQuery.SortEntry("summary", true)));
 
-        // The livedata sorting replaces the one of the query.
-        verify(openProjectApiClient).getProjectWorkPackages(eq(SAVED_QUERY_PROJECT), eq(1), eq(10), anyString(),
-            eq("[[\"subject\",\"desc\"]]"));
+        assertEquals(List.of("10"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithSavedQueryWithoutResultsLink() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(openProjectApiClient.getQueryResultsUrl(QUERY_ID)).thenReturn("");
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        doReturn("").when(this.openProjectApiClient).getQueryResultsUrl(QUERY_ID);
 
         PaginatedResult<WorkItem> result =
-            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
-        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
         assertEquals("Failed to retrieve work packages: The saved query [27] has no results link.",
@@ -269,14 +319,13 @@ class OpenProjectClientTest
     @Test
     void getWorkItemsWithSavedQueryAndUnreadableStoredFilters() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
-        when(executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
             .thenReturn("/api/v3/work_packages?filters=%5B%7Bnot-json");
 
         PaginatedResult<WorkItem> result =
-            openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
 
-        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
         assertEquals("Failed to retrieve work packages: Failed to read the filters of the saved query",
@@ -284,56 +333,37 @@ class OpenProjectClientTest
     }
 
     @Test
-    void getWorkItemsWithoutIdentifier() throws ProjectManagementException
-    {
-        assertWorkItems(null, 1, 0, NUMBER_OF_WORK_PACKAGES);
-    }
-
-    @Test
-    void getWorkItemsWithIdentifierAsUrl() throws ProjectManagementException
-    {
-        assertWorkItems("http://open-project-instance/work_packages", 1, 0, NUMBER_OF_WORK_PACKAGES);
-    }
-
-    @Test
     void getWorkItemsWithIdentifierAsIds() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("1,2,3,4,5,6,7,8,9,10");
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("3,1,2");
+        // OpenProject returns the work packages sorted by id.
+        doReturn(workPackages(1, 2, 3)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(3),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"3\",\"1\",\"2\"]}}]")), eq(""));
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
-        verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(),
-            argThat(actual -> jsonEquals(
-                actual,
-                "[{\"id\":{\"operator\":\"=\",\"values\":"
-                    + "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}}]")),
-            anyString()
-        );
-
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("3", "1", "2"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithKeysKeepsTheOrderOfTheIdentifier() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn(" XWIKI-123 , xwiki-456,1911,XWIKI-123,XWIKI-404 ");
-        when(openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
-        when(openProjectApiClient.getWorkPackage("xwiki-456")).thenReturn(createWorkPackage(2));
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(" XWIKI-123 , xwiki-456,1911,XWIKI-123,XWIKI-404 ");
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
+        when(this.openProjectApiClient.getWorkPackage("xwiki-456")).thenReturn(createWorkPackage(2));
         // OpenProject returns the work packages sorted by id.
-        when(openProjectApiClient.getWorkPackages(eq(1), eq(3), argThat(this::isIdFilterOf5And2And1911), eq("")))
-            .thenReturn(new PaginatedResult<>(
-                List.of(createWorkPackage(2), createWorkPackage(5), createWorkPackage(1911)), 1, 3, 3));
+        doReturn(workPackages(2, 5, 1911)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(3),
+            argThat(idFilterOf5And2And1911()), eq(""));
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertEquals(List.of("5", "2", "1911"), getIds(result));
         assertEquals(3, result.getTotalItems());
-        // Each key is resolved only once.
-        verify(openProjectApiClient).getWorkPackage("XWIKI-123");
-        verify(openProjectApiClient).getWorkPackage("XWIKI-404");
+        // Each key is resolved with a single request to OpenProject.
+        verify(this.openProjectApiClient).getWorkPackage("XWIKI-123");
 
         // The work packages are paginated after being ordered.
-        result = openProjectClient.getWorkItems(1, 1, List.of(), List.of());
+        result = this.openProjectClient.getWorkItems(1, 1, List.of(), List.of());
 
         assertEquals(List.of("2"), getIds(result));
         assertEquals(3, result.getTotalItems());
@@ -344,138 +374,121 @@ class OpenProjectClientTest
     @Test
     void getWorkItemsWithKeysSortedByTheLivedata() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("XWIKI-123,XWIKI-456,1911");
-        when(openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
-        when(openProjectApiClient.getWorkPackage("XWIKI-456")).thenReturn(createWorkPackage(2));
-        LiveDataQuery.SortEntry sortEntry = new LiveDataQuery.SortEntry("identifier", true);
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,XWIKI-456,1911");
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-456")).thenReturn(createWorkPackage(2));
+        // The livedata sorting is applied by OpenProject, which paginates the work packages.
+        doReturn(workPackages(1911, 5)).when(this.openProjectApiClient).getWorkPackages(eq(2), eq(10),
+            argThat(idFilterOf5And2And1911()), eq("[[\"id\",\"desc\"]]"));
 
-        openProjectClient.getWorkItems(10, 10, List.of(), List.of(sortEntry));
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(10, 10, List.of(),
+            List.of(new LiveDataQuery.SortEntry(IDENTIFIER, true)));
 
-        verify(openProjectApiClient).getWorkPackages(eq(2), eq(10), argThat(this::isIdFilterOf5And2And1911),
-            eq(OpenProjectSortingHandler.convertSorting(List.of(sortEntry))));
+        assertEquals(List.of("1911", "5"), getIds(result));
     }
 
     @Test
     void getWorkItemsWithUnknownKeys() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("XWIKI-404,XWIKI-405");
+        // The keys don't resolve to any work package, so no work packages are requested.
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-404,XWIKI-405");
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
-        verify(openProjectApiClient, never()).getWorkPackages(anyInt(), anyInt(), anyString(), anyString());
     }
 
     @Test
     void getWorkItemsWithAKeyRejectedByOpenProject() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("XWIKI-123,1911");
-        when(openProjectApiClient.getWorkPackage("XWIKI-123"))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,1911");
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-123"))
             .thenThrow(new WorkItemRetrievalException("Invalid key", 400));
+        doReturn(workPackages(1911)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"1911\"]}}]")), eq(""));
 
-        openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(1),
-            argThat(actual -> jsonEquals(actual, "[{\"id\":{\"operator\":\"=\",\"values\":[\"1911\"]}}]")), eq(""));
-        assertEquals("Failed to resolve the work package key [XWIKI-123]: Invalid key", logCapture.getMessage(0));
+        assertEquals(List.of("1911"), getIds(result));
+        assertEquals("Failed to resolve the work package key [XWIKI-123]: Invalid key", this.logCapture.getMessage(0));
     }
 
     @Test
     void getWorkItemsWithAKeyWhenOpenProjectRejectsTheUser() throws ProjectManagementException
     {
-        when(executionContext.get("identifier")).thenReturn("XWIKI-123");
-        when(openProjectApiClient.getWorkPackage("XWIKI-123"))
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123");
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-123"))
             .thenThrow(new WorkItemRetrievalException("Rejected", 401));
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
+        assertEquals("Rejected", exception.getMessage());
         assertEquals(401, exception.getStatusCode());
     }
 
     @Test
     void getWorkItemsWithAnInvalidIdentifier()
     {
-        when(executionContext.get("identifier")).thenReturn("XWIKI-123,not a key");
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,not a key");
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
+        assertEquals("An error occurred while trying to get the work items", exception.getMessage());
         assertEquals("The provided identifier value is not in a supported format.",
             exception.getCause().getMessage());
     }
 
     @Test
-    void getWorkItemsWithIdentifierAndProject() throws ProjectManagementException
-    {
-        assertWorkItems("http://open-project-instance/projects/first-project/work_packages", 0, 1,
-            NUMBER_OF_WORK_PACKAGES);
-    }
-
-    @Test
     void getWorkItemsLogsBadRequestAndReturnsNothing() throws ProjectManagementException
     {
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
-            WorkPackageRetrievalBadRequestException.class);
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages");
+        doThrow(new WorkPackageRetrievalBadRequestException("Invalid filter")).when(this.openProjectApiClient)
+            .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertWorkItems("http://open-project-instance/work_packages", 1, 0, 0);
-        assertEquals("Failed to retrieve work packages: null", this.logCapture.getMessage(0));
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+
+        assertEquals(0, result.getItems().size());
+        assertEquals(0, result.getTotalItems());
+        assertEquals("Failed to retrieve work packages: Invalid filter", this.logCapture.getMessage(0));
     }
 
     @Test
     void getWorkItemsWrapsProjectManagementException() throws ProjectManagementException
     {
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
-            ProjectManagementException.class);
+        ProjectManagementException failure = new ProjectManagementException("Server error");
+        doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
-    }
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
 
-    @Test
-    void getWorkPackagesWithBadFiltersOrSortingJsonRepresentation()
-    {
-        try (
-            MockedStatic<OpenProjectFilterHandler> filterMock = mockStatic(OpenProjectFilterHandler.class);
-            MockedStatic<OpenProjectSortingHandler> sortingMock = mockStatic(OpenProjectSortingHandler.class)
-        )
-        {
-            filterMock.when(() -> OpenProjectFilterHandler.convertFilters(any()))
-                .thenThrow(new ProjectManagementException("Invalid filters")
-                {
-                });
-
-            sortingMock.when(() -> OpenProjectSortingHandler.convertSorting(any()))
-                .thenThrow(new ProjectManagementException("Invalid sorting")
-                {
-                });
-
-            assertThrows(WorkItemRetrievalException.class,
-                () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
-        }
+        assertEquals("An error occurred while trying to get the work items", exception.getMessage());
+        assertEquals(failure, exception.getCause());
     }
 
     @ParameterizedTest
     @ValueSource(ints = { 401, 403 })
     void getWorkItemsWhenOpenProjectRejectsTheUser(int statusCode) throws ProjectManagementException
     {
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
-            .thenThrow(new WorkItemRetrievalException("Rejected", statusCode));
+        doThrow(new WorkItemRetrievalException("Rejected", statusCode)).when(this.openProjectApiClient)
+            .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
 
+        assertEquals("Rejected", exception.getMessage());
         assertEquals(statusCode, exception.getStatusCode());
     }
 
     @Test
     void getWorkItemsWhenTheUserIsNotConnected()
     {
-        when(openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConnected());
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
 
         assertEquals("The current user isn't connected to the OpenProject instance [].", exception.getMessage());
         assertEquals(401, exception.getStatusCode());
@@ -484,29 +497,11 @@ class OpenProjectClientTest
     @Test
     void getWorkItemsWhenTheConnectionIsNotConfigured() throws WorkItemRetrievalException
     {
-        when(openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConfigured());
+        when(this.openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConfigured());
 
-        assertEquals(0, openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
+        assertEquals(0, this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
         assertEquals("Failed to retrieve work packages: No configuration for instance [] was found.",
             this.logCapture.getMessage(0));
-    }
-
-    private void assertWorkItems(String identifier, int expectedWorkPackagesCalls,
-        int expectedProjectWorkPackagesCalls, int expectedElements) throws ProjectManagementException
-    {
-
-        when(executionContext.get("identifier")).thenReturn(identifier);
-
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(1, 10, List.of(), List.of());
-
-        verify(openProjectApiClient, times(expectedWorkPackagesCalls)).getWorkPackages(anyInt(), anyInt(), anyString(),
-            anyString());
-
-        verify(openProjectApiClient, times(expectedProjectWorkPackagesCalls)).getProjectWorkPackages(anyString(),
-            anyInt(), anyInt(), anyString(),
-            anyString());
-
-        assertEquals(expectedElements, result.getItems().size());
     }
 
     @Test
@@ -518,36 +513,37 @@ class OpenProjectClientTest
         targetVersions.setFilterKey("targetVersion");
         targetVersions.setFilterValueType("[]Version");
         targetVersions.setSortable(true);
-        when(openProjectApiClient.getWorkPackageFields())
+        when(this.openProjectApiClient.getWorkPackageFields())
             .thenReturn(new PaginatedResult<>(List.of(targetVersions), 0, 1, 1));
         Version version = new Version();
         version.setId(19);
         version.setName("1.2.3");
-        when(openProjectApiClient.getVersions()).thenReturn(new PaginatedResult<>(List.of(version), 0, 1, 1));
+        when(this.openProjectApiClient.getVersions()).thenReturn(new PaginatedResult<>(List.of(version), 0, 1, 1));
         WorkPackage workPackage = createWorkPackage(1);
         Linkable versionLink = new Linkable("1.2.3", "http://open-project-instance/versions/19");
         workPackage.setFieldValues(Map.of("targetVersions", versionLink));
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
-            .thenReturn(new PaginatedResult<>(List.of(workPackage), 1, 10, 1));
+        // The version is filtered by its id, and sorted by the key of the field.
+        doReturn(new PaginatedResult<>(List.of(workPackage), 1, 10, 1)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(10),
+                argThat(jsonFilters("[{\"targetVersion\":{\"operator\":\"=\",\"values\":[\"19\"]}}]")),
+                eq("[[\"targetVersions\",\"desc\"]]"));
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10,
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10,
             List.of(new LiveDataQuery.Filter("targetVersion", "contains", "1.2.3")),
             List.of(new LiveDataQuery.SortEntry("targetVersion", true)));
 
-        verify(openProjectApiClient).getWorkPackages(eq(1), eq(10),
-            argThat(actual -> jsonEquals(actual, "[{\"targetVersion\":{\"operator\":\"=\",\"values\":[\"19\"]}}]")),
-            eq("[[\"targetVersions\",\"desc\"]]"));
         assertEquals(List.of(versionLink), result.getItems().get(0).get("targetVersion"));
     }
 
     @Test
     void getWorkItemsWhenWorkPackageFieldsFail() throws ProjectManagementException
     {
-        when(openProjectApiClient.getWorkPackageFields()).thenThrow(new ProjectManagementException("Forbidden"));
+        when(this.openProjectApiClient.getWorkPackageFields()).thenThrow(new ProjectManagementException("Forbidden"));
+        doReturn(workPackages(1, 2)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("1", "2"), getIds(result));
         assertEquals("Failed to retrieve the work package fields: ProjectManagementException: Forbidden",
             this.logCapture.getMessage(0));
     }
@@ -561,15 +557,16 @@ class OpenProjectClientTest
         Status closed = new Status();
         closed.setName("Closed");
         closed.setClosed(true);
-        when(openProjectApiClient.getStatuses()).thenReturn(new PaginatedResult<>(List.of(open, closed), 0, 2, 2));
+        when(this.openProjectApiClient.getStatuses())
+            .thenReturn(new PaginatedResult<>(List.of(open, closed), 0, 2, 2));
         WorkPackage openWorkPackage = createWorkPackage(1);
         openWorkPackage.setStatus(new Linkable("New", "http://open-project-instance/statuses/1/edit"));
         WorkPackage closedWorkPackage = createWorkPackage(2);
         closedWorkPackage.setStatus(new Linkable("Closed", "http://open-project-instance/statuses/2/edit"));
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
-            .thenReturn(new PaginatedResult<>(List.of(openWorkPackage, closedWorkPackage), 1, 10, 2));
+        doReturn(new PaginatedResult<>(List.of(openWorkPackage, closedWorkPackage), 1, 10, 2))
+            .when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertFalse(result.getItems().get(0).isResolved());
         assertTrue(result.getItems().get(1).isResolved());
@@ -584,10 +581,10 @@ class OpenProjectClientTest
         WorkPackage withId = createWorkPackage(2);
         withId.setDisplayId("2");
         WorkPackage withoutDisplayId = createWorkPackage(3);
-        when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
-            .thenReturn(new PaginatedResult<>(List.of(withKey, withId, withoutDisplayId), 1, 10, 3));
+        doReturn(new PaginatedResult<>(List.of(withKey, withId, withoutDisplayId), 1, 10, 3))
+            .when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertEquals("PROJ-1", result.getItems().get(0).getKey());
         assertEquals("1", result.getItems().get(0).getIdentifier().getValue());
@@ -598,32 +595,105 @@ class OpenProjectClientTest
     @Test
     void getWorkItemsWhenStatusesFail() throws ProjectManagementException
     {
-        when(openProjectApiClient.getStatuses()).thenThrow(new ProjectManagementException("Forbidden"));
+        when(this.openProjectApiClient.getStatuses()).thenThrow(new ProjectManagementException("Forbidden"));
+        doReturn(workPackages(1, 2)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
-        assertEquals(NUMBER_OF_WORK_PACKAGES, result.getItems().size());
+        assertEquals(List.of("1", "2"), getIds(result));
         assertFalse(result.getItems().get(0).containsKey(WorkItem.KEY_RESOLVED));
         assertEquals("Failed to retrieve the work package statuses: ProjectManagementException: Forbidden",
             this.logCapture.getMessage(0));
     }
 
-    private PaginatedResult<WorkPackage> generateWorkItems()
+    @Test
+    void getWorkItem() throws ProjectManagementException
     {
-        PaginatedResult<WorkPackage> result = new PaginatedResult<>();
-        List<WorkPackage> workPackages = new ArrayList<>();
-        for (int i = 1; i <= NUMBER_OF_WORK_PACKAGES; i++) {
-            WorkPackage workPackage = new WorkPackage();
-            workPackage.setId(i);
-            workPackages.add(workPackage);
-        }
-        result.setItems(workPackages);
-        return result;
+        doReturn(workPackages(42)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
+
+        assertEquals("42", this.openProjectClient.getWorkItem("42").getIdentifier().getValue());
     }
 
-    private boolean isIdFilterOf5And2And1911(String filters)
+    @Test
+    void getWorkItemThatDoesNotExist() throws ProjectManagementException
     {
-        return jsonEquals(filters, "[{\"id\":{\"operator\":\"=\",\"values\":[\"5\",\"2\",\"1911\"]}}]");
+        doReturn(workPackages()).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"404\"]}}]")), eq(NO_SORTING));
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.getWorkItem("404"));
+
+        assertEquals("Work Item with ID [404] was not found.", exception.getMessage());
+    }
+
+    @Test
+    void getProjectThatDoesNotExist() throws ProjectManagementException
+    {
+        doReturn(new PaginatedResult<>(List.of(), 0, 1, 0)).when(this.openProjectApiClient)
+            .getProjects(eq(0), eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"404\"]}}]")));
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.projects().get("404"));
+
+        assertEquals("Project with ID [404] was not found.", exception.getMessage());
+    }
+
+    @Test
+    void getProjects() throws ProjectManagementException
+    {
+        doReturn(new PaginatedResult<>(List.of(createProject(7, "Seven"), createProject(8, "Eight")), 2, 2, 4))
+            .when(this.openProjectApiClient)
+            .getProjects(eq(2), eq(2), argThat(jsonFilters("[{\"name\":{\"operator\":\"~\",\"values\":[\"e\"]}}]")));
+
+        PaginatedResult<com.xwiki.projectmanagement.model.Project> result = this.openProjectClient.projects()
+            .get(2, 2, List.of(new LiveDataQuery.Filter("name", "contains", "e")));
+
+        assertEquals(List.of("Seven", "Eight"),
+            result.getItems().stream().map(com.xwiki.projectmanagement.model.Project::getName)
+                .collect(Collectors.toList()));
+        assertEquals("7", result.getItems().get(0).getIdentifier().getValue());
+        assertEquals(4, result.getTotalItems());
+    }
+
+    @Test
+    void getProject() throws ProjectManagementException
+    {
+        doReturn(new PaginatedResult<>(List.of(createProject(7, "Seven")), 0, 1, 1)).when(this.openProjectApiClient)
+            .getProjects(eq(0), eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"7\"]}}]")));
+
+        assertEquals("Seven", this.openProjectClient.projects().get("7").getName());
+    }
+
+    @Test
+    void getProjectsWhenOpenProjectFails() throws ProjectManagementException
+    {
+        ProjectManagementException failure = new ProjectManagementException("Server error");
+        doThrow(failure).when(this.openProjectApiClient).getProjects(0, 1, NO_FILTERS);
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.projects().get(0, 1, List.of()));
+
+        assertEquals("Failed to retrieve the OpenProject projects.", exception.getMessage());
+        assertEquals(failure, exception.getCause());
+    }
+
+    /**
+     * Fails on the requests that the test didn't stub, showing the request that was actually sent.
+     */
+    private static Object unexpectedRequest(InvocationOnMock invocation) throws Throwable
+    {
+        if (CHECKED_REQUESTS.contains(invocation.getMethod().getName())) {
+            throw new AssertionFailedError("Unexpected OpenProject request: " + invocation);
+        }
+        return Mockito.RETURNS_DEFAULTS.answer(invocation);
+    }
+
+    private static PaginatedResult<WorkPackage> workPackages(int... ids)
+    {
+        List<WorkPackage> workPackages =
+            Arrays.stream(ids).mapToObj(OpenProjectClientTest::createWorkPackage).collect(Collectors.toList());
+        return new PaginatedResult<>(workPackages, 1, workPackages.size(), workPackages.size());
     }
 
     private static WorkPackage createWorkPackage(int id)
@@ -634,43 +704,69 @@ class OpenProjectClientTest
         return workPackage;
     }
 
+    private static Project createProject(int id, String name)
+    {
+        Project project = new Project();
+        project.setId(id);
+        project.setName(name);
+        project.setSelf(new Linkable(name, "http://open-project-instance/projects/" + id));
+        return project;
+    }
+
     private static List<String> getIds(PaginatedResult<WorkItem> result)
     {
         return result.getItems().stream().map(workItem -> workItem.getIdentifier().getValue())
             .collect(Collectors.toList());
     }
 
-    private LiveDataQuery.Filter getSummaryFilter()
+    private static LiveDataQuery.Filter getSummaryFilter()
     {
         return new LiveDataQuery.Filter("summary", "contains", "bug");
     }
 
-    /**
-     * The merged filters are built from a map, so their order isn't deterministic.
-     */
-    private boolean jsonArraysEqualIgnoringOrder(String actualJson, String expectedJson)
+    private static ArgumentMatcher<String> idFilterOf5And2And1911()
     {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            List<JsonNode> actual = new ArrayList<>();
-            mapper.readTree(actualJson).forEach(actual::add);
-            List<JsonNode> expected = new ArrayList<>();
-            mapper.readTree(expectedJson).forEach(expected::add);
-            return actual.size() == expected.size() && new HashSet<>(actual).equals(new HashSet<>(expected));
-        } catch (Exception e) {
-            return false;
-        }
+        return jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\",\"2\",\"1911\"]}}]");
     }
 
-    private boolean jsonEquals(String actualJson, String expectedJson)
+    /**
+     * Matches OpenProject filters holding the expected ones in any order (the merged filters are built from a map),
+     * each one exactly once.
+     */
+    private static ArgumentMatcher<String> jsonFilters(String expectedJson)
     {
+        List<JsonNode> expected = elements(expectedJson);
+        return new ArgumentMatcher<>()
+        {
+            @Override
+            public boolean matches(String actualJson)
+            {
+                List<JsonNode> actual = elements(actualJson);
+                for (JsonNode element : expected) {
+                    // Removes a single occurrence, so that duplicated filters don't match.
+                    if (!actual.remove(element)) {
+                        return false;
+                    }
+                }
+                return actual.isEmpty();
+            }
+
+            @Override
+            public String toString()
+            {
+                return expectedJson;
+            }
+        };
+    }
+
+    private static List<JsonNode> elements(String json)
+    {
+        List<JsonNode> elements = new ArrayList<>();
         try {
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode actual = mapper.readTree(actualJson);
-            JsonNode expected = mapper.readTree(expectedJson);
-            return actual.equals(expected);
+            new ObjectMapper().readTree(json).forEach(elements::add);
         } catch (Exception e) {
-            return false;
+            elements.add(null);
         }
+        return elements;
     }
 }

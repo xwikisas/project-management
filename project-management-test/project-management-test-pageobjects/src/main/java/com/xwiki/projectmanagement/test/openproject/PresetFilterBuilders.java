@@ -40,7 +40,7 @@ final class PresetFilterBuilders
     }
 
     /**
-     * Wait for the filter builders to be initialized by the JavaScript code, which also loads the saved filters.
+     * Wait for the filter builders to be initialized by the JavaScript code, and to display the saved filters.
      *
      * @param driver the web driver
      */
@@ -48,6 +48,18 @@ final class PresetFilterBuilders
     {
         driver.waitUntilCondition(d -> Boolean.TRUE.equals(driver.executeJavascript(
             "return !!(window.FilterBuilder && window.FilterBuilder.instances.size > 0);")));
+        // The saved filters are added to the builders afterwards, all at once. The builders display one filter per
+        // saved constraint. Compare both in the same script, since the builders rewrite the saved filters once done.
+        driver.waitUntilCondition(d -> Boolean.TRUE.equals(driver.executeJavascript(
+            "const field = document.querySelector('.proj-manag-filter');"
+                + "let configs;"
+                + "try { configs = field && field.value ? JSON.parse(field.value) : []; } catch (e) { return true; }"
+                + "configs = Array.isArray(configs) ? configs : [configs];"
+                + "const expected = configs.reduce((count, config) => count"
+                + "  + ((config.query && config.query.filters) || [])"
+                + "    .reduce((sum, filter) => sum + (filter.constraints || []).length, 0), 0);"
+                + "return document.querySelectorAll('.project-management-filters .proj-manag-constraints"
+                + " .proj-manag-constraint').length === expected;")));
     }
 
     /**

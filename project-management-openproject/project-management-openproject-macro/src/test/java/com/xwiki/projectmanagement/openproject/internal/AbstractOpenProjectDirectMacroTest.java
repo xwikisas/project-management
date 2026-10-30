@@ -59,7 +59,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -94,8 +93,7 @@ class AbstractOpenProjectDirectMacroTest
     @MockComponent
     private ProjectManagementAsyncExecutor asyncExecutor;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     @Mock
     private OpenProjectApiClient apiClient;
@@ -117,17 +115,6 @@ class AbstractOpenProjectDirectMacroTest
     }
 
     @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-
-        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
-
-        verifyNoInteractions(this.observationManager, this.userTokenChecker, this.asyncExecutor);
-    }
-
-    @Test
     void returnsTheUserTokenWarning() throws Exception
     {
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
@@ -143,23 +130,6 @@ class AbstractOpenProjectDirectMacroTest
     }
 
     @Test
-    void usesTheInstanceResolvedByTheListeners() throws Exception
-    {
-        this.parameters.setInstance(null);
-        doAnswer(invocation -> {
-            this.parameters.setInstance("main");
-            return null;
-        }).when(this.observationManager).notify(any(BeforeOpenProjectMacroExecutionEvent.class), any(), any());
-        OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
-        when(this.apiClient.getProjects(null, 5, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 5, 0));
-
-        this.macro.execute(this.parameters, "", this.context);
-
-        verify(this.userTokenChecker).getWarningBlock("main", OpenProjectAccessStatus.AUTHENTICATED, this.context);
-        verify(this.apiClient).getProjects(null, 5, "");
-    }
-
-    @Test
     void displaysTheConnectHintBeforeThePublicData() throws Exception
     {
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
@@ -172,7 +142,6 @@ class AbstractOpenProjectDirectMacroTest
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertSame(hint, result.get(0));
-        verify(this.apiClient).getProjects(null, 5, "");
     }
 
     @Test

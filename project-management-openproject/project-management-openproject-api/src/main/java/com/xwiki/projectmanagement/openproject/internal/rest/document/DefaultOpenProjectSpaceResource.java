@@ -20,7 +20,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -182,39 +181,19 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         }
     }
 
-    /**
-     * Computes the pages that the create job will copy from the template children, i.e. those that don't exist yet.
-     */
     private List<DocumentReference> getChildrenToCreate(DocumentReference docRef, DocumentReference templateReference,
         XWikiContext context) throws XWikiException
     {
-        List<DocumentReference> children = new ArrayList<>();
-        if (!WEB_HOME.equals(docRef.getName())) {
-            return children;
-        }
         SpaceReference templateSpace = templateReference.getLastSpaceReference();
-        SpaceReference targetSpace = docRef.getLastSpaceReference();
-        for (DocumentReference templatePage : this.modelBridge.getDocumentReferences(templateSpace)) {
-            DocumentReference child = templatePage.replaceParent(templateSpace, targetSpace);
-            if (!child.equals(docRef) && !context.getWiki().exists(child, context)) {
-                children.add(child);
-            }
-        }
-        return children;
+        return TemplateSpacePages.getChildrenToCreate(docRef, templateSpace,
+            this.modelBridge.getDocumentReferences(templateSpace), child -> context.getWiki().exists(child, context));
     }
 
     private List<DocumentReference> getCreatedPages(DocumentReference docRef, List<DocumentReference> childrenToCreate,
         XWikiContext context) throws XWikiException
     {
-        List<DocumentReference> createdPages = new ArrayList<>();
-        createdPages.add(docRef);
-        for (DocumentReference child : childrenToCreate) {
-            // The create job skips the children that the current user is not allowed to create.
-            if (context.getWiki().exists(child, context) && this.authorizationManager.hasAccess(Right.VIEW, child)) {
-                createdPages.add(child);
-            }
-        }
-        return createdPages;
+        return TemplateSpacePages.getCreatedPages(docRef, childrenToCreate, child -> context.getWiki().exists(child,
+            context) && this.authorizationManager.hasAccess(Right.VIEW, child));
     }
 
     private Response checkTarget(DocumentReference docRef, DocumentReference templateReference, XWikiContext context)

@@ -39,19 +39,27 @@ public class TestProjManagementMacro extends AbstractProjectManagementMacro<Proj
 {
     public TestProjManagementMacro()
     {
-        super("test", "test", new DefaultContentDescriptor(), String.class);
+        super("test", "test", new DefaultContentDescriptor(false), ProjectManagementMacroParameters.class);
     }
 
     @Override
     public void processParameters(ProjectManagementMacroParameters parameters)
     {
-        addToSourceParams(parameters, "smth",
-            parameters.getIdentifier() == null ? "smth2" : parameters.getIdentifier());
-        addToSourceParams(parameters, "smth3", "smth4");
+        // Like the macros of the real clients, tell the displayers which client to use.
+        addToSourceParams(parameters, "identifier", parameters.getIdentifier());
+        addToSourceParams(parameters, "client", "test");
+        addToSourceParams(parameters, "translationPrefix", "test.");
     }
 
     @Override
     public void asyncProcessParameters(ProjectManagementMacroParameters parameters)
     {
+    }
+
+    @Override
+    public boolean isAsync(ProjectManagementMacroParameters parameters)
+    {
+        // The rendering tests check the output of the displayers, not their asynchronous placeholder.
+        return false;
     }
 }

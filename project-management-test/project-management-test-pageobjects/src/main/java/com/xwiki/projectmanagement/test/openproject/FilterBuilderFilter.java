@@ -19,14 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import org.apache.commons.lang3.NotImplementedException;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
 import org.xwiki.test.ui.po.SuggestInputElement;
 
@@ -49,14 +44,6 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
-     * @return the property on which this filter filters on.
-     */
-    public String getPropertyName()
-    {
-        return container.findElement(By.className("proj-manag-constraint-title")).getText();
-    }
-
-    /**
      * Adds a constraint to this filter.
      *
      * @return this object.
@@ -68,36 +55,14 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
-     * @param index the index of the constraint that needs to be retrieved.
-     * @return a model of the constraint identified by the index.
+     * @param index the index of the constraint element present in this filter, starting at 1
+     * @return the value element of the constraint identified by the index
      */
-    public WebElement getConstraint(int index)
+    private WebElement getValueElement(int index)
     {
         return container
-            .findElement(By.xpath(String.format("(div[@class='proj-manag-filter-container'])[%d]", index)));
-    }
-
-    /**
-     * @param index the index of the constraint that should have its operator updated.
-     * @param operator the pretty name of the operator that should be set to the constraint identified by the
-     *     index.
-     * @return this object.
-     */
-    public FilterBuilderFilter setOperator(int index, String operator)
-    {
-        WebElement operatorElem = getConstraint(index).findElement(By.className("proj-manag-constraint-operator"));
-        Select select = new Select(operatorElem);
-        select.selectByVisibleText(operator);
-        return this;
-    }
-
-    /**
-     * @param index the index of the constraint element present in this filter.
-     * @return the value element of the constraint identified by the index.
-     */
-    public WebElement getValueElement(int index)
-    {
-        return getConstraint(index).findElement(By.cssSelector("input.proj-manag-constraint-value"));
+            .findElement(By.xpath(String.format("(div[@class='proj-manag-filter-container'])[%d]", index)))
+            .findElement(By.cssSelector("input.proj-manag-constraint-value"));
     }
 
     /**
@@ -146,30 +111,5 @@ public class FilterBuilderFilter extends BaseElement
         valElem.clear();
         valElem.sendKeys(value, Keys.TAB);
         return this;
-    }
-
-    /**
-     * Sets the value to a date constraint value.
-     *
-     * @param index the index of the constraint element present in this filter.
-     * @param value the value that should be set to the date input element of the constraint.
-     * @return this object.
-     */
-    public FilterBuilderFilter setDateValue(int index, String value)
-    {
-        // TODO: Implement once parent is upgraded to 15.10 and use DateRangePicker PO.
-        throw new NotImplementedException();
-    }
-
-    /**
-     * @return the list of constraints set in this filter.
-     */
-    public List<FilterBuilderConstraint> getConstraints()
-    {
-        return container
-            .findElements(By.className("proj-manag-filter-container"))
-            .stream()
-            .map(FilterBuilderConstraint::new)
-            .collect(Collectors.toList());
     }
 }

@@ -20,8 +20,7 @@ package com.xwiki.projectmanagement.livedata;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.HashMap;
-import java.util.IdentityHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -112,16 +111,20 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         } catch (WorkItemException e) {
             throw new LiveDataException("Failed to retrieve the work items.", e);
         }
-        ld.getEntries().addAll(workItems.getItems());
         ld.setCount(workItems.getTotalItems());
-        // PREPARE THE RESULTS FOR THE LIVEDATA - TURN THE LINKABLES TO PROPERTIES OF THE WORK ITEM -----------
-        // The displayers replace the linkables by their HTML display, so keep their locations to expose them as raw
-        // URLs, e.g. for the actions that open the work item.
-        Map<WorkItem, Map<String, Object>> locations = getLocations(workItems.getItems());
-        applyDisplayers(workItems.getItems(), clientId);
-        flatten(ld);
-        // The entries are the work items themselves.
-        locations.forEach(Map::putAll);
+        // The displayers replace the values of the entries by their HTML display, so they work on copies of the work
+        // items of the client, which stay unchanged.
+        List<WorkItem> entries = new ArrayList<>();
+        for (WorkItem workItem : workItems.getItems()) {
+            WorkItem entry = new WorkItem();
+            entry.putAll(workItem);
+            entries.add(entry);
+        }
+        applyDisplayers(entries, clientId);
+        for (int i = 0; i < entries.size(); i++) {
+            flatten(entries.get(i), workItems.getItems().get(i));
+        }
+        ld.getEntries().addAll(entries);
 
         return ld;
     }
@@ -144,41 +147,28 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         }
     }
 
-    private static Map<WorkItem, Map<String, Object>> getLocations(List<WorkItem> workItems)
-    {
-        // The work items are maps whose content changes when they are displayed, so they are matched by identity.
-        Map<WorkItem, Map<String, Object>> locations = new IdentityHashMap<>();
-        for (WorkItem workItem : workItems) {
-            Map<String, Object> itemLocations = new HashMap<>();
-            for (String linkWorkItemProperty : LINK_PROPERTIES) {
-                Object property = workItem.get(linkWorkItemProperty);
-                if (property instanceof Map && ((Map<?, ?>) property).get(Linkable.KEY_LOCATION) != null) {
-                    itemLocations.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
-                        ((Map<?, ?>) property).get(Linkable.KEY_LOCATION));
-                }
-            }
-            locations.put(workItem, itemLocations);
-        }
-        return locations;
-    }
-
+    /**
+     * Expose the linkables of the work item as {@code <property>.location} (a raw URL, e.g. for the actions that open
+     * the work item) and, when the displayer kept them as is, {@code <property>.value}.
+     *
+     * @param entry the work item as displayed
+     * @param workItem the work item of the client
+     */
     // TODO: Have a more generic method of flattening a work item.
-    private static void flatten(LiveData ld)
+    private static void flatten(WorkItem entry, WorkItem workItem)
     {
-        for (Map<String, Object> entry : ld.getEntries()) {
-            for (String linkWorkItemProperty : LINK_PROPERTIES) {
-                Object property = entry.get(linkWorkItemProperty);
-                if (property == null) {
-                    continue;
-                }
-                if (!(property instanceof Map)) {
-                    continue;
-                }
-                Map<String, Object> linkableProperty = (Map<String, Object>) property;
+        for (String linkWorkItemProperty : LINK_PROPERTIES) {
+            Object linkable = workItem.get(linkWorkItemProperty);
+            if (linkable instanceof Map && ((Map<?, ?>) linkable).get(Linkable.KEY_LOCATION) != null) {
                 entry.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
-                    linkableProperty.get(Linkable.KEY_LOCATION));
+                    ((Map<?, ?>) linkable).get(Linkable.KEY_LOCATION));
+            }
+            Object displayed = entry.get(linkWorkItemProperty);
+            if (displayed instanceof Map) {
+                entry.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
+                    ((Map<?, ?>) displayed).get(Linkable.KEY_LOCATION));
                 entry.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_VALUE),
-                    linkableProperty.get(Linkable.KEY_VALUE));
+                    ((Map<?, ?>) displayed).get(Linkable.KEY_VALUE));
                 entry.remove(linkWorkItemProperty);
             }
         }

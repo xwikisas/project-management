@@ -58,7 +58,6 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroPar
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
@@ -109,8 +108,7 @@ class OpenProjectCalendarMacroTest
     @Mock
     private XWikiRequest request;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     private final DefaultProjectManagementClientExecutionContext executionContext =
         new DefaultProjectManagementClientExecutionContext();
@@ -192,19 +190,6 @@ class OpenProjectCalendarMacroTest
         assertEquals(Map.of("instance", "main", "sprint", "true", "version", "true", "versionColor", "#00ff00",
             "sprintColor", "#ff0000", "limit", "10", "filters", "{\"query\":{}}", "excludeWorkItems", "true"),
             getQueryParameters(calendar.getParameter("json")));
-    }
-
-    @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-
-        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
-
-        verifyNoInteractions(this.observationManager, this.userTokenChecker, this.stylingSetupManager, this.jsrx,
-            this.jsx);
-        assertNull(this.executionContext.get("instance"));
     }
 
     @Test

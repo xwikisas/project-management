@@ -85,7 +85,7 @@ class AbstractProjectManagementMacroTest
         abstractMacro.execute(params, "", macroTransformationContext);
 
         assertEquals("projectmanagement", params.getSource());
-        assertEquals("smth=smth2&smth3=smth4", params.getSourceParameters());
+        assertEquals("client=test&translationPrefix=test.", params.getSourceParameters());
 
         // Gets executed in the async renderer.
         verify(asyncExecutor).execute(eq(displayerMacro), any(), any(), any(), any(), anyBoolean());
@@ -106,7 +106,7 @@ class AbstractProjectManagementMacroTest
 
         // The displayer named after the parameter value renders the work items, asynchronously.
         assertSame(expected, result);
-        assertEquals("smth=smth2&smth3=smth4", params.getSourceParameters());
+        assertEquals("client=test&translationPrefix=test.", params.getSourceParameters());
     }
 
     @Test
@@ -151,6 +151,6 @@ class AbstractProjectManagementMacroTest
         abstractMacro.execute(params, "", macroTransformationContext);
 
         // The first source parameter is encoded like the next ones.
-        assertEquals("smth=a%26b%3Dc&smth3=smth4", params.getSourceParameters());
+        assertEquals("identifier=a%26b%3Dc&client=test&translationPrefix=test.", params.getSourceParameters());
     }
 }

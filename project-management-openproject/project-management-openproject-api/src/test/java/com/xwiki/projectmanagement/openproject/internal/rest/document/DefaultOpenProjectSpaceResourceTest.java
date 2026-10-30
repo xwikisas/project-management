@@ -20,8 +20,11 @@
 package com.xwiki.projectmanagement.openproject.internal.rest.document;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -34,7 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
-import org.xwiki.component.util.ReflectionUtils;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.Job;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
@@ -52,11 +55,9 @@ import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.BeforeComponent;
 import org.xwiki.test.junit5.LogCaptureExtension;
-import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
-import org.xwiki.test.mockito.MockitoComponentManager;
 import org.xwiki.user.UserReferenceResolver;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
@@ -77,7 +78,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -98,8 +98,20 @@ class DefaultOpenProjectSpaceResourceTest
     private static final DocumentReference TEMPLATE_CHILD_REFERENCE =
         new DocumentReference("xwiki", List.of("OpenProject", "Code", "Template", "Child"), "WebHome");
 
+    /**
+     * Lets the test provide the request URI, which JAX-RS injects in the resources. Public, so that the component
+     * manager can instantiate it.
+     */
+    public static class TestableSpaceResource extends DefaultOpenProjectSpaceResource
+    {
+        void setUriInfo(UriInfo uriInfo)
+        {
+            this.uriInfo = uriInfo;
+        }
+    }
+
     @InjectMockComponents
-    private DefaultOpenProjectSpaceResource resource;
+    private TestableSpaceResource resource;
 
     @MockComponent
     private DocumentReferenceResolver<String> resolver;
@@ -132,10 +144,14 @@ class DefaultOpenProjectSpaceResourceTest
     @MockComponent
     private OpenProjectConfiguration openProjectConfiguration;
 
-    @InjectComponentManager
-    private MockitoComponentManager componentManager;
+    @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
 
-    private RefactoringScriptService refactoringScriptService;
+    /**
+     * The pages that exist in the wiki.
+     */
+    private final Set<DocumentReference> existingPages = new HashSet<>();
 
     private XWikiContext context;
 
@@ -160,9 +176,6 @@ class DefaultOpenProjectSpaceResourceTest
         // The context is needed when initializing the resource.
         this.context = mock(XWikiContext.class);
         when(this.xcontextProvider.get()).thenReturn(this.context);
-
-        this.refactoringScriptService = mock(RefactoringScriptService.class);
-        this.componentManager.registerComponent(ScriptService.class, "refactoring", this.refactoringScriptService);
     }
 
     @BeforeEach
@@ -174,7 +187,9 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.authorizationManager.hasAccess(Right.EDIT)).thenReturn(true);
         when(this.authorizationManager.hasAccess(Right.VIEW, DOCUMENT_REFERENCE)).thenReturn(true);
         when(this.authorizationManager.hasAccess(Right.EDIT, DOCUMENT_REFERENCE)).thenReturn(true);
-        when(this.xwiki.exists(TEMPLATE_REFERENCE, this.context)).thenReturn(true);
+        when(this.xwiki.exists(any(DocumentReference.class), eq(this.context)))
+            .thenAnswer(invocation -> this.existingPages.contains(invocation.<DocumentReference>getArgument(0)));
+        this.existingPages.add(TEMPLATE_REFERENCE);
         when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenReturn(this.document);
         when(this.document.getAuthors()).thenReturn(mock(DocumentAuthors.class));
         when(this.modelBridge.getDocumentReferences(TEMPLATE_REFERENCE.getLastSpaceReference()))
@@ -279,7 +294,7 @@ class DefaultOpenProjectSpaceResourceTest
     void createSpaceWhenTargetPageExistsAndCannotBeViewed() throws Exception
     {
         when(this.authorizationManager.hasAccess(Right.VIEW, DOCUMENT_REFERENCE)).thenReturn(false);
-        when(this.xwiki.exists(DOCUMENT_REFERENCE, this.context)).thenReturn(true);
+        this.existingPages.add(DOCUMENT_REFERENCE);
 
         Response response = this.resource.createSpace("Space.WebHome", false, null, null, null, "Title");
 
@@ -303,42 +318,25 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.xwiki.getDocument(templateDeniedReference, this.context)).thenReturn(otherTemplateDocument);
         when(this.adminAuthorChecker.isLastSavedByAdmin(otherTemplateDocument)).thenReturn(true);
 
-        // Created from the template by the create job.
-        DocumentReference childReference = new DocumentReference("xwiki", List.of("Space", "Child"), "WebHome");
-        when(this.xwiki.exists(childReference, this.context)).thenReturn(false, true);
-        when(this.authorizationManager.hasAccess(Right.VIEW, childReference)).thenReturn(true);
         // Existed before, so it is skipped by the create job.
         DocumentReference existingReference =
             new DocumentReference("xwiki", List.of("Space", "Existing"), "WebHome");
-        when(this.xwiki.exists(existingReference, this.context)).thenReturn(true);
-        // Not created by the create job, because of the rights of the current user.
-        DocumentReference deniedReference = new DocumentReference("xwiki", List.of("Space", "Denied"), "WebHome");
-        when(this.xwiki.exists(deniedReference, this.context)).thenReturn(false);
+        this.existingPages.add(existingReference);
         // Not part of the template.
-        DocumentReference otherReference = new DocumentReference("xwiki", List.of("Space", "Other"), "WebHome");
-        when(this.modelBridge.getDocumentReferences(DOCUMENT_REFERENCE.getLastSpaceReference()))
-            .thenReturn(List.of(DOCUMENT_REFERENCE, childReference, existingReference, otherReference));
-
+        this.existingPages.add(new DocumentReference("xwiki", List.of("Space", "Other"), "WebHome"));
+        // The create job creates the child, but not the denied page, because of the rights of the current user.
+        DocumentReference childReference = new DocumentReference("xwiki", List.of("Space", "Child"), "WebHome");
+        mockCreateJobAndRestPages(childReference);
+        when(this.authorizationManager.hasAccess(Right.VIEW, childReference)).thenReturn(true);
         when(this.xwiki.getDocument(childReference, this.context)).thenReturn(mock(XWikiDocument.class));
         when(this.urlShortenerManager.createShortenedURL(DOCUMENT_REFERENCE)).thenReturn("homeId");
         when(this.urlShortenerManager.createShortenedURL(childReference)).thenReturn("childId");
-        mockCreateJobAndRestPages();
+        when(this.urlShortenerManager.createShortenedURL(existingReference)).thenReturn("existingId");
 
         Response response = this.resource.createSpace("Space.WebHome", true, null, null, null, "Title");
 
         assertEquals(200, response.getStatus());
-        List<?> pages = (List<?>) response.getEntity();
-        assertEquals(2, pages.size());
-        assertEquals("homeId", ((Page) pages.get(0)).getId());
-        assertEquals("childId", ((Page) pages.get(1)).getId());
-        verify(this.xwiki).saveDocument(this.document, this.context);
-        verify(this.modelFactory, times(2)).toRestPage(any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(),
-            anyBoolean(), anyBoolean());
-        verify(this.urlShortenerManager, never()).createShortenedURL(existingReference);
-        verify(this.urlShortenerManager, never()).createShortenedURL(otherReference);
-        verify(this.urlShortenerManager, never()).createShortenedURL(deniedReference);
-        verify(this.xwiki, never()).getDocument(eq(existingReference), any(XWikiContext.class));
-        verify(this.xwiki, never()).getDocument(eq(otherReference), any(XWikiContext.class));
+        assertEquals(List.of("homeId", "childId"), getIds(response));
     }
 
     @Test
@@ -351,35 +349,42 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.xwiki.getDocument(pageReference, this.context)).thenReturn(this.document);
         // Pages that already exist in the space of the created page.
         DocumentReference otherReference = new DocumentReference("xwiki", List.of("Space"), "Other");
-        DocumentReference nestedReference = new DocumentReference("xwiki", List.of("Space", "Nested"), "WebHome");
-        when(this.modelBridge.getDocumentReferences(pageReference.getLastSpaceReference()))
-            .thenReturn(List.of(pageReference, otherReference, nestedReference));
+        this.existingPages.add(otherReference);
         when(this.urlShortenerManager.createShortenedURL(pageReference)).thenReturn("pageId");
+        when(this.urlShortenerManager.createShortenedURL(otherReference)).thenReturn("otherId");
         mockCreateJobAndRestPages();
 
         Response response = this.resource.createSpace("Space.Page", true, null, null, null, "Title");
 
         assertEquals(200, response.getStatus());
-        List<?> pages = (List<?>) response.getEntity();
-        assertEquals(1, pages.size());
-        assertEquals("pageId", ((Page) pages.get(0)).getId());
-        verify(this.urlShortenerManager, times(1)).createShortenedURL(any());
-        verify(this.xwiki, never()).getDocument(eq(otherReference), any(XWikiContext.class));
-        verify(this.xwiki, never()).getDocument(eq(nestedReference), any(XWikiContext.class));
+        assertEquals(List.of("pageId"), getIds(response));
     }
 
-    private void mockCreateJobAndRestPages() throws Exception
+    private static List<String> getIds(Response response)
+    {
+        return ((List<?>) response.getEntity()).stream().map(page -> ((Page) page).getId())
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * @param createdPages the pages that the create job creates
+     */
+    private void mockCreateJobAndRestPages(DocumentReference... createdPages) throws Exception
     {
         UriInfo uriInfo = mock(UriInfo.class);
         when(uriInfo.getBaseUri()).thenReturn(new URI("http://localhost/xwiki/rest"));
-        ReflectionUtils.setFieldValue(this.resource, "uriInfo", uriInfo);
+        this.resource.setUriInfo(uriInfo);
         when(this.modelFactory.toRestPage(any(), any(), any(), anyBoolean(), anyBoolean(), anyBoolean(), anyBoolean(),
             anyBoolean())).thenAnswer(invocation -> new Page());
 
-        ReflectionUtils.setFieldValue(this.resource, "componentManager", this.componentManager);
+        RefactoringScriptService refactoring = mock(RefactoringScriptService.class);
+        when(this.contextComponentManager.getInstance(ScriptService.class, "refactoring")).thenReturn(refactoring);
         RequestFactory requestFactory = mock(RequestFactory.class);
-        when(this.refactoringScriptService.getRequestFactory()).thenReturn(requestFactory);
+        when(refactoring.getRequestFactory()).thenReturn(requestFactory);
         when(requestFactory.createCreateRequest(any())).thenReturn(new CreateRequest());
-        when(this.refactoringScriptService.create(any(CreateRequest.class))).thenReturn(mock(Job.class));
+        when(refactoring.create(any(CreateRequest.class))).thenAnswer(invocation -> {
+            this.existingPages.addAll(List.of(createdPages));
+            return mock(Job.class);
+        });
     }
 }

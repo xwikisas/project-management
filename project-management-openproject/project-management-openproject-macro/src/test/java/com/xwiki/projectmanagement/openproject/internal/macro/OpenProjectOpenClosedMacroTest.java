@@ -19,20 +19,21 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
+import org.mockito.ArgumentMatcher;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataQuery;
@@ -50,37 +51,30 @@ import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link OpenProjectOpenClosedMacro}.
+ * Unit tests for {@link OpenProjectOpenClosedMacro}. The period of the chart is tested in
+ * {@link com.xwiki.projectmanagement.openproject.internal.LastDaysPeriodTest}.
  *
  * @version $Id$
  */
 @ComponentTest
 class OpenProjectOpenClosedMacroTest
 {
+    private static final String STATUS_FILTER = "{\"query\":{\"filters\":[{\"property\":\"status\","
+        + "\"constraints\":[{\"operator\":\"%s\",\"value\":\"\"}]}]}}";
+
     @InjectMockComponents
     private OpenProjectOpenClosedMacro macro;
-
-    @MockComponent
-    private LicenseChecker licenseChecker;
 
     @MockComponent
     private ContextualLocalizationManager l10n;
@@ -95,93 +89,74 @@ class OpenProjectOpenClosedMacroTest
     private LiveDataConfigurationResolver<String> liveDataConfigurationResolver;
 
     @MockComponent
+    private Provider<Clock> clockProvider;
+
+    @MockComponent
     @Named("line")
     private ChartTypeDisplayer lineDisplayer;
 
-    @Mock
-    private MacroTransformationContext context;
-
-    private final List<Block> chart = List.of(new WordBlock("chart"));
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
+        when(this.clockProvider.get())
+            .thenReturn(Clock.fixed(Instant.parse("2026-03-30T10:00:00Z"), ZoneId.of("Europe/Paris")));
         when(this.l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.open")).thenReturn("Open");
         when(this.l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.closed")).thenReturn("Closed");
-        // Each data set is filtered on the status.
-        when(this.liveDataConfigurationResolver.resolve(anyString())).thenAnswer(invocation -> {
-            LiveDataQuery query = new LiveDataQuery();
-            query.setFilters(new ArrayList<>(List.of(new LiveDataQuery.Filter("status", "o", ""))));
-            LiveDataConfiguration configuration = new LiveDataConfiguration();
-            configuration.setQuery(query);
-            return configuration;
-        });
+        when(this.liveDataConfigurationResolver.resolve(String.format(STATUS_FILTER, "o")))
+            .thenReturn(statusFilter("o"));
+        when(this.liveDataConfigurationResolver.resolve(String.format(STATUS_FILTER, "c")))
+            .thenReturn(statusFilter("c"));
         when(this.lineDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
-        when(this.projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any()))
-            .thenReturn(new PaginatedResult<>(List.of(), 0, 500, 0));
-        when(this.lineDisplayer.execute(any(), any(), any(), any(), any())).thenReturn(this.chart);
+    }
+
+    private static LiveDataConfiguration statusFilter(String operator)
+    {
+        LiveDataQuery query = new LiveDataQuery();
+        // The macro adds its own filter to the list.
+        query.setFilters(new ArrayList<>(List.of(new LiveDataQuery.Filter("status", operator, ""))));
+        LiveDataConfiguration configuration = new LiveDataConfiguration();
+        configuration.setQuery(query);
+        return configuration;
+    }
+
+    private static ArgumentMatcher<List<LiveDataQuery.Filter>> filters(String expected)
+    {
+        return filters -> expected.equals(filters.stream()
+            .flatMap(filter -> filter.getConstraints().stream()
+                .map(constraint -> filter.getProperty() + ' ' + constraint.getOperator() + ' '
+                    + constraint.getValue()))
+            .collect(Collectors.joining(", ")));
+    }
+
+    private static ArgumentMatcher<List<LiveDataQuery.SortEntry>> newestFirst()
+    {
+        return sortEntries -> sortEntries.size() == 1
+            && WorkItem.KEY_CREATION_DATE.equals(sortEntries.get(0).getProperty())
+            && sortEntries.get(0).isDescending();
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void comparesTheOpenAndClosedWorkPackagesCreatedDuringTheLastDays() throws Exception
     {
         OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
         parameters.setInstance("main");
         parameters.setDays(10);
-
-        assertEquals(this.chart, this.macro.execute(parameters, "", this.context));
-
-        ArgumentCaptor<List<LiveDataQuery.Filter>> filtersCaptor = ArgumentCaptor.forClass(List.class);
-        ArgumentCaptor<List<LiveDataQuery.SortEntry>> sortCaptor = ArgumentCaptor.forClass(List.class);
-        // One data set for the open work packages, one for the closed ones.
-        verify(this.projectManagementManager, times(2)).getWorkItems(eq("openproject"), eq(0), eq(500),
-            filtersCaptor.capture(), sortCaptor.capture());
         // The newest work packages are kept when there are more than the limit.
-        for (List<LiveDataQuery.SortEntry> sortEntries : sortCaptor.getAllValues()) {
-            assertEquals(1, sortEntries.size());
-            assertEquals(WorkItem.KEY_CREATION_DATE, sortEntries.get(0).getProperty());
-            assertTrue(sortEntries.get(0).isDescending());
-        }
-        for (List<LiveDataQuery.Filter> filters : filtersCaptor.getAllValues()) {
-            assertEquals(2, filters.size());
-            LiveDataQuery.Filter creationDateFilter = filters.get(1);
-            assertEquals(WorkItem.KEY_CREATION_DATE, creationDateFilter.getProperty());
-            assertEquals("between", creationDateFilter.getConstraints().get(0).getOperator());
-            assertCreationDateRange((String) creationDateFilter.getConstraints().get(0).getValue(), 10);
-        }
-        Map<String, Object> typeParams = Map.of("period", "DAILY", "metric", "accumulate");
-        verify(this.lineDisplayer).execute(any(), eq(WorkItem.KEY_CREATION_DATE), eq(List.of("Open", "Closed")),
-            eq(this.context), eq(new HashMap<>(typeParams)));
-    }
+        String period = "creationDate between 2026-03-20T00:00:00+01:00/2026-03-30T23:59:59.999999999+02:00";
+        PaginatedResult<WorkItem> open = new PaginatedResult<>(List.of(new WorkItem()), 0, 500, 1);
+        when(this.projectManagementManager.getWorkItems(eq("openproject"), eq(0), eq(500),
+            argThat(filters("status o , " + period)), argThat(newestFirst()))).thenReturn(open);
+        PaginatedResult<WorkItem> closed = new PaginatedResult<>(List.of(), 0, 500, 0);
+        when(this.projectManagementManager.getWorkItems(eq("openproject"), eq(0), eq(500),
+            argThat(filters("status c , " + period)), argThat(newestFirst()))).thenReturn(closed);
+        List<Block> chart = List.of(new WordBlock("chart"));
+        when(this.lineDisplayer.execute(List.of(open, closed), WorkItem.KEY_CREATION_DATE, List.of("Open", "Closed"),
+            this.context, new HashMap<>(Map.of("period", "DAILY", "metric", "accumulate")))).thenReturn(chart);
 
-    private void assertCreationDateRange(String range, int days)
-    {
-        String[] bounds = range.split("/");
-        assertEquals(2, bounds.length, range);
-        OffsetDateTime start = OffsetDateTime.parse(bounds[0]);
-        OffsetDateTime end = OffsetDateTime.parse(bounds[1]);
-        LocalDate today = LocalDate.now();
-        // The range goes from the start of the first day to the end of today.
-        assertEquals(LocalTime.MIDNIGHT, start.toLocalTime());
-        assertEquals(LocalTime.MAX, end.toLocalTime());
-        assertTrue(end.toLocalDate().equals(today) || end.toLocalDate().equals(today.minusDays(1)), range);
-        assertEquals(end.toLocalDate().minusDays(days), start.toLocalDate());
-    }
-
-    @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-        OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
-        parameters.setInstance("main");
-
-        assertSame(licenseBlock, this.macro.execute(parameters, "", this.context));
-
-        verifyNoInteractions(this.asyncExecutor, this.projectManagementManager, this.lineDisplayer);
+        assertEquals(chart, this.macro.execute(parameters, "", this.context));
     }
 
     @Test

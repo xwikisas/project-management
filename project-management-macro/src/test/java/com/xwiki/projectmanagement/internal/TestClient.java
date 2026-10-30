@@ -21,14 +21,12 @@ package com.xwiki.projectmanagement.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoField;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +36,6 @@ import java.util.stream.Collectors;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.io.IOUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
@@ -47,17 +44,15 @@ import org.xwiki.livedata.LiveDataQuery;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
-import com.xwiki.projectmanagement.exception.WorkItemCreationException;
-import com.xwiki.projectmanagement.exception.WorkItemDeletionException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
-import com.xwiki.projectmanagement.exception.WorkItemUpdatingException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**
- * Test client retrieving entries from local files and other sources.
+ * Read-only test client serving the work items of {@code testclient/workitems.json}. It supports only what the
+ * rendering tests need: filters (any operator is treated as "equals"), sort entries (on the string value of the
+ * property) and pagination.
  *
  * @version $Id$
  */
@@ -66,10 +61,12 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class TestClient implements ProjectManagementClient, Initializable
 {
-    private static final Set<String> KNOWN_DATE_TYPES = Set.of(WorkItem.KEY_CLOSE_DATE,
+    private static final String FIXTURE = "/testclient/workitems.json";
+
+    private static final Set<String> DATE_PROPERTIES = Set.of(WorkItem.KEY_CLOSE_DATE,
         WorkItem.KEY_CREATION_DATE, WorkItem.KEY_DUE_DATE, WorkItem.KEY_START_DATE, WorkItem.KEY_UPDATE_DATE);
 
-    private static final DateTimeFormatter EXPECTED_JSON_DATE_FORMAT = new DateTimeFormatterBuilder()
+    private static final DateTimeFormatter JSON_DATE_FORMAT = new DateTimeFormatterBuilder()
         .appendPattern("dd/MM/yyyy")
         .optionalStart()
         .appendPattern(" HH:mm:ss")
@@ -79,174 +76,116 @@ public class TestClient implements ProjectManagementClient, Initializable
         .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
         .toFormatter();
 
-    private final List<WorkItem> workItems = new ArrayList<>();
+    private List<WorkItem> workItems;
 
     @Override
     public void initialize() throws InitializationException
     {
-        ObjectMapper objectMapper = new ObjectMapper();
-        InputStream inputStream = getClass().getResourceAsStream("/testclient/workitems.json");
-        if (inputStream == null) {
-            return;
-        }
-        try {
-            String itemsJson = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
-
-            List<WorkItem> jsonNode = objectMapper.readValue(itemsJson, new TypeReference<List<WorkItem>>()
+        try (InputStream inputStream = getClass().getResourceAsStream(FIXTURE)) {
+            if (inputStream == null) {
+                throw new InitializationException(String.format("Missing test fixture [%s].", FIXTURE));
+            }
+            this.workItems = new ObjectMapper().readValue(inputStream, new TypeReference<List<WorkItem>>()
             {
             });
-
-            for (WorkItem workItem : jsonNode) {
-                for (Map.Entry<String, Object> prop : workItem.entrySet()) {
-                    if (KNOWN_DATE_TYPES.contains(prop.getKey())) {
-                        handleDateVal(prop);
-                    } else if (prop.getValue() instanceof Map && (
-                        ((Map<?, ?>) prop.getValue()).containsKey(Linkable.KEY_LOCATION)
-                            || ((Map<?, ?>) prop.getValue()).containsKey(Linkable.KEY_VALUE)))
-                    {
-                        handleLinkableVal(prop);
-                    } else if (prop.getValue() instanceof List && !((List<?>) prop.getValue()).isEmpty()) {
-                        handleListVal(prop);
-                    }
-                }
-            }
-            workItems.addAll(jsonNode);
         } catch (IOException e) {
+            throw new InitializationException(String.format("Failed to read the test fixture [%s].", FIXTURE), e);
+        }
+        // Jackson reads the nested objects as plain maps and the dates as strings.
+        for (WorkItem workItem : this.workItems) {
+            workItem.replaceAll(TestClient::toModelValue);
         }
     }
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException
     {
-        WorkItem item = getWorkItemMatching(workItemId);
-        if (item == null) {
-            throw new WorkItemNotFoundException("Not found");
-        }
-        return item;
+        return this.workItems.stream()
+            .filter(workItem -> workItemId.equals(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER)))
+            .findFirst()
+            .orElseThrow(() -> new WorkItemNotFoundException(String.format("No work item [%s].", workItemId)));
     }
 
     @Override
     public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
-        throws WorkItemRetrievalException
     {
+        List<WorkItem> matching = this.workItems.stream()
+            .filter(workItem -> filters.stream().allMatch(filter -> matches(workItem, filter)))
+            .sorted(getComparator(sortEntries))
+            .collect(Collectors.toList());
+
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
         result.setPage(pageSize > 0 ? offset / pageSize + 1 : 1);
         result.setPageSize(pageSize);
-
-        List<WorkItem> filteredWorkItem = workItems.stream().filter(wi -> {
-            boolean matchesFilters = true;
-            for (LiveDataQuery.Filter filter : filters) {
-                Object propVal = wi.get(filter.getProperty());
-                Object valToMatch;
-                if (propVal instanceof Linkable) {
-                    valToMatch = ((Linkable) propVal).getValue();
-                } else {
-                    valToMatch = propVal;
-                }
-                // We currently assume that all operators are "equals".
-                Boolean matchesConstraints =
-                    filter.getConstraints().stream().map(constraint -> constraint.getValue().equals(valToMatch))
-                        .reduce(false, (a, b) -> a || b);
-                matchesFilters &= matchesConstraints;
-            }
-            return matchesFilters;
-        }).collect(Collectors.toList());
-        result.setTotalItems(workItems.size());
-        if (offset > filteredWorkItem.size()) {
-            return result;
+        result.setTotalItems(matching.size());
+        if (offset < matching.size()) {
+            result.getItems().addAll(matching.subList(offset, Math.min(matching.size(), offset + pageSize)));
         }
-        result.getItems()
-            .addAll(filteredWorkItem.subList(offset, Math.min(filteredWorkItem.size(), offset + pageSize)));
         return result;
     }
 
     @Override
-    public WorkItem createWorkItem(WorkItem workItem) throws WorkItemCreationException
+    public WorkItem createWorkItem(WorkItem workItem)
     {
-        WorkItem dbWorkItem = getWorkItemMatching(workItem.getIdentifier().getValue());
-
-        if (dbWorkItem != null) {
-            throw new WorkItemCreationException("Item already exists.");
-        }
-        workItems.add(workItem);
-        return workItem;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public WorkItem updateWorkItem(WorkItem workItem) throws WorkItemUpdatingException
+    public WorkItem updateWorkItem(WorkItem workItem)
     {
-
-        WorkItem existingWorkItem = getWorkItemMatching(workItem.getIdentifier().getValue());
-
-        if (existingWorkItem == null) {
-            throw new WorkItemUpdatingException("Not found");
-        }
-
-        int index = workItems.indexOf(existingWorkItem);
-        workItems.remove(index);
-        workItems.add(index, workItem);
-        return workItem;
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException
+    public boolean deleteWorkItem(String workItemId)
     {
-        WorkItem existingWorkItem = getWorkItemMatching(workItemId);
-        if (existingWorkItem == null) {
-            throw new WorkItemDeletionException("Not found");
+        throw new UnsupportedOperationException();
+    }
+
+    private static boolean matches(WorkItem workItem, LiveDataQuery.Filter filter)
+    {
+        String value = getStringValue(workItem, filter.getProperty());
+        return filter.getConstraints().stream().anyMatch(constraint -> constraint.getValue().equals(value));
+    }
+
+    private static Comparator<WorkItem> getComparator(List<LiveDataQuery.SortEntry> sortEntries)
+    {
+        // Keep the order of the fixture when there's nothing to sort on.
+        Comparator<WorkItem> comparator = (left, right) -> 0;
+        for (LiveDataQuery.SortEntry sortEntry : sortEntries) {
+            Comparator<String> valueComparator = sortEntry.isDescending()
+                ? Comparator.<String>reverseOrder() : Comparator.<String>naturalOrder();
+            comparator = comparator.thenComparing(workItem -> getStringValue(workItem, sortEntry.getProperty()),
+                Comparator.nullsLast(valueComparator));
         }
-        workItems.remove(existingWorkItem);
-        return true;
+        return comparator;
     }
 
-    private static void handleLinkableVal(Map.Entry<String, Object> prop)
+    private static String getStringValue(WorkItem workItem, String property)
     {
-        String val = (String) ((Map<?, ?>) prop.getValue()).get(Linkable.KEY_VALUE);
-        String location = (String) ((Map<?, ?>) prop.getValue()).get(Linkable.KEY_LOCATION);
-        prop.setValue(new Linkable(val, location));
-    }
-
-    private static void handleListVal(Map.Entry<String, Object> prop)
-    {
-        Object listVal = ((List<?>) prop.getValue()).get(0);
-        if (listVal instanceof Map && (((Map<?, ?>) listVal).containsKey(Linkable.KEY_LOCATION)
-            || ((Map<?, ?>) listVal).containsKey(Linkable.KEY_VALUE)))
-        {
-            List<Linkable> linkables = ((List<?>) prop.getValue())
-                .stream()
-                .map(i -> new Linkable(
-                    (String) ((Map) i).get(Linkable.KEY_VALUE),
-                    (String) ((Map) i).get(Linkable.KEY_VALUE)))
-                .collect(
-                    Collectors.toList());
-            prop.setValue(linkables);
+        Object value = workItem.get(property);
+        if (value instanceof Linkable) {
+            return ((Linkable) value).getValue();
         }
+        return value == null ? null : value.toString();
     }
 
-    private static void handleDateVal(Map.Entry<String, Object> prop)
+    private static Object toModelValue(String property, Object value)
     {
-        Object dateVal = prop.getValue();
-        if (dateVal instanceof Long) {
-            prop.setValue(new Date((Long) dateVal));
-        } else if (dateVal instanceof Integer) {
-            prop.setValue(new Date((Integer) dateVal));
-        } else if (dateVal instanceof String) {
-            try {
-                LocalDateTime localDateTime =
-                    LocalDateTime.parse(dateVal.toString(), EXPECTED_JSON_DATE_FORMAT);
-                Date date = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
-                prop.setValue(date);
-            } catch (DateTimeParseException e) {
-                System.out.println(e);
-            }
+        if (DATE_PROPERTIES.contains(property) && value instanceof String) {
+            return Date.from(LocalDateTime.parse((String) value, JSON_DATE_FORMAT).atZone(ZoneId.systemDefault())
+                .toInstant());
+        } else if (value instanceof Map) {
+            return toLinkable((Map<?, ?>) value);
+        } else if (value instanceof List && !((List<?>) value).isEmpty() && ((List<?>) value).get(0) instanceof Map) {
+            return ((List<?>) value).stream().map(item -> toLinkable((Map<?, ?>) item)).collect(Collectors.toList());
         }
+        return value;
     }
 
-    private WorkItem getWorkItemMatching(String id)
+    private static Linkable toLinkable(Map<?, ?> value)
     {
-        return workItems.stream()
-            .filter(w -> w.getIdentifier().getValue().equals(id))
-            .findFirst().orElse(null);
+        return new Linkable((String) value.get(Linkable.KEY_VALUE), (String) value.get(Linkable.KEY_LOCATION));
     }
 }

@@ -83,7 +83,10 @@ public class OpenProjectProjectMembersMacro
         throws MacroExecutionException
     {
         String project = parameters.getProject();
-        // Always filter on the project, even when it's not set, so that the members of all projects are not listed.
+        // The members of all projects are never listed.
+        if (!hasProject(project)) {
+            throw new MacroExecutionException("The project whose members to display is missing.");
+        }
         String filters = FilterBuilder.get()
             .addFilter("project", FilterBuilder.Operator.EQUALS, Collections.singletonList(project)).build();
         List<User> members;

@@ -62,8 +62,7 @@ abstract class AbstractDirectMacroTest
     @Named("wiki")
     protected ConfigurationSource wikiConfigSource;
 
-    @Mock
-    protected MacroTransformationContext context;
+    protected final MacroTransformationContext context = new MacroTransformationContext();
 
     @Mock
     protected OpenProjectApiClient apiClient;
