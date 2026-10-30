@@ -23,7 +23,6 @@ package com.xwiki.projectmanagement.livedata;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -52,12 +51,6 @@ public class ProjectManagementPropertyDescriptorStore implements LiveDataPropert
     private Provider<LiveDataConfiguration> liveDataConfigurationProvider;
 
     @Override
-    public Optional<LiveDataPropertyDescriptor> get(String propertyId) throws LiveDataException
-    {
-        return LiveDataPropertyDescriptorStore.super.get(propertyId);
-    }
-
-    @Override
     public Collection<LiveDataPropertyDescriptor> get() throws LiveDataException
     {
         List<LiveDataPropertyDescriptor> properties = new ArrayList<>();
@@ -65,17 +58,5 @@ public class ProjectManagementPropertyDescriptorStore implements LiveDataPropert
         properties.addAll(this.liveDataConfigurationProvider.get().getMeta().getPropertyDescriptors());
 
         return properties;
-    }
-
-    @Override
-    public boolean save(LiveDataPropertyDescriptor propertyDescriptor) throws LiveDataException
-    {
-        return LiveDataPropertyDescriptorStore.super.save(propertyDescriptor);
-    }
-
-    @Override
-    public Optional<LiveDataPropertyDescriptor> remove(String propertyId) throws LiveDataException
-    {
-        return LiveDataPropertyDescriptorStore.super.remove(propertyId);
     }
 }

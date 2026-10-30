@@ -65,8 +65,6 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
 
     private static final String FLATTEN_FORMAT = "%s.%s";
 
-    private Map<String, Map<String, Object>> db = new HashMap<>();
-
     @Inject
     private ProjectManagementManager projectManagementManager;
 
@@ -85,13 +83,9 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
     @Override
     public Optional<Map<String, Object>> get(Object entryId) throws LiveDataException
     {
-        return Optional.of(db.get(entryId));
-    }
-
-    @Override
-    public Optional<Object> get(Object entryId, String property) throws LiveDataException
-    {
-        return LiveDataEntryStore.super.get(entryId, property);
+        // The entry id alone doesn't identify the client holding the work item (it's a source parameter, which only
+        // the query provides), so single entries can't be retrieved.
+        return Optional.empty();
     }
 
     @Override
@@ -188,23 +182,5 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
                 entry.remove(linkWorkItemProperty);
             }
         }
-    }
-
-    @Override
-    public Optional<Object> save(Map<String, Object> entry) throws LiveDataException
-    {
-        return LiveDataEntryStore.super.save(entry);
-    }
-
-    @Override
-    public Optional<Object> update(Object entryId, String property, Object value) throws LiveDataException
-    {
-        return LiveDataEntryStore.super.update(entryId, property, value);
-    }
-
-    @Override
-    public Optional<Map<String, Object>> remove(Object entryId) throws LiveDataException
-    {
-        return LiveDataEntryStore.super.remove(entryId);
     }
 }
