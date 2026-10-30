@@ -107,7 +107,12 @@ public class OpenProjectInstance
 
     private static final By USERNAME_INPUT = By.id("username");
 
-    private static final By PAGE = By.tagName("html");
+    /**
+     * OpenProject submits most forms with Turbo, which replaces the body of the page without loading a new document.
+     */
+    private static final By PAGE = By.tagName("body");
+
+    private static final int SUBMIT_TIMEOUT = 60;
 
     private static final By AUTHORIZE_BUTTON =
         By.xpath("//form[@action='/oauth/authorize']//*[contains(@class, '-primary')]");
@@ -135,6 +140,11 @@ public class OpenProjectInstance
     private List<String> classicProjectIdentifiers;
 
     /**
+     * The container running the instance, or {@code null} if the instance is managed externally.
+     */
+    private GenericContainer<?> container;
+
+    /**
      * @return an {@link ExternalOpenProjectInstance} configured from the {@code openproject.*} system properties when
      *     {@value #URL_PROPERTY} is set, otherwise an instance that is started in a Docker container
      */
@@ -148,6 +158,17 @@ public class OpenProjectInstance
         return new ExternalOpenProjectInstance(System.getProperty(USERNAME_PROPERTY, DEFAULT_USERNAME),
             System.getProperty(PASSWORD_PROPERTY, PASSWORD_OLD), url, System.getProperty(CLIENT_ID_PROPERTY),
             System.getProperty(CLIENT_SECRET_PROPERTY));
+    }
+
+    /**
+     * Stop the container started by {@link #startOpenProject(TestUtils, TestConfiguration)}, if any.
+     */
+    public void stop()
+    {
+        if (this.container != null) {
+            this.container.stop();
+            this.container = null;
+        }
     }
 
     /**
@@ -186,6 +207,8 @@ public class OpenProjectInstance
             .withCopyFileToContainer(MountableFile.forClasspathResource("doorkeeper.rb"),
                 "/app/config/initializers/doorkeeper.rb");
 
+        // Keep the container before starting it, so that it can be stopped if its start or its setup fails.
+        this.container = openProject;
         DockerTestUtils.startContainer(openProject, testConfiguration);
 
         // OpenProject has to be reached with the same URL by the browser and by XWiki. A containerized XWiki shares the
@@ -344,7 +367,7 @@ public class OpenProjectInstance
         if (driver.hasElementWithoutWaiting(USERNAME_INPUT)) {
             WebElement loginPage = driver.findElement(PAGE);
             submitLogin(driver);
-            driver.waitUntilCondition(ExpectedConditions.stalenessOf(loginPage));
+            driver.waitUntilCondition(ExpectedConditions.stalenessOf(loginPage), SUBMIT_TIMEOUT);
             waitForAuthorizationStep(driver);
         }
         if (driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON)) {
@@ -526,7 +549,7 @@ public class OpenProjectInstance
     {
         WebElement formPage = driver.findElement(PAGE);
         submit.run();
-        driver.waitUntilCondition(ExpectedConditions.stalenessOf(formPage));
+        driver.waitUntilCondition(ExpectedConditions.stalenessOf(formPage), SUBMIT_TIMEOUT);
         waitPageLoad(driver);
     }
 

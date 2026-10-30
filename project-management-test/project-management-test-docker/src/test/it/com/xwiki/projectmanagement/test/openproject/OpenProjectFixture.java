@@ -39,6 +39,11 @@ public final class OpenProjectFixture
 
     private static boolean connectionConfigured;
 
+    /**
+     * Why the OpenProject instance failed to start or to be set up, or {@code null} if it didn't fail.
+     */
+    private static Throwable startFailure;
+
     private OpenProjectFixture()
     {
     }
@@ -56,10 +61,21 @@ public final class OpenProjectFixture
     public static synchronized OpenProjectInstance ensureReady(TestUtils setup, TestConfiguration testConfiguration)
         throws Exception
     {
+        if (startFailure != null) {
+            // Don't start another instance for each test class: OpenProject is slow to start and takes a lot of memory.
+            throw new IllegalStateException("The OpenProject instance failed to start for a previous test class.",
+                startFailure);
+        }
         if (instance == null) {
             OpenProjectInstance newInstance = OpenProjectInstance.fromSystemProperties();
-            newInstance.startOpenProject(setup, testConfiguration);
-            newInstance.setupInstance(setup);
+            try {
+                newInstance.startOpenProject(setup, testConfiguration);
+                newInstance.setupInstance(setup);
+            } catch (Exception | Error e) {
+                startFailure = e;
+                newInstance.stop();
+                throw e;
+            }
             instance = newInstance;
         }
         ensureConnection(setup);
