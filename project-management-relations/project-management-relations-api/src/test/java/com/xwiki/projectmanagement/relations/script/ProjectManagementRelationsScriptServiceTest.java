@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.security.authorization.AccessDeniedException;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -34,6 +35,10 @@ import com.xwiki.projectmanagement.relations.RelationsManager;
 import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
 /**
@@ -49,6 +54,8 @@ class ProjectManagementRelationsScriptServiceTest
     private static final DocumentReference VIEWABLE = new DocumentReference("wiki", "A", "WebHome");
 
     private static final DocumentReference HIDDEN = new DocumentReference("wiki", "Hidden", "WebHome");
+
+    private static final String CLIENT = "openproject";
 
     @InjectMockComponents
     private ProjectManagementRelationsScriptService scriptService;
@@ -75,6 +82,44 @@ class ProjectManagementRelationsScriptServiceTest
         when(this.relationsManager.getRelations(PAGE, true)).thenReturn(List.of());
 
         assertEquals(List.of(), this.scriptService.getRelations(PAGE, true));
+    }
+
+    @Test
+    void getClientRelationOfAViewableAncestor() throws Exception
+    {
+        ProjectManagementRelation relation = relation(VIEWABLE);
+        when(this.relationsManager.getClientRelation(PAGE, CLIENT, true)).thenReturn(relation);
+
+        assertSame(relation, this.scriptService.getClientRelation(PAGE, CLIENT, true));
+    }
+
+    @Test
+    void getClientRelationWhenThereIsNone() throws Exception
+    {
+        assertNull(this.scriptService.getClientRelation(PAGE, CLIENT, false));
+    }
+
+    @Test
+    void getClientRelationWhenThePageIsNotViewable() throws Exception
+    {
+        // The relation's owner is viewable: only the view right on the requested page is missing.
+        when(this.relationsManager.getClientRelation(PAGE, CLIENT, true)).thenReturn(relation(VIEWABLE));
+        AccessDeniedException denied = new AccessDeniedException(Right.VIEW, null, PAGE);
+        doThrow(denied).when(this.authorizationManager).checkAccess(Right.VIEW, PAGE);
+
+        assertSame(denied, assertThrows(AccessDeniedException.class,
+            () -> this.scriptService.getClientRelation(PAGE, CLIENT, true)));
+    }
+
+    @Test
+    void getClientRelationWhenTheOwnerIsNotViewable() throws Exception
+    {
+        when(this.relationsManager.getClientRelation(PAGE, CLIENT, true)).thenReturn(relation(HIDDEN));
+        AccessDeniedException denied = new AccessDeniedException(Right.VIEW, null, HIDDEN);
+        doThrow(denied).when(this.authorizationManager).checkAccess(Right.VIEW, HIDDEN);
+
+        assertSame(denied, assertThrows(AccessDeniedException.class,
+            () -> this.scriptService.getClientRelation(PAGE, CLIENT, true)));
     }
 
     private ProjectManagementRelation relation(DocumentReference owner)
