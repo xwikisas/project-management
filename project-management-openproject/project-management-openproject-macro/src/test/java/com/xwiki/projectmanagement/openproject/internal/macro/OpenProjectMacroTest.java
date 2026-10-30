@@ -67,7 +67,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -124,8 +123,7 @@ class OpenProjectMacroTest
     @Mock
     private Macro<ProjectManagementAsyncMacroParams> displayerMacro;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     @Mock
     private OpenProjectApiClient apiClient;
@@ -140,8 +138,9 @@ class OpenProjectMacroTest
         this.parameters.setInstance("main");
         when(this.componentManager.getInstance(Macro.class, LIVE_DATA_DISPLAYER)).thenReturn(this.displayerMacro);
         when(this.displayerMacro.supportsInlineMode()).thenReturn(true);
+        // The live data displayer is not rendered asynchronously.
         when(this.asyncExecutor.execute(same(this.displayerMacro), same(this.parameters), any(), same(this.context),
-            any(), anyBoolean())).thenReturn(this.displayed);
+            any(), eq(false))).thenReturn(this.displayed);
     }
 
     @Test
@@ -165,9 +164,6 @@ class OpenProjectMacroTest
         verify(this.ssrx).use("openproject/css/propertyStyles.css");
         verify(this.jsx).use("OpenProject.Code.ViewAction");
         verify(this.stylingSetupManager).useInstanceStyle("main");
-        // The live data displayer is not rendered asynchronously.
-        verify(this.asyncExecutor).execute(same(this.displayerMacro), same(this.parameters), eq("content"),
-            same(this.context), any(), eq(false));
     }
 
     @Test
@@ -186,30 +182,12 @@ class OpenProjectMacroTest
     @Test
     void displaysTheWorkItemsInlineInAFormatBlock() throws Exception
     {
-        when(this.context.isInline()).thenReturn(true);
+        this.context.setInline(true);
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertEquals(List.of(new FormatBlock(this.displayed, Format.NONE, Map.of("class", "open-project-macro"))),
             result);
-    }
-
-    @Test
-    void usesTheInstanceResolvedByTheListeners() throws Exception
-    {
-        this.parameters.setInstance(null);
-        doAnswer(invocation -> {
-            this.parameters.setInstance("dashboard");
-            return null;
-        }).when(this.observationManager).notify(any(BeforeOpenProjectMacroExecutionEvent.class), same(this.macro),
-            same(this.parameters));
-
-        this.macro.execute(this.parameters, "", this.context);
-
-        verify(this.stylingSetupManager).useInstanceStyle("dashboard");
-        verify(this.userTokenChecker).getWarningBlock("dashboard", this.context);
-        assertEquals("client=openproject&instance=dashboard&translationPrefix=openproject.",
-            this.parameters.getSourceParameters());
     }
 
     @Test

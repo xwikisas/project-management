@@ -109,8 +109,7 @@ class OpenProjectCalendarMacroTest
     @Mock
     private XWikiRequest request;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     private final DefaultProjectManagementClientExecutionContext executionContext =
         new DefaultProjectManagementClientExecutionContext();

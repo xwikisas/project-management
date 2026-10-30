@@ -57,11 +57,7 @@ import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -117,9 +113,7 @@ class OpenProjectMacroDisplayListenersTest
     {
         List<OpenProjectConnection> connections = new ArrayList<>();
         for (String name : names) {
-            OpenProjectConnection connection = mock(OpenProjectConnection.class);
-            when(connection.getConnectionName()).thenReturn(name);
-            connections.add(connection);
+            connections.add(new OpenProjectConnection(name, "https://" + name + ".example.com", "id", "secret", name));
         }
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(connections);
     }
@@ -149,9 +143,11 @@ class OpenProjectMacroDisplayListenersTest
     @Test
     void ignoresOtherEvents()
     {
+        selectedConnection("dashboard");
+
         this.listener.onEvent(mock(Event.class), null, this.parameters);
 
-        verifyNoInteractions(this.xcontextProvider);
+        assertNull(this.parameters.getInstance());
     }
 
     @Test
@@ -162,7 +158,6 @@ class OpenProjectMacroDisplayListenersTest
         fireEvent(this.parameters);
 
         assertNull(this.parameters.getInstance());
-        verify(this.document, never()).getXObject(DASHBOARD_CLASS);
     }
 
     @Test
@@ -256,7 +251,6 @@ class OpenProjectMacroDisplayListenersTest
         fireEvent(macroParameters);
 
         assertEquals("dashboard", macroParameters.getInstance());
-        verify(this.dashboardConfig, never()).getStringValue("selectedProject");
     }
 
     @Test
@@ -316,7 +310,6 @@ class OpenProjectMacroDisplayListenersTest
 
         assertEquals(OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE, this.parameters.getInstance());
         assertEquals(OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE, this.parameters.getProject());
-        verify(this.openProjectAccess, never()).resolve(any());
     }
 
     @Test

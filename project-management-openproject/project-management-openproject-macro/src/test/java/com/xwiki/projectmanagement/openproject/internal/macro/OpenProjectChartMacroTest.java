@@ -58,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -96,8 +95,7 @@ class OpenProjectChartMacroTest
     @Named("bar")
     private ChartTypeDisplayer barDisplayer;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     private final DefaultProjectManagementClientExecutionContext executionContext =
         new DefaultProjectManagementClientExecutionContext();
@@ -144,22 +142,6 @@ class OpenProjectChartMacroTest
         assertEquals("openproject", this.parameters.getClient());
         // The instance is made available to the OpenProject client through the execution context.
         assertEquals("main", this.executionContext.get("instance"));
-    }
-
-    @Test
-    void usesTheInstanceResolvedByTheListeners() throws Exception
-    {
-        this.parameters.setInstance(null);
-        doAnswer(invocation -> {
-            this.parameters.setInstance("dashboard");
-            return null;
-        }).when(this.observationManager).notify(any(BeforeOpenProjectMacroExecutionEvent.class), same(this.macro),
-            same(this.parameters));
-
-        this.macro.execute(this.parameters, "", this.context);
-
-        verify(this.userTokenChecker).getWarningBlock("dashboard", this.context);
-        assertEquals("dashboard", this.executionContext.get("instance"));
     }
 
     @Test

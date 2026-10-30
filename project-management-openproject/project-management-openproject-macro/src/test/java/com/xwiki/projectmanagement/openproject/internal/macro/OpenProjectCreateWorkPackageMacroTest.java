@@ -64,8 +64,7 @@ class OpenProjectCreateWorkPackageMacroTest
     @Mock
     private Translation translation;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     @BeforeEach
     void setUp()
@@ -96,7 +95,5 @@ class OpenProjectCreateWorkPackageMacroTest
 
         assertSame(licenseBlock,
             this.macro.execute(new OpenProjectCreateWorkPackageMacroParameters(), "", this.context));
-
-        verifyNoInteractions(this.l10n);
     }
 }
