@@ -40,7 +40,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * Displays the work items as a bulleted list, one work item per line with its linked identifier and its summary.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 @Component
 @Singleton

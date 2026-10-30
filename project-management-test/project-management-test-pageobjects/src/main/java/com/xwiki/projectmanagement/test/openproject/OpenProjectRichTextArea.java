@@ -27,7 +27,7 @@ import org.xwiki.ckeditor.test.po.RichTextAreaElement;
  * The OpenProject features of the CKEditor rich text area.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public class OpenProjectRichTextArea
 {

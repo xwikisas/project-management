@@ -40,7 +40,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
  * up in exports and in the text of the page used for search. The closed (resolved) work items are struck through.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public abstract class AbstractWorkItemsListDisplayer extends AbstractWorkItemsDisplayer
 {

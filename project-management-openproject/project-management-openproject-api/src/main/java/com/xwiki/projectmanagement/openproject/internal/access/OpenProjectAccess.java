@@ -27,7 +27,7 @@ import org.xwiki.component.annotation.Role;
  * read the token themselves.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 @Role
 public interface OpenProjectAccess

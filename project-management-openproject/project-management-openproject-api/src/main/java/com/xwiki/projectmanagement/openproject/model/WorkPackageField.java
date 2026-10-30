@@ -26,7 +26,7 @@ import java.util.List;
  * field (e.g. {@code category}) or a custom field (e.g. {@code customField3}).
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public class WorkPackageField extends BaseOpenProjectObject
 {
