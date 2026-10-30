@@ -1,0 +1,10 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Inline displayer test - display a work item inline, its identifier linked to its location.
+.#-----------------------------------------------------
+See {{test workItemsDisplayer="workItemInline"/}}.
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>See bug <span class="wikiexternallink"><a class="text-primary" href="http://xwiki.com/id/1">#WorkItem1</a></span> <span class="text-muted work-package-inline-summary">Do this thing!</span>.</p>

@@ -19,8 +19,6 @@
  */
 package com.xwiki.projectmanagement;
 
-import java.util.Map;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.configuration.ConfigurationSource;
@@ -31,6 +29,8 @@ import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.AllComponents;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.mockito.MockitoComponentManager;
+
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -76,17 +76,13 @@ public class IntegrationTests implements RenderingTests
     public void initialize(MockitoComponentManager componentManager) throws Exception
     {
         componentManager.registerMockComponent(IconManager.class);
-
-        ProjectManagementClientExecutionContext clientExecutionContext =
-            componentManager.registerMockComponent(ProjectManagementClientExecutionContext.class);
-        when(clientExecutionContext.getContext()).thenReturn(Map.of("client", "test", "translationPrefix",
-            "projectmanagement."));
-        when(clientExecutionContext.get("client")).thenReturn("test");
-        when(clientExecutionContext.get("translationPrefix")).thenReturn("projectmanagement.");
+        // The presets are stored in wiki pages; no test uses one.
+        componentManager.registerMockComponent(PresetsManager.class);
 
         ConfigurationSource wikiCfg = componentManager.registerMockComponent(ConfigurationSource.class, "wiki");
         when(wikiCfg.getProperty(eq("dateformat"), anyString())).thenReturn("dd/MM/yyyy");
 
         componentManager.registerMockComponent(SkinExtension.class, "ssrx");
+        componentManager.registerMockComponent(SkinExtension.class, "jsrx");
     }
 }

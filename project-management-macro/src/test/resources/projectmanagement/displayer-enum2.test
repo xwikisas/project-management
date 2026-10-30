@@ -3,8 +3,8 @@
 .input|xwiki/2.0
 .# Enum displayer test - display the identifiers of the work items in a standalone paragraph.
 .#-----------------------------------------------------
-{{workItemsEnum sourceParams="client=test"/}}
+{{test workItemsDisplayer="workItemsEnum"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<p><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span></del>, #WorkItem2, <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span></p>
+<p><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span></del>, #WorkItem2, <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span>, <span class="wikiexternallink"><a data-xwiki-translated-attribute-href="javascript:alert('identifier')">#Hostile&lt;b&gt;</a></span></p>

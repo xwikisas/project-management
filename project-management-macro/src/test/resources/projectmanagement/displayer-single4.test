@@ -1,11 +1,12 @@
 .runTransformations
 .#-----------------------------------------------------
 .input|xwiki/2.0
-.# Single displayer test - display a work item having a key, which is shown in the header instead of #<identifier>,
-.# and a property named by the Live Data configuration of its client, since it has no translation.
+.# Single displayer test - display the first work item of the sort order (identifier "3" comes before "WorkItem1",
+.# the first one of the client), which has a key, shown in the header instead of #<identifier>, and a property named
+.# by the Live Data configuration of its client, since it has no translation.
 .#-----------------------------------------------------
-{{workItemsSingle sourceParams="client=test" sort="identifier:asc" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"3~"}]}]}}"/}}
+{{test workItemsDisplayer="workItemsSingle" sort="identifier:asc"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>Do that other thing</p></div><div class="work-item-header-id"><p>projectmanagement.displayer.single.header.workItem <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span></p></div></div><div class="row"><div class="col-md-12"><p>projectmanagement.displayer.single.project.prefix:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Custom field:</td><td class="work-item-property-value">Some value</td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">projectmanagement.property.description</div><p></p></div></div>
+<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>Do that other thing</p></div><div class="work-item-header-id"><p>Test work item <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span></p></div></div><div class="row"><div class="col-md-12"><p>Work Item from project:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Custom field:</td><td class="work-item-property-value">Some value</td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">Description</div><p></p></div></div>

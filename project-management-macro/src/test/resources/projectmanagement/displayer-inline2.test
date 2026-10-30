@@ -1,0 +1,10 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Inline displayer test - display a work item whose identifier has no location, so it is not linked.
+.#-----------------------------------------------------
+See {{test workItemsDisplayer="workItemInline" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}.
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>See <span class="text-primary">#WorkItem2</span> <span class="text-muted work-package-inline-summary">Do this thing!</span>.</p>

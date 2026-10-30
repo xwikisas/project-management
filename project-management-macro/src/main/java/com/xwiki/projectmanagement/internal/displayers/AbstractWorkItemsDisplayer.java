@@ -38,6 +38,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
@@ -64,6 +65,13 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<ProjectManagementMacroParameters>
 {
     private static final String KEY_CLIENT = "client";
+
+    private static final String KEY_TRANSLATION_PREFIX = "translationPrefix";
+
+    /**
+     * The prefix of the generic translations, used when the client doesn't translate a key.
+     */
+    private static final String DEFAULT_TRANSLATION_PREFIX = "projectmanagement.";
 
     @Inject
     @Named("ssrx")
@@ -138,15 +146,42 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
      */
     protected String getNoItemsMessage()
     {
-        String translationPrefix = (String) macroContext.get("translationPrefix");
-        if (translationPrefix != null) {
-            String translated =
-                localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"));
-            if (translated != null) {
-                return translated;
-            }
+        String translated = getTranslationPlain("macro.noItems");
+        return translated != null ? translated : "There are no work items matching this filter.";
+    }
+
+    /**
+     * @return the prefix of the translation keys of the client (e.g. {@code openproject.}), given by the
+     *     {@code translationPrefix} source parameter, or the prefix of the generic translations when it's missing
+     */
+    protected String getTranslationPrefix()
+    {
+        Object translationPrefix = macroContext.get(KEY_TRANSLATION_PREFIX);
+        return translationPrefix instanceof String && !((String) translationPrefix).isEmpty()
+            ? (String) translationPrefix : DEFAULT_TRANSLATION_PREFIX;
+    }
+
+    /**
+     * @param key a translation key, without prefix (e.g. {@code macro.noItems})
+     * @return the translation of the key for the client or, when the client doesn't translate it, its generic
+     *     translation; {@code null} when neither exists
+     */
+    protected Translation getTranslation(String key)
+    {
+        Translation translation = this.localizationManager.getTranslation(getTranslationPrefix() + key);
+        if (translation == null) {
+            translation = this.localizationManager.getTranslation(DEFAULT_TRANSLATION_PREFIX + key);
         }
-        return "There are no work items matching this filter.";
+        return translation;
+    }
+
+    private String getTranslationPlain(String key)
+    {
+        String translation = this.localizationManager.getTranslationPlain(getTranslationPrefix() + key);
+        if (translation == null) {
+            translation = this.localizationManager.getTranslationPlain(DEFAULT_TRANSLATION_PREFIX + key);
+        }
+        return translation;
     }
 
     /**

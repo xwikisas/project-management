@@ -24,26 +24,25 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
-import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
-import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
-import org.xwiki.rendering.listener.reference.ResourceReference;
-import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.WorkItemException;
@@ -84,8 +83,26 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
 
     private static final String PREFIX_PROPERTY = "property.";
 
-    @Inject
-    private ContextualLocalizationManager localizationManager;
+    /**
+     * The properties shown outside of the property tables: in the header, the project row and the description. The
+     * resolution flag isn't shown since the status already tells whether the work item is closed.
+     */
+    private static final Set<String> NOT_LISTED_PROPERTIES = Set.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_KEY,
+        WorkItem.KEY_SUMMARY, WorkItem.KEY_PROJECT, WorkItem.KEY_DESCRIPTION, WorkItem.KEY_RESOLVED);
+
+    /**
+     * The order of the known properties in the property tables; the other properties come after them, in
+     * alphabetical order.
+     */
+    private static final List<String> PROPERTY_ORDER = List.of(WorkItem.KEY_TYPE, WorkItem.KEY_STATUS,
+        WorkItem.KEY_PRIORITY, WorkItem.KEY_RESOLUTION, WorkItem.KEY_PROGRESS, WorkItem.KEY_LABELS,
+        WorkItem.KEY_ASSIGNEES, WorkItem.KEY_CREATOR, WorkItem.KEY_REPORTER, WorkItem.KEY_CLOSED_BY,
+        WorkItem.KEY_MILESTONES, WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE, WorkItem.KEY_CREATION_DATE,
+        WorkItem.KEY_UPDATE_DATE, WorkItem.KEY_CLOSE_DATE);
+
+    private static final Comparator<String> PROPERTY_COMPARATOR =
+        Comparator.<String>comparingInt(property -> PROPERTY_ORDER.contains(property)
+            ? PROPERTY_ORDER.indexOf(property) : PROPERTY_ORDER.size()).thenComparing(Comparator.naturalOrder());
 
     /**
      * Default constructor.
@@ -114,63 +131,52 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         ProjectManagementMacroParameters parameters, MacroTransformationContext context)
     {
         this.ssrx.use("css/projectmanagement/displayer/single.css", Collections.singletonMap("forceSkinAction", true));
-        String translationPrefix = (String) macroContext.get("translationPrefix");
-        if (workItemList.getItems().size() <= 0) {
-            String noWorkItemMessage = null;
-            if (translationPrefix != null) {
-                noWorkItemMessage =
-                    localizationManager.getTranslationPlain(String.format("%s.%s", translationPrefix, "macro.noItems"));
-            }
-            if (noWorkItemMessage == null) {
-                noWorkItemMessage = "There are no work items matching this filter.";
-            }
+        if (workItemList.getItems().isEmpty()) {
             return Collections.singletonList(
-                new MacroBlock("warning", Collections.emptyMap(), noWorkItemMessage, false));
+                new MacroBlock("warning", Collections.emptyMap(), getNoItemsMessage(), false));
         }
         WorkItem workItem = workItemList.getItems().get(0);
 
-        Block header = getHeaderBlock(translationPrefix, workItem);
-        Block project = getProjectBlock(translationPrefix, workItem);
-        Block description = getDescriptionBlock(translationPrefix, workItem);
-        Block bodyBlocks = getBodyBlocks(workItem, translationPrefix);
+        Block header = getHeaderBlock(workItem);
+        Block project = getProjectBlock(workItem);
+        Block description = getDescriptionBlock(workItem);
+        Block bodyBlocks = getBodyBlocks(workItem);
 
         return Collections.singletonList(new GroupBlock(Arrays.asList(header, project, bodyBlocks, description),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-page-displayer")));
     }
 
-    private Block getDescriptionBlock(String translationPrefix, WorkItem workItem)
+    private Block getDescriptionBlock(WorkItem workItem)
     {
-        String description = (String) workItem.remove(WorkItem.KEY_DESCRIPTION);
-        List<Block> propertyNameBlock =
-            getTranslationBlocks(WorkItem.KEY_DESCRIPTION, translationPrefix + PREFIX_PROPERTY);
-        List<Block> descriptionBlocks =
-            getPropertyDisplayerManager().displayProperty(WorkItem.KEY_DESCRIPTION, description,
-                Collections.emptyMap());
+        List<Block> propertyNameBlock = getTranslationBlocks(PREFIX_PROPERTY + WorkItem.KEY_DESCRIPTION);
+        List<Block> descriptionBlocks = getPropertyDisplayerManager().displayProperty(WorkItem.KEY_DESCRIPTION,
+            workItem.getDescription(), Collections.emptyMap());
 
         return new GroupBlock(
             Arrays.asList(new GroupBlock(propertyNameBlock, PROP_NAME_PARAMS), new ParagraphBlock(descriptionBlocks)),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-package-description"));
     }
 
-    private Block getBodyBlocks(WorkItem workItem, String translationPrefix)
+    private Block getBodyBlocks(WorkItem workItem)
     {
         TableBuilder tableGeneralProps = new TableBuilder();
         TableBuilder tableLinkables = new TableBuilder();
         TableBuilder tableTimeProps = new TableBuilder();
-        String propertyPrefix = translationPrefix + PREFIX_PROPERTY;
         Map<String, String> propertyNames = getPropertyNames();
 
-        // The status already tells whether the work item is closed.
-        workItem.remove(WorkItem.KEY_RESOLVED);
         Map<String, Object> displayerParams = Map.of(
             KEY_INSTANCE, macroContext.getContext().getOrDefault(KEY_INSTANCE, "").toString(),
             "workItem", workItem
         );
-        for (Map.Entry<String, Object> property : workItem.entrySet()) {
+        // Sort the properties so that they're always displayed in the same order.
+        Map<String, Object> listedProperties = new TreeMap<>(PROPERTY_COMPARATOR);
+        listedProperties.putAll(workItem);
+        listedProperties.keySet().removeAll(NOT_LISTED_PROPERTIES);
+        for (Map.Entry<String, Object> property : listedProperties.entrySet()) {
             if (property.getValue() == null) {
                 continue;
             }
-            List<Block> propertyNameBlock = getPropertyNameBlocks(property.getKey(), propertyPrefix, propertyNames);
+            List<Block> propertyNameBlock = getPropertyNameBlocks(property.getKey(), propertyNames);
             propertyNameBlock.add(new SpecialSymbolBlock(':'));
             List<Block> propertyValueBlock = getPropertyDisplayerManager().displayProperty(property.getKey(),
                 property.getValue(), displayerParams);
@@ -211,9 +217,9 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     //      <p>Work item from project: <a href="#">> Some project name</a></p>
     //    </div>
     //  </div>
-    private Block getProjectBlock(String translationPrefix, WorkItem workItem)
+    private Block getProjectBlock(WorkItem workItem)
     {
-        List<Block> projectBlocks = getTranslationBlocks("displayer.single.project.prefix", translationPrefix);
+        List<Block> projectBlocks = getTranslationBlocks("displayer.single.project.prefix");
 
         projectBlocks.add(new SpecialSymbolBlock(':'));
         projectBlocks.add(new SpaceBlock());
@@ -223,9 +229,6 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
                 Collections.emptyMap()));
 
         Block colBlock = getBootstrap1Col(Collections.singletonList(new ParagraphBlock(projectBlocks)));
-
-        // Remove the project property so it won't get displayed again.
-        workItem.remove(WorkItem.KEY_PROJECT);
 
         return getBootstrapRow(Collections.singletonList(colBlock));
     }
@@ -249,21 +252,13 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
     //    <p>Work Item <a href="#">#123</a></p> (or <a href="#">PROJ-123</a> when the work item has a key)
     //    <p>Some nice title.</p>
     //  </div>
-    private GroupBlock getHeaderBlock(String translationPrefix, WorkItem workItem)
+    private GroupBlock getHeaderBlock(WorkItem workItem)
     {
-        List<Block> headerId = getTranslationBlocks("displayer.single.header.workItem", translationPrefix);
+        List<Block> headerId = getTranslationBlocks("displayer.single.header.workItem");
         headerId.add(new SpaceBlock());
-        headerId.add(
-            new LinkBlock(getIdentifierLabelBlocks(workItem),
-                new ResourceReference(workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER), ResourceType.URL),
-                false
-            ));
+        headerId.addAll(getIdentifierBlocks(workItem));
         List<Block> headerName = getPropertyDisplayerManager().displayProperty(String.class.getName(),
             workItem.getLinkableValue(WorkItem.KEY_SUMMARY), Collections.emptyMap());
-        // Remove id, key and summary so they won't be displayed again.
-        workItem.remove(WorkItem.KEY_IDENTIFIER);
-        workItem.remove(WorkItem.KEY_KEY);
-        workItem.remove(WorkItem.KEY_SUMMARY);
         GroupBlock headerIdGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(headerId)),
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header-id"));
         GroupBlock headerNameGroup = new GroupBlock(Collections.singletonList(new ParagraphBlock(headerName)),
@@ -273,30 +268,29 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
             Collections.singletonMap(ATTRIBUTE_CLASS, "work-item-header"));
     }
 
-    private List<Block> getPropertyNameBlocks(String property, String propertyPrefix,
-        Map<String, String> propertyNames)
+    private List<Block> getPropertyNameBlocks(String property, Map<String, String> propertyNames)
     {
+        // The name given by the Live Data configuration of the client wins over the generic translation.
         String name = propertyNames.get(property);
-        if (localizationManager.getTranslation(propertyPrefix + property) == null && name != null) {
+        if (name != null
+            && this.localizationManager.getTranslation(getTranslationPrefix() + PREFIX_PROPERTY + property) == null)
+        {
             return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(), name,
                 Collections.emptyMap()));
         }
-        return getTranslationBlocks(property, propertyPrefix);
+        return getTranslationBlocks(PREFIX_PROPERTY + property);
     }
 
-    private List<Block> getTranslationBlocks(String key, String translationPrefix)
+    private List<Block> getTranslationBlocks(String key)
     {
-        List<Block> returnList = null;
-        String translationKey = translationPrefix + key;
-
-        if (localizationManager.getTranslation(translationKey) == null) {
-            // Returned the key that was supposed to be used.
-            returnList = getPropertyDisplayerManager().displayProperty(String.class.getName(), translationKey,
-                Collections.emptyMap());
-        } else {
-            returnList = new ArrayList<>();
-            returnList.add(localizationManager.getTranslation(translationKey).render());
+        Translation translation = getTranslation(key);
+        if (translation == null) {
+            // Show the key that was supposed to be used.
+            return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(),
+                getTranslationPrefix() + key, Collections.emptyMap()));
         }
-        return returnList;
+        List<Block> blocks = new ArrayList<>();
+        blocks.add(translation.render());
+        return blocks;
     }
 }
