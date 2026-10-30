@@ -72,7 +72,11 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         this.editPage = page.editWYSIWYG();
         new CKEditor("content").waitToLoad();
         MacroDialogSelectModal selectModal = openMacroSelectModal(setup);
-        if (!setup.getDriver().hasElement(By.cssSelector(".macro-editor-modal .macro-name"))) {
+        // CKEditor opens the macro selector, or directly the edit modal of the macro at the caret position.
+        By editModal = By.cssSelector(".macro-editor-modal .macro-name");
+        By selectorModal = By.cssSelector(".macro-selector-modal");
+        setup.getDriver().waitUntilCondition(driver -> isDisplayed(editModal) || isDisplayed(selectorModal));
+        if (!isDisplayed(editModal)) {
             selectModal.waitUntilReady();
             selectModal.filterByText(macroName, expectedMacroCount);
             setup.getDriver().findElement(By.cssSelector(".macro-selector-modal .modal-footer .btn-primary")).click();
@@ -106,19 +110,20 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
-     * @param name the technical name of the parameter.
-     * @return the input value of the parameter.
+     * @return the filter parameter which has a model of its own.
      */
-    public String getMacroParameter(String name)
+    public FilterBuilderParameter getFilterBuilder()
     {
-        return getMacroParameterInput(name).getDomProperty("value");
+        selectParameterTab("filters");
+        return new FilterBuilderParameter();
     }
 
-    /**
-     * @param name the technical name of the parameter.
-     * @return the input element of the parameter.
-     */
-    public WebElement getMacroParameterInput(String name)
+    private boolean isDisplayed(By locator)
+    {
+        return getDriver().findElementsWithoutWaiting(locator).stream().anyMatch(WebElement::isDisplayed);
+    }
+
+    protected WebElement getMacroParameterInput(String name)
     {
         return getDriver().findElementWithoutWaitingWithoutScrolling(By.cssSelector(
             String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],select[name='%s']", name,

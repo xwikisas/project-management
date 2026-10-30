@@ -49,6 +49,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
@@ -279,6 +280,23 @@ class DefaultOpenProjectApiClientTest
             List.of("First project", "Second project", "Third project"),
             String.format("%s/projects/%%s", OPEN_PROJECT_CONNECTION_URL)
         );
+    }
+
+    @Test
+    void getNewsLinksToTheProjectOfEachNews() throws IOException, ProjectManagementException
+    {
+        // The id of the news differs from the id of its project.
+        when(this.response.body()).thenReturn("{\"_embedded\":{\"elements\":[{\"id\":7,\"title\":\"Release\","
+            + "\"summary\":\"\",\"description\":{\"raw\":\"\"},\"createdAt\":\"2026-10-01T10:00:00Z\","
+            + "\"_links\":{\"self\":{\"href\":\"/api/v3/news/7\",\"title\":\"Release\"},"
+            + "\"project\":{\"href\":\"/api/v3/projects/3\",\"title\":\"Third project\"},"
+            + "\"author\":{\"href\":\"/api/v3/users/1\",\"title\":\"Admin\"}}}]}}");
+
+        PaginatedResult<News> news = openProjectApiClient.getNews(OFFSET, PAGE_SIZE, FILTERS_STRING);
+
+        assertEquals(1, news.getItems().size());
+        assertEquals(new Linkable("Third project", OPEN_PROJECT_CONNECTION_URL + "/projects/3"),
+            news.getItems().get(0).getProjectLink());
     }
 
     @Test

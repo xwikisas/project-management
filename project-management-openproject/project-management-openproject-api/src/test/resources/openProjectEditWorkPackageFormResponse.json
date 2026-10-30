@@ -1,0 +1,164 @@
+{
+  "_type": "Form",
+  "_embedded": {
+    "payload": {
+      "subject": "Fix the login",
+      "description": {
+        "format": "markdown",
+        "raw": "The login fails."
+      },
+      "startDate": "2026-10-01",
+      "dueDate": null,
+      "lockVersion": 3,
+      "_links": {
+        "type": {
+          "href": "/api/v3/types/2",
+          "title": "Bug"
+        },
+        "priority": {
+          "href": "/api/v3/priorities/99",
+          "title": "Removed priority"
+        },
+        "status": {
+          "href": "/api/v3/statuses/1",
+          "title": "New"
+        },
+        "project": {
+          "href": "/api/v3/projects/5",
+          "title": "Demo"
+        },
+        "assignee": {
+          "href": "/api/v3/users/4",
+          "title": "Alice"
+        },
+        "parent": {
+          "href": "/api/v3/work_packages/7",
+          "title": "Epic"
+        },
+        "category": {
+          "href": null
+        },
+        "version": {
+          "href": ""
+        }
+      }
+    },
+    "schema": {
+      "subject": {
+        "name": "Subject",
+        "required": true,
+        "writable": true
+      },
+      "description": {
+        "name": "Description",
+        "required": false,
+        "writable": true
+      },
+      "type": {
+        "name": "Type",
+        "required": true,
+        "writable": true,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 1,
+              "name": "Task",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/types/1",
+                  "title": "Task"
+                }
+              }
+            },
+            {
+              "id": 2,
+              "name": "Bug",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/types/2",
+                  "title": "Bug"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "priority": {
+        "name": "Priority",
+        "required": true,
+        "writable": true,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 7,
+              "name": "Low",
+              "isDefault": false,
+              "_links": {
+                "self": {
+                  "href": "/api/v3/priorities/7",
+                  "title": "Low"
+                }
+              }
+            },
+            {
+              "id": 8,
+              "name": "Normal",
+              "isDefault": true,
+              "_links": {
+                "self": {
+                  "href": "/api/v3/priorities/8",
+                  "title": "Normal"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "status": {
+        "name": "Status",
+        "required": true,
+        "writable": false,
+        "_embedded": {
+          "allowedValues": [
+            {
+              "id": 1,
+              "name": "New",
+              "_links": {
+                "self": {
+                  "href": "/api/v3/statuses/1",
+                  "title": "New"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "assignee": {
+        "name": "Assignee",
+        "required": false,
+        "writable": true
+      },
+      "parent": {
+        "name": "Parent",
+        "required": false,
+        "writable": true
+      },
+      "startDate": {
+        "name": "Start date",
+        "required": false,
+        "writable": true
+      },
+      "dueDate": {
+        "name": "Finish date",
+        "required": false,
+        "writable": true
+      }
+    },
+    "validationErrors": {}
+  },
+  "_links": {
+    "commit": {
+      "href": "/api/v3/work_packages/42"
+    }
+  }
+}

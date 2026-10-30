@@ -30,7 +30,6 @@ import org.xwiki.test.ui.TestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -58,9 +57,8 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
     {
         // A second connection, that the current user hasn't authorized.
         String unauthorized = "dashboard-unauthorized";
-        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.addNewConnection(unauthorized, this.openProject.getBaseUrl(), "someid", "somesecret");
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", unauthorized));
+        OpenProjectAdminPage.gotoPage()
+            .addNewConnection(unauthorized, this.openProject.getBaseUrl(), "someid", "somesecret");
 
         OpenProjectDashboardPage dashboard = OpenProjectDashboardPage.gotoPage();
         if (!CONNECTION_ID.equals(dashboard.getSelectedConnection())) {
@@ -88,11 +86,7 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
         // When the selected connection is deleted, the dashboard falls back on the first connection, and doesn't
         // display the warning of the deleted connection.
         dashboard.selectConnection(unauthorized);
-        adminPage = OpenProjectAdminPage.gotoPage();
-        int index = adminPage.getConnectionIndex(unauthorized);
-        assertThat(index, greaterThan(0));
-        adminPage.deleteConnection(index);
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", unauthorized));
+        OpenProjectAdminPage.gotoPage().deleteConnection(unauthorized);
 
         dashboard = OpenProjectDashboardPage.gotoPage();
         // The connection picker is disabled when there is a single connection.

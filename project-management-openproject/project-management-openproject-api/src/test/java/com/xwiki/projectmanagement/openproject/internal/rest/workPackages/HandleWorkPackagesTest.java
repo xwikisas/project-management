@@ -38,6 +38,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -49,10 +50,12 @@ import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -78,6 +81,10 @@ class HandleWorkPackagesTest
     private static final String INSTANCE = "instance";
 
     private static final String WIKI = "wiki";
+
+    private static final String DEFAULT_VALUE = "defaultValue";
+
+    private static final String EMBEDDED = "_embedded";
 
     final ObjectMapper mapper = new ObjectMapper();
 
@@ -268,6 +275,146 @@ class HandleWorkPackagesTest
             ProjectManagementException.class,
             () -> this.handleWorkPackages.createWorkPackage(WIKI, INSTANCE, new CreateWorkPackage())
         );
+    }
+
+    @Test
+    void getEditFormPrefillsTheCurrentValues() throws Exception
+    {
+        when(this.openProjectApiClient.getWorkPackageFormResponse("42", "")).thenReturn(editForm());
+
+        Response response = this.handleWorkPackages.getEditForm(WIKI, INSTANCE, "42");
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        Map<String, Object> options = getOptions(response);
+        assertEquals("Fix the login", field(options, "subject").get(DEFAULT_VALUE));
+        assertEquals("The login fails.", field(options, "description").get(DEFAULT_VALUE));
+        assertEquals("/api/v3/types/2", field(options, "type").get(DEFAULT_VALUE));
+        // The current priority is no longer allowed: the default of the schema is proposed instead.
+        assertEquals("/api/v3/priorities/8", field(options, "priority").get(DEFAULT_VALUE));
+        assertEquals(false, field(options, "status").get("writable"));
+        assertEquals("/api/v3/users/4", field(options, "assignee").get(DEFAULT_VALUE));
+        assertEquals("Alice", field(options, "assignee").get("defaultLabel"));
+        assertEquals("/api/v3/work_packages/7", field(options, "parent").get(DEFAULT_VALUE));
+        assertEquals("#7: Epic", field(options, "parent").get("defaultLabel"));
+        assertEquals("2026-10-01", field(options, "startDate").get(DEFAULT_VALUE));
+        assertNull(field(options, "dueDate").get(DEFAULT_VALUE));
+        assertEquals(3, options.get("lockVersion"));
+        assertEquals("/api/v3/projects/5", options.get("projectHref"));
+    }
+
+    @Test
+    void getEditFormWhenTheResponseIsNotAForm() throws Exception
+    {
+        when(this.openProjectApiClient.getWorkPackageFormResponse("42", ""))
+            .thenReturn(this.mapper.readTree("{\"_type\":\"Error\"}"));
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> this.handleWorkPackages.getEditForm(WIKI, INSTANCE, "42"));
+
+        assertEquals("Failed to retrieve the edit form for work package [42]", exception.getMessage());
+        assertEquals("Unexpected response type: Error", exception.getCause().getMessage());
+    }
+
+    @Test
+    void editingRequiresAnAuthenticatedConnection() throws Exception
+    {
+        when(this.openProjectAccess.resolve(INSTANCE))
+            .thenReturn(OpenProjectAccessResult.anonymous(this.openProjectApiClient));
+
+        Response editForm = this.handleWorkPackages.getEditForm(WIKI, INSTANCE, "42");
+        Response update = this.handleWorkPackages.updateWorkPackage(WIKI, INSTANCE, "42", new CreateWorkPackage());
+
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), editForm.getStatus());
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), update.getStatus());
+        assertEquals("You must authenticate to the OpenProject instance from XWiki before creating or editing a "
+            + "work package.", update.getEntity());
+        verifyNoInteractions(this.openProjectApiClient);
+    }
+
+    @Test
+    void updateWorkPackageCommitsTheValidatedPayload() throws Exception
+    {
+        when(this.openProjectApiClient.getWorkPackageFormResponse(eq("42"), jsonEq("{\"subject\":\"New subject\","
+            + "\"lockVersion\":3,\"description\":{\"raw\":\"New description\"},"
+            + "\"_links\":{\"type\":{\"href\":\"/api/v3/types/1\"}}}"))).thenReturn(editForm());
+        // The empty links of the validated payload are not committed.
+        ObjectNode committedPayload = (ObjectNode) editForm().path(EMBEDDED).path("payload");
+        ((ObjectNode) committedPayload.path("_links")).remove(List.of("category", "version"));
+        JsonNode updated = this.mapper.readTree("{\"id\":42}");
+        when(this.openProjectApiClient.updateWorkPackage(eq("/api/v3/work_packages/42"),
+            jsonEq(committedPayload.toString()))).thenReturn(updated);
+        CreateWorkPackage changes = new CreateWorkPackage();
+        changes.setSubject("New subject");
+        changes.setDescription("New description");
+        changes.setType("/api/v3/types/1");
+        changes.setAssignee("");
+        changes.setLockVersion(3);
+
+        Response response = this.handleWorkPackages.updateWorkPackage(WIKI, INSTANCE, "42", changes);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertSame(updated, response.getEntity());
+    }
+
+    @Test
+    void updateWorkPackageReturnsTheValidationErrorWithoutCommitting() throws Exception
+    {
+        ObjectNode form = editForm();
+        ((ObjectNode) form.path(EMBEDDED)).set("validationErrors", this.mapper.readTree(
+            "{\"subject\":{\"_type\":\"Error\",\"message\":\"Subject can't be blank.\"}}"));
+        when(this.openProjectApiClient.getWorkPackageFormResponse(eq("42"), anyString())).thenReturn(form);
+
+        Response response = this.handleWorkPackages.updateWorkPackage(WIKI, INSTANCE, "42", new CreateWorkPackage());
+
+        assertEquals(422, response.getStatus());
+        Map<String, Object> options = getOptions(response);
+        assertEquals("Subject can't be blank.", options.get("validationMessage"));
+        // The form is sent back filled with the values of the work package.
+        assertEquals("Fix the login", field(options, "subject").get(DEFAULT_VALUE));
+        // A refused update must not be committed.
+        verify(this.openProjectApiClient, never()).updateWorkPackage(anyString(), anyString());
+    }
+
+    @Test
+    void updateWorkPackageFails() throws Exception
+    {
+        when(this.openProjectApiClient.getWorkPackageFormResponse(eq("42"), anyString())).thenReturn(editForm());
+        when(this.openProjectApiClient.updateWorkPackage(anyString(), anyString()))
+            .thenThrow(new ProjectManagementException("Conflict"));
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> this.handleWorkPackages.updateWorkPackage(WIKI, INSTANCE, "42", new CreateWorkPackage()));
+
+        assertEquals("The Work Package update failed", exception.getMessage());
+        assertEquals("Conflict", exception.getCause().getMessage());
+    }
+
+    private ObjectNode editForm() throws IOException
+    {
+        return (ObjectNode) this.mapper.readTree(OpenProjectTestUtils.getEditWorkPackageFormResponse());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getOptions(Response response)
+    {
+        return (Map<String, Object>) response.getEntity();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> field(Map<String, Object> options, String name)
+    {
+        return (Map<String, Object>) options.get(name);
+    }
+
+    private String jsonEq(String expected)
+    {
+        return argThat(actual -> {
+            try {
+                return this.mapper.readTree(expected).equals(this.mapper.readTree(actual));
+            } catch (JsonProcessingException e) {
+                return false;
+            }
+        });
     }
 
     private List<Project> generateProjects()

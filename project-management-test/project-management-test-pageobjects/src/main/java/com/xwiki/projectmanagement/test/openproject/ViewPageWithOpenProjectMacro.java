@@ -62,13 +62,22 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
      * @param property the work package property, e.g. {@code type}
      * @param value the value of the property, e.g. {@code Task}
      * @param instance the name of the OpenProject connection the work packages come from
-     * @return the text color of the first displayed property value, as computed by the browser
+     * @return the text color of the first displayed property value, as computed by the browser, once the macros
+     *     displaying it are rendered
      * @since 1.4.0
      */
     public String getPropertyColor(String property, String value, String instance)
     {
-        String cssClass = String.format("openproject-property-%s-%s-%s", property, value, instance);
-        return getDriver().findElement(By.className(cssClass)).getCssValue("color");
+        By propertyValue = By.className(String.format("openproject-property-%s-%s-%s", property, value, instance));
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            // The macros are rendered asynchronously, and their Live Data fetches the work packages afterwards.
+            getDriver().waitUntilElementIsVisible(propertyValue);
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+        return getDriver().findElement(propertyValue).getCssValue("color");
     }
 
     /**

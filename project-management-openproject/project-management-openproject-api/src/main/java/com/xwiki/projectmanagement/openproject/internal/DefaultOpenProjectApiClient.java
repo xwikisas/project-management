@@ -548,10 +548,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             News news = new News(element);
             news.initializeSelfWithPath(connectionUrl, String.format("/news/%s", news.getId()));
 
-            news.setProjectLink(new Linkable(
-                element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_PROJECT).path(OP_RESPONSE_TITLE).asText(),
-                String.format("%s/%s", connectionUrl, String.format("projects/%s", news.getId()))
-            ));
+            // The project is linked like the one of the work packages, from the API link given by OpenProject.
+            JsonNode projectNode = element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_PROJECT);
+            news.setProjectLink(new Linkable(projectNode.path(OP_RESPONSE_TITLE).asText(),
+                connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
             newsList.add(news);
         }
 
