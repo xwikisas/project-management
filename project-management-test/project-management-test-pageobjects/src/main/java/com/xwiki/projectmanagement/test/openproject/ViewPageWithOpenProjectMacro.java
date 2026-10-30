@@ -48,7 +48,7 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     /**
      * @return {@code true} if the page displays the warning asking the current user to connect to OpenProject, which
      *     the OpenProject macros display instead of the work packages when the user can't see them
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean isConnectWarningDisplayed()
     {
@@ -60,7 +60,7 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
      * @param value the value of the property, e.g. {@code Task}
      * @param instance the name of the OpenProject connection the work packages come from
      * @return the text color of the first displayed property value, as computed by the browser
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getPropertyColor(String property, String value, String instance)
     {

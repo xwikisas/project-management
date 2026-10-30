@@ -122,7 +122,7 @@ public class OpenProjectMacroElement extends BaseElement
      * @param row the row index, starting from 1
      * @return {@code true} if the given cell of the Live Data table displays a link
      * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean hasLinkInCell(String column, int row) throws OperationNotSupportedException
     {
@@ -165,7 +165,7 @@ public class OpenProjectMacroElement extends BaseElement
      *
      * @return the lines of the list, one per work package: its key (or its id prefixed by {@code #}) followed by its
      *     subject
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> getListedWorkPackages()
     {
@@ -179,7 +179,7 @@ public class OpenProjectMacroElement extends BaseElement
      *
      * @return the displayed text, i.e. the keys (or the ids prefixed by {@code #}) of the work packages separated by
      *     commas
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getEnumeratedWorkPackages()
     {
@@ -189,7 +189,7 @@ public class OpenProjectMacroElement extends BaseElement
 
     /**
      * @return the work packages displayed as links to OpenProject, by their displayed identifier
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> getWorkPackageLinks()
     {
@@ -200,7 +200,7 @@ public class OpenProjectMacroElement extends BaseElement
     /**
      * @return the work packages displayed as closed (struck through) by the list and enumeration displayers, as
      *     displayed
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> getClosedWorkPackages()
     {

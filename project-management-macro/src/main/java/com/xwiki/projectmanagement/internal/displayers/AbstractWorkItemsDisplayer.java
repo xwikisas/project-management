@@ -153,7 +153,7 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
      * @param workItem a work item
      * @return the key of the work item (e.g. {@code XWIKI-123}) or, when it has none, its identifier prefixed by
      *     {@code #} (e.g. {@code #123}), linked to the work item when it has a location
-     * @since 1.3.1
+     * @since 1.4.0
      */
     protected List<Block> getIdentifierBlocks(WorkItem workItem)
     {
@@ -171,7 +171,7 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
      * @param workItem a work item
      * @return the key of the work item (e.g. {@code XWIKI-123}) or, when it has none, its identifier prefixed by
      *     {@code #} (e.g. {@code #123}), not linked; empty when the work item has neither
-     * @since 1.3.1
+     * @since 1.4.0
      */
     protected List<Block> getIdentifierLabelBlocks(WorkItem workItem)
     {

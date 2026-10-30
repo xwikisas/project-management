@@ -57,7 +57,7 @@ public class Status extends ColoredOpenProjectObject
 
     /**
      * @return {@code true} if the work packages having this status are closed
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean isClosed()
     {
@@ -66,7 +66,7 @@ public class Status extends ColoredOpenProjectObject
 
     /**
      * @param closed see {@link #isClosed()}
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void setClosed(boolean closed)
     {
