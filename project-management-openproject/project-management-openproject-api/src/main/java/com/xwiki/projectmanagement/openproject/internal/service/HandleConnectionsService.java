@@ -23,7 +23,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -127,9 +126,10 @@ public class HandleConnectionsService
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ProjectManagementException if the document is not in the connections space, if a configuration with
-     *     the same name already exists, if the existing page can't be updated, if no client secret is provided for a
-     *     new connection, if the server URL is not valid, if the query failed or the document retrieval/creation fails.
+     * @throws ConnectionSaveException if the document is not in the connections space, if no client secret is
+     *     provided for a new connection, if the server URL is not valid, if a configuration with the same name
+     *     already exists or if the existing page can't be updated
+     * @throws ProjectManagementException if the query failed or the document retrieval/creation fails
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
         DocumentReference documentReference)
@@ -138,7 +138,7 @@ public class HandleConnectionsService
         SpaceReference connectionsSpace = new SpaceReference(documentReference.getWikiReference().getName(),
             OPEN_PROJECT, CODE, OPEN_PROJECT_CONFIGURATIONS);
         if (!documentReference.hasParent(connectionsSpace)) {
-            throw new ProjectManagementException(String.format("The connection can't be saved on the page [%s]: the "
+            throw ConnectionSaveException.invalid(String.format("The connection can't be saved on the page [%s]: the "
                 + "connections must be saved in the [OpenProject.Code.OpenProjectConfigurations] space.",
                 this.compactSerializer.serialize(documentReference)));
         }
@@ -149,13 +149,13 @@ public class HandleConnectionsService
         try {
             XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
             if (!doc.isNew() && !isAuthorAdmin(doc)) {
-                throw new ProjectManagementException(String.format("The page [%s] can't be updated because it was "
+                throw ConnectionSaveException.conflict(String.format("The page [%s] can't be updated because it was "
                     + "last modified by a user without administration right on the wiki. Delete the connection and "
                     + "create it again.", this.compactSerializer.serialize(documentReference)));
             }
 
             if (isConnectionNameUsed(openProjectConnection.getConnectionName(), documentReference, context)) {
-                throw new ProjectManagementException(
+                throw ConnectionSaveException.conflict(
                     String.format("Connection %s already exists. Use another connection name.",
                         openProjectConnection.getConnectionName()));
             }
@@ -172,14 +172,14 @@ public class HandleConnectionsService
     {
         boolean valid = false;
         try {
-            URI uri = new URI(Objects.toString(serverURL, ""));
+            URI uri = new URI(StringUtils.defaultString(serverURL));
             valid = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
                 && StringUtils.isNotEmpty(uri.getHost());
         } catch (URISyntaxException e) {
             // Not a valid URL.
         }
         if (!valid) {
-            throw new ProjectManagementException(String.format("The server URL [%s] is not valid: it must be an "
+            throw ConnectionSaveException.invalid(String.format("The server URL [%s] is not valid: it must be an "
                 + "absolute HTTP or HTTPS URL, e.g. [https://openproject.example.com].", serverURL));
         }
     }
@@ -226,7 +226,7 @@ public class HandleConnectionsService
             BaseObject currentObject = doc.getXObject(getConnectionClassReference(doc));
             clientSecret = currentObject != null ? currentObject.getStringValue(CLIENT_SECRET) : null;
             if (StringUtils.isEmpty(clientSecret)) {
-                throw new ProjectManagementException("The client secret is required.");
+                throw ConnectionSaveException.invalid("The client secret is required.");
             }
         }
         return clientSecret;
