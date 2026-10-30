@@ -272,4 +272,21 @@ class DefaultOpenProjectAccessTest
         assertEquals(OpenProjectAccessStatus.NOT_CONNECTED, this.access.resolve(CONNECTION_NAME).getStatus());
         verifyNoInteractions(this.publicDataClientProvider);
     }
+
+    @Test
+    void getAnonymousClient()
+    {
+        assertSame(this.apiClient, this.access.getAnonymousClient(CONNECTION_NAME));
+        verify(this.builder).serverUrl(SERVER_URL);
+        verify(this.builder, never()).authentication(any());
+        // Whatever the connection shows to the users who aren't connected to it.
+        verifyNoInteractions(this.oauth2Client, this.publicDataClientProvider);
+    }
+
+    @Test
+    void getAnonymousClientWhenNotConfigured()
+    {
+        assertNull(this.access.getAnonymousClient("unknown"));
+        verifyNoInteractions(this.openProjectApiClientFactory);
+    }
 }

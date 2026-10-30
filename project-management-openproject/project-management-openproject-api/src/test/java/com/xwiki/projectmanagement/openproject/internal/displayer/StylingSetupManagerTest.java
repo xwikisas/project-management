@@ -43,6 +43,7 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
@@ -74,6 +75,8 @@ import static org.mockito.Mockito.when;
 class StylingSetupManagerTest
 {
     private static final String CONNECTION_NAME = "main";
+
+    private static final String SERVER_URL = "https://openproject.example.org";
 
     private static final DocumentReference USER = new DocumentReference("wiki", "XWiki", "Admin");
 
@@ -127,8 +130,10 @@ class StylingSetupManagerTest
         when(this.adminAuthorChecker.isAdmin(USER, USER.getWikiReference())).thenReturn(true);
         when(this.adminAuthorChecker.isLastSavedByAdmin(this.stylesDocument)).thenReturn(true);
         when(this.stylesDocument.clone()).thenReturn(this.stylesDocument);
-        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(Collections.singletonList(
-            new OpenProjectConnection(CONNECTION_NAME, "https://openproject.example.org", "id", "secret", "inst")));
+        OpenProjectConnection connection =
+            new OpenProjectConnection(CONNECTION_NAME, SERVER_URL, "id", "secret", "inst");
+        when(this.openProjectConfiguration.getOpenProjectConnections())
+            .thenReturn(Collections.singletonList(connection));
         DocumentReference stylesReference = new DocumentReference("wiki", "OpenProject", CONNECTION_NAME);
         when(this.documentReferenceResolver.resolve(any(EntityReference.class))).thenReturn(stylesReference);
         when(this.xwiki.getDocument(stylesReference, this.xcontext)).thenReturn(this.stylesDocument);
@@ -203,14 +208,114 @@ class StylingSetupManagerTest
     @Test
     void setupInstanceStylesWhenShowingPublicData() throws Exception
     {
-        // The current user, possibly a guest, only sees the public data of the connection: the styles page must not
-        // be saved as them.
+        // The current user, an administrator, isn't connected to OpenProject but the connection shows its public
+        // data: the statuses and types are read with the client of the public data.
         when(this.openProjectAccess.resolve(CONNECTION_NAME))
             .thenReturn(OpenProjectAccessResult.anonymous(this.client));
 
         this.stylingSetupManager.setupInstanceStyles();
 
-        verifyNoInteractions(this.client);
+        verify(this.styleObject).set(eq("code"), anyString(), same(this.xcontext));
+        verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
+        verify(this.openProjectAccess, never()).getAnonymousClient(any());
+    }
+
+    @Test
+    void setupInstanceStylesWhenNotConnected() throws Exception
+    {
+        // The current user isn't connected to OpenProject, and the connection doesn't show its public data: the
+        // statuses and types, which are the same for every user, are read without credentials by the styling job.
+        when(this.openProjectAccess.resolve(CONNECTION_NAME)).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.openProjectAccess.getAnonymousClient(CONNECTION_NAME)).thenReturn(this.client);
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.styleObject).set(eq("code"), anyString(), same(this.xcontext));
+        verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
+    }
+
+    @Test
+    void setupInstanceStylesWhenNotConnectedWithoutAnonymousFallback() throws Exception
+    {
+        // When rendering, the statuses and types aren't requested without credentials, since it isn't cached.
+        when(this.openProjectAccess.resolve(CONNECTION_NAME)).thenReturn(OpenProjectAccessResult.notConnected());
+
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verify(this.openProjectAccess, never()).getAnonymousClient(any());
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+    }
+
+    @Test
+    void setupInstanceStylesWhenAnonymousRequestsAreRefused() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME)).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.openProjectAccess.getAnonymousClient(CONNECTION_NAME)).thenReturn(this.client);
+        // OpenProject gives the statuses to anonymous users, but not the types when no project is public.
+        when(this.client.getTypes()).thenThrow(new WorkItemRetrievalException("Forbidden", 403));
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+        assertEquals("Skipping styling update for [main] since OpenProject refused to give its statuses or types to "
+            + "anonymous users. Either connect the user [wiki:XWiki.Admin] to OpenProject, or allow anonymous users "
+            + "to see them in the OpenProject administration (e.g. by disabling \"Login required\" and making a "
+            + "project public).", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void setupInstanceStylesWhenTheAccountOfTheUserIsRefused() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        when(this.client.getStatuses()).thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.openProjectAccess, never()).getAnonymousClient(any());
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+        assertEquals("Skipping styling update for [main] since OpenProject refused to give its statuses or types to "
+            + "the user [wiki:XWiki.Admin]: their OpenProject account may have been disconnected or lack permissions. "
+            + "Cause: [WorkItemRetrievalException: Unauthorized].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void setupInstanceStylesWhenTheStatusesCantBeRetrieved() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        when(this.client.getStatuses()).thenThrow(new WorkItemRetrievalException("Server error", 500));
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+        assertEquals("Failed to update the styling for the configured OpenProject instance [main]. "
+            + "Cause: [WorkItemRetrievalException: Server error].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void setupInstanceStylesWhenTheFailureHasNoStatusCode() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        when(this.client.getStatuses())
+            .thenThrow(new WorkItemRetrievalException("No status", new IllegalStateException("Network"), null));
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+        assertEquals("Failed to update the styling for the configured OpenProject instance [main]. "
+            + "Cause: [IllegalStateException: Network].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void setupInstanceStylesWhenNotConfigured() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME)).thenReturn(OpenProjectAccessResult.notConfigured());
+
+        this.stylingSetupManager.setupInstanceStyles(true);
+
+        verify(this.openProjectAccess, never()).getAnonymousClient(any());
         verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
     }
 }
