@@ -20,8 +20,10 @@
 package com.xwiki.projectmanagement.test.openproject;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.xwiki.administration.test.po.AdministrationSectionPage;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
@@ -38,14 +40,15 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     @FindBy(id = "create-connection-button")
     private WebElement addNewConnectionBtn;
 
-    @FindBy(id = "open-project-sync-colors")
-    private WebElement syncColorsBtn;
-
     private static final String SECTION_ID = "OpenProject";
 
     private static final String CONNECTION_NAME_COLUMN = "Connection name";
 
     private static final String CONFIGURATION_CLASS = "OpenProject.Code.OpenProjectConfigurationClass";
+
+    private static final String EDIT_CONNECTION_ACTION = "edit-connection";
+
+    private static final By CONNECTION_MODAL = By.id("handleConnectionModal");
 
     public OpenProjectAdminPage()
     {
@@ -64,7 +67,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
-     * Add a new OAuth connection.
+     * Add a new OAuth connection, and wait for it to be saved and listed.
      *
      * @param name the name of the connection - needs to be unique among the other connections.
      * @param clientUrl the url where the OAuth provider is located.
@@ -73,61 +76,81 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
      */
     public void addNewConnection(String name, String clientUrl, String clientID, String clientSecret)
     {
+        submitNewConnection(name, clientUrl, clientID, clientSecret);
+        waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", name));
+        waitUntilConnectionIsListed(name, true);
+    }
+
+    /**
+     * Fill and submit the form adding a new OAuth connection, without waiting for the outcome. Use it for the
+     * connections that are expected to be rejected, then wait for the error notification.
+     *
+     * @param name the name of the connection
+     * @param clientUrl the url where the OAuth provider is located
+     * @param clientID the client id provided by the OAuth provider
+     * @param clientSecret the client secret provided by tge OAuth provider
+     * @since 1.4.0
+     */
+    public void submitNewConnection(String name, String clientUrl, String clientID, String clientSecret)
+    {
         addNewConnectionBtn.click();
         fillAndSendConnectionModal(name, clientUrl, clientID, clientSecret);
     }
 
     /**
-     * Update an OAuth connection displayed in the liveData present in the Admin section.
+     * Update an OAuth connection, and wait for the connection to be saved and listed under its new name.
      *
-     * @param index the index of the connection from the livedata. It starts at 1.
+     * @param currentName the current name of the connection
      * @param name the new name for the selected connection.
      * @param clientUrl the new client url for the selected connection.
      * @param clientID the new client id for the selected connection.
      * @param clientSecret the new client secret for the selected connection.
      */
-    public void updateConnection(int index, String name, String clientUrl, String clientID, String clientSecret)
+    public void updateConnection(String currentName, String name, String clientUrl, String clientID,
+        String clientSecret)
     {
-        TableLayoutElement ld = getConnectionsLivedata().getTableLayout();
-        ld.clickAction(index, "edit-connection");
-
+        clickConnectionAction(currentName, EDIT_CONNECTION_ACTION);
         fillAndSendConnectionModal(name, clientUrl, clientID, clientSecret);
+        waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", name));
+        waitUntilConnectionIsListed(name, true);
+        if (!name.equals(currentName)) {
+            waitUntilConnectionIsListed(currentName, false);
+        }
     }
 
     /**
      * Enable or disable showing the public data of a connection to the users without an OpenProject account, and wait
      * for the connection to be saved.
      *
-     * @param index the index of the connection from the livedata. It starts at 1.
+     * @param name the name of the connection
      * @param showPublicData {@code true} to show the public data of the connection to these users
      * @since 1.4.0
      */
-    public void setShowPublicData(int index, boolean showPublicData)
+    public void setShowPublicData(String name, boolean showPublicData)
     {
-        getConnectionsLivedata().getTableLayout().clickAction(index, "edit-connection");
-        By modalSelector = By.id("handleConnectionModal");
-        getDriver().waitUntilElementIsVisible(modalSelector);
-        WebElement modal = getDriver().findElement(modalSelector);
+        clickConnectionAction(name, EDIT_CONNECTION_ACTION);
+        getDriver().waitUntilElementIsVisible(CONNECTION_MODAL);
+        WebElement modal = getDriver().findElement(CONNECTION_MODAL);
         WebElement checkbox = modal.findElement(By.id("show-public-data"));
         if (checkbox.isSelected() != showPublicData) {
             checkbox.click();
         }
         modal.findElement(By.className("btn-primary")).click();
         // The modal is closed once the connection is saved.
-        getDriver().waitUntilElementDisappears(modalSelector);
+        getDriver().waitUntilElementDisappears(CONNECTION_MODAL);
     }
 
     /**
      * Open the form editing a connection, read the hint displayed under its client secret field, and close the form
      * without saving.
      *
-     * @param index the index of the connection from the livedata. It starts at 1.
+     * @param name the name of the connection
      * @return the hint displayed under the client secret field, or an empty string when there is none
      * @since 1.4.0
      */
-    public String getEditConnectionClientSecretHint(int index)
+    public String getEditConnectionClientSecretHint(String name)
     {
-        getConnectionsLivedata().getTableLayout().clickAction(index, "edit-connection");
+        clickConnectionAction(name, EDIT_CONNECTION_ACTION);
         return getClientSecretHintAndCloseModal();
     }
 
@@ -142,6 +165,20 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     {
         addNewConnectionBtn.click();
         return getClientSecretHintAndCloseModal();
+    }
+
+    /**
+     * Start the authorization of a connection by the current user, and wait for the browser to leave the
+     * administration: it is redirected to the OAuth provider, then back to the administration.
+     *
+     * @param name the name of the connection
+     * @since 1.4.0
+     */
+    public void authorizeConnection(String name)
+    {
+        WebElement page = getDriver().findElement(By.tagName("html"));
+        clickConnectionAction(name, "authorize-connection");
+        getDriver().waitUntilCondition(ExpectedConditions.stalenessOf(page));
     }
 
     /**
@@ -169,33 +206,48 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
 
     /**
      * @param name the name of a connection
-     * @return the index of the connection in the Live Data, starting at 1, or {@code -1} if there is no connection
-     *     with the given name
+     * @return {@code true} if the connection is listed in the connections Live Data
+     * @since 1.4.0
      */
-    public int getConnectionIndex(String name)
+    public boolean isConnectionListed(String name)
     {
-        TableLayoutElement ld = getConnectionsLivedata().getTableLayout();
-        ld.waitUntilReady();
-        for (int i = 1; i <= ld.countRows(); i++) {
-            if (name.equals(ld.getCell(CONNECTION_NAME_COLUMN, i).getText())) {
-                return i;
-            }
-        }
-        return -1;
+        return getConnectionRow(name) > 0;
     }
 
     /**
-     * Delete a connection identified by its index in the live data.
-     *
-     * @param index the index of the connection inside the livedata. The indexing starts at 1.
+     * @param name the name of a listed connection
+     * @return the authorization state of the connection for the current user, as displayed, e.g. {@code Authorized}
+     * @since 1.4.0
      */
-    public void deleteConnection(int index)
+    public String getConnectionAuthorization(String name)
     {
-        TableLayoutElement ld = getConnectionsLivedata().getTableLayout();
-        ld.clickAction(index, "delete-connection");
-        getDriver().waitUntilElementIsVisible(By.id("deleteConnectionModal"));
-        WebElement modal = getDriver().findElement(By.id("deleteConnectionModal"));
-        modal.findElement(By.className("btn-danger")).click();
+        return getConnectionsTable().getCell("Authorized?", getListedConnectionRow(name)).getText();
+    }
+
+    /**
+     * @param name the name of a listed connection
+     * @return the number of actions that can be performed on the connection
+     * @since 1.4.0
+     */
+    public int getConnectionActionCount(String name)
+    {
+        return getConnectionsTable().getCell("Actions", getListedConnectionRow(name))
+            .findElements(By.className("action")).size();
+    }
+
+    /**
+     * Delete a connection, and wait for it to be removed from the connections Live Data.
+     *
+     * @param name the name of the connection
+     */
+    public void deleteConnection(String name)
+    {
+        clickConnectionAction(name, "delete-connection");
+        By modalSelector = By.id("deleteConnectionModal");
+        getDriver().waitUntilElementIsVisible(modalSelector);
+        getDriver().findElement(modalSelector).findElement(By.className("btn-danger")).click();
+        waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", name));
+        waitUntilConnectionIsListed(name, false);
     }
 
     /**
@@ -251,78 +303,95 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
-     * @return the Live Data listing the filter presets
-     * @since 1.3.0-rc-2
-     */
-    public LiveDataElement getPresetsLivedata()
-    {
-        return new LiveDataElement("openproject-preset-filters");
-    }
-
-    /**
      * @param name the name of a filter preset
-     * @return the index of the preset in the presets Live Data, starting at 1, or {@code -1} if there is no preset
-     *     with the given name
-     * @since 1.3.0-rc-2
+     * @return whether the presets Live Data lists the preset as meant for the charts, as displayed ({@code Yes} or
+     *     {@code No}), or {@code null} if the preset is not listed
+     * @since 1.4.0
      */
-    public int getPresetIndex(String name)
+    public String getListedPresetChartFlag(String name)
     {
-        TableLayoutElement ld = getPresetsLivedata().getTableLayout();
+        TableLayoutElement ld = new LiveDataElement("openproject-preset-filters").getTableLayout();
         ld.waitUntilReady();
         for (int i = 1; i <= ld.countRows(); i++) {
             if (name.equals(ld.getCell("Preset Name", i).getText())) {
+                return ld.getCell("Chart preset?", i).getText();
+            }
+        }
+        return null;
+    }
+
+    private TableLayoutElement getConnectionsTable()
+    {
+        return new LiveDataElement("openproject_connections").getTableLayout();
+    }
+
+    /**
+     * @return the index of the connection in the Live Data, starting at 1, or {@code -1} if there is no connection
+     *     with the given name
+     */
+    private int getConnectionRow(String name)
+    {
+        TableLayoutElement ld = getConnectionsTable();
+        ld.waitUntilReady();
+        return findConnectionRow(ld, name);
+    }
+
+    private int getListedConnectionRow(String name)
+    {
+        int row = getConnectionRow(name);
+        if (row < 0) {
+            throw new IllegalStateException(String.format("The connection [%s] is not listed.", name));
+        }
+        return row;
+    }
+
+    private static int findConnectionRow(TableLayoutElement ld, String name)
+    {
+        for (int i = 1; i <= ld.countRows(); i++) {
+            if (name.equals(ld.getCell(CONNECTION_NAME_COLUMN, i).getText())) {
                 return i;
             }
         }
         return -1;
     }
 
-    /**
-     * @param index the index of the connection in the connections Live Data, starting from 1
-     * @return the number of actions that can be performed on the connection
-     * @since 1.4.0
-     */
-    public int getConnectionActionCount(int index)
+    private void clickConnectionAction(String name, String action)
     {
-        return getConnectionsLivedata().getTableLayout().getCell("Actions", index)
-            .findElements(By.className("action")).size();
+        getConnectionsTable().clickAction(getListedConnectionRow(name), action);
     }
 
     /**
-     * @return the livedata inside the Admin page.
+     * The connections Live Data is refreshed asynchronously after a connection is saved or deleted, while the
+     * notification is displayed.
      */
-    public LiveDataElement getConnectionsLivedata()
+    private void waitUntilConnectionIsListed(String name, boolean listed)
     {
-        return new LiveDataElement("openproject_connections");
-    }
-
-    /**
-     * Trigger the OpenProject style sync.
-     *
-     * @return the view page of the Job Scheduler.
-     */
-    public ViewPage triggerStyleSync()
-    {
-        syncColorsBtn.click();
-        return new ViewPage();
+        LiveDataElement liveData = new LiveDataElement("openproject_connections");
+        getDriver().waitUntilCondition(driver -> {
+            try {
+                return liveData.isReady() && (findConnectionRow(liveData.getTableLayout(), name) > 0) == listed;
+            } catch (StaleElementReferenceException e) {
+                // The rows are being refreshed.
+                return false;
+            }
+        });
     }
 
     private String getClientSecretHintAndCloseModal()
     {
-        By modalSelector = By.id("handleConnectionModal");
-        getDriver().waitUntilElementIsVisible(modalSelector);
-        WebElement modal = getDriver().findElement(modalSelector);
+        getDriver().waitUntilElementIsVisible(CONNECTION_MODAL);
+        WebElement modal = getDriver().findElement(CONNECTION_MODAL);
         WebElement hint = modal.findElement(By.id("client-secret-keep-hint"));
         String hintText = hint.isDisplayed() ? hint.getText() : "";
         modal.findElement(By.cssSelector(".modal-footer [data-dismiss='modal']")).click();
-        getDriver().waitUntilElementDisappears(modalSelector);
+        getDriver().waitUntilElementDisappears(CONNECTION_MODAL);
         return hintText;
     }
 
     private void fillAndSendConnectionModal(String name, String clientUrl, String clientID, String clientSecret)
     {
-        getDriver().waitUntilElementIsVisible(By.id("handleConnectionModal"));
-        WebElement modal = getDriver().findElement(By.id("handleConnectionModal"));
+        getDriver().waitUntilElementIsVisible(CONNECTION_MODAL);
+        WebElement modal = getDriver().findElement(CONNECTION_MODAL);
         WebElement elem = modal.findElement(By.id("connection-name"));
         elem.clear();
         elem.sendKeys(name);

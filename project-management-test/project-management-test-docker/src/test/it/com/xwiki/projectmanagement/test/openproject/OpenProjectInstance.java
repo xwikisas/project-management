@@ -107,6 +107,13 @@ public class OpenProjectInstance
 
     private static final By USERNAME_INPUT = By.id("username");
 
+    /**
+     * OpenProject submits most forms with Turbo, which replaces the body of the page without loading a new document.
+     */
+    private static final By PAGE = By.tagName("body");
+
+    private static final int SUBMIT_TIMEOUT = 60;
+
     private static final By AUTHORIZE_BUTTON =
         By.xpath("//form[@action='/oauth/authorize']//*[contains(@class, '-primary')]");
 
@@ -133,6 +140,11 @@ public class OpenProjectInstance
     private List<String> classicProjectIdentifiers;
 
     /**
+     * The container running the instance, or {@code null} if the instance is managed externally.
+     */
+    private GenericContainer<?> container;
+
+    /**
      * @return an {@link ExternalOpenProjectInstance} configured from the {@code openproject.*} system properties when
      *     {@value #URL_PROPERTY} is set, otherwise an instance that is started in a Docker container
      */
@@ -146,6 +158,17 @@ public class OpenProjectInstance
         return new ExternalOpenProjectInstance(System.getProperty(USERNAME_PROPERTY, DEFAULT_USERNAME),
             System.getProperty(PASSWORD_PROPERTY, PASSWORD_OLD), url, System.getProperty(CLIENT_ID_PROPERTY),
             System.getProperty(CLIENT_SECRET_PROPERTY));
+    }
+
+    /**
+     * Stop the container started by {@link #startOpenProject(TestUtils, TestConfiguration)}, if any.
+     */
+    public void stop()
+    {
+        if (this.container != null) {
+            this.container.stop();
+            this.container = null;
+        }
     }
 
     /**
@@ -184,6 +207,8 @@ public class OpenProjectInstance
             .withCopyFileToContainer(MountableFile.forClasspathResource("doorkeeper.rb"),
                 "/app/config/initializers/doorkeeper.rb");
 
+        // Keep the container before starting it, so that it can be stopped if its start or its setup fails.
+        this.container = openProject;
         DockerTestUtils.startContainer(openProject, testConfiguration);
 
         // OpenProject has to be reached with the same URL by the browser and by XWiki. A containerized XWiki shares the
@@ -265,13 +290,13 @@ public class OpenProjectInstance
         driver.get(getBaseUrl() + "/admin/settings/work_packages_identifier");
         waitPageLoad(driver);
         // The form asks for a confirmation in a dialog before submitting the setting, so submit it directly.
-        driver.executeScript("const form = document.getElementById('wp-identifier-settings-form');"
-            + "for (const input of form.querySelectorAll(\"[name='settings[work_packages_identifier]']\")) {"
-            + "  if (input.type === 'radio') { input.checked = input.value === arguments[0]; }"
-            + "  else { input.value = arguments[0]; }"
-            + "}"
-            + "form.submit();", value);
-        waitPageLoad(driver);
+        submitAndWaitPageLoad(driver, () -> driver.executeScript(
+            "const form = document.getElementById('wp-identifier-settings-form');"
+                + "for (const input of form.querySelectorAll(\"[name='settings[work_packages_identifier]']\")) {"
+                + "  if (input.type === 'radio') { input.checked = input.value === arguments[0]; }"
+                + "  else { input.value = arguments[0]; }"
+                + "}"
+                + "form.submit();", value));
     }
 
     private void waitForIdentifiers(String mode, Callable<Boolean> converted) throws Exception
@@ -320,37 +345,56 @@ public class OpenProjectInstance
             LOGGER.info("Not on the login page.");
             return;
         }
-        WebElement userNameElem = driver.findElement(USERNAME_INPUT);
-        WebElement passElem = driver.findElement(By.id("password"));
+        submitAndWaitPageLoad(driver, () -> submitLogin(driver));
+    }
 
-        userNameElem.sendKeys(userName);
-        passElem.sendKeys(currentPassword);
-
-        WebElement submitElem =
-            driver.findElement(By.cssSelector("[data-test-selector='user-login--form'] button[type='submit']"));
-        submitElem.click();
-        waitPageLoad(driver);
+    private void submitLogin(XWikiWebDriver driver)
+    {
+        driver.findElement(USERNAME_INPUT).sendKeys(userName);
+        driver.findElement(By.id("password")).sendKeys(currentPassword);
+        driver.findElement(By.cssSelector("[data-test-selector='user-login--form'] button[type='submit']")).click();
     }
 
     /**
-     * Authorize XWiki on the OpenProject OAuth page the browser has been redirected to, logging in first if needed.
+     * Authorize XWiki on the OpenProject OAuth page, logging in first if needed, and wait for OpenProject to redirect
+     * the browser back to XWiki. Call it once the browser has left the XWiki page that started the authorization.
      *
      * @param driver the webdriver used to navigate the instance.
      */
     public void authorize(XWikiWebDriver driver)
     {
-        try {
-            driver.waitUntilCondition(webDriver -> driver.hasElementWithoutWaiting(USERNAME_INPUT)
-                || driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON));
-        } catch (TimeoutException e) {
-            // OpenProject doesn't ask again for an authorization it has already given.
-            LOGGER.info("The OpenProject OAuth application is already authorized.");
-            return;
+        waitForAuthorizationStep(driver);
+        if (driver.hasElementWithoutWaiting(USERNAME_INPUT)) {
+            WebElement loginPage = driver.findElement(PAGE);
+            submitLogin(driver);
+            driver.waitUntilCondition(ExpectedConditions.stalenessOf(loginPage), SUBMIT_TIMEOUT);
+            waitForAuthorizationStep(driver);
         }
-        maybeLogin(driver, false);
         if (driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON)) {
             driver.findElement(AUTHORIZE_BUTTON).click();
+        } else if (isOnOpenProject(driver)) {
+            throw new IllegalStateException(
+                String.format("Unexpected OpenProject page during the authorization: [%s]", driver.getCurrentUrl()));
+        } else {
+            // OpenProject doesn't ask again for an authorization it has already given.
+            LOGGER.info("The OpenProject OAuth application is already authorized.");
         }
+        driver.waitUntilCondition(webDriver -> !isOnOpenProject(driver));
+    }
+
+    /**
+     * Wait for OpenProject to ask the user to log in or to authorize XWiki, or to redirect the browser back to XWiki
+     * when it doesn't need to.
+     */
+    private void waitForAuthorizationStep(XWikiWebDriver driver)
+    {
+        driver.waitUntilCondition(webDriver -> !isOnOpenProject(driver)
+            || driver.hasElementWithoutWaiting(USERNAME_INPUT) || driver.hasElementWithoutWaiting(AUTHORIZE_BUTTON));
+    }
+
+    private boolean isOnOpenProject(XWikiWebDriver driver)
+    {
+        return driver.getCurrentUrl().startsWith(getBaseUrl());
     }
 
     /**
@@ -458,8 +502,7 @@ public class OpenProjectInstance
 
         WebElement submitElem =
             driver.findElement(By.xpath("//form[@action='/account/change_password']//*[contains(@class, '-primary')]"));
-        submitElem.click();
-        waitPageLoad(driver);
+        submitAndWaitPageLoad(driver, submitElem::click);
     }
 
     private void createNewOAuthApp(XWikiWebDriver driver, String redirectUri)
@@ -487,9 +530,7 @@ public class OpenProjectInstance
             apiV3Checkbox.click();
         }
 
-        form.submit();
-
-        waitPageLoad(driver);
+        submitAndWaitPageLoad(driver, form::submit);
 
         WebElement clientIdElem = driver.findElement(
             By.xpath("//div[@class='attributes-key-value--key' and contains(text(), 'Client ID')]/..//span"));
@@ -498,6 +539,18 @@ public class OpenProjectInstance
         this.clientId = clientIdElem.getText();
         this.clientSecret = clientSecretElem.getText();
         LOGGER.info("Created the OpenProject OAuth application with client id [{}].", this.clientId);
+    }
+
+    /**
+     * Submit a form and wait for the page it leads to. The logo waited for by {@link #waitPageLoad(XWikiWebDriver)} is
+     * also displayed by the page of the form, so wait first for this page to be unloaded.
+     */
+    private static void submitAndWaitPageLoad(XWikiWebDriver driver, Runnable submit)
+    {
+        WebElement formPage = driver.findElement(PAGE);
+        submit.run();
+        driver.waitUntilCondition(ExpectedConditions.stalenessOf(formPage), SUBMIT_TIMEOUT);
+        waitPageLoad(driver);
     }
 
     private static void waitPageLoad(XWikiWebDriver driver)

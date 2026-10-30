@@ -39,6 +39,11 @@ public final class OpenProjectFixture
 
     private static boolean connectionConfigured;
 
+    /**
+     * Why the OpenProject instance failed to start or to be set up, or {@code null} if it didn't fail.
+     */
+    private static Throwable startFailure;
+
     private OpenProjectFixture()
     {
     }
@@ -56,10 +61,21 @@ public final class OpenProjectFixture
     public static synchronized OpenProjectInstance ensureReady(TestUtils setup, TestConfiguration testConfiguration)
         throws Exception
     {
+        if (startFailure != null) {
+            // Don't start another instance for each test class: OpenProject is slow to start and takes a lot of memory.
+            throw new IllegalStateException("The OpenProject instance failed to start for a previous test class.",
+                startFailure);
+        }
         if (instance == null) {
             OpenProjectInstance newInstance = OpenProjectInstance.fromSystemProperties();
-            newInstance.startOpenProject(setup, testConfiguration);
-            newInstance.setupInstance(setup);
+            try {
+                newInstance.startOpenProject(setup, testConfiguration);
+                newInstance.setupInstance(setup);
+            } catch (Exception | Error e) {
+                startFailure = e;
+                newInstance.stop();
+                throw e;
+            }
             instance = newInstance;
         }
         ensureConnection(setup);
@@ -102,23 +118,18 @@ public final class OpenProjectFixture
     private static void ensureConnection(TestUtils setup)
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int index = adminPage.getConnectionIndex(CONNECTION_ID);
-        if (index > 0 && connectionConfigured) {
+        boolean listed = adminPage.isConnectionListed(CONNECTION_ID);
+        if (listed && connectionConfigured) {
             return;
         }
-        if (index > 0) {
+        if (listed) {
             // The connection was left by a previous run and points to another OpenProject instance or OAuth app.
-            adminPage.deleteConnection(index);
-            adminPage.waitForNotificationSuccessMessage(
-                String.format("Connection %s has been deleted!", CONNECTION_ID));
-            adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.deleteConnection(CONNECTION_ID);
         }
 
         adminPage.addNewConnection(CONNECTION_ID, instance.getBaseUrl(), instance.getClientId(),
             instance.getClientSecret());
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", CONNECTION_ID));
-        adminPage.getConnectionsLivedata().getTableLayout()
-            .clickAction(adminPage.getConnectionIndex(CONNECTION_ID), "authorize-connection");
+        adminPage.authorizeConnection(CONNECTION_ID);
         instance.authorize(setup.getDriver());
         new OpenProjectAdminPage().waitUntilPageIsReady();
         connectionConfigured = true;

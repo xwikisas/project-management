@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.test.openproject;
 import java.util.List;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.InlinePage;
 
 /**
@@ -33,6 +34,9 @@ import org.xwiki.test.ui.po.InlinePage;
 public class PresetEditPage extends InlinePage
 {
     private static final String FIELD_PREFIX = "ProjectManagement.Code.Presets.PresetClass_0_";
+
+    private static final By FILTER_VALUES =
+        By.cssSelector(".project-management-filters input.proj-manag-constraint-value");
 
     /**
      * Wait for the preset form and its filter builders to be ready.
@@ -81,25 +85,20 @@ public class PresetEditPage extends InlinePage
     }
 
     /**
-     * Wait for the filter value that is going to be saved to contain the given text.
-     *
-     * @param text the expected text, e.g. a filter value
-     */
-    public void waitUntilFilterValueContains(String text)
-    {
-        getDriver().waitUntilCondition(driver -> {
-            String value = getDriver().findElement(By.id(FIELD_PREFIX + "filter")).getDomProperty("value");
-            return value != null && value.contains(text);
-        });
-    }
-
-    /**
      * Save the preset and wait for its view page.
      *
      * @return the view page of the preset
      */
     public PresetViewPage clickSaveAndViewPreset()
     {
+        // The filter builders serialize their filters in the saved field when a value changes.
+        getDriver().waitUntilCondition(driver -> {
+            String saved = getDriver().findElement(By.id(FIELD_PREFIX + "filter")).getDomProperty("value");
+            return saved != null && getDriver().findElementsWithoutWaiting(FILTER_VALUES).stream()
+                .filter(WebElement::isDisplayed).map(input -> input.getDomProperty("value"))
+                .filter(value -> value != null && !value.isEmpty())
+                .allMatch(value -> saved.contains('"' + value + '"'));
+        });
         clickSaveAndView(true);
         return new PresetViewPage();
     }

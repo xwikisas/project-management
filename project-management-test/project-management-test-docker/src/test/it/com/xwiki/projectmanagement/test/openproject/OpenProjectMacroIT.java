@@ -36,7 +36,6 @@ import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
-import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -145,10 +144,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         macroModal.clickMore();
         macroModal.selectDisplayer("Single item");
         // Assert that "sort", "offset", "limit", "properties" params are hidden.
-        assertFalse(macroModal.getMacroParameterInput(PROPERTIES_PARAMETER).isDisplayed());
+        assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
         macroModal.clickSubmit();
 
-        wysiwygEditPage.clickSaveAndView().waitUntilPageIsReady();
+        wysiwygEditPage.clickSaveAndView();
 
         ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
         List<OpenProjectMacroElement> macros = vp.getOpenProjectMacros();
@@ -183,7 +182,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WYSIWYGEditPage editPage = modal.getEditPage();
         modal.clickMore();
         // Assert that "sort", "offset", "limit", "properties" params are still hidden.
-        assertFalse(modal.getMacroParameterInput(PROPERTIES_PARAMETER).isDisplayed());
+        assertFalse(modal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
         modal.selectDisplayer("Live Data table");
         modal = new OpenProjectMacroEditModal();
         // Assert that all props are visible.
@@ -200,14 +199,15 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             .sendKeys(Keys.ESCAPE);
         modal.clickSubmit();
 
-        TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
+        saveAndGetFirstOPMacro(editPage);
+        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
 
-        useSuggestFilter(ld, "ID", "1", false); // First work package
-        useSuggestFilter(ld, "Type", TASK_TYPE_ID);
-        useSuggestFilter(ld, "Assignee", ADMIN_USER_ID);
-        useSuggestFilter(ld, "Priority", NORMAL_PRIORITY_ID);
-        useSuggestFilter(ld, "Project", DEMO_PROJECT_ID);
-        useSuggestFilter(ld, "Status", NEW_STATUS_ID);
+        useSuggestFilter(macro, "ID", "1", false); // First work package
+        useSuggestFilter(macro, "Type", TASK_TYPE_ID);
+        useSuggestFilter(macro, "Assignee", ADMIN_USER_ID);
+        useSuggestFilter(macro, "Priority", NORMAL_PRIORITY_ID);
+        useSuggestFilter(macro, "Project", DEMO_PROJECT_ID);
+        useSuggestFilter(macro, "Status", NEW_STATUS_ID);
     }
 
     @Test
@@ -326,16 +326,13 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             String.format("{{openproject instance=\"%s\" id=\"showPublicData\" identifier=\"%s\"/}}", CONNECTION_ID,
                 getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc",
                     "\"id\",\"subject\",\"type\",\"status\"")));
-        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int connectionIndex = adminPage.getConnectionIndex(CONNECTION_ID);
-
         // Without the option, guests are asked to connect to OpenProject.
         setup.forceGuestUser();
         setup.gotoPage(testReference);
         assertTrue(new ViewPageWithOpenProjectMacro().isConnectWarningDisplayed());
 
         setup.loginAsSuperAdmin();
-        OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, true);
+        OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, true);
         try {
             setup.forceGuestUser();
             setup.gotoPage(testReference);
@@ -346,7 +343,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
         } finally {
             setup.loginAsSuperAdmin();
-            OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, false);
+            OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, false);
         }
     }
 
@@ -503,26 +500,28 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         throw new IllegalStateException(String.format("None of %s exists under [%s].", List.of(ids), path));
     }
 
-    private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue)
+    private static void useSuggestFilter(OpenProjectMacroElement macro, String filteredColumn, String selectedValue)
+        throws OperationNotSupportedException
     {
-        useSuggestFilter(ld, filteredColumn, selectedValue, true);
+        useSuggestFilter(macro, filteredColumn, selectedValue, true);
     }
 
-    private static void useSuggestFilter(TableLayoutElement ld, String filteredColumn, String selectedValue,
-        boolean labelDisplayed)
+    /**
+     * Filter a column with one of the values its filter suggests, and check that all the displayed work packages
+     * have this value.
+     *
+     * @param labelDisplayed {@code true} if the column displays the label of the suggested value, {@code false} if it
+     *     displays the value itself
+     */
+    private static void useSuggestFilter(OpenProjectMacroElement macro, String filteredColumn, String selectedValue,
+        boolean labelDisplayed) throws OperationNotSupportedException
     {
-        SuggestInputElement suggest = new SuggestInputElement(ld.getFilter(filteredColumn));
-        suggest.click().waitForSuggestions().selectByValue(selectedValue);
-        String selectedLabel = suggest.getSelectedSuggestions().get(0).getLabel().toLowerCase();
-        String selectedVal = suggest.getSelectedSuggestions().get(0).getValue().toLowerCase();
-        ld.waitUntilReady();
-        if (labelDisplayed) {
-            assertEquals(selectedLabel, ld.getCell(filteredColumn, 1).getText().toLowerCase());
-        } else {
-            assertEquals(selectedVal, ld.getCell(filteredColumn, 1).getText().toLowerCase());
-        }
-        suggest.clear();
-        ld.waitUntilReady();
+        String selectedLabel = macro.filterColumnBySuggestion(filteredColumn, selectedValue);
+        String expected = (labelDisplayed ? selectedLabel : selectedValue).toLowerCase();
+        List<String> displayed = macro.getColumnValues(filteredColumn);
+        assertFalse(displayed.isEmpty(), "No work package matches the filter on " + filteredColumn);
+        displayed.forEach(value -> assertEquals(expected, value.toLowerCase(), displayed.toString()));
+        macro.clearColumnFilter(filteredColumn);
     }
 
     private String getTasksInProgressUrl(String path, String sortOrder, String columns)
