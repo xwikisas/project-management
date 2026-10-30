@@ -23,8 +23,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -101,7 +103,9 @@ public class OpenProjectMentionTask implements TaskConsumer
             XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
             List<MacroBlock> opMacros = getMacroBlocks(doc);
 
-            List<BaseObject> existingObjs = doc.getXObjects(REFERENCE);
+            // The list of xobjects holds a null entry in place of each removed object.
+            List<BaseObject> existingObjs =
+                doc.getXObjects(REFERENCE).stream().filter(Objects::nonNull).collect(Collectors.toList());
             logger.debug("Found [{}] OP macros and [{}] existing mention objects.", opMacros.size(),
                 existingObjs.size());
             if (shouldSkipProcessing(opMacros, existingObjs)) {

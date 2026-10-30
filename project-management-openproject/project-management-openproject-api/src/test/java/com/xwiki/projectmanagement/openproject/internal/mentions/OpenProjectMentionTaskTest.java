@@ -249,6 +249,43 @@ class OpenProjectMentionTaskTest
     }
 
     @Test
+    void mentionAddedAfterARemovedMention() throws Exception
+    {
+        savePageWithARemovedMention();
+        withMacros(macro("12", INSTANCE), macro("56", INSTANCE));
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@test", "56@test"), getStoredMentions());
+        assertEquals(0, this.logCapture.size());
+    }
+
+    @Test
+    void sameMentionsAsTheRemainingOnesAfterARemovedMention() throws Exception
+    {
+        savePageWithARemovedMention();
+        withMacros(macro("12", INSTANCE));
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@test"), getStoredMentions());
+        assertNotSavedAgain();
+    }
+
+    /**
+     * Saves the page with a mention, after removing another one: the list of xobjects of the page holds a null entry
+     * in place of the removed object.
+     */
+    private void savePageWithARemovedMention() throws Exception
+    {
+        savePage("34", INSTANCE, "12", INSTANCE);
+        XWikiDocument page = getPage().clone();
+        page.removeXObject(page.getXObject(REFERENCE, 0));
+        this.oldcore.getSpyXWiki().saveDocument(page, this.oldcore.getXWikiContext());
+        clearInvocations(this.oldcore.getSpyXWiki());
+    }
+
+    @Test
     void saveFails() throws Exception
     {
         savePage("34", INSTANCE);
