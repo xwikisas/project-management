@@ -85,12 +85,6 @@ public class StylingSetupManager
     private static final EntityReference STYLESHEET_EXTENSION = new LocalDocumentReference(SPACE_XWIKI,
         "StyleSheetExtension");
 
-    private static final String REGEX_SPACES = "\\s*";
-
-    private static final String BRACKET_START = " {\n";
-
-    private static final String BRACKET_END = "\n}\n";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(StylingSetupManager.class);
 
     @Inject
@@ -174,19 +168,19 @@ public class StylingSetupManager
                     continue;
                 }
 
-                StringBuilder stringBuilder = new StringBuilder();
+                List<Status> statuses = apiClient.getStatuses().getItems();
+                LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
+                List<Type> types = apiClient.getTypes().getItems();
+                LOGGER.debug("Retrieved [{}] types.", types.size());
+                String styleSheet =
+                    StyleSheetComposer.compose(IdGenerator.generate(openProjCfgName), statuses, types);
 
-                String cssEscaped = IdGenerator.generate(openProjCfgName);
-                composeStatusStyles(cssEscaped, apiClient, stringBuilder);
-
-                composeTypeStyles(cssEscaped, apiClient, stringBuilder);
-
-                if (stringBuilder.toString().isEmpty()) {
+                if (styleSheet.isEmpty()) {
                     LOGGER.debug("Generated style sheet is empty.");
                     continue;
                 }
 
-                updateStylePage(context, stylesDocRef, stringBuilder, userRefResolver);
+                updateStylePage(context, stylesDocRef, styleSheet, userRefResolver);
             } catch (XWikiException | ProjectManagementException e) {
                 LOGGER.warn("Failed to update the styling for the configured OpenProject instance [{}]. Cause: [{}].",
                     openProjCfgName, ExceptionUtils.getRootCauseMessage(e));
@@ -194,69 +188,7 @@ public class StylingSetupManager
         }
     }
 
-    private void composeTypeStyles(String openProjCfgName, OpenProjectApiClient apiClient, StringBuilder stringBuilder)
-        throws ProjectManagementException
-    {
-        List<Type> types = apiClient.getTypes().getItems();
-        LOGGER.debug("Retrieved [{}] types.", types.size());
-        for (Type type : types) {
-            if (!StyleValues.isValidColor(type.getColor()) || type.getName() == null) {
-                LOGGER.debug("Skipping the type [{}] with color [{}].", type.getName(), type.getColor());
-                continue;
-            }
-            stringBuilder.append(".openproject-property-type-");
-            stringBuilder.append(IdGenerator.generate(type.getName()));
-            stringBuilder.append('-');
-            stringBuilder.append(openProjCfgName);
-            stringBuilder.append(BRACKET_START);
-            stringBuilder.append("\tcolor: ");
-            stringBuilder.append(type.getColor());
-            stringBuilder.append(';');
-            stringBuilder.append(BRACKET_END);
-            composeTypeColorStyle(type, stringBuilder);
-        }
-    }
-
-    private void composeTypeColorStyle(Type type, StringBuilder stringBuilder)
-    {
-        stringBuilder.append("a.fc-event.openproject-color-type-");
-        // The calendar events get the type name without the white spaces as class name.
-        stringBuilder.append(StyleValues.escapeClassNamePart(type.getName().replaceAll("\\s+", "")));
-        stringBuilder.append(BRACKET_START);
-        stringBuilder.append("\tbackground-color: ");
-        stringBuilder.append(type.getColor());
-        stringBuilder.append(';');
-        stringBuilder.append(BRACKET_END);
-    }
-
-    private void composeStatusStyles(String openProjCfgName, OpenProjectApiClient apiClient,
-        StringBuilder stringBuilder) throws ProjectManagementException
-    {
-        List<Status> statuses = apiClient.getStatuses().getItems();
-        LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
-        for (Status status : statuses) {
-            if (!StyleValues.isValidColor(status.getColor()) || status.getName() == null) {
-                LOGGER.debug("Skipping the status [{}] with color [{}].", status.getName(), status.getColor());
-                continue;
-            }
-            stringBuilder.append(".openproject-property-status-");
-            stringBuilder.append(IdGenerator.generate(status.getName()));
-            stringBuilder.append('-');
-            stringBuilder.append(openProjCfgName);
-            stringBuilder.append("::before");
-            stringBuilder.append(BRACKET_START);
-            stringBuilder.append("\tbackground: ");
-            stringBuilder.append(status.getColor());
-            stringBuilder.append(";");
-            stringBuilder.append("\tborder: 1px solid ");
-            stringBuilder.append("color-mix(in srgb, ");
-            stringBuilder.append(status.getColor());
-            stringBuilder.append(" 85%, black 15%);");
-            stringBuilder.append(BRACKET_END);
-        }
-    }
-
-    private void updateStylePage(XWikiContext context, DocumentReference stylesDocRef, StringBuilder stringBuilder,
+    private void updateStylePage(XWikiContext context, DocumentReference stylesDocRef, String styleSheet,
         UserReferenceResolver<DocumentReference> userRefResolver)
         throws XWikiException
     {
@@ -276,7 +208,7 @@ public class StylingSetupManager
             styleObj = stylesDoc.getXObject(STYLESHEET_EXTENSION, true, context);
         }
         String existingCode = styleObj.getLargeStringValue(PROP_CODE);
-        if (stringBuilder.toString().equals(existingCode) && styleObj.getIntValue(PROP_PARSE) == 0) {
+        if (styleSheet.equals(existingCode) && styleObj.getIntValue(PROP_PARSE) == 0) {
             LOGGER.debug("Existing stylesheet is equal to the generated one.");
             return;
         }
@@ -288,8 +220,8 @@ public class StylingSetupManager
         documentAuthors.setContentAuthor(currentUser);
         documentAuthors.setOriginalMetadataAuthor(currentUser);
         stylesDoc.setHidden(true);
-        LOGGER.debug("Setting the stylesheet code to [{}].", stringBuilder.toString());
-        styleObj.set(PROP_CODE, stringBuilder.toString(), context);
+        LOGGER.debug("Setting the stylesheet code to [{}].", styleSheet);
+        styleObj.set(PROP_CODE, styleSheet, context);
         // The generated code contains values received from OpenProject: it must not be evaluated.
         styleObj.setIntValue(PROP_PARSE, 0);
         context.getWiki().saveDocument(stylesDoc, "Updated styles.", context);

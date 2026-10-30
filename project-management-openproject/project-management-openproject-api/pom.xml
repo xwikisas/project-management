@@ -79,6 +79,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-test-oldcore</artifactId>
+      <version>${platform.version}</version>
+      <type>pom</type>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.contrib.oidc</groupId>
       <artifactId>oauth2-client</artifactId>
       <version>${contrib.oauth2.version}</version>
