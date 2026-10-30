@@ -100,7 +100,8 @@ public class OpenProjectMentionTask implements TaskConsumer
 
         try {
             logger.debug("Creating OP mentions for [{}].", documentReference);
-            XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            // Work on a copy of the cached document.
+            XWikiDocument doc = context.getWiki().getDocument(documentReference, context).clone();
             List<MacroBlock> opMacros = getMacroBlocks(doc);
 
             // The list of xobjects holds a null entry in place of each removed object.

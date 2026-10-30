@@ -297,6 +297,8 @@ class OpenProjectMentionTaskTest
 
         assertEquals("Failed to create the OpenProject mention objects for the document "
             + "[xwiki:Space.Page]. Cause: [XWikiException: Error number 0 in 0]", this.logCapture.getMessage(0));
+        // The cached page isn't modified by the failed save.
+        assertEquals(List.of("34@test"), getStoredMentions());
         assertNull(this.oldcore.getXWikiContext().get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
     }
 
