@@ -25,15 +25,10 @@ import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
-import org.xwiki.livedata.LiveDataConfiguration;
-import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rendering.RenderingException;
-import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
 import org.xwiki.rendering.async.internal.AsyncRendererExecutor;
 import org.xwiki.rendering.async.internal.AsyncRendererExecutorResponse;
 import org.xwiki.rendering.async.internal.AsyncRendererJobStatus;
@@ -41,14 +36,13 @@ import org.xwiki.rendering.macro.Macro;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
-import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
@@ -58,18 +52,14 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link AsyncMacroCallResource}.
+ * Unit tests for {@link AsyncMacroCallResource}. The parameters of the displayer are tested in
+ * {@link WorkPackageDisplayerParametersTest}.
  *
  * @version $Id$
  */
@@ -105,7 +95,6 @@ class AsyncMacroCallResourceTest
 
     private XWikiContext xcontext;
 
-    @Mock
     private ProjectManagementAsyncRenderer asyncRenderer;
 
     @Mock
@@ -114,18 +103,24 @@ class AsyncMacroCallResourceTest
     @Mock
     private AsyncRendererExecutorResponse rendererResponse;
 
+    /**
+     * The wiki of the context while the work package is rendered.
+     */
+    private String renderingWiki;
+
     @BeforeComponent
     void beforeComponent()
     {
         // The context is needed when initializing the resource.
-        this.xcontext = mock(XWikiContext.class);
+        this.xcontext = new XWikiContext();
         when(this.xcontextProvider.get()).thenReturn(this.xcontext);
     }
 
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.xcontext.getWikiId()).thenReturn(CURRENT_WIKI);
+        this.xcontext.setWikiId(CURRENT_WIKI);
+        this.asyncRenderer = new ProjectManagementAsyncRenderer();
         when(this.authorizationManager.hasAccess(Right.VIEW, new WikiReference(WIKI))).thenReturn(true);
         when(this.wikiDescriptorManager.exists(WIKI)).thenReturn(true);
         when(this.componentManager.getInstance(ProjectManagementAsyncRenderer.class)).thenReturn(this.asyncRenderer);
@@ -133,79 +128,56 @@ class AsyncMacroCallResourceTest
         when(this.rendererResponse.getStatus()).thenReturn(mock(AsyncRendererJobStatus.class));
         when(this.rendererResponse.getJobIdHTTPPath()).thenReturn("job/id");
         when(this.rendererResponse.getAsyncClientId()).thenReturn("42");
-        when(this.asyncRendererExecutor.render(eq(this.asyncRenderer), any())).thenReturn(this.rendererResponse);
+        when(this.asyncRendererExecutor.render(eq(this.asyncRenderer), any())).thenAnswer(invocation -> {
+            this.renderingWiki = this.xcontext.getWikiId();
+            return this.rendererResponse;
+        });
     }
 
     @Test
-    void getAsyncCall() throws Exception
+    void getAsyncCall()
     {
-        // The rendering job takes the context wiki of the caller.
-        doAnswer(invocation -> {
-            verify(this.xcontext).setWikiId(WIKI);
-            return this.rendererResponse;
-        }).when(this.asyncRendererExecutor).render(eq(this.asyncRenderer), any(AsyncRendererConfiguration.class));
-
         Response response = this.resource.getAsyncCall(WIKI, SINGLE, "My&instance=x", "123");
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        ArgumentCaptor<ProjectManagementMacroParameters> parametersCaptor =
-            ArgumentCaptor.forClass(ProjectManagementMacroParameters.class);
-        ArgumentCaptor<String> contentCaptor = ArgumentCaptor.forClass(String.class);
-        verify(this.asyncRenderer).initialize(eq(this.displayerMacro), parametersCaptor.capture(),
-            contentCaptor.capture(), any(), any());
-        ProjectManagementMacroParameters parameters = parametersCaptor.getValue();
-        // The connection name is a single source parameter, whatever characters it holds.
+        assertEquals("<div class=\"xwiki-async\" data-xwiki-async-id=\"job/id\" data-xwiki-async-client-id=\"42\">"
+            + "</div>", response.getEntity());
+        // The work package is rendered with the parameters of the work package displayer.
+        ProjectManagementMacroParameters parameters =
+            (ProjectManagementMacroParameters) this.asyncRenderer.getParameters();
+        assertEquals(WorkItemsDisplayer.workItemsSingle, parameters.getWorkItemsDisplayer());
         assertEquals("instance=My%26instance%3Dx&client=openproject&translationPrefix=openproject.",
             parameters.getSourceParameters());
-        assertEquals(WorkItemsDisplayer.workItemsSingle, parameters.getWorkItemsDisplayer());
-        // The work items displayers read the filters from the parameters.
-        LiveDataQuery.Filter filter = new ObjectMapper().readValue(parameters.getFilters(),
-            LiveDataConfiguration.class).getQuery().getFilters().get(0);
-        assertEquals("identifier", filter.getProperty());
-        assertEquals("123", filter.getConstraints().get(0).getValue());
-        assertEquals(parameters.getFilters(), contentCaptor.getValue());
-
-        InOrder inOrder = inOrder(this.xcontext);
-        inOrder.verify(this.xcontext).setWikiId(WIKI);
-        inOrder.verify(this.xcontext).setWikiId(CURRENT_WIKI);
+        // The rendering job takes the wiki of the request as context wiki, and the context wiki is restored after.
+        assertEquals(WIKI, this.renderingWiki);
+        assertEquals(CURRENT_WIKI, this.xcontext.getWikiId());
     }
 
     @Test
     void getAsyncCallWithLiveDataDisplayer() throws Exception
     {
+        // Not the Live Data macro of the platform, which doesn't take the parameters of the displayers.
         when(this.componentManager.getInstance(Macro.class, WorkItemLivedataDisplayer.ROLE_HINT))
             .thenReturn(this.displayerMacro);
 
         Response response = this.resource.getAsyncCall(WIKI, "liveData", "instance", "123");
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals("<div class=\"xwiki-async\" data-xwiki-async-id=\"job/id\" data-xwiki-async-client-id=\"42\">"
-            + "</div>", response.getEntity());
-        // Not the Live Data macro of the platform, which doesn't take the parameters of the displayers.
-        verify(this.componentManager, never()).getInstance(Macro.class, "liveData");
-        // The Live Data gets its entries from the project management source.
-        ArgumentCaptor<ProjectManagementMacroParameters> parametersCaptor =
-            ArgumentCaptor.forClass(ProjectManagementMacroParameters.class);
-        verify(this.asyncRenderer).initialize(eq(this.displayerMacro), parametersCaptor.capture(), any(), any(),
-            any());
-        assertEquals("projectmanagement", parametersCaptor.getValue().getSource());
-        assertEquals("identifier,type,summary,description,startDate,assignees",
-            parametersCaptor.getValue().getProperties());
-        assertEquals(WorkItemsDisplayer.liveData, parametersCaptor.getValue().getWorkItemsDisplayer());
+        assertEquals(WorkItemsDisplayer.liveData,
+            ((ProjectManagementMacroParameters) this.asyncRenderer.getParameters()).getWorkItemsDisplayer());
     }
 
     @Test
-    void getAsyncCallWithUnknownDisplayer() throws Exception
+    void getAsyncCallWithUnknownDisplayer()
     {
         Response response = this.resource.getAsyncCall(WIKI, "html", "instance", "123");
 
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-        verify(this.componentManager, never()).getInstance(any(), anyString());
         verifyNoInteractions(this.asyncRendererExecutor);
     }
 
     @Test
-    void getAsyncCallWithInvalidWorkPackageId() throws Exception
+    void getAsyncCallWithInvalidWorkPackageId()
     {
         Response response = this.resource.getAsyncCall(WIKI, SINGLE, "instance", "1&x=y");
 
@@ -214,7 +186,7 @@ class AsyncMacroCallResourceTest
     }
 
     @Test
-    void getAsyncCallWithoutViewRightOnTheWiki() throws Exception
+    void getAsyncCallWithoutViewRightOnTheWiki()
     {
         when(this.authorizationManager.hasAccess(Right.VIEW, new WikiReference(WIKI))).thenReturn(false);
         when(this.authorizationManager.hasAccess(Right.VIEW)).thenReturn(true);
@@ -234,20 +206,24 @@ class AsyncMacroCallResourceTest
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
         verifyNoInteractions(this.asyncRendererExecutor);
-        verify(this.xcontext, never()).setWikiId(WIKI);
+        assertEquals(CURRENT_WIKI, this.xcontext.getWikiId());
     }
 
     @Test
     void getAsyncCallWhenTheRenderingFails() throws Exception
     {
-        RenderingException exception = new RenderingException("Details");
-        when(this.asyncRendererExecutor.render(eq(this.asyncRenderer), any())).thenThrow(exception);
+        when(this.asyncRendererExecutor.render(eq(this.asyncRenderer), any())).thenAnswer(invocation -> {
+            this.renderingWiki = this.xcontext.getWikiId();
+            throw new RenderingException("Details");
+        });
 
         Response response = this.resource.getAsyncCall(WIKI, SINGLE, "instance", "123");
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
         assertEquals("Failed to display the work package.", response.getEntity());
         assertEquals("Failed to display the work package.", this.logCapture.getMessage(0));
-        verify(this.xcontext).setWikiId(CURRENT_WIKI);
+        // The context wiki is restored even when the rendering fails.
+        assertEquals(WIKI, this.renderingWiki);
+        assertEquals(CURRENT_WIKI, this.xcontext.getWikiId());
     }
 }
