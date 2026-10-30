@@ -152,6 +152,29 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemsConvertsTheOffsetToAnOpenProjectPage() throws ProjectManagementException
+    {
+        openProjectClient.getWorkItems(0, 20, List.of(), List.of());
+        openProjectClient.getWorkItems(40, 20, List.of(), List.of());
+        // An offset in the middle of a page retrieves the page that holds it.
+        openProjectClient.getWorkItems(25, 10, List.of(), List.of());
+
+        verify(openProjectApiClient).getWorkPackages(eq(1), eq(20), anyString(), anyString());
+        verify(openProjectApiClient).getWorkPackages(eq(3), eq(20), anyString(), anyString());
+        verify(openProjectApiClient).getWorkPackages(eq(3), eq(10), anyString(), anyString());
+    }
+
+    @Test
+    void getWorkItemsWithSavedQueryConvertsTheOffsetToAnOpenProjectPage() throws ProjectManagementException
+    {
+        when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
+
+        openProjectClient.getWorkItems(30, 15, List.of(), List.of());
+
+        verify(openProjectApiClient).getQueryWorkPackages(QUERY_ID, 3, 15, "");
+    }
+
+    @Test
     void getWorkItemsWithSavedQueryAndLivedataSortingButNoFilters() throws ProjectManagementException
     {
         when(executionContext.get("identifier")).thenReturn(SAVED_QUERY_IDENTIFIER);
@@ -314,6 +337,8 @@ class OpenProjectClientTest
 
         assertEquals(List.of("2"), getIds(result));
         assertEquals(3, result.getTotalItems());
+        // The work package at the offset 1 is on the second page.
+        assertEquals(2, result.getPage());
     }
 
     @Test

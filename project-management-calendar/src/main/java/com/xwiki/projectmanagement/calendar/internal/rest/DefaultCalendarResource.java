@@ -76,7 +76,7 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
             // Fetch standard work item events unless the caller explicitly requests only provider events.
             if (!excludeWorkItems) {
                 PaginatedResult<WorkItem> workItems =
-                    client.getWorkItems(1, pageSize, queryFilters, Collections.emptyList());
+                    client.getWorkItems(0, pageSize, queryFilters, Collections.emptyList());
                 calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
             }
             // Add additional events from the calendar event provider.

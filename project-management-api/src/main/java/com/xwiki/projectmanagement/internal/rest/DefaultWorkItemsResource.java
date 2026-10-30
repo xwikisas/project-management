@@ -75,8 +75,10 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
         try {
             ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
                 projectManagementHint);
+            // The page starts at 1, a smaller number being the first page.
+            int offset = (Math.max(page, 1) - 1) * pageSize;
             PaginatedResult<WorkItem> workItems =
-                client.getWorkItems(page, pageSize, getFilters(filter), Collections.emptyList());
+                client.getWorkItems(offset, pageSize, getFilters(filter), Collections.emptyList());
             return Response.ok(workItems).build();
         } catch (ComponentLookupException e) {
             return Response

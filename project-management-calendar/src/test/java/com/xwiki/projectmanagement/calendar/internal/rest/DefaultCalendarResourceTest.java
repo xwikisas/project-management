@@ -143,8 +143,8 @@ class DefaultCalendarResourceTest
         assertEquals(List.of(this.workItemEvent, this.providerEvent), response.getEntity());
 
         // The work items are filtered by the requested filters and by the calendar window: their date range must
-        // overlap it. A missing limit defaults to 25 work items.
-        verify(this.client).getWorkItems(eq(1), eq(25), this.filtersCaptor.capture(), eq(Collections.emptyList()));
+        // overlap it. The work items are read from the first one and a missing limit defaults to 25 work items.
+        verify(this.client).getWorkItems(eq(0), eq(25), this.filtersCaptor.capture(), eq(Collections.emptyList()));
         List<LiveDataQuery.Filter> filters = this.filtersCaptor.getValue();
         assertEquals(List.of("status equals open", "dateRange between " + START + '/' + END),
             serialize(filters));
@@ -161,7 +161,7 @@ class DefaultCalendarResourceTest
         Response response = this.resource.getCalendarEvents(WIKI, HINT, null, START, END, 10, false);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(this.client).getWorkItems(eq(1), eq(10), this.filtersCaptor.capture(), any());
+        verify(this.client).getWorkItems(eq(0), eq(10), this.filtersCaptor.capture(), any());
         assertEquals(List.of("dateRange between " + START + '/' + END),
             serialize(this.filtersCaptor.getValue()));
     }

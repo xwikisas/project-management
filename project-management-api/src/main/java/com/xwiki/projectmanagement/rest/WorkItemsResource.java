@@ -71,7 +71,8 @@ public interface WorkItemsResource
      *     implementation, different wikis can have different configurations or the wiki might be irrelevant to the
      *     query.
      * @param projectManagementHint the hint of the project management implementation.
-     * @param page the page number that is being requested.
+     * @param page the number, starting at 1, of the page that is being requested. A number smaller than 1 requests
+     *     the first page.
      * @param pageSize the maximum number of elements that can be returned by this query.
      * @param filter the filter that should match the returned work items.
      * @return a paginated result of work items specific to the page number. HTTP 200: successful retrieval. HTTP 401:

@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.livedata;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -79,15 +80,22 @@ class ProjectManagementEntryStoreTest
     {
         String clientId = "testclient";
         LiveDataQuery query = createQuery(clientId);
+        // The Live Data asks for its third page of 10 entries.
+        query.setOffset(20L);
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "equals", "open"));
+        query.setFilters(filters);
+        List<LiveDataQuery.SortEntry> sortEntries = List.of(new LiveDataQuery.SortEntry("dueDate", true));
+        query.setSort(sortEntries);
 
         PaginatedResult<WorkItem> workItemResult = new PaginatedResult<>();
-        workItemResult.setTotalItems(2);
-        workItemResult.setPage(1);
+        workItemResult.setTotalItems(21);
+        workItemResult.setPage(3);
         WorkItem wi = new WorkItem();
         wi.setIdentifier(new Linkable("1", "http://xwiki.com/1"));
         workItemResult.getItems().add(wi);
 
-        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenReturn(workItemResult);
+        // The offset of the Live Data is passed as is.
+        when(projectManagementManager.getWorkItems(clientId, 20, 10, filters, sortEntries)).thenReturn(workItemResult);
         when(componentManager.hasComponent(ProjectManagementLiveDataDisplayer.class, clientId)).thenReturn(false);
 
         LiveData result = entryStore.get(query);
@@ -96,7 +104,7 @@ class ProjectManagementEntryStoreTest
         verify(componentManager).hasComponent(ProjectManagementLiveDataDisplayer.class, clientId);
         verify(defaultDisplayer).display(argThat(list -> list.contains(wi)));
 
-        assertEquals(2, result.getCount());
+        assertEquals(21, result.getCount());
         assertEquals(1, result.getEntries().size());
         // Work Item was flattened.
         assertEquals("1", result.getEntries().get(0).get("identifier.value"));

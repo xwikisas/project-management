@@ -53,14 +53,15 @@ public interface ProjectManagementManager
      * Retrieve a list of work items based on a filter.
      *
      * @param client the hint of the client implementation.
-     * @param page the number identifying the page that needs retrieval.
+     * @param offset the index, starting at 0, of the first work item to retrieve among all the work items matching
+     *     the filters.
      * @param pageSize the maximum number of items the result can have.
      * @param filters a list of filters that the returned items must satisfy.
      * @param sortEntries a list of sort entries that denote how the results should be arranged.
      * @return a paginated result containing the list of items that satisfy the filters.
      * @throws WorkItemException if there was an exception during the retrieval of the tasks.
      */
-    PaginatedResult<WorkItem> getWorkItems(String client, int page, int pageSize, List<LiveDataQuery.Filter> filters,
+    PaginatedResult<WorkItem> getWorkItems(String client, int offset, int pageSize, List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemException;
 
