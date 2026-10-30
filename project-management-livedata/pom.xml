@@ -33,7 +33,7 @@
   <name>Project Management - Livedata</name>
   <description>Provides the Livedata data source through which all the Project Management implementations will display work items.</description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.83</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.84</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <dependency>
