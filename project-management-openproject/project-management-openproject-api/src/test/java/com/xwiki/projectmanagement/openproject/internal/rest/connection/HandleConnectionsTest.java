@@ -24,6 +24,8 @@ import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.WikiReference;
@@ -237,24 +239,22 @@ class HandleConnectionsTest
         assertEquals("There was a problem while saving the connection", this.logCapture.getMessage(0));
     }
 
-    @Test
-    void createAndUpdateConnectionOnInvalidPageFail()
+    @ParameterizedTest
+    @CsvSource({
+        "A/notspaces/B, Malformed URL: the spaces section is invalid.",
+        "A/spaces//spaces/B, Malformed URL: a space name cannot be empty."
+    })
+    void createAndUpdateConnectionOnInvalidPageFail(String spaces, String message) throws Exception
     {
-        Response createResponse = handleConnections.createConnection(
-            "",
-            "",
-            PAGE_NAME,
-            openProjectConnection
-        );
+        Response createResponse =
+            this.handleConnections.createConnection(WIKI_NAME, spaces, PAGE_NAME, this.openProjectConnection);
+        Response updateResponse =
+            this.handleConnections.updateConnection(WIKI_NAME, spaces, PAGE_NAME, this.openProjectConnection);
 
-        Response updateResponse = handleConnections.updateConnection(
-            "",
-            "",
-            PAGE_NAME,
-            openProjectConnection
-        );
-
-        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), createResponse.getStatus());
-        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), updateResponse.getStatus());
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), createResponse.getStatus());
+        assertEquals(message, createResponse.getEntity());
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), updateResponse.getStatus());
+        assertEquals(message, updateResponse.getEntity());
+        verify(this.handleConnectionsService, never()).handleConnection(any(), any());
     }
 }

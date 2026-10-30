@@ -25,13 +25,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 
-import javax.naming.OperationNotSupportedException;
-
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.rendering.syntax.Syntax;
@@ -39,8 +36,6 @@ import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -63,10 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 {
-    private static final String AUTHORIZED_COLUMN = "Authorized?";
-
-    private static final String SAVED_MESSAGE = "Connection %s has been saved!";
-
     private static final String CONNECTIONS_SPACE = "OpenProject.Code.OpenProjectConfigurations";
 
     @Test
@@ -75,11 +66,9 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     {
         // The connection is added and authorized by the OpenProjectFixture.
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int index = adminPage.getConnectionIndex(CONNECTION_ID);
-        assertThat(index, greaterThan(0));
-        TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
-        assertEquals("Authorized", livedata.getCell(AUTHORIZED_COLUMN, index).getText());
-        assertEquals(2, adminPage.getConnectionActionCount(index));
+        assertTrue(adminPage.isConnectionListed(CONNECTION_ID));
+        assertEquals("Authorized", adminPage.getConnectionAuthorization(CONNECTION_ID));
+        assertEquals(2, adminPage.getConnectionActionCount(CONNECTION_ID));
     }
 
     @Test
@@ -87,17 +76,17 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     void tryToAddInvalidConnection()
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.addNewConnection(CONNECTION_ID, this.openProject.getBaseUrl(), "someid", "somesecret");
+        adminPage.submitNewConnection(CONNECTION_ID, this.openProject.getBaseUrl(), "someid", "somesecret");
         adminPage.waitForNotificationErrorMessage(
             String.format("Connection %s already exists. Use another connection name.", CONNECTION_ID));
 
         // The server URL must be an absolute HTTP or HTTPS URL.
         adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.addNewConnection("invalidURL", "someurl", "someid", "somesecret");
+        adminPage.submitNewConnection("invalidURL", "someurl", "someid", "somesecret");
         adminPage.waitForNotificationErrorMessage("The server URL [someurl] is not valid: it must be an absolute HTTP "
             + "or HTTPS URL, e.g. [https://openproject.example.com].");
         adminPage = OpenProjectAdminPage.gotoPage();
-        assertEquals(-1, adminPage.getConnectionIndex("invalidURL"));
+        assertFalse(adminPage.isConnectionListed("invalidURL"));
     }
 
     @Test
@@ -108,30 +97,24 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         String name = "temporary";
         String newName = "temporary2";
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        // The connection actions wait for the saved or deleted connection to be listed or removed.
         adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", "somesecret");
-        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
+        assertTrue(adminPage.isConnectionListed(name));
+        assertEquals("Not yet authorized", adminPage.getConnectionAuthorization(name));
+        assertEquals(3, adminPage.getConnectionActionCount(name));
 
-        int index = adminPage.getConnectionIndex(name);
-        assertThat(index, greaterThan(0));
-        TableLayoutElement livedata = adminPage.getConnectionsLivedata().getTableLayout();
-        assertEquals("Not yet authorized", livedata.getCell(AUTHORIZED_COLUMN, index).getText());
-        assertEquals(3, adminPage.getConnectionActionCount(index));
+        adminPage.updateConnection(name, newName, this.openProject.getBaseUrl(), "asd", "asd");
+        assertFalse(adminPage.isConnectionListed(name));
+        assertTrue(adminPage.isConnectionListed(newName));
 
-        adminPage.updateConnection(index, newName, this.openProject.getBaseUrl(), "asd", "asd");
-        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, newName));
-        assertEquals(-1, adminPage.getConnectionIndex(name));
-        index = adminPage.getConnectionIndex(newName);
-        assertThat(index, greaterThan(0));
-
-        adminPage.deleteConnection(index);
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", newName));
-        assertEquals(-1, adminPage.getConnectionIndex(newName));
-        assertThat(adminPage.getConnectionIndex(CONNECTION_ID), greaterThan(0));
+        adminPage.deleteConnection(newName);
+        assertFalse(adminPage.isConnectionListed(newName));
+        assertTrue(adminPage.isConnectionListed(CONNECTION_ID));
     }
 
     @Test
     @Order(4)
-    void styleSyncJob(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    void styleSyncJob(TestUtils setup, TestReference testReference)
     {
         setup.createPage(testReference,
             String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
@@ -145,13 +128,9 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
             "{{velocity}}$services.openproject.generateStyling(){{/velocity}}", "");
 
         setup.gotoPage(testReference);
-        ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
-        vp.waitUntilPageIsReady();
-        List<OpenProjectMacroElement> macros = vp.getOpenProjectMacros();
-        assertEquals(1, macros.size());
-        macros.get(0).getLivedata().getTableLayout().waitUntilReady();
         // Compare one rendered type property with a known OpenProject color.
-        assertEquals("rgb(26, 103, 163)", vp.getPropertyColor("type", "Task", CONNECTION_ID));
+        assertEquals("rgb(26, 103, 163)",
+            new ViewPageWithOpenProjectMacro().getPropertyColor("type", "Task", CONNECTION_ID));
     }
 
     @Test
@@ -178,16 +157,12 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         String clientSecret = "initialSecret";
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", clientSecret);
-        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
         // The form explains that the client secret is not displayed when editing a connection.
         assertEquals("", adminPage.getNewConnectionClientSecretHint());
         assertEquals("The current client secret is not displayed, but it is still set. Leave this field empty to keep "
-            + "it, or enter a new value to replace it.",
-            adminPage.getEditConnectionClientSecretHint(adminPage.getConnectionIndex(name)));
+            + "it, or enter a new value to replace it.", adminPage.getEditConnectionClientSecretHint(name));
         // Leaving the client secret empty keeps the current one.
-        adminPage.updateConnection(adminPage.getConnectionIndex(name), name, this.openProject.getBaseUrl(), "someid",
-            "");
-        adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, name));
+        adminPage.updateConnection(name, name, this.openProject.getBaseUrl(), "someid", "");
 
         // Reading the client secret from a script requires programming right (see PRCHECKER_EXCLUDE_PROPERTY).
         UsernamePasswordCredentials credentials = setup.setDefaultCredentials(TestUtils.SUPER_ADMIN_CREDENTIALS);
@@ -243,8 +218,7 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         assertFalse(response.body().contains(clientSecret));
 
         adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.deleteConnection(adminPage.getConnectionIndex(name));
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", name));
+        OpenProjectAdminPage.gotoPage().deleteConnection(name);
     }
 
     @Test

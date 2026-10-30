@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import javax.naming.OperationNotSupportedException;
@@ -34,7 +36,6 @@ import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,18 +74,16 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
 
         // Create the preset from the administration section. The name is mandatory.
         PresetCreateModal createModal = OpenProjectAdminPage.gotoPage().clickCreatePreset();
-        createModal.clickCreate();
-        assertTrue(createModal.isDisplayed());
+        // The name is checked when the button is clicked, so the modal is still displayed afterwards.
+        assertTrue(createModal.clickCreateWithoutName().isDisplayed());
         PresetEditPage editPage = createModal.setName(presetName).setChartPreset(false).create();
         assertEquals(presetName, editPage.getName());
         String presetId = editPage.getPresetId();
         editPage.getFilterBuilders().get(0).addFilter(SUMMARY).typeValue(1, "speakers");
-        editPage.waitUntilFilterValueContains("\"speakers\"");
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 
         // The saved filters are displayed, but they can't be changed.
         assertFalse(viewPage.isChartPreset());
-        viewPage.waitUntilFiltersAreDisplayed(1);
         List<FilterBuilderParameter> builders = viewPage.getFilterBuilders();
         assertEquals(1, builders.size());
         assertTrue(builders.get(0).isReadOnly());
@@ -93,11 +92,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             new DocumentReference(setup.resolveDocumentReference(viewPage.getPresetReference()));
 
         // The preset is listed in the administration section.
-        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int presetIndex = adminPage.getPresetIndex(presetName);
-        assertThat(presetIndex, greaterThan(0));
-        assertEquals("No",
-            adminPage.getPresetsLivedata().getTableLayout().getCell("Chart preset?", presetIndex).getText());
+        assertEquals("No", OpenProjectAdminPage.gotoPage().getListedPresetChartFlag(presetName));
 
         // Use the preset in a macro.
         setup.deletePage(testReference);
@@ -134,7 +129,6 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         setup.gotoPage(presetReference, "edit");
         editPage = new PresetEditPage();
         editPage.getFilterBuilders().get(0).getFilters().get(0).typeValue(1, "sp");
-        editPage.waitUntilFilterValueContains("\"sp\"");
         editPage.clickSaveAndViewPreset();
         setup.gotoPage(testReference);
         macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
@@ -169,11 +163,9 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         assertEquals(1, builders.size());
         builders.get(0).addFilter(SUMMARY).typeValue(1, "speakers");
         editPage.addDataset().addFilter(SUMMARY).typeValue(1, "sp");
-        editPage.waitUntilFilterValueContains("\"sp\"");
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 
         assertTrue(viewPage.isChartPreset());
-        viewPage.waitUntilFiltersAreDisplayed(2);
         builders = viewPage.getFilterBuilders();
         assertEquals(2, builders.size());
         assertEquals("Dataset #1", builders.get(0).getTitle());
@@ -192,7 +184,6 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 
-        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
         assertEquals(2, new ChartJSCanvas().getDatasetCount());
     }
 
@@ -225,8 +216,12 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             new DocumentReference("RestrictedPreset", testReference.getLastSpaceReference());
         DocumentReference adminPage = new DocumentReference("AdminPage", testReference.getLastSpaceReference());
         DocumentReference editorPage = new DocumentReference("EditorPage", testReference.getLastSpaceReference());
-        String macro = String.format("{{openproject instance=\"%s\" id=\"restrictedPreset\" presetId=\"%s\"/}}",
-            CONNECTION_ID, presetId);
+        String macro = String.format("{{openproject instance=\"%s\" id=\"restrictedPreset\" presetId=\"%s\" "
+            + "properties=\"identifier,summary,status\"/}}", CONNECTION_ID, presetId);
+        // The preset filters the new work packages. Guests see the public ones, like anonymous OpenProject users.
+        String newStatus = this.openProject.getApiResource("/statuses/1").get("name").asText().toLowerCase();
+        int newCount = this.openProject.getApiResource("/work_packages?pageSize=1&filters=" + URLEncoder.encode(
+            "[{\"status\":{\"operator\":\"=\",\"values\":[\"1\"]}}]", StandardCharsets.UTF_8)).get("total").asInt();
 
         // A preset saved by an administrator, that guests and the editor can't view.
         setup.createUser(userName, "pass", null);
@@ -238,13 +233,16 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         setup.setRights(presetReference, "", "XWiki.XWikiGuest,XWiki." + userName, "view", false);
         setup.createPage(adminPage, macro);
 
-        int connectionIndex = OpenProjectAdminPage.gotoPage().getConnectionIndex(CONNECTION_ID);
-        OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, true);
+        OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, true);
         try {
             // Guests see the result of the preset used on a page saved by someone who can view it.
             setup.forceGuestUser();
             setup.gotoPage(adminPage);
-            new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+            OpenProjectMacroElement guestMacro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+            assertEquals(String.format("Entries 1 - %d out of %d", Math.min(25, newCount), newCount),
+                getPaginationEntriesText(guestMacro));
+            List<String> statuses = guestMacro.getColumnValues("Status");
+            statuses.forEach(status -> assertEquals(newStatus, status.toLowerCase(), statuses.toString()));
 
             // The preset is not used on a page saved by someone who can't view it, whoever views the page.
             setup.login(userName, "pass");
@@ -258,7 +256,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
         } finally {
             setup.loginAsSuperAdmin();
-            OpenProjectAdminPage.gotoPage().setShowPublicData(connectionIndex, false);
+            OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, false);
         }
     }
 

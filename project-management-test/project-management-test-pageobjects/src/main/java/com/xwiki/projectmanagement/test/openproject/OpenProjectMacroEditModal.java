@@ -70,13 +70,4 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
         select.selectByVisibleText(displayerName);
         return this;
     }
-
-    /**
-     * @return the filter parameter which has a model of its own.
-     */
-    public FilterBuilderParameter getFilterBuilder()
-    {
-        selectParameterTab("filters");
-        return new FilterBuilderParameter();
-    }
 }

@@ -26,12 +26,11 @@ import javax.naming.OperationNotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
-import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
-import org.xwiki.livedata.test.po.CardLayoutElement;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.ui.po.BaseElement;
+import org.xwiki.test.ui.po.SuggestInputElement;
 
 /**
  * Models the OpenProject macro present in a view page.
@@ -57,33 +56,6 @@ public class OpenProjectMacroElement extends BaseElement
     public OpenProjectMacroElement(WebElement element)
     {
         self = element;
-    }
-
-    /**
-     * @return true if the warning message is displayed or not. The warning message is displayed when the user seeing
-     *     the macro is not authorized to the OpenProject instance from which the work packages are retrieved.
-     */
-    public boolean isUserAuthorized()
-    {
-        try {
-            self.findElement(By.className("warningmessage"));
-            return false;
-        } catch (NoSuchElementException e) {
-            return true;
-        }
-    }
-
-    /**
-     * Click the link from the warning message, authorizing the user to the OpenProject instance.
-     *
-     * @return the view page after it the user was authorized.
-     */
-    public ViewPageWithOpenProjectMacro authorizeUser()
-    {
-        self.findElement(By.cssSelector(".warningmessage a")).click();
-        ViewPageWithOpenProjectMacro vp = new ViewPageWithOpenProjectMacro();
-        vp.waitUntilPageIsReady();
-        return vp;
     }
 
     /**
@@ -148,18 +120,57 @@ public class OpenProjectMacroElement extends BaseElement
     }
 
     /**
-     * @return the livedata cards displayer of the OpenProject macro.
-     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided. The
-     *     livedata page object requires an id in order to be retrieved.
+     * Filter a column of the Live Data table with one of the values suggested by its filter, and wait for the table to
+     * display the filtered work packages.
+     *
+     * @param column the label of the Live Data column
+     * @param value the value of the suggestion to select
+     * @return the label of the selected suggestion
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.4.0
      */
-    public CardLayoutElement getCards() throws OperationNotSupportedException
+    public String filterColumnBySuggestion(String column, String value) throws OperationNotSupportedException
     {
-        String id = self.getAttribute("id");
-        if (StringUtils.isEmpty(id)) {
-            throw new OperationNotSupportedException(
-                "Can't retrieve the cards element if no id was provided to the macro.");
-        }
-        return new CardLayoutElement(id);
+        SuggestInputElement filter = new SuggestInputElement(waitForTableLayout().getFilter(column));
+        runAndWaitForEntriesUpdate(() -> filter.click().waitForSuggestions().selectByValue(value));
+        return filter.getSelectedSuggestions().get(0).getLabel();
+    }
+
+    /**
+     * Clear the filter of a column of the Live Data table, and wait for the table to display the unfiltered work
+     * packages.
+     *
+     * @param column the label of the Live Data column
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.4.0
+     */
+    public void clearColumnFilter(String column) throws OperationNotSupportedException
+    {
+        SuggestInputElement filter = new SuggestInputElement(waitForTableLayout().getFilter(column));
+        runAndWaitForEntriesUpdate(filter::clear);
+    }
+
+    /**
+     * @param column the label of the Live Data column
+     * @return the values displayed in the given column, one per displayed work package
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.4.0
+     */
+    public List<String> getColumnValues(String column) throws OperationNotSupportedException
+    {
+        return getTexts(waitForTableLayout().getAllCells(column));
+    }
+
+    /**
+     * Wait for the work package displayed inline to be rendered, since the macro is rendered asynchronously.
+     *
+     * @return the summary of the work package displayed inline
+     * @since 1.4.0
+     */
+    public String getInlineWorkPackageSummary()
+    {
+        waitUntilRendered();
+        return self.findElement(By.className("work-package-inline-summary")).getText();
     }
 
     /**
@@ -362,16 +373,31 @@ public class OpenProjectMacroElement extends BaseElement
         }
     }
 
+    /**
+     * Run an action that makes the Live Data fetch its entries again, e.g. a filter change, and wait for the fetched
+     * entries to be displayed. The Live Data can still display the previous entries, as ready, right after the action.
+     */
+    private void runAndWaitForEntriesUpdate(Runnable action) throws OperationNotSupportedException
+    {
+        String id = getLivedata().getId();
+        getDriver().executeScript("const liveData = document.getElementById(arguments[0]);"
+            + "delete liveData.dataset.entriesUpdated;"
+            + "liveData.addEventListener('xwiki:livedata:entriesUpdated',"
+            + "  () => liveData.dataset.entriesUpdated = 'true', {once: true});", id);
+        action.run();
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            getDriver().waitUntilCondition(
+                driver -> "true".equals(driver.findElement(By.id(id)).getAttribute("data-entries-updated")));
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+        waitForTableLayout();
+    }
+
     private static List<String> getTexts(List<WebElement> elements)
     {
         return elements.stream().map(WebElement::getText).collect(Collectors.toList());
-    }
-
-    /**
-     * @return the wrapper of the macro.
-     */
-    public WebElement getElement()
-    {
-        return self;
     }
 }

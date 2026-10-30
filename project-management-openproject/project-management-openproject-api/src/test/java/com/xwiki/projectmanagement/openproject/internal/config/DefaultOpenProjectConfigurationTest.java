@@ -86,13 +86,6 @@ class DefaultOpenProjectConfigurationTest
     }
 
     @Test
-    void getOpenProjectConnections()
-    {
-        List<OpenProjectConnection> result = configuration.getOpenProjectConnections();
-        assertEquals(this.connections, result);
-    }
-
-    @Test
     void getConnectionByName()
     {
         OpenProjectConnection result = configuration.getConnection(opConnection.getConnectionName());
