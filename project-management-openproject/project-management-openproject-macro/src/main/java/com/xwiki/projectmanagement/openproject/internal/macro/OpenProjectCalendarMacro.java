@@ -41,6 +41,7 @@ import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManage
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
@@ -57,6 +58,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroPar
 @Named("openprojectcalendar")
 public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarMacro<OpenProjectCalendarMacroParameters>
 {
+    @Inject
+    private LicenseChecker licenseChecker;
+
     @Inject
     private UserTokenChecker userTokenChecker;
 
@@ -89,6 +93,10 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     public List<Block> execute(OpenProjectCalendarMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        List<Block> licenseBlock = this.licenseChecker.getMissingLicenseBlock(context);
+        if (!licenseBlock.isEmpty()) {
+            return licenseBlock;
+        }
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), context);
         if (!warningBlock.isEmpty()) {

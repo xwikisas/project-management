@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
@@ -75,6 +76,9 @@ class OpenProjectChartMacroTest
 
     @InjectMockComponents
     private OpenProjectChartMacro macro;
+
+    @MockComponent
+    private LicenseChecker licenseChecker;
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
@@ -116,6 +120,7 @@ class OpenProjectChartMacroTest
     {
         this.executionContext.setContext(null);
         this.parameters.setInstance("main");
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
         when(this.barDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
         when(this.projectManagementManager.getWorkItems("openproject", 0, 100, List.of(), List.of()))
@@ -155,6 +160,19 @@ class OpenProjectChartMacroTest
 
         verify(this.userTokenChecker).getWarningBlock("dashboard", this.context);
         assertEquals("dashboard", this.executionContext.get("instance"));
+    }
+
+    @Test
+    void returnsTheMissingLicenseMessage() throws Exception
+    {
+        List<Block> licenseBlock = List.of(new WordBlock("license"));
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
+
+        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
+
+        verifyNoInteractions(this.observationManager, this.userTokenChecker, this.asyncExecutor,
+            this.projectManagementManager);
+        assertNull(this.executionContext.get("instance"));
     }
 
     @Test

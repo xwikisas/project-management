@@ -36,6 +36,7 @@ import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCreateWorkPackageMacroParameters;
 
@@ -49,6 +50,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCreateWorkPackag
 @Named("openproject-create-work-package")
 public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProjectCreateWorkPackageMacroParameters>
 {
+    @Inject
+    private LicenseChecker licenseChecker;
+
     @Inject
     private ContextualLocalizationManager l10n;
 
@@ -73,6 +77,10 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
     public List<Block> execute(OpenProjectCreateWorkPackageMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        List<Block> licenseBlock = this.licenseChecker.getMissingLicenseBlock(context);
+        if (!licenseBlock.isEmpty()) {
+            return licenseBlock;
+        }
         Block infoMessage = l10n.getTranslation("openproject-create-work-package.display.viewMode.message").render();
         return List.of(new GroupBlock(List.of(infoMessage), Collections.singletonMap("class", "box " + "infomessage")));
     }
