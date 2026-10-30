@@ -52,48 +52,46 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
     @Override
     public Response getWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
-        prepareClientContext();
-        try {
-            ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
-                projectManagementHint);
-            return Response.ok(client.getWorkItem(workItemId)).build();
-        } catch (ComponentLookupException e) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(String.format("No project management client with id [%s].", projectManagementHint))
-                .build();
-        } catch (WorkItemNotFoundException e) {
-            return Response.status(Response.Status.NOT_FOUND).build();
-        } catch (WorkItemRetrievalException e) {
-            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work item.", e);
-        } finally {
-            clearClientContext();
-        }
+        return handleRequest(wiki, () -> {
+            try {
+                ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
+                    projectManagementHint);
+                return Response.ok(client.getWorkItem(workItemId)).build();
+            } catch (ComponentLookupException e) {
+                return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity(String.format("No project management client with id [%s].", projectManagementHint))
+                    .build();
+            } catch (WorkItemNotFoundException e) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            } catch (WorkItemRetrievalException e) {
+                return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work item.", e);
+            }
+        });
     }
 
     @Override
     public Response getWorkItems(String wiki, String projectManagementHint, int page, int pageSize, String filter)
     {
-        prepareClientContext();
-        try {
-            ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
-                projectManagementHint);
-            int offset = Pagination.getOffset(page, pageSize);
-            PaginatedResult<WorkItem> workItems =
-                client.getWorkItems(offset, pageSize, getFilters(filter), Collections.emptyList());
-            return Response.ok(workItems).build();
-        } catch (ComponentLookupException e) {
-            return Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(String.format("No project management client with id [%s] exists.", projectManagementHint))
-                .build();
-        } catch (LiveDataException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
-        } catch (WorkItemRetrievalException e) {
-            return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work items.", e);
-        } finally {
-            clearClientContext();
-        }
+        return handleRequest(wiki, () -> {
+            try {
+                ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
+                    projectManagementHint);
+                int offset = Pagination.getOffset(page, pageSize);
+                PaginatedResult<WorkItem> workItems =
+                    client.getWorkItems(offset, pageSize, getFilters(filter), Collections.emptyList());
+                return Response.ok(workItems).build();
+            } catch (ComponentLookupException e) {
+                return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity(String.format("No project management client with id [%s] exists.", projectManagementHint))
+                    .build();
+            } catch (LiveDataException e) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
+            } catch (WorkItemRetrievalException e) {
+                return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work items.", e);
+            }
+        });
     }
 
     @Override

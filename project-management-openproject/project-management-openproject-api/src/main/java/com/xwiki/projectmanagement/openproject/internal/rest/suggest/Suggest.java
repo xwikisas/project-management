@@ -46,6 +46,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
@@ -101,6 +102,9 @@ public class Suggest extends XWikiResource
     @Inject
     private OpenProjectAccess openProjectAccess;
 
+    @Inject
+    private WikiRequestExecutor wikiRequestExecutor;
+
     /**
      * @param wiki the wiki that contains the configured client.
      * @param instance the OpenProject client where to search for work item suggestions.
@@ -120,6 +124,13 @@ public class Suggest extends XWikiResource
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selectedItem
     )
+    {
+        return this.wikiRequestExecutor.execute(wiki,
+            () -> getSuggestions(instance, suggest, search, pageSize, selectedItem));
+    }
+
+    private Response getSuggestions(String instance, String suggest, String search, int pageSize,
+        Integer selectedItem)
     {
         OpenProjectApiClient openProjectApiClient;
 

@@ -37,6 +37,7 @@ import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -47,6 +48,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -64,6 +66,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WikiRequestExecutor.class)
 class AsyncMacroCallResourceTest
 {
     private static final String WIKI = "subwiki";

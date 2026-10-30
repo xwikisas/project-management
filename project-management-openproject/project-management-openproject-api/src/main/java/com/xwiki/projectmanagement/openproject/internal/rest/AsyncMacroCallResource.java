@@ -38,7 +38,6 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
-import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
 import org.xwiki.rendering.async.internal.AsyncRendererExecutor;
@@ -47,16 +46,12 @@ import org.xwiki.rendering.async.internal.AsyncRendererResult;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.rest.XWikiResource;
-import org.xwiki.security.authorization.ContextualAuthorizationManager;
-import org.xwiki.security.authorization.Right;
-import org.xwiki.wiki.descriptor.WikiDescriptorManager;
-import org.xwiki.wiki.manager.WikiManagerException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -84,10 +79,7 @@ public class AsyncMacroCallResource extends XWikiResource
     private AsyncRendererExecutor asyncRendererExecutor;
 
     @Inject
-    private ContextualAuthorizationManager authorizationManager;
-
-    @Inject
-    private WikiDescriptorManager wikiDescriptorManager;
+    private WikiRequestExecutor wikiRequestExecutor;
 
     /**
      * @param wiki the wiki that contains the OpenProject instance.
@@ -114,26 +106,14 @@ public class AsyncMacroCallResource extends XWikiResource
         {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
-        if (!this.authorizationManager.hasAccess(Right.VIEW, new WikiReference(wiki))) {
-            return Response.status(Response.Status.UNAUTHORIZED).build();
-        }
-
-        XWikiContext xcontext = getXWikiContext();
-        String currentWiki = xcontext.getWikiId();
-        try {
-            if (!this.wikiDescriptorManager.exists(wiki)) {
-                return Response.status(Response.Status.NOT_FOUND).build();
+        // The OpenProject connection is read from the context wiki, also in the asynchronous rendering job.
+        return this.wikiRequestExecutor.execute(wiki, () -> {
+            try {
+                return Response.ok(getPlaceholder(workItemsDisplayer, instance, workPackageId)).build();
+            } catch (JobException | RenderingException | JsonProcessingException | ComponentLookupException e) {
+                return RestErrorResponses.errorResponse(getLogger(), ERROR_MESSAGE, e);
             }
-            // The OpenProject connection is read from the context wiki, also in the asynchronous rendering job.
-            xcontext.setWikiId(wiki);
-            return Response.ok(getPlaceholder(workItemsDisplayer, instance, workPackageId)).build();
-        } catch (WikiManagerException | JobException | RenderingException | JsonProcessingException
-            | ComponentLookupException e)
-        {
-            return RestErrorResponses.errorResponse(getLogger(), ERROR_MESSAGE, e);
-        } finally {
-            xcontext.setWikiId(currentWiki);
-        }
+        });
     }
 
     private String getPlaceholder(WorkItemsDisplayer displayer, String instance, String workPackageId)

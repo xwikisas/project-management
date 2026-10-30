@@ -61,38 +61,37 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
     public Response getCalendarEvents(String wiki, String projectManagementHint, String filters, String start,
         String end, int limit, boolean excludeWorkItems)
     {
-        prepareClientContext();
-        try {
-            ProjectManagementClient client =
-                this.componentManager.getInstance(ProjectManagementClient.class, projectManagementHint);
-            CalendarEventProvider calendarEventProvider =
-                this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
-            int pageSize = limit != 0 ? limit : 25;
-            List<LiveDataQuery.Filter> queryFilters = new ArrayList<>(getFilters(filters));
-            // Filter work items whose date range overlaps with the requested calendar window, including the ones
-            // having only a start date or only a due date.
-            queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DATE_RANGE, "between", start + '/' + end));
-            List<CalendarEvent> calendarEvents = new ArrayList<>();
-            // Fetch standard work item events unless the caller explicitly requests only provider events.
-            if (!excludeWorkItems) {
-                PaginatedResult<WorkItem> workItems =
-                    client.getWorkItems(0, pageSize, queryFilters, Collections.emptyList());
-                calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
+        return handleRequest(wiki, () -> {
+            try {
+                ProjectManagementClient client =
+                    this.componentManager.getInstance(ProjectManagementClient.class, projectManagementHint);
+                CalendarEventProvider calendarEventProvider =
+                    this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
+                int pageSize = limit != 0 ? limit : 25;
+                List<LiveDataQuery.Filter> queryFilters = new ArrayList<>(getFilters(filters));
+                // Filter work items whose date range overlaps with the requested calendar window, including the ones
+                // having only a start date or only a due date.
+                queryFilters.add(new LiveDataQuery.Filter(WorkItem.KEY_DATE_RANGE, "between", start + '/' + end));
+                List<CalendarEvent> calendarEvents = new ArrayList<>();
+                // Fetch standard work item events unless the caller explicitly requests only provider events.
+                if (!excludeWorkItems) {
+                    PaginatedResult<WorkItem> workItems =
+                        client.getWorkItems(0, pageSize, queryFilters, Collections.emptyList());
+                    calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
+                }
+                // Add additional events from the calendar event provider.
+                calendarEvents.addAll(calendarEventProvider.getMoreEvents(queryFilters));
+                return Response.ok(calendarEvents).build();
+            } catch (ComponentLookupException e) {
+                return errorResponse(Response.Status.BAD_REQUEST,
+                    String.format("No project management client or calendar event provider with id [%s].",
+                        projectManagementHint), e);
+            } catch (LiveDataException e) {
+                return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
+            } catch (ProjectManagementException e) {
+                return errorResponse(getErrorStatus(e), "Failed to retrieve the calendar events.", e);
             }
-            // Add additional events from the calendar event provider.
-            calendarEvents.addAll(calendarEventProvider.getMoreEvents(queryFilters));
-            return Response.ok(calendarEvents).build();
-        } catch (ComponentLookupException e) {
-            return errorResponse(Response.Status.BAD_REQUEST,
-                String.format("No project management client or calendar event provider with id [%s].",
-                    projectManagementHint), e);
-        } catch (LiveDataException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
-        } catch (ProjectManagementException e) {
-            return errorResponse(getErrorStatus(e), "Failed to retrieve the calendar events.", e);
-        } finally {
-            clearClientContext();
-        }
+        });
     }
 
     /**

@@ -21,9 +21,11 @@
 package com.xwiki.projectmanagement.openproject.internal.rest.workPackages;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -31,15 +33,23 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
+import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -53,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -63,6 +74,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
+@ComponentList(WikiRequestExecutor.class)
 class HandleWorkPackagesTest
 {
     @MockComponent
@@ -70,6 +82,17 @@ class HandleWorkPackagesTest
 
     @MockComponent
     private OpenProjectApiClient openProjectApiClient;
+
+    @MockComponent
+    private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private WikiDescriptorManager wikiDescriptorManager;
+
+    @MockComponent
+    private Provider<XWikiContext> xcontextProvider;
+
+    private final XWikiContext xcontext = new XWikiContext();
 
     @InjectMockComponents
     private HandleWorkPackages handleWorkPackages;
@@ -87,6 +110,15 @@ class HandleWorkPackagesTest
     private static final String EMBEDDED = "_embedded";
 
     final ObjectMapper mapper = new ObjectMapper();
+
+    @BeforeComponent
+    void beforeComponent() throws Exception
+    {
+        // The requests are handled on any existing wiki the current user can view.
+        when(this.xcontextProvider.get()).thenReturn(this.xcontext);
+        when(this.authorizationManager.hasAccess(eq(Right.VIEW), any(WikiReference.class))).thenReturn(true);
+        when(this.wikiDescriptorManager.exists(any())).thenReturn(true);
+    }
 
     @BeforeEach
     void setUp()
@@ -442,4 +474,21 @@ class HandleWorkPackagesTest
         return createWorkPackage;
     }
 
+    @Test
+    void getAvailableProjectsReadsTheConnectionFromTheWikiOfTheRequest() throws Exception
+    {
+        this.xcontext.setWikiId("xwiki");
+        List<String> connectionWikis = new ArrayList<>();
+        when(this.openProjectAccess.resolve(INSTANCE)).thenAnswer(invocation -> {
+            connectionWikis.add(this.xcontext.getWikiId());
+            return OpenProjectAccessResult.notConfigured();
+        });
+
+        Response response =
+            this.handleWorkPackages.getAvailableProjects("subwiki", INSTANCE, "", OFFSET, PAGE_SIZE, null);
+
+        assertEquals(Response.Status.CONFLICT.getStatusCode(), response.getStatus());
+        assertEquals(List.of("subwiki"), connectionWikis);
+        assertEquals("xwiki", this.xcontext.getWikiId());
+    }
 }
