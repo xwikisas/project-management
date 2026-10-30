@@ -38,6 +38,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
@@ -53,6 +54,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParame
 @Named("openprojectchart")
 public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<OpenProjectChartMacroParameters>
 {
+    @Inject
+    private LicenseChecker licenseChecker;
+
     @Inject
     private UserTokenChecker userTokenChecker;
 
@@ -93,6 +97,10 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        List<Block> licenseBlock = this.licenseChecker.getMissingLicenseBlock(context);
+        if (!licenseBlock.isEmpty()) {
+            return licenseBlock;
+        }
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         String instanceToUse = parameters.getInstance();
 

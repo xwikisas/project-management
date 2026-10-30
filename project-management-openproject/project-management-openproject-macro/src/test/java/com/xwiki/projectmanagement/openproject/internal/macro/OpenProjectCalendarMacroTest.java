@@ -51,12 +51,14 @@ import com.xpn.xwiki.web.XWikiRequest;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
@@ -77,6 +79,9 @@ class OpenProjectCalendarMacroTest
 
     @InjectMockComponents
     private OpenProjectCalendarMacro macro;
+
+    @MockComponent
+    private LicenseChecker licenseChecker;
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
@@ -128,6 +133,7 @@ class OpenProjectCalendarMacroTest
         when(this.xcontext.getWikiId()).thenReturn("mywiki");
         when(this.request.getContextPath()).thenReturn("/xwiki");
         this.parameters.setInstance("main");
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
     }
 
     private MacroBlock getCalendarMacro(List<Block> result)
@@ -186,6 +192,19 @@ class OpenProjectCalendarMacroTest
         assertEquals(Map.of("instance", "main", "sprint", "true", "version", "true", "versionColor", "#00ff00",
             "sprintColor", "#ff0000", "limit", "10", "filters", "{\"query\":{}}", "excludeWorkItems", "true"),
             getQueryParameters(calendar.getParameter("json")));
+    }
+
+    @Test
+    void returnsTheMissingLicenseMessage() throws Exception
+    {
+        List<Block> licenseBlock = List.of(new WordBlock("license"));
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
+
+        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
+
+        verifyNoInteractions(this.observationManager, this.userTokenChecker, this.stylingSetupManager, this.jsrx,
+            this.jsx);
+        assertNull(this.executionContext.get("instance"));
     }
 
     @Test

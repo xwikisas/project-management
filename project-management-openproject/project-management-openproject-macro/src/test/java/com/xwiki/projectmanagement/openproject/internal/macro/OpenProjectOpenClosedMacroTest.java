@@ -50,11 +50,13 @@ import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -63,6 +65,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -75,6 +78,9 @@ class OpenProjectOpenClosedMacroTest
 {
     @InjectMockComponents
     private OpenProjectOpenClosedMacro macro;
+
+    @MockComponent
+    private LicenseChecker licenseChecker;
 
     @MockComponent
     private ContextualLocalizationManager l10n;
@@ -100,6 +106,7 @@ class OpenProjectOpenClosedMacroTest
     @BeforeEach
     void setUp() throws Exception
     {
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
         when(this.l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.open")).thenReturn("Open");
         when(this.l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.closed")).thenReturn("Closed");
@@ -162,6 +169,19 @@ class OpenProjectOpenClosedMacroTest
         assertEquals(LocalTime.MAX, end.toLocalTime());
         assertTrue(end.toLocalDate().equals(today) || end.toLocalDate().equals(today.minusDays(1)), range);
         assertEquals(end.toLocalDate().minusDays(days), start.toLocalDate());
+    }
+
+    @Test
+    void returnsTheMissingLicenseMessage() throws Exception
+    {
+        List<Block> licenseBlock = List.of(new WordBlock("license"));
+        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
+        OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
+        parameters.setInstance("main");
+
+        assertSame(licenseBlock, this.macro.execute(parameters, "", this.context));
+
+        verifyNoInteractions(this.asyncExecutor, this.projectManagementManager, this.lineDisplayer);
     }
 
     @Test
