@@ -312,7 +312,8 @@ class OpenProjectFilterHandlerTest
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "o", ""),
             new LiveDataQuery.Filter("assignees", "!*", ""), new LiveDataQuery.Filter("startDate", "t", ""));
 
-        // The empty value is sent as is, and ignored by OpenProject for these operators.
+        // The empty value is sent as is: checked against OpenProject 17.9.4, values [""] returns the same work
+        // packages as values [] for the o, c, *, !*, t and w operators.
         String expected = "["
             + "{\"status\":{\"operator\":\"o\",\"values\":[\"\"]}},"
             + "{\"assigned_to\":{\"operator\":\"!*\",\"values\":[\"\"]}},"
