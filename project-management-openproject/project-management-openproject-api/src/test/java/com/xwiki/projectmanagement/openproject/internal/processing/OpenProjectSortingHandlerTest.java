@@ -131,4 +131,45 @@ class OpenProjectSortingHandlerTest
 
         assertEquals(expectedJson, actualJson);
     }
+
+    @Test
+    void mergeSortEntriesWithSameMappedKeys() throws ProjectManagementException, JsonProcessingException
+    {
+        // The stored sort uses the OpenProject names, as in the query_props of an OpenProject URL, while the Live Data
+        // sort uses the work item properties: the Live Data sort wins for the properties mapped to the same column.
+        List<LiveDataQuery.SortEntry> sortEntries = List.of(new LiveDataQuery.SortEntry("identifier", true),
+            new LiveDataQuery.SortEntry("summary", false));
+
+        String mergedSortingString =
+            OpenProjectSortingHandler.mergeSortEntries(sortEntries, "subject:desc,id:asc,identifier:asc,status:desc");
+
+        assertEquals(mapper.readTree("[[\"id\",\"desc\"],[\"subject\",\"asc\"],[\"status\",\"desc\"]]"),
+            mapper.readTree(mergedSortingString));
+    }
+
+    @Test
+    void mergeSortEntriesWithoutDirection() throws ProjectManagementException, JsonProcessingException
+    {
+        String mergedSortingString =
+            OpenProjectSortingHandler.mergeSortEntries(List.of(), "id,subject:,status:desc, type : desc ");
+
+        // OpenProject sorts in ascending order when no direction is given.
+        assertEquals(
+            mapper.readTree("[[\"id\",\"asc\"],[\"subject\",\"asc\"],[\"status\",\"desc\"],[\"type\",\"desc\"]]"),
+            mapper.readTree(mergedSortingString));
+    }
+
+    @Test
+    void mergeSortEntriesWithBlankEntries() throws ProjectManagementException, JsonProcessingException
+    {
+        List<LiveDataQuery.SortEntry> sortEntries = List.of(new LiveDataQuery.SortEntry("summary", true));
+
+        String mergedSortingString = OpenProjectSortingHandler.mergeSortEntries(sortEntries, ", ,id:desc,,:asc, ");
+
+        assertEquals(mapper.readTree("[[\"subject\",\"desc\"],[\"id\",\"desc\"]]"),
+            mapper.readTree(mergedSortingString));
+
+        assertEquals(mapper.readTree("[[\"subject\",\"desc\"]]"),
+            mapper.readTree(OpenProjectSortingHandler.mergeSortEntries(sortEntries, " ")));
+    }
 }
