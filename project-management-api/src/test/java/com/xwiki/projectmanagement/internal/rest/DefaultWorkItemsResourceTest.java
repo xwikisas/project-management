@@ -182,7 +182,8 @@ class DefaultWorkItemsResourceTest
         configuration.getQuery().setFilters(filters);
         when(this.configurationResolver.resolve(FILTER)).thenReturn(configuration);
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        when(this.client.getWorkItems(2, 20, filters, Collections.emptyList())).thenReturn(result);
+        // The second page of 20 work items starts at the offset 20.
+        when(this.client.getWorkItems(20, 20, filters, Collections.emptyList())).thenReturn(result);
 
         Response response = this.resource.getWorkItems(WIKI, CLIENT, 2, 20, FILTER);
 
@@ -191,10 +192,29 @@ class DefaultWorkItemsResourceTest
     }
 
     @Test
+    void getWorkItemsConvertsThePageToAnOffset() throws Exception
+    {
+        when(this.configurationResolver.resolve("")).thenReturn(null);
+        PaginatedResult<WorkItem> result = new PaginatedResult<>();
+        when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList())).thenReturn(result);
+
+        this.resource.getWorkItems(WIKI, CLIENT, 1, 10, null);
+        this.resource.getWorkItems(WIKI, CLIENT, 3, 10, null);
+        // A page smaller than 1 is the first page.
+        this.resource.getWorkItems(WIKI, CLIENT, 0, 15, null);
+        this.resource.getWorkItems(WIKI, CLIENT, -2, 25, null);
+
+        verify(this.client).getWorkItems(0, 10, Collections.emptyList(), Collections.emptyList());
+        verify(this.client).getWorkItems(20, 10, Collections.emptyList(), Collections.emptyList());
+        verify(this.client).getWorkItems(0, 15, Collections.emptyList(), Collections.emptyList());
+        verify(this.client).getWorkItems(0, 25, Collections.emptyList(), Collections.emptyList());
+    }
+
+    @Test
     void getWorkItemsWithoutFilters() throws Exception
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        when(this.client.getWorkItems(1, 10, Collections.emptyList(), Collections.emptyList())).thenReturn(result);
+        when(this.client.getWorkItems(0, 10, Collections.emptyList(), Collections.emptyList())).thenReturn(result);
 
         // No filter parameter: the empty configuration is resolved.
         when(this.configurationResolver.resolve("")).thenReturn(null);

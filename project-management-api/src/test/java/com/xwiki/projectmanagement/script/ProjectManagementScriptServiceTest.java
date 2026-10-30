@@ -103,7 +103,8 @@ class ProjectManagementScriptServiceTest
     void getWorkItemsConvertsTheFiltersAndSortEntries() throws Exception
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        when(this.projectManagementManager.getWorkItems(eq(CLIENT), eq(2), eq(10), anyList(), anyList()))
+        // The second page of 10 work items starts at the offset 10.
+        when(this.projectManagementManager.getWorkItems(eq(CLIENT), eq(10), eq(10), anyList(), anyList()))
             .thenReturn(result);
         List<Object> filters = List.of(Map.of("property", "status", "matchAll", true, "constraints",
             List.of(Map.of("operator", "equals", "value", "open"))));
@@ -115,7 +116,7 @@ class ProjectManagementScriptServiceTest
         ArgumentCaptor<List<LiveDataQuery.Filter>> filtersCaptor = ArgumentCaptor.forClass(List.class);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<LiveDataQuery.SortEntry>> sortCaptor = ArgumentCaptor.forClass(List.class);
-        verify(this.projectManagementManager).getWorkItems(eq(CLIENT), eq(2), eq(10), filtersCaptor.capture(),
+        verify(this.projectManagementManager).getWorkItems(eq(CLIENT), eq(10), eq(10), filtersCaptor.capture(),
             sortCaptor.capture());
 
         assertEquals(1, filtersCaptor.getValue().size());
@@ -145,7 +146,22 @@ class ProjectManagementScriptServiceTest
 
         this.scriptService.getWorkItems(CLIENT, 1, 10, List.of(), List.of(), clientContext);
 
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 1, 10, List.of(), List.of());
+        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 10, List.of(), List.of());
+    }
+
+    @Test
+    void getWorkItemsConvertsThePageToAnOffset() throws Exception
+    {
+        this.scriptService.getWorkItems(CLIENT, 1, 20, List.of(), List.of(), Map.of());
+        this.scriptService.getWorkItems(CLIENT, 4, 20, List.of(), List.of(), Map.of());
+        // A page smaller than 1 is the first page.
+        this.scriptService.getWorkItems(CLIENT, 0, 30, List.of(), List.of(), Map.of());
+        this.scriptService.getWorkItems(CLIENT, -1, 40, List.of(), List.of(), Map.of());
+
+        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 20, List.of(), List.of());
+        verify(this.projectManagementManager).getWorkItems(CLIENT, 60, 20, List.of(), List.of());
+        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 30, List.of(), List.of());
+        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 40, List.of(), List.of());
     }
 
     @Test

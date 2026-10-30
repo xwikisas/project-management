@@ -57,7 +57,8 @@ public interface ProjectManagementClient
     /**
      * Retrieve a list of work items based on a list of filters.
      *
-     * @param page the number identifying the page that needs to be retrieved.
+     * @param offset the index, starting at 0, of the first work item to retrieve among all the work items matching
+     *     the filters.
      * @param pageSize the maximum number of items that can be present in the returned result.
      * @param filters a list of filters that the returned items need to match.
      * @param sortEntries a list of {@link org.xwiki.livedata.LiveDataQuery.SortEntry} objects that denote how the
@@ -65,7 +66,7 @@ public interface ProjectManagementClient
      * @return a paginated result containing the items matching the list of filters.
      * @throws WorkItemRetrievalException if there was any exception during the retrieval of the work item.
      */
-    PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+    PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries) throws
         WorkItemRetrievalException;
 

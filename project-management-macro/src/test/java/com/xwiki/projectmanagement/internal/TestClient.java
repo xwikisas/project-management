@@ -126,12 +126,12 @@ public class TestClient implements ProjectManagementClient, Initializable
     }
 
     @Override
-    public PaginatedResult<WorkItem> getWorkItems(int page, int pageSize, List<LiveDataQuery.Filter> filters,
+    public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
         throws WorkItemRetrievalException
     {
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        result.setPage(page);
+        result.setPage(pageSize > 0 ? offset / pageSize + 1 : 1);
         result.setPageSize(pageSize);
 
         List<WorkItem> filteredWorkItem = workItems.stream().filter(wi -> {
@@ -153,11 +153,11 @@ public class TestClient implements ProjectManagementClient, Initializable
             return matchesFilters;
         }).collect(Collectors.toList());
         result.setTotalItems(workItems.size());
-        int index = page * pageSize;
-        if (index > filteredWorkItem.size()) {
+        if (offset > filteredWorkItem.size()) {
             return result;
         }
-        result.getItems().addAll(filteredWorkItem.subList(index, Math.min(filteredWorkItem.size(), index + pageSize)));
+        result.getItems()
+            .addAll(filteredWorkItem.subList(offset, Math.min(filteredWorkItem.size(), offset + pageSize)));
         return result;
     }
 

@@ -95,7 +95,8 @@ public class ProjectManagementScriptService implements ScriptService
      * Retrieve a list of work items based on a filter.
      *
      * @param client the hint of the client implementation.
-     * @param page the number identifying the page that needs retrieval.
+     * @param page the number, starting at 1, of the page that needs retrieval. A number smaller than 1 retrieves the
+     *     first page.
      * @param pageSize the maximum number of items the result can have.
      * @param filters a list of filters that the returned items must satisfy.
      * @param sortEntries a list of sort entries that denote how the results should be arranged.
@@ -116,6 +117,8 @@ public class ProjectManagementScriptService implements ScriptService
         List<LiveDataQuery.SortEntry> livedataSortEntries =
             sortEntries.stream().map(sortEntry -> objectMapper.convertValue(sortEntry, LiveDataQuery.SortEntry.class))
                 .collect(Collectors.toList());
-        return projectManagementManager.getWorkItems(client, page, pageSize, livedataFilters, livedataSortEntries);
+        // The page starts at 1, a smaller number being the first page.
+        int offset = (Math.max(page, 1) - 1) * pageSize;
+        return projectManagementManager.getWorkItems(client, offset, pageSize, livedataFilters, livedataSortEntries);
     }
 }
