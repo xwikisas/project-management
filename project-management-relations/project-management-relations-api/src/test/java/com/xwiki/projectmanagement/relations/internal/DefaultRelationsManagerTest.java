@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.model.reference.DocumentReference;
@@ -48,6 +49,8 @@ import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -61,11 +64,14 @@ class DefaultRelationsManagerTest
 {
     private static final String RELATIONS = "from doc.object('ProjectManagement.Code.RelationClass') as obj ";
 
-    private static final String ANCESTORS_WITH_RELATIONS =
-        RELATIONS + "where doc.space in (:ancestorList) order by length(doc.space) desc";
+    // Only the space home pages of the parent spaces are ancestors: the other pages of these spaces (e.g. A.B.Child
+    // or A.Sibling for A.B.WebHome) are children or siblings.
+    private static final String ANCESTORS = RELATIONS + "where doc.space in (:ancestorList) and doc.name = 'WebHome'";
+
+    private static final String ANCESTORS_WITH_RELATIONS = ANCESTORS + " order by length(doc.space) desc";
 
     private static final String ANCESTORS_WITH_CLIENT_RELATION =
-        RELATIONS + "where doc.space in (:ancestorList)  and obj.client = :client order by length(doc.space) desc";
+        ANCESTORS + " and obj.client = :client order by length(doc.space) desc";
 
     private static final DocumentReference PAGE = new DocumentReference("xwiki", List.of("A", "B"), "WebHome");
 
@@ -88,6 +94,14 @@ class DefaultRelationsManagerTest
 
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
+    @BeforeEach
+    void setUp() throws Exception
+    {
+        // The store finds nothing for the queries not stubbed by the test.
+        when(this.queryManager.createQuery(anyString(), eq(Query.XWQL)))
+            .thenAnswer(invocation -> answer(invocation.getArgument(0), Map.of()));
+    }
 
     /**
      * Saves the given page with one relation per given client, each relation having the page space and its client as
@@ -114,19 +128,23 @@ class DefaultRelationsManagerTest
     private void stubAncestorQuery(String statement, Map<String, Object> parameters, String... rows)
         throws QueryException
     {
-        when(this.queryManager.createQuery(statement, Query.XWQL))
-            .thenReturn(new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+        when(this.queryManager.createQuery(statement, Query.XWQL)).thenReturn(answer(statement, parameters, rows));
+    }
+
+    private Query answer(String statement, Map<String, Object> parameters, String... rows)
+    {
+        return new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+        {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> List<T> execute(Query query)
             {
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> List<T> execute(Query query)
-                {
-                    if (!parameters.equals(query.getNamedParameters()) || query.getLimit() != 1) {
-                        return Collections.emptyList();
-                    }
-                    return (List<T>) List.of(rows);
+                if (!parameters.equals(query.getNamedParameters()) || query.getLimit() != 1) {
+                    return Collections.emptyList();
                 }
-            }));
+                return (List<T>) List.of(rows);
+            }
+        });
     }
 
     private void stubFailingQuery(String statement) throws QueryException

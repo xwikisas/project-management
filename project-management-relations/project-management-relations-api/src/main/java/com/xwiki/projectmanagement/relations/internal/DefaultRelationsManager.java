@@ -87,7 +87,7 @@ public class DefaultRelationsManager implements RelationsManager
                     client, false);
             if (relation == null && ancestorLookup) {
 
-                XWikiDocument ancestorDoc = getAncestorWithRelation(document, context, " and obj.client = :client ",
+                XWikiDocument ancestorDoc = getAncestorWithRelation(document, context, " and obj.client = :client",
                     query -> query.bindValue("client", client));
                 if (ancestorDoc == null) {
                     return null;
@@ -144,11 +144,12 @@ public class DefaultRelationsManager implements RelationsManager
     {
         List<String> parents = document.getDocumentReference().getParent().getReversedReferenceChain().stream()
             .filter(e -> !(e instanceof WikiReference)).map(serializer::serialize).collect(Collectors.toList());
-        // Get the closest ancestor that has a relation obj.
+        // Get the closest ancestor that has a relation obj. The ancestors are the space home pages of the parent
+        // spaces: the other pages of these spaces are children or siblings, not ancestors.
         Query query = queryManager.createQuery(
             String.format(
                 "from doc.object('ProjectManagement.Code.RelationClass') as obj "
-                    + "where doc.space in (:ancestorList) %s"
+                    + "where doc.space in (:ancestorList) and doc.name = 'WebHome'%s "
                     + "order by length(doc.space) desc", extraWhere),
             Query.XWQL).bindValue("ancestorList", parents).setLimit(1);
         if (queryConsumer != null) {
