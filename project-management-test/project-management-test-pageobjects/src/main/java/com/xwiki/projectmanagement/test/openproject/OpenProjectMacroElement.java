@@ -217,7 +217,7 @@ public class OpenProjectMacroElement extends BaseElement
      * @param row the row index, starting from 1
      * @return the work package displayed by the modal
      * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public OpenProjectSingleDisplayer viewWorkPackage(int row) throws OperationNotSupportedException
     {
@@ -240,7 +240,7 @@ public class OpenProjectMacroElement extends BaseElement
     /**
      * Close the modal opened by {@link #viewWorkPackage(int)}.
      *
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void closeWorkPackageView()
     {
