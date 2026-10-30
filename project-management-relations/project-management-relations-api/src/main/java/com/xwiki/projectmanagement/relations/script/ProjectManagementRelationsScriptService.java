@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.relations.script;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -93,8 +94,8 @@ public class ProjectManagementRelationsScriptService implements ScriptService
      */
     public List<ProjectManagementRelation> getRelations(DocumentReference documentReference, boolean ancestorLookup)
     {
-        List<ProjectManagementRelation> relations = relationsManager.getRelations(documentReference, ancestorLookup);
-        relations.removeIf(relation -> !authorizationManager.hasAccess(Right.VIEW, relation.getDocumentReference()));
-        return relations;
+        return relationsManager.getRelations(documentReference, ancestorLookup).stream()
+            .filter(relation -> authorizationManager.hasAccess(Right.VIEW, relation.getDocumentReference()))
+            .collect(Collectors.toList());
     }
 }

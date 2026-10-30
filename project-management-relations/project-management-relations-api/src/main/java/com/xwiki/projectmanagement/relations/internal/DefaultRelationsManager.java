@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.relations.internal;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -91,7 +92,8 @@ public class DefaultRelationsManager implements RelationsManager
                 if (ancestorDoc == null) {
                     return null;
                 }
-                relation = ancestorDoc.getXObject(ProjectManagementRelation.CLASS_REFERENCE);
+                relation = ancestorDoc.getXObject(ProjectManagementRelation.CLASS_REFERENCE,
+                    ProjectManagementRelation.FIELD_CLIENT, client, false);
             }
 
             if (relation == null) {
@@ -111,24 +113,29 @@ public class DefaultRelationsManager implements RelationsManager
             XWikiContext context = contextProvider.get();
             XWikiDocument document = context.getWiki().getDocument(documentReference, context);
 
-            List<BaseObject> relations =
-                document.getXObjects(ProjectManagementRelation.CLASS_REFERENCE);
-            if ((relations == null || relations.isEmpty()) && ancestorLookup) {
+            List<ProjectManagementRelation> relations = getRelations(document);
+            if (relations.isEmpty() && ancestorLookup) {
                 XWikiDocument xWikiDocument = getAncestorWithRelation(document, context, "", null);
-                if (xWikiDocument == null) {
-                    return null;
+                if (xWikiDocument != null) {
+                    relations = getRelations(xWikiDocument);
                 }
-                relations = xWikiDocument.getXObjects(ProjectManagementRelation.CLASS_REFERENCE);
             }
-
-            if (relations == null || relations.isEmpty()) {
-                return Collections.emptyList();
-            }
-            return relations.stream().map(ProjectManagementRelation::new).collect(Collectors.toList());
+            return relations;
         } catch (XWikiException | QueryException e) {
             logger.error("Failed to retrieve the relation objects for the document [{}].", documentReference, e);
-            return null;
+            return Collections.emptyList();
         }
+    }
+
+    private List<ProjectManagementRelation> getRelations(XWikiDocument document)
+    {
+        List<BaseObject> relations = document.getXObjects(ProjectManagementRelation.CLASS_REFERENCE);
+        if (relations == null) {
+            return Collections.emptyList();
+        }
+        // The list of xobjects holds a null entry in place of each removed object.
+        return relations.stream().filter(Objects::nonNull).map(ProjectManagementRelation::new)
+            .collect(Collectors.toList());
     }
 
     private XWikiDocument getAncestorWithRelation(XWikiDocument document, XWikiContext context, String extraWhere,

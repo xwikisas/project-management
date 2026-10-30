@@ -55,7 +55,7 @@ public interface RelationsManager
      * @param ancestorLookup whether relation objects should be fetched from the closest ancestor (if self does not
      *     have any objects attached).
      * @return a list of all the relation objects attached to the passed document reference or to the first ancestor
-     *     that contains said objects.
+     *     that contains said objects, empty (never {@code null}) when there are none or they can't be retrieved
      */
     List<ProjectManagementRelation> getRelations(DocumentReference documentReference, Boolean ancestorLookup);
 }
