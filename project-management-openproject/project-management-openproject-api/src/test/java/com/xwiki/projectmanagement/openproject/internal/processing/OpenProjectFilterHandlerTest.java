@@ -20,9 +20,8 @@
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.xwiki.livedata.LiveDataQuery;
@@ -30,6 +29,7 @@ import org.xwiki.livedata.LiveDataQuery;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -70,13 +70,14 @@ class OpenProjectFilterHandlerTest
 
         LiveDataQuery.Constraint firstConstraint = new LiveDataQuery.Constraint("value1", "equals");
         LiveDataQuery.Constraint secondConstraint = new LiveDataQuery.Constraint("value2", "equals");
-        LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("value3", "between");
+        // The Live Data offers the between operator only on the date properties, with a start/end value.
+        LiveDataQuery.Constraint thirdConstraint = new LiveDataQuery.Constraint("2026-01-01/2026-02-01", "between");
 
         filter1.setProperty("identifier");
         filter1.getConstraints().add(firstConstraint);
         filter1.getConstraints().add(secondConstraint);
 
-        filter2.setProperty("summary");
+        filter2.setProperty("startDate");
         filter2.getConstraints().add(thirdConstraint);
 
         filters.add(filter1);
@@ -84,7 +85,7 @@ class OpenProjectFilterHandlerTest
 
         String expected = "["
             + "{"
-            + "\"subject\":{\"operator\":\"<>d\",\"values\":[\"value3\"]}"
+            + "\"startDate\":{\"operator\":\"<>d\",\"values\":[\"2026-01-01\",\"2026-02-01\"]}"
             + "},"
             + "{"
             + "\"id\":{\"operator\":\"=\",\"values\":[\"value1\",\"value2\"]}}"
@@ -276,17 +277,84 @@ class OpenProjectFilterHandlerTest
         assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
     }
 
-    private void assertEqualsStringFilters(String firstFilter, String secondFilter) throws JsonProcessingException
+    @Test
+    void convertBeforeAndAfterDateFilters() throws JsonProcessingException, ProjectManagementException
     {
-        JsonNode firstFilterJson = mapper.readTree(firstFilter);
-        JsonNode secondFilterJson = mapper.readTree(secondFilter);
+        // OpenProject has no before or after operators: they become intervals bounded by a distant date.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("startDate", "before", "2026-10-01"),
+            new LiveDataQuery.Filter("dueDate", "after", "2026-11-01"));
 
-        Set<JsonNode> set1 = new HashSet<>();
-        firstFilterJson.forEach(set1::add);
+        String expected = "["
+            + "{\"startDate\":{\"operator\":\"<>d\",\"values\":[\"1970-01-01\",\"2026-10-01\"]}},"
+            + "{\"dueDate\":{\"operator\":\"<>d\",\"values\":[\"2026-11-01\",\"3000-01-01\"]}}"
+            + "]";
 
-        Set<JsonNode> set2 = new HashSet<>();
-        secondFilterJson.forEach(set2::add);
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
 
-        assertEquals(set1, set2);
+    @Test
+    void convertFiltersDropsTheConstraintsWithoutValue() throws JsonProcessingException, ProjectManagementException
+    {
+        LiveDataQuery.Filter summary = new LiveDataQuery.Filter("summary", "contains", "");
+        summary.getConstraints().add(new LiveDataQuery.Constraint(null, "contains"));
+        LiveDataQuery.Filter description = new LiveDataQuery.Filter("description", "contains", "");
+        description.getConstraints().add(new LiveDataQuery.Constraint("bug", "contains"));
+
+        // The filters left without any constraint are dropped too.
+        String expected = "[{\"description\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(List.of(summary, description)));
+    }
+
+    @Test
+    void convertFiltersKeepsTheOperatorsThatTakeNoValue() throws JsonProcessingException, ProjectManagementException
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "o", ""),
+            new LiveDataQuery.Filter("assignees", "!*", ""), new LiveDataQuery.Filter("startDate", "t", ""));
+
+        // The empty value is sent as is, and ignored by OpenProject for these operators.
+        String expected = "["
+            + "{\"status\":{\"operator\":\"o\",\"values\":[\"\"]}},"
+            + "{\"assigned_to\":{\"operator\":\"!*\",\"values\":[\"\"]}},"
+            + "{\"startDate\":{\"operator\":\"t\",\"values\":[\"\"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
+    @Test
+    void convertContainsOnListFilters() throws JsonProcessingException, ProjectManagementException
+    {
+        // The list properties are matched on their exact values, the text ones on a substring.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("assignees", "contains", "5"),
+            new LiveDataQuery.Filter("status", "contains", "1"), new LiveDataQuery.Filter("summary", "contains", "a"));
+
+        String expected = "["
+            + "{\"assigned_to\":{\"operator\":\"=\",\"values\":[\"5\"]}},"
+            + "{\"status\":{\"operator\":\"=\",\"values\":[\"1\"]}},"
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\"a\"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
+    /**
+     * Compares the filters in any order (the merged filters are built from a map), but each one as many times as
+     * expected.
+     */
+    private void assertEqualsStringFilters(String expected, String actual) throws JsonProcessingException
+    {
+        assertEquals(canonicalFilters(expected), canonicalFilters(actual));
+    }
+
+    private List<String> canonicalFilters(String filters) throws JsonProcessingException
+    {
+        ObjectMapper sortingMapper = new ObjectMapper().configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+        List<String> canonicalFilters = new ArrayList<>();
+        for (JsonNode filter : this.mapper.readTree(filters)) {
+            canonicalFilters.add(sortingMapper.writeValueAsString(this.mapper.convertValue(filter, Object.class)));
+        }
+        Collections.sort(canonicalFilters);
+        return canonicalFilters;
     }
 }
