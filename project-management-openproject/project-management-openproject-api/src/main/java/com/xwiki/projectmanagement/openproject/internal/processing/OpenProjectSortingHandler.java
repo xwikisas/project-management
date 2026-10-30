@@ -19,12 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -41,6 +41,8 @@ public final class OpenProjectSortingHandler
     private static final String ASC = "asc";
 
     private static final String DESC = "desc";
+
+    private static final String SEPARATOR = ":";
 
     private static final String FAILURE_MESSAGE = "Failed to convert Livedata sorting";
 
@@ -82,11 +84,15 @@ public final class OpenProjectSortingHandler
      * Combines sorting criteria from two sources: a list of {@link LiveDataQuery.SortEntry} objects and a string
      * representing OpenProject's query sorting format.
      * <p>
-     * If the same key exists in both, the value from the SortEntry list takes priority. Returns a string formatted
-     * according to OpenProject's sorting format.
+     * The properties of both sources are mapped to the OpenProject ones before being compared, and when the same
+     * property exists in both, the direction from the SortEntry list takes priority. Blank entries of the string are
+     * ignored, and an entry without a direction is sorted in ascending order, which is what OpenProject does when no
+     * direction is given. Returns a string formatted according to OpenProject's sorting format.
      *
      * @param sortEntries a list of {@link LiveDataQuery.SortEntry} objects
-     * @param sortByEntries a comma-separated string  representing sort criteria
+     * @param sortByEntries a comma-separated string representing sort criteria, each entry having the
+     *     {@code property:direction} format (the {@code t} value of the {@code query_props} parameter of an OpenProject
+     *     work package list URL)
      * @return a string representing the merged sorting options in OpenProject format
      * @throws ProjectManagementException if the sorting entries cannot be converted properly
      */
@@ -102,18 +108,17 @@ public final class OpenProjectSortingHandler
             )
         );
 
-        if (sortByEntries != null && !sortByEntries.isEmpty()) {
-            Arrays.stream(sortByEntries.split(",")).forEach(
-                (entry) -> {
-                    String[] splitEntry = entry.split(":");
-                    if (!sortMap.containsKey(splitEntry[0])) {
-                        sortMap.put(
-                            OpenProjectMapper.mapLivedataProperty(splitEntry[0]),
-                            splitEntry[1]
-                        );
-                    }
+        if (StringUtils.isNotBlank(sortByEntries)) {
+            for (String entry : sortByEntries.split(",")) {
+                String property = StringUtils.trim(StringUtils.substringBefore(entry, SEPARATOR));
+                if (!property.isEmpty()) {
+                    String direction = StringUtils.trim(StringUtils.substringAfter(entry, SEPARATOR));
+                    // The properties are compared once mapped, since the stored sort may use either the OpenProject
+                    // names or the work item property names.
+                    sortMap.putIfAbsent(OpenProjectMapper.mapLivedataProperty(property),
+                        StringUtils.defaultIfEmpty(direction, ASC));
                 }
-            );
+            }
         }
 
         List<List<String>> listOfEntries = sortMap.entrySet().stream().map(
