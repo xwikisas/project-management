@@ -19,9 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -41,7 +39,6 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
-import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -49,11 +46,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -83,6 +78,12 @@ class CachingOpenProjectApiClientTest
 
     private static final String URL = "url";
 
+    private static final String OTHER_URL = "otherUrl";
+
+    private static final String OTHER_FILTERS = "otherFilters";
+
+    private static final String PROJECT = "project";
+
     private static final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
@@ -100,87 +101,121 @@ class CachingOpenProjectApiClientTest
             throws ProjectManagementException;
     }
 
+    /**
+     * For each cached method: a request, followed by requests differing from it by a single parameter, which must not
+     * share its cache entry.
+     */
     private static Stream<Arguments> cachedCalls()
     {
         return Stream.of(
-            cachedCall("getWorkPackages", c -> c.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING)),
+            cachedCall("getWorkPackages", c -> c.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getWorkPackages(2, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getWorkPackages(OFFSET, 20, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getWorkPackages(OFFSET, PAGE_SIZE, OTHER_FILTERS, SORT_BY_STRING),
+                c -> c.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, "otherSortBy"),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING)),
             cachedCall("getProjectWorkPackages",
-                c -> c.getProjectWorkPackages("projectName", OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING)),
-            cachedCall("getUsers", c -> c.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING)),
-            cachedCall("getAvailableUsers", c -> c.getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING)),
-            cachedCall("getProjects", c -> c.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING)),
-            cachedCall("getAvailableProjects", c -> c.getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING)),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getProjectWorkPackages("otherProject", OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getProjectWorkPackages(PROJECT, 2, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, 20, FILTERS_STRING, SORT_BY_STRING),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, OTHER_FILTERS, SORT_BY_STRING),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, "otherSortBy")),
+            cachedCall("getQueryWorkPackages", c -> c.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING),
+                c -> c.getQueryWorkPackages("28", OFFSET, PAGE_SIZE, SORT_BY_STRING),
+                c -> c.getQueryWorkPackages("27", 2, PAGE_SIZE, SORT_BY_STRING),
+                c -> c.getQueryWorkPackages("27", OFFSET, 20, SORT_BY_STRING),
+                c -> c.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, "otherSortBy")),
+            cachedCall("getUsers", c -> c.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getUsers(2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getUsers(OFFSET, 20, FILTERS_STRING),
+                c -> c.getUsers(OFFSET, PAGE_SIZE, OTHER_FILTERS)),
+            cachedCall("getAvailableUsers", c -> c.getAvailableUsers(URL, OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableUsers(OTHER_URL, OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableUsers(URL, 2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableUsers(URL, OFFSET, 20, FILTERS_STRING),
+                c -> c.getAvailableUsers(URL, OFFSET, PAGE_SIZE, OTHER_FILTERS),
+                c -> c.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING)),
+            cachedCall("getProjects", c -> c.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getProjects(2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getProjects(OFFSET, 20, FILTERS_STRING),
+                c -> c.getProjects(OFFSET, PAGE_SIZE, OTHER_FILTERS)),
+            cachedCall("getAvailableProjects", c -> c.getAvailableProjects(URL, OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableProjects(OTHER_URL, OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableProjects(URL, 2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getAvailableProjects(URL, OFFSET, 20, FILTERS_STRING),
+                c -> c.getAvailableProjects(URL, OFFSET, PAGE_SIZE, OTHER_FILTERS),
+                c -> c.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING)),
+            cachedCall("getNews", c -> c.getNews(OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getNews(2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getNews(OFFSET, 20, FILTERS_STRING),
+                c -> c.getNews(OFFSET, PAGE_SIZE, OTHER_FILTERS)),
+            cachedCall("getMemberships", c -> c.getMemberships(OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getMemberships(2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getMemberships(OFFSET, 20, FILTERS_STRING),
+                c -> c.getMemberships(OFFSET, PAGE_SIZE, OTHER_FILTERS),
+                c -> c.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING)),
+            cachedCall("getSprints", c -> c.getSprints(OFFSET, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getSprints(2, PAGE_SIZE, FILTERS_STRING),
+                c -> c.getSprints(OFFSET, 20, FILTERS_STRING),
+                c -> c.getSprints(OFFSET, PAGE_SIZE, OTHER_FILTERS)),
+            cachedCall("getProjectSprints", c -> c.getProjectSprints(OFFSET, PAGE_SIZE, FILTERS_STRING, 1),
+                c -> c.getProjectSprints(OFFSET, PAGE_SIZE, FILTERS_STRING, 2),
+                c -> c.getProjectSprints(2, PAGE_SIZE, FILTERS_STRING, 1),
+                c -> c.getProjectSprints(OFFSET, 20, FILTERS_STRING, 1),
+                c -> c.getProjectSprints(OFFSET, PAGE_SIZE, OTHER_FILTERS, 1),
+                c -> c.getSprints(OFFSET, PAGE_SIZE, FILTERS_STRING)),
+            cachedCall("getVersions", OpenProjectApiClient::getVersions),
+            cachedCall("getProjectVersions", c -> c.getProjectVersions(1),
+                c -> c.getProjectVersions(2),
+                OpenProjectApiClient::getVersions),
             cachedCall("getTypes", OpenProjectApiClient::getTypes),
             cachedCall("getStatuses", OpenProjectApiClient::getStatuses),
-            cachedCall("getPriorities", OpenProjectApiClient::getPriorities)
+            cachedCall("getPriorities", OpenProjectApiClient::getPriorities),
+            cachedCall("getWorkPackageFields", OpenProjectApiClient::getWorkPackageFields)
         );
     }
 
-    private static Arguments cachedCall(String name, CachedCall call)
+    private static Arguments cachedCall(String name, CachedCall call, CachedCall... otherCalls)
     {
-        return Arguments.of(Named.of(name, call));
+        return Arguments.of(Named.of(name, call), otherCalls);
     }
 
     @ParameterizedTest
     @MethodSource("cachedCalls")
-    void resultIsServedFromCacheOrFetchedAndCached(CachedCall call) throws ProjectManagementException
+    void resultIsCachedPerRequest(CachedCall call, CachedCall[] otherCalls) throws ProjectManagementException
     {
-        PaginatedResult<? extends BaseOpenProjectObject> expectedResult =
-            new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
+        // OpenProject returns a new result for each request.
+        OpenProjectApiClient backend = mock(OpenProjectApiClient.class, invocation -> new PaginatedResult<>());
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> mapBackedCache = mock(Cache.class);
+        useMapBackedCache(mapBackedCache);
+        CachingOpenProjectApiClient cachingClient = new CachingOpenProjectApiClient(backend, CLIENT_ID, mapBackedCache);
 
-        call.call(doReturn(expectedResult).when(openProjectApiClient));
+        PaginatedResult<? extends BaseOpenProjectObject> result = call.call(cachingClient);
 
-        doReturn(expectedResult).when(cache).get(anyString());
-
-        PaginatedResult<? extends BaseOpenProjectObject> result = call.call(cachingOpenProjectApiClient);
-
-        assertEquals(expectedResult, result);
-
-        call.call(verify(openProjectApiClient, times(0)));
-
-        when(cache.get(anyString())).thenReturn(null);
-
-        result = call.call(cachingOpenProjectApiClient);
-
-        assertEquals(expectedResult, result);
-        verify(cache).set(anyString(), eq(result));
-        call.call(verify(openProjectApiClient, times(1)));
+        // The same request is served from the cache, without reaching OpenProject.
+        assertSame(result, call.call(cachingClient));
+        assertEquals(1, mockingDetails(backend).getInvocations().size());
+        // A request that differs by any parameter gets its own result.
+        for (int i = 0; i < otherCalls.length; i++) {
+            assertNotSame(result, otherCalls[i].call(cachingClient),
+                String.format("The other request at index [%d] shares the cache entry of the first one.", i));
+        }
+        assertEquals(1 + otherCalls.length, mockingDetails(backend).getInvocations().size());
     }
 
     @Test
     void createWorkPackageIsNotCached() throws ProjectManagementException, JsonProcessingException
     {
+        useMapBackedCache(cache);
         String jsonBody = "{}";
-        JsonNode expectedNode = mapper.readTree("{}");
+        JsonNode firstNode = mapper.readTree("{\"id\":1}");
+        JsonNode secondNode = mapper.readTree("{\"id\":2}");
+        when(openProjectApiClient.createWorkPackage(URL, jsonBody)).thenReturn(firstNode, secondNode);
 
-        when(openProjectApiClient.createWorkPackage(URL, jsonBody))
-            .thenReturn(expectedNode);
-
-        JsonNode result = cachingOpenProjectApiClient
-            .createWorkPackage(URL, jsonBody);
-
-        assertEquals(expectedNode, result);
-
-        verify(openProjectApiClient, times(1))
-            .createWorkPackage(URL, jsonBody);
-
-        verify(cache, times(0)).get(anyString());
-        verify(cache, times(0)).set(anyString(), any());
-    }
-
-    @Test
-    void queryWorkPackagesResultIsCached() throws ProjectManagementException
-    {
-        PaginatedResult<WorkPackage> expectedResult =
-            new PaginatedResult<>(Collections.emptyList(), OFFSET, PAGE_SIZE, 0);
-        when(openProjectApiClient.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING))
-            .thenReturn(expectedResult);
-
-        assertEquals(expectedResult,
-            cachingOpenProjectApiClient.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING));
-
-        verify(cache).set(anyString(), eq(expectedResult));
-        verify(openProjectApiClient).getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING);
+        // Each call creates a work package.
+        assertEquals(firstNode, cachingOpenProjectApiClient.createWorkPackage(URL, jsonBody));
+        assertEquals(secondNode, cachingOpenProjectApiClient.createWorkPackage(URL, jsonBody));
     }
 
     @Test
@@ -201,36 +236,6 @@ class CachingOpenProjectApiClientTest
     }
 
     @Test
-    void cachedResultsDependOnTheRequestParameters() throws ProjectManagementException
-    {
-        Map<String, PaginatedResult<? extends BaseOpenProjectObject>> cacheContent = useMapBackedCache(cache);
-        when(openProjectApiClient.getWorkPackages(any(), any(), any(), any()))
-            .thenAnswer(invocation -> new PaginatedResult<WorkPackage>());
-        when(openProjectApiClient.getProjectWorkPackages(any(), any(), any(), any(), any()))
-            .thenAnswer(invocation -> new PaginatedResult<WorkPackage>());
-
-        PaginatedResult<WorkPackage> result =
-            cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
-        // The same request is served from the cache.
-        assertSame(result,
-            cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
-        // Any other parameter value makes a different request.
-        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(2, PAGE_SIZE, FILTERS_STRING,
-            SORT_BY_STRING));
-        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, 20, FILTERS_STRING,
-            SORT_BY_STRING));
-        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "otherFilters",
-            SORT_BY_STRING));
-        assertNotSame(result, cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING,
-            "otherSortBy"));
-        assertNotSame(result, cachingOpenProjectApiClient.getProjectWorkPackages("project", OFFSET, PAGE_SIZE,
-            FILTERS_STRING, SORT_BY_STRING));
-
-        verify(openProjectApiClient, times(5)).getWorkPackages(any(), any(), any(), any());
-        assertEquals(6, cacheContent.size());
-    }
-
-    @Test
     void cachedResultsAreNotSharedBetweenClients() throws ProjectManagementException
     {
         useMapBackedCache(cache);
@@ -248,20 +253,6 @@ class CachingOpenProjectApiClientTest
             cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
         assertSame(otherResult,
             otherCachingClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
-    }
-
-    @Test
-    void workPackageFieldsAreCached() throws ProjectManagementException
-    {
-        useMapBackedCache(cache);
-        PaginatedResult<WorkPackageField> expectedResult =
-            new PaginatedResult<>(List.of(new WorkPackageField()), 0, 1, 1);
-        when(openProjectApiClient.getWorkPackageFields()).thenReturn(expectedResult);
-
-        assertSame(expectedResult, cachingOpenProjectApiClient.getWorkPackageFields());
-        assertSame(expectedResult, cachingOpenProjectApiClient.getWorkPackageFields());
-
-        verify(openProjectApiClient, times(1)).getWorkPackageFields();
     }
 
     private static Map<String, PaginatedResult<? extends BaseOpenProjectObject>> useMapBackedCache(
