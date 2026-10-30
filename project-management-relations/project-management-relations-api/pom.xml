@@ -29,7 +29,7 @@
   <artifactId>project-management-relations-api</artifactId>
   <properties>
     <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
-    <xwiki.jacoco.instructionRatio>0.49</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.51</xwiki.jacoco.instructionRatio>
   </properties>
 
   <dependencies>

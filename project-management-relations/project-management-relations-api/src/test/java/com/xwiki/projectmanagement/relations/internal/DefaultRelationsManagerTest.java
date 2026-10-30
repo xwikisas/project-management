@@ -77,6 +77,12 @@ class DefaultRelationsManagerTest
 
     private static final DocumentReference ANCESTOR = new DocumentReference("xwiki", "A", "WebHome");
 
+    private static final String SUBWIKI = "subwiki";
+
+    private static final DocumentReference SUBWIKI_PAGE = new DocumentReference(SUBWIKI, List.of("A", "B"), "WebHome");
+
+    private static final DocumentReference SUBWIKI_ANCESTOR = new DocumentReference(SUBWIKI, "A", "WebHome");
+
     private static final List<String> ANCESTOR_SPACES = List.of("A", "A.B");
 
     private static final String CLIENT = "openproject";
@@ -122,8 +128,8 @@ class DefaultRelationsManagerTest
     }
 
     /**
-     * Answers the ancestor lookup query with the given rows (local page references), but only when it is sent with the
-     * given parameters and limited to one result.
+     * Answers the ancestor lookup query with the given rows (local page references of the main wiki), but only when it
+     * is executed on the main wiki with the given parameters and limited to one result.
      */
     private void stubAncestorQuery(String statement, Map<String, Object> parameters, String... rows)
         throws QueryException
@@ -133,13 +139,23 @@ class DefaultRelationsManagerTest
 
     private Query answer(String statement, Map<String, Object> parameters, String... rows)
     {
+        return answer(statement, "xwiki", parameters, rows);
+    }
+
+    private Query answer(String statement, String pagesWiki, Map<String, Object> parameters, String... rows)
+    {
         return new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
         {
             @Override
             @SuppressWarnings("unchecked")
             public <T> List<T> execute(Query query)
             {
-                if (!parameters.equals(query.getNamedParameters()) || query.getLimit() != 1) {
+                // A query is executed on the current wiki unless another wiki is set.
+                String wiki = query.getWiki() != null ? query.getWiki()
+                    : DefaultRelationsManagerTest.this.oldcore.getXWikiContext().getWikiId();
+                if (!pagesWiki.equals(wiki) || !parameters.equals(query.getNamedParameters())
+                    || query.getLimit() != 1)
+                {
                     return Collections.emptyList();
                 }
                 return (List<T>) List.of(rows);
@@ -198,6 +214,34 @@ class DefaultRelationsManagerTest
         stubAncestorQuery(ANCESTORS_WITH_RELATIONS, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome");
 
         assertEquals(List.of("A-openproject"), workItems(this.relationsManager.getRelations(PAGE, true)));
+    }
+
+    @Test
+    void getRelationsOfTheAncestorInTheSubwikiOfThePage() throws Exception
+    {
+        this.oldcore.getXWikiContext().setWikiId(SUBWIKI);
+        savePage(SUBWIKI_ANCESTOR, CLIENT);
+        // The main wiki has a page with the same local reference.
+        savePage(ANCESTOR, OTHER_CLIENT);
+        when(this.queryManager.createQuery(ANCESTORS_WITH_RELATIONS, Query.XWQL)).thenReturn(
+            answer(ANCESTORS_WITH_RELATIONS, SUBWIKI, Map.of("ancestorList", ANCESTOR_SPACES), "A.WebHome"));
+
+        assertEquals(List.of("A-openproject"), workItems(this.relationsManager.getRelations(SUBWIKI_PAGE, true)));
+    }
+
+    @Test
+    void getClientRelationOfTheAncestorInTheWikiOfThePageFromAnotherWiki() throws Exception
+    {
+        // The current wiki is the main wiki, but the page is in a subwiki.
+        savePage(SUBWIKI_ANCESTOR, CLIENT);
+        savePage(ANCESTOR, CLIENT);
+        when(this.queryManager.createQuery(ANCESTORS_WITH_CLIENT_RELATION, Query.XWQL))
+            .thenReturn(answer(ANCESTORS_WITH_CLIENT_RELATION, SUBWIKI,
+                Map.of("ancestorList", ANCESTOR_SPACES, "client", CLIENT), "A.WebHome"));
+
+        ProjectManagementRelation relation = this.relationsManager.getClientRelation(SUBWIKI_PAGE, CLIENT, true);
+
+        assertEquals(SUBWIKI_ANCESTOR, relation.getXobject().getDocumentReference());
     }
 
     @Test

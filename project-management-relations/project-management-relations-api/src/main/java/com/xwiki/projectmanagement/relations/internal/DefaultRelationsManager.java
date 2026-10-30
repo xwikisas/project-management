@@ -142,6 +142,7 @@ public class DefaultRelationsManager implements RelationsManager
         Consumer<Query> queryConsumer)
         throws QueryException, XWikiException
     {
+        WikiReference wiki = document.getDocumentReference().getWikiReference();
         List<String> parents = document.getDocumentReference().getParent().getReversedReferenceChain().stream()
             .filter(e -> !(e instanceof WikiReference)).map(serializer::serialize).collect(Collectors.toList());
         // Get the closest ancestor that has a relation obj. The ancestors are the space home pages of the parent
@@ -151,7 +152,7 @@ public class DefaultRelationsManager implements RelationsManager
                 "from doc.object('ProjectManagement.Code.RelationClass') as obj "
                     + "where doc.space in (:ancestorList) and doc.name = 'WebHome'%s "
                     + "order by length(doc.space) desc", extraWhere),
-            Query.XWQL).bindValue("ancestorList", parents).setLimit(1);
+            Query.XWQL).setWiki(wiki.getName()).bindValue("ancestorList", parents).setLimit(1);
         if (queryConsumer != null) {
             queryConsumer.accept(query);
         }
@@ -161,7 +162,8 @@ public class DefaultRelationsManager implements RelationsManager
             return null;
         }
 
-        DocumentReference parentDocRef = documentReferenceResolver.resolve(result.get(0));
+        // The query returns local references: the ancestor is in the wiki of the page.
+        DocumentReference parentDocRef = documentReferenceResolver.resolve(result.get(0), wiki);
 
         return context.getWiki().getDocument(parentDocRef, context);
     }
