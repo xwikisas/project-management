@@ -4,8 +4,8 @@
 .# List displayer test - display the work items as a bulleted list, by key when they have one, the closed ones being
 .# struck through.
 .#-----------------------------------------------------
-{{workItemsList sourceParams="client=test"/}}
+{{test workItemsDisplayer="workItemsList"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<ul><li><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span> Do this thing!</del></li><li>#WorkItem2 Do this thing!</li><li><span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span> Do that other thing</li></ul>
+<ul><li><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span> Do this thing!</del></li><li>#WorkItem2 Do this thing!</li><li><span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span> Do that other thing</li><li><span class="wikiexternallink"><a data-xwiki-translated-attribute-href="javascript:alert('identifier')">#Hostile&lt;b&gt;</a></span> **bold** &#123;&#123;html}}&lt;script&gt;alert('summary')&lt;/script&gt;&#123;&#123;/html}} [[link&gt;&gt;javascript:alert(1)]]</li></ul>
