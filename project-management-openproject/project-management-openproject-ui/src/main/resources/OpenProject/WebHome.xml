@@ -49,8 +49,8 @@
   #set ($configObj = $doc.getObject($configClass))
   #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
     #set ($discard = $configObj.set('selectedConnection', $request.connection))
-    #set ($discard = $configObj.set('selectedProject', $request.project))
-    #set ($discard = $configObj.set('selectedProjectLabel', $request.projectLabel))
+    #set ($discard = $configObj.set('selectedProject', "$!request.project"))
+    #set ($discard = $configObj.set('selectedProjectLabel', "$!request.projectLabel"))
     #set ($discard = $doc.save('Updated project', true))
     $response.sendRedirect($doc.getURL())
     #stop
@@ -65,9 +65,21 @@
     #set ($selectedProject = $configObj.getValue('selectedProject'))
     #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
   #end
-  #set ($effectiveConnection = $selectedConnection)
+  ## Fall back to the first connection when none is selected or when the selected one no longer exists, so that
+  ## the authorization warning matches the connection displayed in the picker.
+  #set ($effectiveConnection = '')
+  #foreach ($option in $connectionOptions)
+    #if ("$!selectedConnection" != '' &amp;&amp; $option.value == $selectedConnection)
+      #set ($effectiveConnection = $selectedConnection)
+    #end
+  #end
   #if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
     #set ($effectiveConnection = $connectionOptions.get(0).value)
+  #end
+  ## The selected project belongs to the selected connection.
+  #if ("$!effectiveConnection" != "$!selectedConnection")
+    #set ($selectedProject = '')
+    #set ($selectedProjectLabel = '')
   #end
   #set ($tokenValid = false)
   #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.isUserAuthorized($effectiveConnection))
@@ -930,14 +942,24 @@
     refreshDashboardState(currentConnection);
   }
 
+  // The warnings and the gadgets are rendered on the server for the saved connection, so save the new connection and
+  // reload the dashboard instead of refreshing it in place, which would leave the warnings of the previous connection.
   $('#openproject-dashboard-connection-select').on('change', function() {
     let newConnection = $(this).val();
     if (!newConnection || newConnection === currentConnection) {
       return;
     }
-    currentConnection = newConnection;
-    initSelectize(newConnection);
-    refreshDashboardState(newConnection);
+    // The selected project belongs to the previous connection.
+    if (select.length) {
+      if (select[0].selectize) {
+        select[0].selectize.destroy();
+      } else if (select[0].tomselect) {
+        select[0].tomselect.destroy();
+      }
+      select.empty().append($('&lt;option&gt;', {value: '', selected: true}));
+    }
+    $('#openproject-dashboard-project-label-input').val('');
+    $('#openproject-dashboard-project-form').submit();
   });
 
   if (select.length) {

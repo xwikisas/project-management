@@ -27,6 +27,7 @@ import org.xwiki.test.docker.junit5.UITest;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectDashboardIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT;
@@ -68,6 +69,12 @@ public class AllIT
     @Nested
     @DisplayName("OpenProject filter presets")
     class NestedOpenProjectPresetIT extends OpenProjectPresetIT
+    {
+    }
+
+    @Nested
+    @DisplayName("OpenProject dashboard")
+    class NestedOpenProjectDashboardIT extends OpenProjectDashboardIT
     {
     }
 
