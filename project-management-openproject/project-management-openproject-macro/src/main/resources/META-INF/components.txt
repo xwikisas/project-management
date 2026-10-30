@@ -1,5 +1,6 @@
 com.xwiki.projectmanagement.openproject.internal.LicenseChecker
 com.xwiki.projectmanagement.openproject.internal.OpenProjectCalendarEventProvider
+com.xwiki.projectmanagement.openproject.internal.SystemClockProvider
 com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectMacroDisplayListeners
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectAssignedToMeMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro
