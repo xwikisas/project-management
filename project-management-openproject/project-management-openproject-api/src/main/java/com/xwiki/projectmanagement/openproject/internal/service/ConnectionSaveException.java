@@ -27,7 +27,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
  * already used by another connection).
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public final class ConnectionSaveException extends ProjectManagementException
 {
