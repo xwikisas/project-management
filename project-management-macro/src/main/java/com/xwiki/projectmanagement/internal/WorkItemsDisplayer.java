@@ -20,6 +20,8 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
+
 /**
  * An enum listing the different ways a list of work items can be displayed.
  *
@@ -55,4 +57,16 @@ public enum WorkItemsDisplayer
      * @since 1.4.0
      */
     workItemsEnum;
+
+    /**
+     * @return the hint of the macro component that displays the work items this way
+     * @since 1.4.0
+     */
+    public String getMacroHint()
+    {
+        if (this == liveData || this == liveDataCards) {
+            return WorkItemLivedataDisplayer.ROLE_HINT;
+        }
+        return name();
+    }
 }

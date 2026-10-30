@@ -20,20 +20,30 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.async.internal.block.AbstractBlockAsyncRenderer;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.CompositeBlock;
+import org.xwiki.rendering.block.FormatBlock;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.MacroMarkerBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.rendering.util.ErrorBlockGenerator;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 
@@ -46,6 +56,26 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 @Component(roles = ProjectManagementAsyncRenderer.class)
 public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 {
+    private static final String ERROR_MESSAGE_ID = "projectmanagement.macro.async.error";
+
+    private static final String ERROR_MESSAGE = "Failed to display the work items.";
+
+    private static final String ASYNC_ERROR_SCRIPT = "js/projectmanagement/asyncError.js";
+
+    private static final String ASYNC_ERROR_CLASS = "proj-manag-async-error";
+
+    private static final String CLASS_PARAMETER = "class";
+
+    @Inject
+    private Logger logger;
+
+    @Inject
+    private ErrorBlockGenerator errorBlockGenerator;
+
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsrx;
+
     private Macro<ProjectManagementAsyncMacroParams> workItemsDisplayer;
 
     private ProjectManagementAsyncMacroParams parameters;
@@ -103,8 +133,24 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
             }
             return new CompositeBlock(result);
-        } catch (MacroExecutionException e) {
-            throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
+        } catch (MacroExecutionException | RuntimeException e) {
+            if (!async) {
+                throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
+            }
+            // Display the failure like the macro transformation does for a synchronous macro: the message contains
+            // the root cause and the details (the stack trace) are displayed when clicking on it.
+            this.logger.error(ERROR_MESSAGE, e);
+            List<Block> errorBlocks =
+                this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
+            // The script makes the error expandable once the asynchronous result is inserted in the page.
+            this.jsrx.use(ASYNC_ERROR_SCRIPT);
+            Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, ASYNC_ERROR_CLASS);
+            Block error = this.inline ? new FormatBlock(errorBlocks, Format.NONE, wrapperParameters)
+                : new GroupBlock(errorBlocks, wrapperParameters);
+            if (this.transformationContext.getCurrentMacroBlock() != null) {
+                error = wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), List.of(error));
+            }
+            return new CompositeBlock(List.of(error));
         }
     }
 

@@ -45,6 +45,10 @@ public class OpenProjectMacroElement extends BaseElement
 
     private static final By VIEW_MODAL = By.id("openproject-item-view-modal");
 
+    private static final By ERROR_MESSAGE = By.className("xwikirenderingerror");
+
+    private static final By ERROR_DETAILS = By.className("xwikirenderingerrordescription");
+
     private final WebElement self;
 
     /**
@@ -246,6 +250,92 @@ public class OpenProjectMacroElement extends BaseElement
     {
         getDriver().findElement(VIEW_MODAL).findElement(By.cssSelector(".modal-header .close")).click();
         getDriver().waitUntilElementDisappears(VIEW_MODAL);
+    }
+
+    /**
+     * Wait for the Live Data of the macro to display its entries in the table layout. Unlike
+     * {@link #waitForTableLayout()}, this doesn't need the Live Data to have an id.
+     *
+     * @return the text of the displayed rows
+     * @since 1.4.0
+     */
+    public List<String> waitForLiveDataRows()
+    {
+        return waitForLiveDataEntries(By.cssSelector(".liveData .layout-table-root tbody tr"));
+    }
+
+    /**
+     * Wait for the Live Data of the macro to display its entries in the cards layout.
+     *
+     * @return the text of the displayed cards
+     * @since 1.4.0
+     */
+    public List<String> waitForLiveDataCards()
+    {
+        return waitForLiveDataEntries(By.cssSelector(".liveData .layout-cards .card"));
+    }
+
+    /**
+     * Wait for the macro to display an error, since it can be rendered asynchronously.
+     *
+     * @return the error message
+     * @since 1.4.0
+     */
+    public String waitForErrorMessage()
+    {
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            getDriver().waitUntilElementIsVisible(self, ERROR_MESSAGE);
+            return self.findElement(ERROR_MESSAGE).getText();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+    }
+
+    /**
+     * Click on the error message displayed by the macro, which shows or hides the details of the error.
+     *
+     * @since 1.4.0
+     */
+    public void toggleErrorDetails()
+    {
+        boolean displayed = isErrorDetailsDisplayed();
+        self.findElement(ERROR_MESSAGE).click();
+        getDriver().waitUntilCondition(driver -> isErrorDetailsDisplayed() != displayed);
+    }
+
+    /**
+     * @return {@code true} if the details of the error displayed by the macro are visible
+     * @since 1.4.0
+     */
+    public boolean isErrorDetailsDisplayed()
+    {
+        return self.findElement(ERROR_DETAILS).isDisplayed();
+    }
+
+    /**
+     * @return the details of the error displayed by the macro, once visible
+     * @since 1.4.0
+     */
+    public String getErrorDetails()
+    {
+        return self.findElement(ERROR_DETAILS).getText();
+    }
+
+    private List<String> waitForLiveDataEntries(By entries)
+    {
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            // The entries are displayed once the Live Data has been initialized and has fetched them.
+            getDriver().waitUntilCondition(driver -> !self.findElements(entries).isEmpty()
+                && self.findElements(By.cssSelector(".liveData .layout-loader, .liveData .xwiki-loader")).stream()
+                .noneMatch(WebElement::isDisplayed));
+            return getTexts(self.findElements(entries));
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
     }
 
     private void waitUntilRendered()

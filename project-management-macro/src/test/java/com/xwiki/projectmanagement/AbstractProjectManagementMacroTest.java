@@ -142,4 +142,17 @@ public class AbstractProjectManagementMacroTest
 
         assertEquals("Could not find the displayer [workItemsSingle].", exception.getMessage());
     }
+
+    @Test
+    void executeEncodesTheSourceParameters() throws Exception
+    {
+        ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
+        params.setIdentifier("a&b=c");
+        when(componentManager.getInstance(Macro.class, "proj-manag-liveData")).thenReturn(displayerMacro);
+
+        abstractMacro.execute(params, "", macroTransformationContext);
+
+        // The first source parameter is encoded like the next ones.
+        assertEquals("smth=a%26b%3Dc&smth3=smth4", params.getSourceParameters());
+    }
 }
