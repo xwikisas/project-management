@@ -257,7 +257,7 @@ public class OpenProjectMacroElement extends BaseElement
      * {@link #waitForTableLayout()}, this doesn't need the Live Data to have an id.
      *
      * @return the text of the displayed rows
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> waitForLiveDataRows()
     {
@@ -268,7 +268,7 @@ public class OpenProjectMacroElement extends BaseElement
      * Wait for the Live Data of the macro to display its entries in the cards layout.
      *
      * @return the text of the displayed cards
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> waitForLiveDataCards()
     {
@@ -279,7 +279,7 @@ public class OpenProjectMacroElement extends BaseElement
      * Wait for the macro to display an error, since it can be rendered asynchronously.
      *
      * @return the error message
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String waitForErrorMessage()
     {
@@ -296,7 +296,7 @@ public class OpenProjectMacroElement extends BaseElement
     /**
      * Click on the error message displayed by the macro, which shows or hides the details of the error.
      *
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void toggleErrorDetails()
     {
@@ -307,7 +307,7 @@ public class OpenProjectMacroElement extends BaseElement
 
     /**
      * @return {@code true} if the details of the error displayed by the macro are visible
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean isErrorDetailsDisplayed()
     {
@@ -316,7 +316,7 @@ public class OpenProjectMacroElement extends BaseElement
 
     /**
      * @return the details of the error displayed by the macro, once visible
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getErrorDetails()
     {

@@ -60,7 +60,7 @@ public enum WorkItemsDisplayer
 
     /**
      * @return the hint of the macro component that displays the work items this way
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getMacroHint()
     {

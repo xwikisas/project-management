@@ -94,7 +94,7 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
      * @param instance the name of the OpenProject connection
      * @param workPackageId the id of the work package
      * @return the displayed work package, once its asynchronous rendering has been inserted in the page
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public OpenProjectMacroElement displayWorkPackage(String displayer, String instance, String workPackageId)
     {
