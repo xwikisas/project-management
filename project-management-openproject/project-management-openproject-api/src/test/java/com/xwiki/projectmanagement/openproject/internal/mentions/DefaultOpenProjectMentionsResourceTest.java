@@ -23,6 +23,9 @@ import javax.ws.rs.WebApplicationException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -33,6 +36,7 @@ import com.xwiki.urlshortener.URLShortenerException;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
@@ -65,5 +69,37 @@ class DefaultOpenProjectMentionsResourceTest
         assertEquals(500, exception.getResponse().getStatus());
         assertEquals("Failed to resolve the page id.", exception.getResponse().getEntity());
         assertEquals("Failed to resolve the page id.", this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    void getMentionsWithIdWhenThePageIdIsMissing(String pageId)
+    {
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.getMentionsWithId(pageId, null, 10, 0, false));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals("Missing page id.", exception.getResponse().getEntity());
+    }
+
+    @Test
+    void getMentionsWithIdWhenThePageIsUnknown()
+    {
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.getMentionsWithId("unknown", null, 10, 0, false));
+
+        assertEquals(404, exception.getResponse().getStatus());
+        assertNull(exception.getResponse().getEntity());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "abc", "1.5", "1 OR 1", "*" })
+    void getPagesMentioningWorkPackageWhenTheIdIsNotAnInteger(String workPackageId)
+    {
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.getPagesMentioningWorkPackage(workPackageId, null, 10, 0, null, null, false));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals("Work package id should be an integer.", exception.getResponse().getEntity());
     }
 }
