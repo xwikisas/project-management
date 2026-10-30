@@ -19,37 +19,43 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.listener;
 
-import javax.inject.Named;
+import java.util.Arrays;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.quartz.Trigger;
-import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.EntityReference;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.model.reference.WikiReference;
-import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.security.authorization.Right;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.ComponentList;
+import org.xwiki.test.junit5.LogCaptureExtension;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
-import org.xwiki.test.junit5.mockito.MockComponent;
-import org.xwiki.user.UserReference;
+import org.xwiki.test.mockito.MockitoComponentManager;
 import org.xwiki.user.UserReferenceResolver;
 
-import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.internal.event.XObjectAddedEvent;
+import com.xpn.xwiki.internal.event.XObjectUpdatedEvent;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.plugin.XWikiPluginManager;
 import com.xpn.xwiki.plugin.scheduler.JobState;
 import com.xpn.xwiki.plugin.scheduler.SchedulerPlugin;
+import com.xpn.xwiki.test.MockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -59,99 +65,158 @@ import static org.mockito.Mockito.when;
  *
  * @version $Id$
  */
-@ComponentTest
+@OldcoreTest
+@ReferenceComponentList
+@ComponentList(AdminAuthorChecker.class)
 class StyleSetupJobSchedulerListenerTest
 {
-    private static final WikiReference WIKI = new WikiReference("xwiki");
+    private static final DocumentReference JOB_DOCUMENT =
+        new DocumentReference("xwiki", Arrays.asList("OpenProject", "Code"), "StylingSetupJob");
+
+    private static final DocumentReference JOB_AUTHOR = new DocumentReference("xwiki", "XWiki", "JobAuthor");
 
     private static final DocumentReference CONNECTION_AUTHOR = new DocumentReference("xwiki", "XWiki", "Author");
+
+    private static final DocumentReference CURRENT_USER = new DocumentReference("xwiki", "XWiki", "CurrentUser");
+
+    private static final WikiReference MAIN_WIKI = new WikiReference("xwiki");
+
+    private static final WikiReference SUBWIKI = new WikiReference("subwiki");
+
+    private static final String CONTEXT_USER = "contextUser";
+
+    @InjectMockitoOldcore
+    private MockitoOldcore oldcore;
+
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @InjectMockComponents
     private StyleSetupJobSchedulerListener listener;
 
-    @MockComponent
-    private AdminAuthorChecker adminAuthorChecker;
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
-    @MockComponent
-    @Named("compact")
-    private EntityReferenceSerializer<String> serializer;
-
-    @MockComponent
-    @Named("document")
-    private UserReferenceResolver<DocumentReference> userReferenceResolver;
-
-    @Mock
-    private XWikiContext context;
-
-    @Mock
-    private XWiki xwiki;
-
-    @Mock
     private SchedulerPlugin scheduler;
 
-    @Mock
-    private XWikiDocument connectionDocument;
-
-    @Mock
-    private XWikiDocument jobDocument;
-
-    @Mock
-    private BaseObject job;
-
-    @Mock
-    private DocumentAuthors jobAuthors;
+    private UserReferenceResolver<DocumentReference> userResolver;
 
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.context.getWiki()).thenReturn(this.xwiki);
-        when(this.context.getWikiReference()).thenReturn(WIKI);
-        when(this.context.getUserReference()).thenReturn(CONNECTION_AUTHOR);
+        this.userResolver = this.componentManager.getInstance(UserReferenceResolver.TYPE_DOCUMENT_REFERENCE,
+            "document");
+
+        this.scheduler = mock(SchedulerPlugin.class);
         XWikiPluginManager pluginManager = mock(XWikiPluginManager.class);
-        when(this.xwiki.getPluginManager()).thenReturn(pluginManager);
         when(pluginManager.getPlugin("scheduler")).thenReturn(this.scheduler);
-        when(this.xwiki.getDocument(any(EntityReference.class), any(XWikiContext.class)))
-            .thenReturn(this.jobDocument);
-        when(this.jobDocument.clone()).thenReturn(this.jobDocument);
-        when(this.jobDocument.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE)).thenReturn(this.job);
-        when(this.jobDocument.getAuthors()).thenReturn(this.jobAuthors);
-        when(this.job.getStringValue("contextUser")).thenReturn("XWiki.Admin");
-        when(this.scheduler.getJobStatus(this.job, this.context))
-            .thenReturn(new JobState(Trigger.TriggerState.NORMAL));
+        doReturn(pluginManager).when(this.oldcore.getSpyXWiki()).getPluginManager();
+        when(this.scheduler.getJobStatus(any(), any())).thenReturn(new JobState(Trigger.TriggerState.NORMAL));
 
-        when(this.connectionDocument.getDocumentReference())
-            .thenReturn(new DocumentReference("xwiki", "Space", "Page"));
-        when(this.adminAuthorChecker.getMetadataAuthor(this.connectionDocument)).thenReturn(CONNECTION_AUTHOR);
-        when(this.serializer.serialize(CONNECTION_AUTHOR)).thenReturn("XWiki.Author");
+        XWikiContext context = this.oldcore.getXWikiContext();
+        context.setUserReference(CURRENT_USER);
+        XWikiDocument jobDocument = new XWikiDocument(JOB_DOCUMENT);
+        jobDocument.getAuthors().setEffectiveMetadataAuthor(this.userResolver.resolve(JOB_AUTHOR));
+        jobDocument.getAuthors().setOriginalMetadataAuthor(this.userResolver.resolve(JOB_AUTHOR));
+        BaseObject job = jobDocument.newXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE, context);
+        job.setStringValue(CONTEXT_USER, "XWiki.JobAuthor");
+        this.oldcore.getSpyXWiki().saveDocument(jobDocument, context);
+    }
+
+    private XWikiDocument connectionSavedBy(DocumentReference author, String wiki)
+    {
+        XWikiDocument connection = new XWikiDocument(new DocumentReference(wiki, "OpenProject", "Connection"));
+        connection.getAuthors().setEffectiveMetadataAuthor(this.userResolver.resolve(author));
+        return connection;
+    }
+
+    private void setAdmin(DocumentReference user, WikiReference wiki)
+    {
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.ADMIN, user, wiki)).thenReturn(true);
+    }
+
+    private XWikiDocument getJobDocument() throws XWikiException
+    {
+        return this.oldcore.getSpyXWiki().getDocument(JOB_DOCUMENT, this.oldcore.getXWikiContext());
     }
 
     @Test
-    void onEventWhenConnectionAuthorIsAdmin() throws Exception
+    void runsTheJobAsTheAdminWhoSavedTheConnection() throws Exception
     {
-        when(this.adminAuthorChecker.isAdmin(CONNECTION_AUTHOR, WIKI)).thenReturn(true);
-        UserReference authorReference = mock(UserReference.class);
-        when(this.userReferenceResolver.resolve(CONNECTION_AUTHOR)).thenReturn(authorReference);
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
 
-        this.listener.onEvent(new XObjectAddedEvent(), this.connectionDocument, this.context);
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
 
-        verify(this.scheduler).unscheduleJob(this.job, this.context);
-        verify(this.job).setStringValue("contextUser", "XWiki.Author");
-        verify(this.jobAuthors).setOriginalMetadataAuthor(authorReference);
-        verify(this.jobAuthors, never()).setEffectiveMetadataAuthor(any());
-        verify(this.xwiki).saveDocument(this.jobDocument, "Updated context user to [xwiki:XWiki.Author].",
-            this.context);
-        verify(this.scheduler).scheduleJob(this.job, this.context);
+        XWikiDocument jobDocument = getJobDocument();
+        BaseObject job = jobDocument.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE);
+        assertEquals("XWiki.Author", job.getStringValue(CONTEXT_USER));
+        assertEquals(this.userResolver.resolve(CONNECTION_AUTHOR),
+            jobDocument.getAuthors().getOriginalMetadataAuthor());
+        // The job script keeps running with the rights of its own author.
+        assertEquals(this.userResolver.resolve(JOB_AUTHOR), jobDocument.getAuthors().getEffectiveMetadataAuthor());
+        // Rescheduling is an outgoing command to the scheduler, not observable on the stored document.
+        verify(this.scheduler).unscheduleJob(any(), any());
+        verify(this.scheduler).scheduleJob(any(), any());
     }
 
     @Test
-    void onEventWhenConnectionAuthorIsNotAdmin() throws Exception
+    void ignoresConnectionSavedByNonAdmin() throws Exception
     {
-        when(this.adminAuthorChecker.isAdmin(CONNECTION_AUTHOR, WIKI)).thenReturn(false);
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
 
-        this.listener.onEvent(new XObjectAddedEvent(), this.connectionDocument, this.context);
+        assertJobUnchanged();
+    }
 
+    @Test
+    void ignoresConnectionSavedByNonAdminOfTheJobWiki() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, SUBWIKI);
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, SUBWIKI.getName()),
+            this.oldcore.getXWikiContext());
+
+        assertJobUnchanged();
+    }
+
+    @Test
+    void ignoresConnectionSavedByNonAdminOfTheConnectionWiki() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, SUBWIKI.getName()),
+            this.oldcore.getXWikiContext());
+
+        assertJobUnchanged();
+    }
+
+    @Test
+    void leavesTheCachedJobDocumentUnchangedWhenSaveFails() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        doThrow(new XWikiException()).when(this.oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class),
+            anyString(), any(XWikiContext.class));
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
+
+        XWikiDocument jobDocument = getJobDocument();
+        assertEquals("XWiki.JobAuthor",
+            jobDocument.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE).getStringValue(CONTEXT_USER));
+        assertEquals(this.userResolver.resolve(JOB_AUTHOR), jobDocument.getAuthors().getOriginalMetadataAuthor());
+        assertEquals("Failed to set the context user [xwiki:XWiki.Author] for the job "
+            + "[OpenProject.Code.StylingSetupJob] and reschedule it. Cause: [XWikiException: Error number 0 in 0].",
+            this.logCapture.getMessage(0));
+    }
+
+    private void assertJobUnchanged() throws XWikiException
+    {
+        XWikiDocument jobDocument = getJobDocument();
+        assertEquals("XWiki.JobAuthor",
+            jobDocument.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE).getStringValue(CONTEXT_USER));
+        assertEquals(this.userResolver.resolve(JOB_AUTHOR), jobDocument.getAuthors().getOriginalMetadataAuthor());
+        // A refused connection must not reschedule the job.
         verifyNoInteractions(this.scheduler);
-        verify(this.job, never()).setStringValue(anyString(), anyString());
-        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
     }
 }
