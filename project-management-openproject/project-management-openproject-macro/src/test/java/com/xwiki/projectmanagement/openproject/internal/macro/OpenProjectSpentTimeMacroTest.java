@@ -19,17 +19,21 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
+import javax.inject.Provider;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -43,12 +47,10 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -63,8 +65,13 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
 
     private static final Linkable PROJECT = new Linkable("Alpha", SERVER_URL + "/projects/alpha");
 
+    private static final String PROJECT_FILTER = "{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}";
+
     @InjectMockComponents
     private OpenProjectSpentTimeMacro macro;
+
+    @MockComponent
+    private Provider<Clock> clockProvider;
 
     private final OpenProjectSpentTimeMacroParameters parameters = new OpenProjectSpentTimeMacroParameters();
 
@@ -75,6 +82,9 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setCount(10);
         when(this.apiClient.getTimeEntries(any(), any(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 10, 0));
+        // It's already 2026-03-10 in Paris.
+        when(this.clockProvider.get())
+            .thenReturn(Clock.fixed(Instant.parse("2026-03-09T23:30:00Z"), ZoneId.of("Europe/Paris")));
     }
 
     private static TimeEntry entry(Date spentOn, String hours, String comment, Linkable activity)
@@ -95,18 +105,29 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         return String.format("%.2f", hours);
     }
 
-    private String executeAndGetFilters() throws Exception
+    /**
+     * Stub the time entries matching exactly the given filters, then execute the macro.
+     *
+     * @return the text of the result, which lists the matching time entry only if the macro used the given filters
+     */
+    private String executeWithFilters(String filters) throws Exception
     {
-        this.macro.execute(this.parameters, "", this.context);
-        ArgumentCaptor<String> filtersCaptor = ArgumentCaptor.forClass(String.class);
-        verify(this.apiClient).getTimeEntries(isNull(), eq(10), filtersCaptor.capture());
-        return filtersCaptor.getValue();
+        when(this.apiClient.getTimeEntries(isNull(), eq(10), eq(filters))).thenReturn(new PaginatedResult<>(
+            List.of(entry(date(2026, 3, 9), "PT1H", "Matching", null)), 1, 10, 1));
+        return text(this.macro.execute(this.parameters, "", this.context));
     }
 
-    private static String dateRange(LocalDate today, int days)
+    private static String matchingEntry()
     {
-        return String.format("{\"created_at\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}",
-            today.minusDays(days), today.plusDays(1));
+        return "Total: " + hours(1) + " h\n"
+            + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
+            + "2026-03-09|||" + hours(1) + "|\n"
+            + "-|Alpha / #1 Fix|Matching|" + hours(1) + "|\n";
+    }
+
+    private static String spentOn(String firstDay, String lastDay)
+    {
+        return String.format("{\"spent_on\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}", firstDay, lastDay);
     }
 
     @Test
@@ -159,32 +180,22 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
-    void filtersByProjectAndDays() throws Exception
+    void filtersByProjectAndDaysOnWhichTheTimeWasSpent() throws Exception
     {
         this.parameters.setProject("12");
         this.parameters.setDays(7);
-        LocalDate before = LocalDate.now();
 
-        String filters = executeAndGetFilters();
-
-        // Accept both days in case the test runs around midnight.
-        String expectedBefore =
-            "[{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}," + dateRange(before, 7) + "]";
-        String expectedAfter =
-            "[{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}," + dateRange(LocalDate.now(), 7) + "]";
-        assertTrue(filters.equals(expectedBefore) || filters.equals(expectedAfter), filters);
+        assertEquals(matchingEntry() + "View project dashboard\n",
+            executeWithFilters("[" + PROJECT_FILTER + "," + spentOn("2026-03-03", "2026-03-10") + "]"));
     }
 
     @Test
     void filtersByDaysOnly() throws Exception
     {
         this.parameters.setDays(3);
-        LocalDate before = LocalDate.now();
 
-        String filters = executeAndGetFilters();
-
-        assertTrue(filters.equals("[" + dateRange(before, 3) + "]")
-            || filters.equals("[" + dateRange(LocalDate.now(), 3) + "]"), filters);
+        assertEquals(matchingEntry() + "View time entries\n",
+            executeWithFilters("[" + spentOn("2026-03-07", "2026-03-10") + "]"));
     }
 
     @Test
@@ -193,7 +204,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setProject("12");
         this.parameters.setDays(0);
 
-        assertEquals("[{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}]", executeAndGetFilters());
+        assertEquals(matchingEntry() + "View project dashboard\n", executeWithFilters("[" + PROJECT_FILTER + "]"));
     }
 
     @Test
@@ -202,9 +213,9 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setProject("a\"]}},{\"x\":{\"operator\":\"!\",\"values\":[\"\\");
         this.parameters.setDays(0);
 
-        assertEquals("[{\"project\":{\"operator\":\"=\",\"values\":"
-            + "[\"a\\\"]}},{\\\"x\\\":{\\\"operator\\\":\\\"!\\\",\\\"values\\\":[\\\"\\\\\"]}}]",
-            executeAndGetFilters());
+        assertEquals(matchingEntry() + "View project dashboard\n", executeWithFilters(
+            "[{\"project\":{\"operator\":\"=\",\"values\":"
+                + "[\"a\\\"]}},{\\\"x\\\":{\\\"operator\\\":\\\"!\\\",\\\"values\\\":[\\\"\\\\\"]}}]"));
     }
 
     @Test
@@ -213,7 +224,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setProject(" ");
         this.parameters.setDays(0);
 
-        assertEquals("", executeAndGetFilters());
+        assertEquals(matchingEntry() + "View time entries\n", executeWithFilters(""));
     }
 
     @Test

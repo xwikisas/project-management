@@ -20,8 +20,8 @@
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -31,6 +31,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -55,6 +56,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
@@ -70,7 +72,7 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 public class OpenProjectSpentTimeMacro
     extends AbstractOpenProjectDirectMacro<OpenProjectSpentTimeMacroParameters>
 {
-    private static final String CREATED_AT_PROPERTY = "created_at";
+    private static final String SPENT_ON_PROPERTY = "spent_on";
 
     private static final String BETWEEN_DATES_OPERATOR = "<>d";
 
@@ -89,6 +91,9 @@ public class OpenProjectSpentTimeMacro
     @Inject
     @Named("wiki")
     private ConfigurationSource wikiConfigSource;
+
+    @Inject
+    private Provider<Clock> clockProvider;
 
     /**
      * Default constructor.
@@ -136,9 +141,10 @@ public class OpenProjectSpentTimeMacro
             filterBuilder.addFilter("project", FilterBuilder.Operator.EQUALS, project);
         }
         if (days > 0) {
-            String endDate = LocalDate.now().plusDays(1).toString();
-            String startDate = LocalDate.now().minusDays(days).toString();
-            filterBuilder.addFilter(CREATED_AT_PROPERTY, BETWEEN_DATES_OPERATOR, List.of(startDate, endDate));
+            // The days on which the time was spent, not the days on which it was logged.
+            LastDaysPeriod period = new LastDaysPeriod(days, this.clockProvider.get());
+            filterBuilder.addFilter(SPENT_ON_PROPERTY, BETWEEN_DATES_OPERATOR,
+                List.of(period.getFirstDay().toString(), period.getLastDay().toString()));
         }
         return filterBuilder.build();
     }
