@@ -1511,7 +1511,11 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
     </property>
     <property>
       <content>{{velocity}}
-#if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest'))
+## Without a valid license, the licensing module doesn't serve the skin extensions that style and drive this UI,
+## so it would be displayed broken.
+#if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest')
+    &amp;&amp; $services.licensing.licensor.hasLicensureForEntity(
+      $services.model.createDocumentReference('', ['OpenProject', 'Code'], 'OpenProjectConnectionClass')))
   $xwiki.parseTemplate("create_work_package_helper_macros.vm")
   #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
   #set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
