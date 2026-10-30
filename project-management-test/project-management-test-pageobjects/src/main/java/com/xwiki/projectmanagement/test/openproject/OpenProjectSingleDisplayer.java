@@ -62,6 +62,15 @@ public class OpenProjectSingleDisplayer extends BaseElement
     }
 
     /**
+     * @return the displayed description of the work package
+     * @since 1.4.0
+     */
+    public FormattedTextElement getFormattedDescription()
+    {
+        return new FormattedTextElement(getDescription());
+    }
+
+    /**
      * @return the header container that contains information such as the work package id, name and link.
      */
     public WebElement getHeader()
@@ -84,7 +93,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return {@code true} if the header links to the work package
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean hasWorkPackageLink()
     {
@@ -93,7 +102,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return the text of the header, which includes the subject of the work package
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getHeaderText()
     {
@@ -102,7 +111,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return the text displayed about the project of the work package
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getProjectText()
     {
@@ -111,7 +120,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return {@code true} if the project of the work package is displayed as a link
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public boolean hasProjectLink()
     {
@@ -121,7 +130,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
     /**
      * @param name the work package property pretty name
      * @return the displayed value of the property
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getPropertyValue(String name)
     {
@@ -130,7 +139,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return the labels of the displayed work package properties, without the trailing colon
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<String> getPropertyNames()
     {

@@ -45,6 +45,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
@@ -64,8 +65,6 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
     private static final String CLASS = "class";
 
     private static final String TEXT_MUTED_CLASS = "text-muted";
-
-    private static final String PROJECT_FILTER = "[{\"project_id\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
 
     @Inject
     @Named("wiki")
@@ -95,7 +94,7 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
     {
         String filters = "";
         if (project != null && !project.isBlank()) {
-            filters = String.format(PROJECT_FILTER, project);
+            filters = FilterBuilder.get().addFilter("project_id", FilterBuilder.Operator.EQUALS, project).build();
         }
 
         try {

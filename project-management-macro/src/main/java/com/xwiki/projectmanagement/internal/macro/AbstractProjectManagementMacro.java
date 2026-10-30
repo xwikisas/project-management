@@ -40,7 +40,6 @@ import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
-import com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.presets.Preset;
@@ -103,10 +102,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         processParameters(parameters);
         maybeUpdateFilterFromPreset(parameters);
         try {
-            String displayerId = displayer.name();
-            if (WorkItemsDisplayer.liveDataCards.equals(displayer) || WorkItemsDisplayer.liveData.equals(displayer)) {
-                displayerId = WorkItemLivedataDisplayer.ROLE_HINT;
-            }
+            String displayerId = displayer.getMacroHint();
             Macro<ProjectManagementAsyncMacroParams> displayerMacro =
                 componentManager.getInstance(Macro.class, displayerId);
             if (!displayerMacro.supportsInlineMode() && context.isInline()) {
@@ -183,13 +179,13 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         if (value == null || value.isEmpty()) {
             return;
         }
+        String parameter = String.format("%s=%s", URLEncoder.encode(key, StandardCharsets.UTF_8),
+            URLEncoder.encode(value, StandardCharsets.UTF_8));
         String sourceParameters = parameters.getSourceParameters();
         if (sourceParameters == null || sourceParameters.isEmpty()) {
-            parameters.setSourceParameters(String.format("%s=%s", key, value));
+            parameters.setSourceParameters(parameter);
         } else {
-            parameters.setSourceParameters(
-                String.format("%s&%s=%s", sourceParameters, URLEncoder.encode(key, StandardCharsets.UTF_8),
-                    URLEncoder.encode(value, StandardCharsets.UTF_8)));
+            parameters.setSourceParameters(String.format("%s&%s", sourceParameters, parameter));
         }
     }
 }

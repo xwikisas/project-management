@@ -23,6 +23,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -41,6 +42,7 @@ import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -120,6 +122,15 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertTrue(macro.hasLinkInCell("ID", 1));
         assertTrue(macro.hasLinkInCell(SUBJECT_COLUMN, 1));
         assertTrue(macro.hasLinkInCell("Assignee", 1));
+
+        // The View action displays the work package of the row it was clicked on.
+        TableLayoutElement ld = macro.waitForTableLayout();
+        for (int row : List.of(2, 1)) {
+            String subject = ld.getCell(SUBJECT_COLUMN, row).getText();
+            String header = macro.viewWorkPackage(row).getHeaderText();
+            assertTrue(header.contains(subject), String.format("[%s] doesn't contain [%s]", header, subject));
+            macro.closeWorkPackageView();
+        }
     }
 
     @Test
@@ -382,6 +393,98 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         expectedSubjects.forEach(subject -> ld.assertRow(SUBJECT_COLUMN, subject));
         // The target version column is named after the OpenProject field.
         ld.assertRow(versionColumnName, versionName);
+    }
+
+    @Test
+    @Order(9)
+    void displayWorkPackageAsynchronously(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // The work package is displayed the way the View action of the Live Data displays it in its modal.
+        String workPackageId = "1";
+        String subject = this.openProject.getApiResource("/work_packages/" + workPackageId).get("subject").asText();
+        setup.createPage(testReference, "");
+        setup.gotoPage(testReference);
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+
+        List<String> rows = page.displayWorkPackage("liveData", CONNECTION_ID, workPackageId).waitForLiveDataRows();
+        assertEquals(1, rows.size(), rows.toString());
+        assertThat(rows.get(0), containsString(subject));
+
+        setup.gotoPage(testReference);
+        page = new ViewPageWithOpenProjectMacro();
+        List<String> cards =
+            page.displayWorkPackage("liveDataCards", CONNECTION_ID, workPackageId).waitForLiveDataCards();
+        assertEquals(1, cards.size(), cards.toString());
+        assertThat(cards.get(0), containsString(subject));
+
+        setup.gotoPage(testReference);
+        page = new ViewPageWithOpenProjectMacro();
+        OpenProjectSingleDisplayer single = page.displayWorkPackage("workItemsSingle", CONNECTION_ID, workPackageId)
+            .getSingleWorkItem().waitUntilReady();
+        assertThat(single.getHeaderText(), containsString(subject));
+
+        // Guests aren't connected to OpenProject, so the rendering fails: the error is displayed with its cause, and
+        // its details are displayed when clicking on it.
+        setup.forceGuestUser();
+        try {
+            setup.gotoPage(testReference);
+            OpenProjectMacroElement failure = new ViewPageWithOpenProjectMacro().displayWorkPackage("workItemsSingle",
+                CONNECTION_ID, workPackageId);
+            String message = failure.waitForErrorMessage();
+            assertThat(message, containsString("Failed to display the work items."));
+            assertThat(message, containsString(
+                String.format("The current user isn't connected to the OpenProject instance [%s].", CONNECTION_ID)));
+            assertFalse(failure.isErrorDetailsDisplayed());
+
+            failure.toggleErrorDetails();
+            String details = failure.getErrorDetails();
+            assertThat(details, containsString("MacroExecutionException"));
+            assertThat(details, containsString("at com.xwiki.projectmanagement."));
+        } finally {
+            setup.loginAsSuperAdmin();
+        }
+    }
+
+    @Test
+    @Order(10)
+    void displayFormattedDescription(TestUtils setup, TestReference testReference) throws Exception
+    {
+        JsonNode workPackages = this.openProject.getApiResource(String.format(
+            "/projects/%s/work_packages?pageSize=2&sortBy=%s", DEMO_PROJECT_ID, encode("[[\"id\",\"asc\"]]")));
+        String referencedId = workPackages.get(EMBEDDED).get(ELEMENTS).get(0).get("id").asText();
+        String describedId = workPackages.get(EMBEDDED).get(ELEMENTS).get(1).get("id").asText();
+        String reference = "#" + referencedId;
+
+        // A description with a heading (to which OpenProject adds a permalink), a reference to another work package
+        // (which OpenProject renders as a relative link) and some formatting.
+        String previousDescription = this.openProject.setWorkPackageDescription(setup.getDriver(), describedId,
+            String.format("# Release notes%n%nThe **new** feature is tracked by %s.%n%n* first%n* second%n",
+                reference));
+        try {
+            setup.createPage(testReference, String.format("{{openproject instance=\"%1$s\" identifier=\"%2$s\" "
+                + "workItemsDisplayer=\"workItemsSingle\"/}}%n%n{{openproject instance=\"%1$s\" id=\"description\" "
+                + "identifier=\"%2$s\" properties=\"identifier,description\"/}}", CONNECTION_ID, describedId));
+
+            List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+            Map<String, String> expectedLinks =
+                Map.of(reference, this.openProject.getBaseUrl() + "/work_packages/" + referencedId);
+
+            FormattedTextElement description =
+                macros.get(0).getSingleWorkItem().waitUntilReady().getFormattedDescription();
+            assertEquals(List.of("Release notes"), description.getHeadings());
+            assertEquals(List.of("new"), description.getBoldTexts());
+            assertEquals(List.of("first", "second"), description.getListItems());
+            // The heading permalink is not displayed and the reference links to OpenProject.
+            assertEquals(expectedLinks, description.getLinks());
+
+            FormattedTextElement cell = macros.get(1).getFormattedCell("Description", 1);
+            assertEquals(List.of("Release notes"), cell.getHeadings());
+            assertEquals(List.of("new"), cell.getBoldTexts());
+            assertEquals(List.of("first", "second"), cell.getListItems());
+            assertEquals(expectedLinks, cell.getLinks());
+        } finally {
+            this.openProject.setWorkPackageDescription(setup.getDriver(), describedId, previousDescription);
+        }
     }
 
     /**

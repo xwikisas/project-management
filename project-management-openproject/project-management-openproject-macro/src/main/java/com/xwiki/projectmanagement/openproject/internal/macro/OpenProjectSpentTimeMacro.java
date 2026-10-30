@@ -52,6 +52,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.utility.TableBuilder;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
@@ -69,12 +70,9 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 public class OpenProjectSpentTimeMacro
     extends AbstractOpenProjectDirectMacro<OpenProjectSpentTimeMacroParameters>
 {
-    private static final String PROJECT_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}]";
+    private static final String CREATED_AT_PROPERTY = "created_at";
 
-    private static final String PROJECT_AND_DATE_FILTER = "[{\"project\":{\"operator\":\"=\",\"values\":[\"%s\"]}}"
-        + ",{\"created_at\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}]";
-
-    private static final String DATE_FILTER = "[{\"created_at\":{\"operator\":\"<>d\",\"values\":[\"%s\",\"%s\"]}}]";
+    private static final String BETWEEN_DATES_OPERATOR = "<>d";
 
     private static final String EMPTY_FILTER = "";
 
@@ -119,7 +117,7 @@ public class OpenProjectSpentTimeMacro
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
         boolean hasProject = isNotBlank(parameters.getProject());
         String linkUrl = hasProject
-            ? String.format("%s/projects/%s", serverUrl, parameters.getProject())
+            ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
         String linkLabel = hasProject ? "View project dashboard" : "View time entries";
 
@@ -130,14 +128,19 @@ public class OpenProjectSpentTimeMacro
     private String buildFilters(String project, int days)
     {
         boolean hasProject = isNotBlank(project);
+        if (!hasProject && days <= 0) {
+            return EMPTY_FILTER;
+        }
+        FilterBuilder filterBuilder = FilterBuilder.get();
+        if (hasProject) {
+            filterBuilder.addFilter("project", FilterBuilder.Operator.EQUALS, project);
+        }
         if (days > 0) {
             String endDate = LocalDate.now().plusDays(1).toString();
             String startDate = LocalDate.now().minusDays(days).toString();
-            return hasProject
-                ? String.format(PROJECT_AND_DATE_FILTER, project, startDate, endDate)
-                : String.format(DATE_FILTER, startDate, endDate);
+            filterBuilder.addFilter(CREATED_AT_PROPERTY, BETWEEN_DATES_OPERATOR, List.of(startDate, endDate));
         }
-        return hasProject ? String.format(PROJECT_FILTER, project) : EMPTY_FILTER;
+        return filterBuilder.build();
     }
 
     private static boolean isNotBlank(String value)

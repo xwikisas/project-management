@@ -230,18 +230,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private final String connectionUrl;
 
+    private final WorkPackageDescriptionCleaner descriptionCleaner;
+
     /**
      * Constructs a new {@code OpenProjectApiClient} with the given authentication method and connection URL.
      *
      * @param connectionUrl the base URL of the OpenProject instance
      * @param authenticator the authentication method used to authenticate the requests sent to the OpenProject API
      * @param client the {@link HttpClient} instance used to perform HTTP requests to the OpenProject API
+     * @param descriptionCleaner cleans the HTML description of the work packages
      */
-    public DefaultOpenProjectApiClient(String connectionUrl, OpenProjectAuthenticator authenticator, HttpClient client)
+    public DefaultOpenProjectApiClient(String connectionUrl, OpenProjectAuthenticator authenticator, HttpClient client,
+        WorkPackageDescriptionCleaner descriptionCleaner)
     {
         this.connectionUrl = connectionUrl;
         this.authenticator = authenticator;
         this.client = client;
+        this.descriptionCleaner = descriptionCleaner;
     }
 
     @Override
@@ -819,7 +824,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     {
         WorkPackage workPackage = new WorkPackage();
 
-        workPackage.setDescription(element.path(OP_DESCRIPTION).path("html").asText());
+        workPackage.setDescription(
+            this.descriptionCleaner.clean(element.path(OP_DESCRIPTION).path("html").asText(), this.connectionUrl));
         workPackage.setPercentageDone(element.path(OP_RESPONSE_PERCENTAGE_DONE).asInt());
         int id = element.path(OP_RESPONSE_ID).asInt();
         workPackage.setId(id);

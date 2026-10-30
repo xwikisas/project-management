@@ -97,7 +97,8 @@ public interface WorkItemsResource
      * @param workItem the work item that needs to be created.
      * @return the created work item. HTTP 200: successful retrieval. HTTP 400: invalid payload. HTTP 401: the user is
      *     not logged in. HTTP 403: the user does not have the rights to retrieve the work items. HTTP 409: work item
-     *     could not be created due to a similar resource already existing.
+     *     could not be created due to a similar resource already existing. HTTP 501: the operation is not
+     *     implemented yet.
      */
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -118,7 +119,7 @@ public interface WorkItemsResource
      * @param workItem the work item that needs to be updated.
      * @return the updated work item. HTTP 200: successful retrieval. HTTP 400: invalid payload. HTTP 401: the user is
      *     not logged in. HTTP 403: the user does not have the rights to retrieve the work items. HTTP 404: the work
-     *     item that needs updating could not be found.
+     *     item that needs updating could not be found. HTTP 501: the operation is not implemented yet.
      */
     @PUT
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -138,7 +139,8 @@ public interface WorkItemsResource
      * @param projectManagementHint the hint of the project management implementation.
      * @param workItemId the id of the work item that needs to be removed.
      * @return the deleted item. HTTP 200: successful retrieval. HTTP 401: the user is not logged in. HTTP 403: the user
-     *     does not have the rights to retrieve the work items. HTTP 404: the work item does not exist.
+     *     does not have the rights to retrieve the work items. HTTP 404: the work item does not exist. HTTP 501: the
+     *     operation is not implemented yet.
      */
     @DELETE
     @Path("/{workItemId}")

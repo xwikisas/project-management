@@ -132,7 +132,7 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
      *
      * @return the names of the work item properties declared by the Live Data configuration of the client, keyed by
      *     property id, when they differ from the id
-     * @since 1.3.1
+     * @since 1.4.0
      */
     protected Map<String, String> getPropertyNames()
     {

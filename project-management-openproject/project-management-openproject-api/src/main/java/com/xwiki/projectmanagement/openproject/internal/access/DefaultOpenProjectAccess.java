@@ -46,7 +46,7 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
  * public data.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 @Component
 @Singleton

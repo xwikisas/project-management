@@ -60,7 +60,7 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
  * request. There is one cache of each kind per wiki, since the duration of the cache is configured per wiki.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 @Component(roles = PublicDataClientProvider.class)
 @Singleton

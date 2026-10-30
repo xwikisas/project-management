@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -37,9 +38,12 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 @Singleton
 public class DefaultOpenProjectApiClientFactory implements OpenProjectApiClientFactory
 {
+    @Inject
+    private WorkPackageDescriptionCleaner descriptionCleaner;
+
     @Override
     public OpenProjectApiClientBuilder builder()
     {
-        return new DefaultOpenProjectApiClientBuilder();
+        return new DefaultOpenProjectApiClientBuilder(this.descriptionCleaner);
     }
 }

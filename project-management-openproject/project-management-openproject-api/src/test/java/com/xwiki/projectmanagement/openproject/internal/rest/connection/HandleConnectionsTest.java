@@ -23,11 +23,14 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.WikiReference;
 import org.xwiki.security.authorization.AuthorizationManager;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -35,6 +38,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.service.ConnectionSaveException;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,6 +53,9 @@ public class HandleConnectionsTest
 {
     @InjectMockComponents
     private HandleConnections handleConnections;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @MockComponent
     private HandleConnectionsService handleConnectionsService;
@@ -78,12 +85,46 @@ public class HandleConnectionsTest
 
     private static final String PAGE_NAME = "page";
 
+    private static final DocumentReference PAGE_REFERENCE = new DocumentReference(WIKI_NAME, SPACE_NAME, PAGE_NAME);
+
     @BeforeEach
     public void setUp()
     {
         when(this.xContext.getUserReference()).thenReturn(userReference);
         when(this.xContext.getWikiReference()).thenReturn(wikiReference);
         when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, PAGE_REFERENCE)).thenReturn(true);
+    }
+
+    @Test
+    void handleConnectionWithoutEditRightOnPageIsForbidden() throws ProjectManagementException
+    {
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, PAGE_REFERENCE)).thenReturn(false);
+
+        Response createResponse = handleConnections.createConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+        Response updateResponse = handleConnections.updateConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), createResponse.getStatus());
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), updateResponse.getStatus());
+        verify(this.handleConnectionsService, never()).handleConnection(any(), any());
+    }
+
+    @Test
+    void handleConnectionChecksRightsOnTargetWikiNotContextWiki() throws ProjectManagementException
+    {
+        WikiReference otherWiki = new WikiReference("otherWiki");
+        DocumentReference otherPage = new DocumentReference("otherWiki", SPACE_NAME, PAGE_NAME);
+        when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(false);
+        when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, otherWiki)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, userReference, otherPage)).thenReturn(true);
+
+        Response createResponse = handleConnections.createConnection("otherWiki", SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.CREATED.getStatusCode(), createResponse.getStatus());
+        verify(this.handleConnectionsService).handleConnection(openProjectConnection, otherPage);
     }
 
     @Test
@@ -147,28 +188,53 @@ public class HandleConnectionsTest
     }
 
     @Test
-    public void handleConflictTest() throws ProjectManagementException
+    void handleInvalidConnection() throws ProjectManagementException
     {
-        doThrow(ProjectManagementException.class)
+        doThrow(ConnectionSaveException.invalid("The client secret is required."))
             .when(this.handleConnectionsService)
             .handleConnection(any(OpenProjectConnection.class), any(DocumentReference.class));
 
-        Response createResponse = handleConnections.createConnection(
-            WIKI_NAME,
-            SPACE_NAME,
-            PAGE_NAME,
-            openProjectConnection
-        );
+        Response createResponse = this.handleConnections.createConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+        Response updateResponse = this.handleConnections.updateConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
 
-        Response updateResponse = handleConnections.updateConnection(
-            WIKI_NAME,
-            SPACE_NAME,
-            PAGE_NAME,
-            openProjectConnection
-        );
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), createResponse.getStatus());
+        assertEquals("The client secret is required.", createResponse.getEntity());
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), updateResponse.getStatus());
+    }
+
+    @Test
+    void handleConflict() throws ProjectManagementException
+    {
+        doThrow(ConnectionSaveException.conflict("Connection firstConnection already exists."))
+            .when(this.handleConnectionsService)
+            .handleConnection(any(OpenProjectConnection.class), any(DocumentReference.class));
+
+        Response createResponse = this.handleConnections.createConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+        Response updateResponse = this.handleConnections.updateConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
 
         assertEquals(Response.Status.CONFLICT.getStatusCode(), createResponse.getStatus());
+        assertEquals("Connection firstConnection already exists.", createResponse.getEntity());
         assertEquals(Response.Status.CONFLICT.getStatusCode(), updateResponse.getStatus());
+    }
+
+    @Test
+    void handleSaveFailure() throws ProjectManagementException
+    {
+        doThrow(new ProjectManagementException("There was a problem while saving the connection",
+            new RuntimeException("Database error")))
+            .when(this.handleConnectionsService)
+            .handleConnection(any(OpenProjectConnection.class), any(DocumentReference.class));
+
+        Response response = this.handleConnections.createConnection(WIKI_NAME, SPACE_NAME, PAGE_NAME,
+            openProjectConnection);
+
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("There was a problem while saving the connection", response.getEntity());
+        assertEquals("There was a problem while saving the connection", this.logCapture.getMessage(0));
     }
 
     @Test

@@ -47,7 +47,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  * form, and their values, from the work packages.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public final class WorkPackageFieldsParser
 {

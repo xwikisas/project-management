@@ -53,6 +53,6 @@ public class DefaultInstanceIdResource implements InstanceIdResource, XWikiRestC
         if (id == null) {
             throw new WebApplicationException(Response.serverError().entity("The id was not initialized").build());
         }
-        return instanceIdManager.getInstanceId();
+        return id;
     }
 }

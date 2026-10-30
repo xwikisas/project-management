@@ -26,7 +26,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
  * when that status allows calling OpenProject.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public final class OpenProjectAccessResult
 {

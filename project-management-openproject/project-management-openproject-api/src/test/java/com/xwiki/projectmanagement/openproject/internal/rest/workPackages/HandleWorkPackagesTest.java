@@ -124,6 +124,25 @@ public class HandleWorkPackagesTest
             PAGE_SIZE, "");
     }
 
+    @Test
+    void getAvailableAssigneesWithSearch() throws Exception
+    {
+        when(this.openProjectApiClient.getAvailableUsers(anyString(), anyInt(), anyInt(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(), 0, PAGE_SIZE, 0));
+        String search = "a\"]}},{\"id\":{\"operator\":\"!\",\"values\":[\"0\\";
+
+        this.handleWorkPackages.getAvailableAssignees(WIKI, INSTANCE, "/api/v3/projects/demo-1", search, PAGE_SIZE,
+            null);
+
+        ArgumentCaptor<String> filters = ArgumentCaptor.forClass(String.class);
+        verify(this.openProjectApiClient).getAvailableUsers(eq("/api/v3/projects/demo-1/available_assignees"),
+            eq(0), eq(PAGE_SIZE), filters.capture());
+        JsonNode filter = this.mapper.readTree(filters.getValue());
+        assertEquals(1, filter.size());
+        assertEquals(search, filter.get(0).get("name").get("values").get(0).asText());
+        assertEquals("~", filter.get(0).get("name").get("operator").asText());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = { "@other.example/api/v3/projects/1", "/api/v3/projects/1?x=",
         "/api/v3/projects/1/../../users", "/api/v3/users/1", "api/v3/projects/1" })

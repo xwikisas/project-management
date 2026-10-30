@@ -78,7 +78,7 @@ public class WorkItem extends HashMap<String, Object>
      * {@code 2026-10-01/2026-11-01}). A work item having only one of the two dates matches when that date is inside
      * the interval.
      *
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public static final String KEY_DATE_RANGE = "dateRange";
 
@@ -160,7 +160,7 @@ public class WorkItem extends HashMap<String, Object>
     /**
      * The key identifying the key property of the work item.
      *
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public static final String KEY_KEY = "key";
 
@@ -555,7 +555,7 @@ public class WorkItem extends HashMap<String, Object>
      * @return the human-readable key of this work item when it differs from its identifier, e.g. {@code XWIKI-123}
      *     for an OpenProject work package identified by {@code 123} on an instance using project-based semantic
      *     identifiers; {@code null} if the work item is only known by its identifier
-     * @since 1.3.1
+     * @since 1.4.0
      */
     @JsonProperty(KEY_KEY)
     public String getKey()
@@ -565,7 +565,7 @@ public class WorkItem extends HashMap<String, Object>
 
     /**
      * @param key see {@link #getKey()}.
-     * @since 1.3.1
+     * @since 1.4.0
      */
     @JsonProperty(KEY_KEY)
     public void setKey(String key)

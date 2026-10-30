@@ -28,7 +28,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,7 +55,6 @@ import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
@@ -251,12 +249,15 @@ class DefaultWorkItemsResourceTest
     @Test
     void modificationsAreNotImplemented()
     {
-        assertThrows(NotImplementedException.class,
-            () -> this.resource.createWorkItem(WIKI, CLIENT, new WorkItem()));
-        assertThrows(NotImplementedException.class,
-            () -> this.resource.updateWorkItem(WIKI, CLIENT, new WorkItem()));
-        assertThrows(NotImplementedException.class,
-            () -> this.resource.deleteWorkItem(WIKI, CLIENT, WORK_ITEM_ID));
+        Response response = this.resource.createWorkItem(WIKI, CLIENT, new WorkItem());
+        assertEquals(501, response.getStatus());
+        assertEquals("The REST API doesn't support creating work items.", response.getEntity());
+        response = this.resource.updateWorkItem(WIKI, CLIENT, new WorkItem());
+        assertEquals(501, response.getStatus());
+        assertEquals("The REST API doesn't support updating work items.", response.getEntity());
+        response = this.resource.deleteWorkItem(WIKI, CLIENT, WORK_ITEM_ID);
+        assertEquals(501, response.getStatus());
+        assertEquals("The REST API doesn't support deleting work items.", response.getEntity());
         verifyNoInteractions(this.client);
     }
 }
