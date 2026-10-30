@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject.service;
+package com.xwiki.projectmanagement.openproject.internal.service;
 
 import java.util.Arrays;
 import java.util.List;
@@ -58,8 +58,6 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
-import com.xwiki.projectmanagement.openproject.internal.service.ConnectionSaveException;
-import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,7 +72,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class HandleConnectionsServiceTest
+class HandleConnectionsServiceTest
 {
     @InjectMockComponents
     private HandleConnectionsService handleConnectionsService;
@@ -188,7 +186,7 @@ public class HandleConnectionsServiceTest
     }
 
     @Test
-    public void handleExistingConnectionsTest() throws Exception
+    void handleConnectionRefusesExistingConnectionName() throws Exception
     {
         mockOtherConnectionDocument(adminReference);
 
@@ -387,7 +385,7 @@ public class HandleConnectionsServiceTest
     }
 
     @Test
-    public void handleConnectionTest() throws QueryException, ProjectManagementException, XWikiException
+    void handleConnectionSavesConfigAndOidcObjects() throws QueryException, ProjectManagementException, XWikiException
     {
         BaseObject configObj = new BaseObject();
         BaseObject oidcObj = new BaseObject();

@@ -52,9 +52,8 @@ import com.xwiki.projectmanagement.openproject.macro.BaseDirectOpenProjectMacroP
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 
-import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE;
-import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -223,8 +222,8 @@ class OpenProjectMacroDisplayListenersTest
     @Test
     void replacesTheDashboardPlaceholders()
     {
-        this.parameters.setInstance(USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
-        this.parameters.setProject(USE_SELECTED_DASHBOARD_PROJECT_VALUE);
+        this.parameters.setInstance(OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
+        this.parameters.setProject(OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE);
         selectedConnection("dashboard");
         selectedProject("12");
 
@@ -264,7 +263,7 @@ class OpenProjectMacroDisplayListenersTest
     void resolvesTheInstanceOfTheCalendarMacro()
     {
         OpenProjectCalendarMacroParameters calendarParameters = new OpenProjectCalendarMacroParameters();
-        calendarParameters.setInstance(USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
+        calendarParameters.setInstance(OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
         selectedConnection("dashboard");
 
         fireEvent(calendarParameters);
@@ -310,13 +309,13 @@ class OpenProjectMacroDisplayListenersTest
     void leavesTheInstanceUnsetWithoutAnyConnection()
     {
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of());
-        this.parameters.setInstance(USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
-        this.parameters.setProject(USE_SELECTED_DASHBOARD_PROJECT_VALUE);
+        this.parameters.setInstance(OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE);
+        this.parameters.setProject(OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE);
 
         fireEvent(this.parameters);
 
-        assertEquals(USE_SELECTED_DASHBOARD_CONNECTION_VALUE, this.parameters.getInstance());
-        assertEquals(USE_SELECTED_DASHBOARD_PROJECT_VALUE, this.parameters.getProject());
+        assertEquals(OpenProjectScriptService.USE_SELECTED_DASHBOARD_CONNECTION_VALUE, this.parameters.getInstance());
+        assertEquals(OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE, this.parameters.getProject());
         verify(this.openProjectAccess, never()).resolve(any());
     }
 

@@ -22,12 +22,16 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -54,12 +58,13 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class SuggestTest
+class SuggestTest
 {
     @MockComponent
     private OpenProjectAccess openProjectAccess;
@@ -86,14 +91,14 @@ public class SuggestTest
     private static final String SEARCH_STRING = "searchString";
 
     @BeforeEach
-    public void setUp()
+    void setUp()
     {
         when(this.openProjectAccess.resolve(INSTANCE))
             .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
     }
 
     @Test
-    public void getSuggestionsForIdentifierTest() throws ProjectManagementException
+    void getSuggestionsForIdentifierSearchesWorkPackageSubjects() throws ProjectManagementException
     {
         PaginatedResult<WorkPackage> workPackagePaginatedResult = new PaginatedResult<>();
 
@@ -228,120 +233,57 @@ public class SuggestTest
             responseEntity.stream().map(suggestion -> suggestion.get("label")).collect(Collectors.toList()));
     }
 
-    @Test
-    public void getSuggestionsForPrioritiesTest() throws ProjectManagementException
+    @FunctionalInterface
+    private interface EntitiesCall
     {
-        PaginatedResult<Priority> priorityPaginatedResult = new PaginatedResult<>();
-
-        Priority priority = new Priority();
-        priority.setId(1);
-        priority.setName("priority");
-        priority.setSelf(new Linkable("1", "location"));
-
-        priorityPaginatedResult.setItems(List.of(priority));
-
-        when(this.openProjectApiClient.getPriorities()).thenReturn(priorityPaginatedResult);
-
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "priorities", SEARCH_STRING, 10, null);
-
-        verify(openProjectApiClient).getPriorities();
-
-        verifySuccessResponse(response, priorityPaginatedResult.getItems());
+        PaginatedResult<? extends BaseOpenProjectObject> call(OpenProjectApiClient client)
+            throws ProjectManagementException;
     }
 
-    @Test
-    public void getSuggestionsForStatusesTest() throws ProjectManagementException
+    private static Stream<Arguments> entitySuggestions()
     {
-        PaginatedResult<Status> statusesPaginatedResult = new PaginatedResult<>();
-
-        Status status = new Status();
-        status.setId(1);
-        status.setName("status");
-        status.setSelf(new Linkable("1", "location"));
-
-        statusesPaginatedResult.setItems(List.of(status));
-
-        when(this.openProjectApiClient.getStatuses()).thenReturn(statusesPaginatedResult);
-
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "statuses", SEARCH_STRING, 10, null);
-
-        verify(openProjectApiClient).getStatuses();
-
-        verifySuccessResponse(response, statusesPaginatedResult.getItems());
-    }
-
-    @Test
-    public void getSuggestionsForProjectsTest() throws ProjectManagementException
-    {
-        PaginatedResult<Project> projectPaginatedResult = new PaginatedResult<>();
-
-        Project project = new Project();
-        project.setId(1);
-        project.setName("project");
-        project.setSelf(new Linkable("1", "location"));
-
-        projectPaginatedResult.setItems(List.of(project));
-
-        when(this.openProjectApiClient.getProjects(anyInt(), anyInt(), anyString())).thenReturn(
-            projectPaginatedResult);
-
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", SEARCH_STRING, 10, null);
-
-        verify(openProjectApiClient).getProjects(
-            OFFSET,
-            PAGE_SIZE,
-            String.format("[{\"%s\":{\"operator\":\"~\",\"values\":[\"%s\"]}}]", "name", SEARCH_STRING.toLowerCase())
+        String nameFilter = String.format("[{\"%s\":{\"operator\":\"~\",\"values\":[\"%s\"]}}]", "name",
+            SEARCH_STRING.toLowerCase());
+        return Stream.of(
+            Arguments.of("priorities", new Priority(), "priority",
+                (EntitiesCall) OpenProjectApiClient::getPriorities, (EntitiesCall) OpenProjectApiClient::getPriorities),
+            Arguments.of("statuses", new Status(), "status",
+                (EntitiesCall) OpenProjectApiClient::getStatuses, (EntitiesCall) OpenProjectApiClient::getStatuses),
+            Arguments.of("projects", new Project(), "project",
+                (EntitiesCall) c -> c.getProjects(anyInt(), anyInt(), anyString()),
+                (EntitiesCall) c -> c.getProjects(OFFSET, PAGE_SIZE, nameFilter)),
+            Arguments.of("types", new Type(), "type",
+                (EntitiesCall) OpenProjectApiClient::getTypes, (EntitiesCall) OpenProjectApiClient::getTypes),
+            Arguments.of("users", new User(), "user",
+                (EntitiesCall) c -> c.getUsers(anyInt(), anyInt(), anyString()),
+                (EntitiesCall) c -> c.getUsers(OFFSET, PAGE_SIZE, nameFilter))
         );
-
-        verifySuccessResponse(response, projectPaginatedResult.getItems());
     }
 
-    @Test
-    public void getSuggestionsForTypeTest() throws ProjectManagementException
+    @ParameterizedTest
+    @MethodSource("entitySuggestions")
+    void getSuggestionsForEntities(String property, BaseOpenProjectObject entity, String entityName,
+        EntitiesCall stubbedCall, EntitiesCall expectedCall) throws ProjectManagementException
     {
-        PaginatedResult<Type> typesPaginatedResult = new PaginatedResult<>();
+        PaginatedResult<BaseOpenProjectObject> paginatedResult = new PaginatedResult<>();
 
-        Type type = new Type();
-        type.setId(1);
-        type.setName("type");
-        type.setSelf(new Linkable("1", "location"));
+        entity.setId(1);
+        entity.setName(entityName);
+        entity.setSelf(new Linkable("1", "location"));
 
-        typesPaginatedResult.setItems(List.of(type));
+        paginatedResult.setItems(List.of(entity));
 
-        when(this.openProjectApiClient.getTypes()).thenReturn(typesPaginatedResult);
+        stubbedCall.call(doReturn(paginatedResult).when(this.openProjectApiClient));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null);
-        verify(openProjectApiClient).getTypes();
-        verifySuccessResponse(response, typesPaginatedResult.getItems());
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, property, SEARCH_STRING, 10, null);
+
+        expectedCall.call(verify(openProjectApiClient));
+
+        verifySuccessResponse(response, paginatedResult.getItems());
     }
 
     @Test
-    public void getSuggestionsForUsersTest() throws ProjectManagementException
-    {
-        PaginatedResult<User> usersPaginatedResult = new PaginatedResult<>();
-
-        User user = new User();
-        user.setId(1);
-        user.setName("user");
-        user.setSelf(new Linkable("1", "location"));
-
-        usersPaginatedResult.setItems(List.of(user));
-
-        when(this.openProjectApiClient.getUsers(anyInt(), anyInt(), anyString())).thenReturn(usersPaginatedResult);
-
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, 10, null);
-
-        verify(openProjectApiClient).getUsers(
-            OFFSET,
-            PAGE_SIZE,
-            String.format("[{\"%s\":{\"operator\":\"~\",\"values\":[\"%s\"]}}]", "name", SEARCH_STRING.toLowerCase())
-        );
-
-        verifySuccessResponse(response, usersPaginatedResult.getItems());
-    }
-
-    @Test
-    public void getSuggestionsForUnknownTest()
+    void getSuggestionsForUnknownPropertyReturnsNothing()
     {
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "unknown", SEARCH_STRING, 10, null);
 
@@ -349,7 +291,7 @@ public class SuggestTest
     }
 
     @Test
-    public void getSuggestionsServerError() throws ProjectManagementException
+    void getSuggestionsServerError() throws ProjectManagementException
     {
         when(this.openProjectApiClient.getTypes()).thenThrow(new ProjectManagementException(
             "Failed to retrieve the OpenProject entities. [internal error details from http://openproject.local]."));
@@ -365,7 +307,7 @@ public class SuggestTest
     }
 
     @Test
-    public void noConfigurationWasFoundTest()
+    void getSuggestionsWithoutConnectionReturnsNotFound()
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
 

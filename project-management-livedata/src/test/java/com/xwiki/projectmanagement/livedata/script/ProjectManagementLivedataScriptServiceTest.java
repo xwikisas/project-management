@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.livedata;
+package com.xwiki.projectmanagement.livedata.script;
 
 import javax.inject.Named;
 
@@ -29,8 +29,6 @@ import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
-
-import com.xwiki.projectmanagement.livadata.script.ProjectManagementLivedataScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -56,7 +54,7 @@ class ProjectManagementLivedataScriptServiceTest
     private LiveDataConfigurationResolver<LiveDataConfiguration> resolver;
 
     @Test
-    void testGetLivedataConfiguration() throws Exception
+    void getLivedataConfigurationForTheClient() throws Exception
     {
         LiveDataConfiguration expectedConfig = new LiveDataConfiguration();
         when(resolver.resolve(any(LiveDataConfiguration.class)))
@@ -76,7 +74,7 @@ class ProjectManagementLivedataScriptServiceTest
     }
 
     @Test
-    void testGetLivedataConfigurationThrowsError() throws Exception
+    void getLivedataConfigurationReturnsNullOnError() throws Exception
     {
         when(resolver.resolve(any(LiveDataConfiguration.class)))
             .thenThrow(new LiveDataException("failure"));

@@ -31,8 +31,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
-import com.xwiki.projectmanagement.livadata.ProjectManagementEntryStore;
-import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
+import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -55,7 +54,7 @@ import static org.mockito.Mockito.when;
  * @since 1.0-rc-4
  */
 @ComponentTest
-public class ProjectManagementEntryStoreTest
+class ProjectManagementEntryStoreTest
 {
     @InjectMockComponents
     private ProjectManagementEntryStore entryStore;

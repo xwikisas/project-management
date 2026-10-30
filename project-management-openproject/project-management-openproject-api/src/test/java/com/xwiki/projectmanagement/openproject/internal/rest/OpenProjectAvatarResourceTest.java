@@ -74,7 +74,7 @@ class OpenProjectAvatarResourceTest
     private OpenProjectApiClient openProjectApiClient;
 
     @Test
-    public void getExistingAvatarTest() throws ProjectManagementException, URISyntaxException
+    void getExistingAvatar() throws ProjectManagementException, URISyntaxException
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
         UserAvatar userAvatar = new UserAvatar(mock(StreamingOutput.class), "test");
@@ -103,7 +103,7 @@ class OpenProjectAvatarResourceTest
     }
 
     @Test
-    public void getAvatarThatDoesNotExistOrFailToRetrieveTest() throws ProjectManagementException, URISyntaxException
+    void getAvatarThatDoesNotExistOrFailsRedirectsToDefault() throws ProjectManagementException, URISyntaxException
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.authenticated(openProjectApiClient));
         when(openProjectApiClient.getUserAvatar("42")).thenThrow(new ProjectManagementException(""));
@@ -121,7 +121,7 @@ class OpenProjectAvatarResourceTest
     }
 
     @Test
-    public void getAvatarWithoutBeingAuthorized() throws URISyntaxException
+    void getAvatarWithoutBeingAuthorized() throws URISyntaxException
     {
         when(openProjectAccess.resolve(any())).thenReturn(OpenProjectAccessResult.notConnected());
 

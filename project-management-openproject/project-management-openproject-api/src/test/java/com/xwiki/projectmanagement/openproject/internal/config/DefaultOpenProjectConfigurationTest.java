@@ -86,14 +86,14 @@ class DefaultOpenProjectConfigurationTest
     }
 
     @Test
-    public void getConnectionsTest()
+    void getOpenProjectConnections()
     {
         List<OpenProjectConnection> result = configuration.getOpenProjectConnections();
         assertEquals(this.connections, result);
     }
 
     @Test
-    public void getConnectionTest()
+    void getConnectionByName()
     {
         OpenProjectConnection result = configuration.getConnection(opConnection.getConnectionName());
 
@@ -101,7 +101,7 @@ class DefaultOpenProjectConfigurationTest
     }
 
     @Test
-    public void getConnectionFailsTest()
+    void getUnknownConnectionReturnsNull()
     {
         String connectionName = "invalidConnection";
 

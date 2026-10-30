@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.livadata.displayer;
+package com.xwiki.projectmanagement.livedata.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional

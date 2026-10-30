@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject;
+package com.xwiki.projectmanagement.openproject.internal;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -27,7 +27,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
@@ -48,8 +47,6 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
-import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.internal.WorkPackageDescriptionCleaner;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -60,8 +57,6 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
-
-import utils.OpenProjectTestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -198,7 +193,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getWorkPackagesTest() throws IOException, ProjectManagementException
+    void getWorkPackagesParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
 
@@ -214,7 +209,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getProjectWorkPackagesTest() throws IOException, ProjectManagementException
+    void getProjectWorkPackagesParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
 
@@ -233,7 +228,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getUsersTest() throws IOException, ProjectManagementException
+    void getUsersParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
 
@@ -251,7 +246,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getAvailableUsersTest() throws IOException, ProjectManagementException
+    void getAvailableUsersParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
 
@@ -269,7 +264,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getProjectsTest() throws IOException, ProjectManagementException
+    void getProjectsParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());
 
@@ -287,7 +282,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getAvailableProjectsTest() throws IOException, ProjectManagementException
+    void getAvailableProjectsParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());
 
@@ -306,7 +301,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getTypesTest() throws IOException, ProjectManagementException
+    void getTypesParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getTypesValidResponse());
 
@@ -320,7 +315,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getStatusesTest() throws IOException, ProjectManagementException
+    void getStatusesParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getStatusesValidResponse());
 
@@ -334,7 +329,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getPrioritiesTest() throws IOException, ProjectManagementException
+    void getPrioritiesParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getPrioritiesValidResponse());
 
@@ -348,7 +343,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getAvatarTest() throws ProjectManagementException
+    void getUserAvatarNormalizesContentType() throws ProjectManagementException
     {
         when(response.statusCode()).thenReturn(200);
         HttpHeaders headers = HttpHeaders.of(Map.of("Content-Type", List.of("Image/PNG; charset=binary")),
@@ -452,7 +447,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void getWorkPackagesFormResponseTest() throws ProjectManagementException
+    void getWorkPackagesFormResponseParsesBody() throws ProjectManagementException
     {
         String jsonBody = "{}";
         when(this.response.body()).thenReturn(jsonBody);
@@ -501,7 +496,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void projectWorkPackagesUrlParametersTest()
+    void getProjectWorkPackagesBuildsUrlParameters()
         throws ProjectManagementException, IOException, InterruptedException
     {
         when(this.response.body()).thenReturn("{}");
@@ -523,7 +518,7 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
-    void workPackagesUrlParametersTest() throws ProjectManagementException, IOException, InterruptedException
+    void getWorkPackagesBuildsUrlParameters() throws ProjectManagementException, IOException, InterruptedException
     {
         when(this.response.body()).thenReturn("{}");
 

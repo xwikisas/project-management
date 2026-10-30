@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.openproject;
+package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -30,7 +30,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
 
 import org.mockito.MockedStatic;
 import org.xwiki.livedata.LiveDataQuery;
@@ -49,8 +48,8 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
-import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
@@ -123,7 +122,7 @@ class OpenProjectClientTest
     private static final Integer NUMBER_OF_WORK_PACKAGES = 10;
 
     @BeforeEach
-    public void setUp() throws ProjectManagementException
+    void setUp() throws ProjectManagementException
     {
         when(executionContext.get("instance")).thenReturn("");
         when(openProjectAccess.resolve(any()))
@@ -262,19 +261,19 @@ class OpenProjectClientTest
     }
 
     @Test
-    public void getWorkItemsWithoutIdentifierTest() throws ProjectManagementException
+    void getWorkItemsWithoutIdentifier() throws ProjectManagementException
     {
-        getWorkItemsTest(null, 1, 0, NUMBER_OF_WORK_PACKAGES);
+        assertWorkItems(null, 1, 0, NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
-    public void getWorkItemsWithIdentifierAsUrl() throws ProjectManagementException
+    void getWorkItemsWithIdentifierAsUrl() throws ProjectManagementException
     {
-        getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, NUMBER_OF_WORK_PACKAGES);
+        assertWorkItems("http://open-project-instance/work_packages", 1, 0, NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
-    public void getWorkItemsWithIdentifierAsIds() throws ProjectManagementException
+    void getWorkItemsWithIdentifierAsIds() throws ProjectManagementException
     {
         when(executionContext.get("identifier")).thenReturn("1,2,3,4,5,6,7,8,9,10");
 
@@ -283,7 +282,8 @@ class OpenProjectClientTest
         verify(openProjectApiClient, times(1)).getWorkPackages(anyInt(), anyInt(),
             argThat(actual -> jsonEquals(
                 actual,
-                "[{\"id\":{\"operator\":\"=\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}}]")),
+                "[{\"id\":{\"operator\":\"=\",\"values\":"
+                    + "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\",\"9\",\"10\"]}}]")),
             anyString()
         );
 
@@ -382,24 +382,24 @@ class OpenProjectClientTest
     }
 
     @Test
-    public void getWorkItemsWithIdentifierAndProjectTest() throws ProjectManagementException
+    void getWorkItemsWithIdentifierAndProject() throws ProjectManagementException
     {
-        getWorkItemsTest("http://open-project-instance/projects/first-project/work_packages", 0, 1,
+        assertWorkItems("http://open-project-instance/projects/first-project/work_packages", 0, 1,
             NUMBER_OF_WORK_PACKAGES);
     }
 
     @Test
-    public void getWorkPackagesInvalidFiltersOrSortingTest() throws ProjectManagementException
+    void getWorkItemsLogsBadRequestAndReturnsNothing() throws ProjectManagementException
     {
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
             WorkPackageRetrievalBadRequestException.class);
 
-        getWorkItemsTest("http://open-project-instance/work_packages", 1, 0, 0);
+        assertWorkItems("http://open-project-instance/work_packages", 1, 0, 0);
         assertEquals("Failed to retrieve work packages: null", this.logCapture.getMessage(0));
     }
 
     @Test
-    public void getWorkPackagesThrowsProjectManagementExceptionTest() throws ProjectManagementException
+    void getWorkItemsWrapsProjectManagementException() throws ProjectManagementException
     {
         when(openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString())).thenThrow(
             ProjectManagementException.class);
@@ -409,7 +409,7 @@ class OpenProjectClientTest
     }
 
     @Test
-    public void getWorkPackagesWithBadFiltersOrSortingJsonRepresentation()
+    void getWorkPackagesWithBadFiltersOrSortingJsonRepresentation()
     {
         try (
             MockedStatic<OpenProjectFilterHandler> filterMock = mockStatic(OpenProjectFilterHandler.class);
@@ -466,7 +466,7 @@ class OpenProjectClientTest
             this.logCapture.getMessage(0));
     }
 
-    private void getWorkItemsTest(String identifier, int expectedWorkPackagesCalls,
+    private void assertWorkItems(String identifier, int expectedWorkPackagesCalls,
         int expectedProjectWorkPackagesCalls, int expectedElements) throws ProjectManagementException
     {
 

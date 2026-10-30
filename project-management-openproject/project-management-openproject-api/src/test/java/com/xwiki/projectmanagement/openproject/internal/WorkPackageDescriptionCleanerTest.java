@@ -79,8 +79,9 @@ class WorkPackageDescriptionCleanerTest
     void makeRelativeLinksAbsolute()
     {
         // The link of a #13 work package reference, as rendered by OpenProject.
-        assertEquals("<p>See <a class=\"issue work_package op-uc-link\" href=\"https://op.example.org/work_packages/13\""
-            + " target=\"_top\">#13</a> and <a href=\"https://www.xwiki.org/\">XWiki</a>.</p>",
+        assertEquals("<p>See <a class=\"issue work_package op-uc-link\""
+            + " href=\"https://op.example.org/work_packages/13\" target=\"_top\">#13</a> and"
+            + " <a href=\"https://www.xwiki.org/\">XWiki</a>.</p>",
             this.cleaner.clean("<p>See <a class=\"issue work_package op-uc-link\" "
                 + "href=\"/work_packages/13\" target=\"_top\">#13</a> and "
                 + "<a href=\"https://www.xwiki.org/\">XWiki</a>.</p>", SERVER_URL));

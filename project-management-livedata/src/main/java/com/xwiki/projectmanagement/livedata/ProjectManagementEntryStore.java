@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.livadata;
+package com.xwiki.projectmanagement.livedata;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -43,7 +43,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
-import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
+import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;

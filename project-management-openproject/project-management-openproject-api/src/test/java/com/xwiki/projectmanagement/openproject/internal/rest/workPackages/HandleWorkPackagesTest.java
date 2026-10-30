@@ -42,12 +42,11 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
 import com.xwiki.projectmanagement.openproject.model.Project;
-
-import utils.OpenProjectTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -61,7 +60,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class HandleWorkPackagesTest
+class HandleWorkPackagesTest
 {
     @MockComponent
     private OpenProjectAccess openProjectAccess;
@@ -83,14 +82,14 @@ public class HandleWorkPackagesTest
     final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
-    public void setUp()
+    void setUp()
     {
         when(this.openProjectAccess.resolve(INSTANCE))
             .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
     }
 
     @Test
-    public void getAvailableProjectsReturnsConflictWhenTokenIsNullTest() throws ProjectManagementException
+    void getAvailableProjectsReturnsConflictWhenNotConnected() throws ProjectManagementException
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
 
@@ -99,7 +98,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void getAvailableProjectsReturnsConflictWithAnonymousAccess() throws ProjectManagementException
+    void getAvailableProjectsReturnsConflictWithAnonymousAccess() throws ProjectManagementException
     {
         when(this.openProjectAccess.resolve(INSTANCE))
             .thenReturn(OpenProjectAccessResult.anonymous(this.openProjectApiClient));
@@ -156,7 +155,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void getAvailableProjectsTest() throws ProjectManagementException, IOException
+    void getAvailableProjectsReturnsValueLabelPairs() throws ProjectManagementException, IOException
     {
         List<Project> projects = generateProjects();
 
@@ -181,7 +180,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void getAvailableProjectsThrowsProjectManagementExceptionTest() throws ProjectManagementException,
+    void getAvailableProjectsThrowsOnErrorFormResponse() throws ProjectManagementException,
         JsonProcessingException
     {
         String jsonResponse = "{\"_type\":\"Error\"}";
@@ -196,7 +195,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void createWorkPackageValidationTest() throws ProjectManagementException, IOException
+    void createWorkPackageReturnsValidationErrors() throws ProjectManagementException, IOException
     {
         CreateWorkPackage createWorkPackage = generateCreateWorkPackage();
 
@@ -229,7 +228,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void createWorkPackageTest() throws ProjectManagementException, IOException
+    void createWorkPackageCommitsValidatedPayload() throws ProjectManagementException, IOException
     {
         String validationSuccessResponseJsonString =
             OpenProjectTestUtils.getCreateWorkPackageValidationSuccessResponse();
@@ -253,7 +252,7 @@ public class HandleWorkPackagesTest
     }
 
     @Test
-    public void createWorkPackageFails() throws ProjectManagementException, IOException
+    void createWorkPackageFails() throws ProjectManagementException, IOException
     {
         String validationSuccessResponseJsonString =
             OpenProjectTestUtils.getCreateWorkPackageValidationSuccessResponse();

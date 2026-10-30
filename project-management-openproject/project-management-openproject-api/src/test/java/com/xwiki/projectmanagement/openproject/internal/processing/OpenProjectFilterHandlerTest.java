@@ -34,12 +34,12 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OpenProjectFilterHandlerTest
+class OpenProjectFilterHandlerTest
 {
     final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void convertFiltersTest() throws ProjectManagementException, JsonProcessingException
+    void convertFiltersToOpenProjectJson() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
 
@@ -61,7 +61,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void sameOperatorInFilterTest() throws ProjectManagementException, JsonProcessingException
+    void mergeFiltersGroupsConstraintsWithSameOperator() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
 
@@ -95,7 +95,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void sameFilterDifferentOperatorsInLivedataFiltersTest()
+    void sameFilterDifferentOperatorsInLivedataFilters()
         throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
@@ -125,7 +125,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void openProjectFiltersTest() throws JsonProcessingException, ProjectManagementException
+    void mergeFiltersConvertsOpenProjectFilters() throws JsonProcessingException, ProjectManagementException
     {
         String opFiltersString = "["
             + "{\"n\":\"identifier\",\"o\":\"contains\",\"v\":[\"value1\"]},"
@@ -146,7 +146,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void liveDataAndOpenProjectFiltersTest() throws JsonProcessingException, ProjectManagementException
+    void liveDataAndOpenProjectFilters() throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
 
@@ -177,7 +177,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void liveDataAndOpenProjectSameFilterInBothSourcesTest()
+    void liveDataAndOpenProjectSameFilterInBothSources()
         throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = new ArrayList<>();
@@ -206,7 +206,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void mergeApiFiltersOnDifferentPropertiesTest() throws JsonProcessingException, ProjectManagementException
+    void mergeApiFiltersOnDifferentProperties() throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"));
         JsonNode apiFilters = mapper.readTree("[{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
@@ -220,7 +220,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void mergeApiFiltersOnSamePropertyAndOperatorTest() throws JsonProcessingException, ProjectManagementException
+    void mergeApiFiltersOnSamePropertyAndOperator() throws JsonProcessingException, ProjectManagementException
     {
         // The livedata property is mapped to the OpenProject one (identifier -> id) before merging.
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("identifier", "equals", "5"),
@@ -234,7 +234,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void mergeApiFiltersOnSamePropertyWithDifferentOperatorsTest()
+    void mergeApiFiltersOnSamePropertyWithDifferentOperators()
         throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "equals", "1"));
@@ -250,7 +250,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void mergeApiFiltersWithoutApiFiltersTest() throws JsonProcessingException, ProjectManagementException
+    void mergeApiFiltersWithoutApiFilters() throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"));
         String expected = "[{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]";
@@ -260,7 +260,7 @@ public class OpenProjectFilterHandlerTest
     }
 
     @Test
-    void convertDateRangeFilterTest() throws JsonProcessingException, ProjectManagementException
+    void convertDateRangeFilter() throws JsonProcessingException, ProjectManagementException
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "contains", "bug"),
             new LiveDataQuery.Filter("dateRange", "between", "2026-10-01T00:00:00Z/2026-11-01T00:00:00Z"));

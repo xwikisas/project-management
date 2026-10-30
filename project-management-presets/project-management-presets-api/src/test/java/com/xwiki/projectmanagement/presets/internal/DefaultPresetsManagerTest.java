@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement.presets;
+package com.xwiki.projectmanagement.presets.internal;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,7 +58,7 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xwiki.projectmanagement.presets.internal.DefaultPresetsManager;
+import com.xwiki.projectmanagement.presets.Preset;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -76,7 +76,7 @@ import static org.mockito.Mockito.when;
 
 @ComponentTest
 @ComponentList({ DocumentQueryFilter.class, ViewableQueryFilter.class })
-public class DefaultPresetsManagerTest
+class DefaultPresetsManagerTest
 {
     private static final String DEFAULT_PRESET_ID = "Preset.MyPreset";
 
@@ -179,7 +179,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getPresetsTest() throws QueryException
+    void getNormalPresets() throws QueryException
     {
         List<Preset> presets = this.presetsManager.getPresets(false, 0, 10);
         assertQueryContains("isMultiple = 0");
@@ -187,7 +187,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getChartPresetsTest() throws QueryException
+    void getChartPresets() throws QueryException
     {
         List<Preset> presets = this.presetsManager.getPresets(true, 0, 10);
         assertQueryContains("isMultiple = 1");
@@ -195,7 +195,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getNoPresetsTest() throws QueryException
+    void getPresetsWhenNoneExist() throws QueryException
     {
         mockQueryResults(Collections.emptyList());
         List<Preset> presets = this.presetsManager.getPresets(true, 0, 10);
@@ -203,7 +203,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getPresetsFailTest() throws QueryException
+    void getPresetsWhenTheQueryFails() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
         RuntimeException exception =
@@ -212,7 +212,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getClientPresetsTest() throws QueryException
+    void getNormalClientPresets() throws QueryException
     {
         List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, false, 0, 10);
         assertQueryContains("isMultiple = 0");
@@ -221,7 +221,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getChartClientPresetsTest() throws QueryException
+    void getChartClientPresets() throws QueryException
     {
         List<Preset> presets = this.presetsManager.getClientPresets(DEFAULT_CLIENT_ID, true, 0, 10);
         assertQueryContains("isMultiple = 1");
@@ -230,7 +230,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getPresetTest()
+    void getPresetById()
     {
         Preset preset = this.presetsManager.getPreset(10);
         verify(this.query).bindValue(any(String.class), eq(10));
@@ -238,7 +238,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getNoPresetTest() throws QueryException
+    void getPresetReturnsNullWhenNotFound() throws QueryException
     {
         mockQueryResults(Collections.emptyList());
         Preset preset = this.presetsManager.getPreset(10);
@@ -247,7 +247,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getPresetFailTest() throws QueryException
+    void getPresetWhenTheQueryFails() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
         RuntimeException exception =
@@ -256,7 +256,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getNextIdTest() throws QueryException
+    void getNextIdIncrementsTheMaxExistingId() throws QueryException
     {
         int maxExistingId = 10;
         mockQueryResults(Collections.singletonList(maxExistingId));
@@ -265,7 +265,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getNextIdWithNoExistingTest() throws QueryException
+    void getNextIdWithNoExistingPreset() throws QueryException
     {
         mockQueryResults(Collections.emptyList());
         Integer id = this.presetsManager.getNextId();
@@ -273,7 +273,7 @@ public class DefaultPresetsManagerTest
     }
 
     @Test
-    public void getNextIdFailTest() throws QueryException
+    void getNextIdWhenTheQueryFails() throws QueryException
     {
         when(this.query.execute()).thenThrow(QueryException.class);
         RuntimeException exception = assertThrows(RuntimeException.class, () -> this.presetsManager.getNextId());

@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,6 +54,17 @@ public final class OpenProjectMacroTestUtils
 {
     private OpenProjectMacroTestUtils()
     {
+    }
+
+    /**
+     * @param year the year
+     * @param month the month, from 1 (January) to 12 (December)
+     * @param day the day of the month
+     * @return the start of the given day, in the default time zone
+     */
+    public static Date date(int year, int month, int day)
+    {
+        return Date.from(LocalDate.of(year, month, day).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     /**

@@ -21,29 +21,58 @@ package com.xwiki.projectmanagement;
 
 import java.util.Map;
 
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.icon.IconManager;
-import org.xwiki.rendering.test.integration.RenderingTestSuite;
+import org.xwiki.rendering.test.integration.junit5.RenderingTests;
 import org.xwiki.skinx.SkinExtension;
+import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.AllComponents;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.mockito.MockitoComponentManager;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.oneOf;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
- * Run all tests found in {@code *.test} files located in the classpath. These {@code *.test} files must follow the
- * conventions described in {@link org.xwiki.rendering.test.integration.TestDataParser}.
+ * Run all tests found in the {@code *.test} files located in the {@code projectmanagement} folder of the classpath.
+ * These {@code *.test} files must follow the conventions described in
+ * {@link org.xwiki.rendering.test.integration.TestDataParser}.
  *
  * @version $Id$
  */
-@RunWith(RenderingTestSuite.class)
 @AllComponents
-public class IntegrationTests
+@RenderingTests.Scope("projectmanagement")
+public class IntegrationTests implements RenderingTests
 {
-    @RenderingTestSuite.Initialized
+    /**
+     * The components loaded by {@link AllComponents} log errors that don't affect the rendering, such as the missing
+     * {@code xwiki.cfg} file or the missing Expression Language implementation needed by the Bean Validation. Only
+     * these known errors are accepted, so that any other warning or error still fails the tests.
+     */
+    private static final String[] EXPECTED_LOG_MESSAGES = {
+        "Failed to load configuration",
+        "Failed to build the Bean Validation provider. There will be no Java bean validation."
+    };
+
+    @RegisterExtension
+    static LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
+    @AfterEach
+    void afterEach()
+    {
+        for (int i = 0; i < logCapture.size(); i++) {
+            assertThat(logCapture.getMessage(i), is(oneOf(EXPECTED_LOG_MESSAGES)));
+        }
+        logCapture.ignoreAllMessages();
+    }
+
+    @RenderingTests.Initialized
     public void initialize(MockitoComponentManager componentManager) throws Exception
     {
         componentManager.registerMockComponent(IconManager.class);
