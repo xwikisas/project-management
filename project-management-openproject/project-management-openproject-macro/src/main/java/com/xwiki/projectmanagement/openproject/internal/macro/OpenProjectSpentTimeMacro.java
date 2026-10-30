@@ -105,7 +105,8 @@ public class OpenProjectSpentTimeMacro
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        String filters = buildFilters(parameters.getProject(), parameters.getDays());
+        boolean hasProject = hasProject(parameters.getProject());
+        String filters = buildFilters(hasProject ? parameters.getProject() : null, parameters.getDays());
 
         List<TimeEntry> entries;
         try {
@@ -115,7 +116,6 @@ public class OpenProjectSpentTimeMacro
         }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
-        boolean hasProject = isNotBlank(parameters.getProject());
         String linkUrl = hasProject
             ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
@@ -127,7 +127,7 @@ public class OpenProjectSpentTimeMacro
 
     private String buildFilters(String project, int days)
     {
-        boolean hasProject = isNotBlank(project);
+        boolean hasProject = project != null;
         if (!hasProject && days <= 0) {
             return EMPTY_FILTER;
         }
@@ -141,11 +141,6 @@ public class OpenProjectSpentTimeMacro
             filterBuilder.addFilter(CREATED_AT_PROPERTY, BETWEEN_DATES_OPERATOR, List.of(startDate, endDate));
         }
         return filterBuilder.build();
-    }
-
-    private static boolean isNotBlank(String value)
-    {
-        return value != null && !value.isBlank();
     }
 
     private List<Block> buildContent(List<TimeEntry> entries, String linkLabel, String linkUrl)

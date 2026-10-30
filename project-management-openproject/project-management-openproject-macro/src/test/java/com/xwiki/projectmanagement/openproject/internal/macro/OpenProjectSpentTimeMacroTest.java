@@ -217,6 +217,18 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void failsWhenTheDashboardProjectIsNotResolved()
+    {
+        this.parameters.setProject("use_selected_dashboard_project");
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
+            + "explicitly when the macro is not on the dashboard.", exception.getMessage());
+    }
+
+    @Test
     void failsWhenTheTimeEntriesCannotBeRetrieved() throws Exception
     {
         ProjectManagementException cause = new ProjectManagementException("unreachable");

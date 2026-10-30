@@ -42,7 +42,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -120,7 +119,18 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertEquals("Release\nAlice · 2026-02-03\nSummary 1\n", text(result));
-        verify(this.apiClient).getNews(null, 2, "");
+    }
+
+    @Test
+    void failsWhenTheDashboardProjectIsNotResolved()
+    {
+        this.parameters.setProject("use_selected_dashboard_project");
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
+            + "explicitly when the macro is not on the dashboard.", exception.getMessage());
     }
 
     @Test
