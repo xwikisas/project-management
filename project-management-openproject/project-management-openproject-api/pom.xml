@@ -95,6 +95,13 @@
       <artifactId>xwiki-platform-rest-api</artifactId>
       <version>${platform.version}</version>
     </dependency>
+    <!-- Provides the "solr" REST search source used to search the pages linked to OpenProject. It's not part of every
+      XWiki distribution. -->
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-search-solr-rest</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
     <!-- Needed for scheduling the automatic syncing of OpenProject styles. -->
     <dependency>
       <groupId>org.xwiki.platform</groupId>
