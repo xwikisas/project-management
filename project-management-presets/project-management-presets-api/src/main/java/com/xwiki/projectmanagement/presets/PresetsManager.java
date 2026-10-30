@@ -38,7 +38,7 @@ public interface PresetsManager
      * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the returned list relative to the superset.
      * @param limit the maximum number of preset objects returned.
-     * @return a list of presets that matches the offset and limit.
+     * @return a list of presets that matches the offset and limit, limited to the presets the current user can view.
      */
     List<Preset> getPresets(Boolean chart, int offset, int limit);
 
@@ -47,18 +47,23 @@ public interface PresetsManager
      * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the result set.
      * @param limit the maximum size that will be returned.
-     * @return a list of presets that were configured for a specific ProjectManagement client.
+     * @return a list of presets that were configured for a specific ProjectManagement client, limited to the presets
+     *     the current user can view.
      */
     List<Preset> getClientPresets(String client, Boolean chart, int offset, int limit);
 
     /**
+     * Resolves a preset by its id, on behalf of the current content author (e.g. the author of the page holding the
+     * macro that uses the preset), so that a preset used by a page can be applied for any user who can view that page.
+     *
      * @param id the id of the Preset.
-     * @return the first Preset that matches the name.
+     * @return the first Preset that matches the id, or {@code null} if there is none or if the current content author
+     *     can't view it.
      */
     Preset getPreset(Integer id);
 
     /**
-     * @return an id that is not assigned to any existing Preset.
+     * @return an id that is not assigned to any existing Preset (including the presets the current user can't view).
      */
     int getNextId();
 }

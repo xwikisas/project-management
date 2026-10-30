@@ -41,7 +41,7 @@ import com.xpn.xwiki.objects.BaseObjectReference;
  * holds the duration of the cache) change, so that the change applies right away.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 @Component
 @Singleton

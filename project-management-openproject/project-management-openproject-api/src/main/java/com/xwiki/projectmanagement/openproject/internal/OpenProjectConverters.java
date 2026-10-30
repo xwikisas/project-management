@@ -70,7 +70,7 @@ public final class OpenProjectConverters
      * @param workPackage the {@link WorkPackage} to convert
      * @param fields the work package fields of the OpenProject instance that the work package comes from
      * @return a {@link WorkItem} containing the mapped data
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public static WorkItem convertWorkPackageToWorkItem(WorkPackage workPackage, OpenProjectWorkItemFields fields)
     {

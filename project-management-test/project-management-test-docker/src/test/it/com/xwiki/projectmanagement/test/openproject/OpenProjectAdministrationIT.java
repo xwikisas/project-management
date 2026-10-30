@@ -84,12 +84,20 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 
     @Test
     @Order(2)
-    void tryToAddConnectionWithSameName()
+    void tryToAddInvalidConnection()
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.addNewConnection(CONNECTION_ID, "someurl", "someid", "somesecret");
+        adminPage.addNewConnection(CONNECTION_ID, this.openProject.getBaseUrl(), "someid", "somesecret");
         adminPage.waitForNotificationErrorMessage(
             String.format("Connection %s already exists. Use another connection name.", CONNECTION_ID));
+
+        // The server URL must be an absolute HTTP or HTTPS URL.
+        adminPage = OpenProjectAdminPage.gotoPage();
+        adminPage.addNewConnection("invalidURL", "someurl", "someid", "somesecret");
+        adminPage.waitForNotificationErrorMessage("The server URL [someurl] is not valid: it must be an absolute HTTP "
+            + "or HTTPS URL, e.g. [https://openproject.example.com].");
+        adminPage = OpenProjectAdminPage.gotoPage();
+        assertEquals(-1, adminPage.getConnectionIndex("invalidURL"));
     }
 
     @Test
@@ -109,7 +117,7 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         assertEquals("Not yet authorized", livedata.getCell(AUTHORIZED_COLUMN, index).getText());
         assertEquals(3, adminPage.getConnectionActionCount(index));
 
-        adminPage.updateConnection(index, newName, "asd", "asd", "asd");
+        adminPage.updateConnection(index, newName, this.openProject.getBaseUrl(), "asd", "asd");
         adminPage.waitForNotificationSuccessMessage(String.format(SAVED_MESSAGE, newName));
         assertEquals(-1, adminPage.getConnectionIndex(name));
         index = adminPage.getConnectionIndex(newName);

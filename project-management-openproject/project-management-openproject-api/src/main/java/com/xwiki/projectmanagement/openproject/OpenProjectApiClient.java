@@ -101,7 +101,7 @@ public interface OpenProjectApiClient
      * @param idOrKey the id or the key of the work package.
      * @return the work package, or {@code null} if it doesn't exist or isn't visible to the user of the client.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the work package.
-     * @since 1.3.1
+     * @since 1.4.0
      */
     default WorkPackage getWorkPackage(String idOrKey) throws ProjectManagementException
     {
@@ -257,7 +257,7 @@ public interface OpenProjectApiClient
      *
      * @return a {@link PaginatedResult} containing the list of {@link WorkPackageField}
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the fields
-     * @since 1.3.1
+     * @since 1.4.0
      */
     default PaginatedResult<WorkPackageField> getWorkPackageFields() throws ProjectManagementException
     {

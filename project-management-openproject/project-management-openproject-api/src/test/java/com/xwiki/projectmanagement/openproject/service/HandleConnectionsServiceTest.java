@@ -27,6 +27,9 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.internal.document.DefaultDocumentAuthors;
@@ -55,15 +58,19 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.service.ConnectionSaveException;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
@@ -176,7 +183,8 @@ public class HandleConnectionsServiceTest
         when(doc.getAuthors()).thenReturn(documentAuthors);
 
         openProjectConnection =
-            new OpenProjectConnection("connectionName", "serverUrl", "clientId", "clientSecret", "instanceId");
+            new OpenProjectConnection("connectionName", "https://openproject.example.com", "clientId", "clientSecret",
+                "instanceId");
     }
 
     @Test
@@ -184,12 +192,13 @@ public class HandleConnectionsServiceTest
     {
         mockOtherConnectionDocument(adminReference);
 
-        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> handleConnectionsService.handleConnection(openProjectConnection,
                 documentReference));
 
         assertEquals("Connection connectionName already exists. Use another connection name.",
             exception.getMessage());
+        assertTrue(exception.isConflict());
         verify(this.query).setWiki(WIKI_NAME);
         verify(xwiki, never()).saveDocument(any(), any(), any());
     }
@@ -212,12 +221,13 @@ public class HandleConnectionsServiceTest
         documentAuthors.setEffectiveMetadataAuthor(mockAuthor(simpleUserReference));
         when(this.compactSerializer.serialize(documentReference)).thenReturn("ProjectManagement.Code.FirstConnection");
 
-        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> handleConnectionsService.handleConnection(openProjectConnection, documentReference));
 
         assertEquals("The page [ProjectManagement.Code.FirstConnection] can't be updated because it was last "
             + "modified by a user without administration right on the wiki. Delete the connection and create it "
             + "again.", exception.getMessage());
+        assertTrue(exception.isConflict());
         verify(xwiki, never()).saveDocument(any(), any(), any());
     }
 
@@ -258,16 +268,75 @@ public class HandleConnectionsServiceTest
     }
 
     @Test
+    void handleConnectionKeepsCreatorAndContentAuthorOfExistingPage() throws Exception
+    {
+        when(this.doc.isNew()).thenReturn(false);
+        documentAuthors.setEffectiveMetadataAuthor(mockAuthor(adminReference));
+        UserReference creator = mock(UserReference.class);
+        documentAuthors.setCreator(creator);
+        UserReference contentAuthor = mock(UserReference.class);
+        documentAuthors.setContentAuthor(contentAuthor);
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+
+        assertEquals(creator, documentAuthors.getCreator());
+        assertEquals(contentAuthor, documentAuthors.getContentAuthor());
+        assertEquals(userReference, documentAuthors.getEffectiveMetadataAuthor());
+        assertEquals(userReference, documentAuthors.getOriginalMetadataAuthor());
+        verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = { "serverUrl", "openproject.example.com", "file:///etc/passwd",
+        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/", "http://", "https:///path",
+        "http://open project", " https://openproject.example.com" })
+    void handleConnectionRefusesInvalidServerURL(String serverURL) throws Exception
+    {
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+        openProjectConnection.setServerURL(serverURL);
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> handleConnectionsService.handleConnection(openProjectConnection, documentReference));
+
+        assertEquals(String.format("The server URL [%s] is not valid: it must be an absolute HTTP or HTTPS URL, e.g. "
+            + "[https://openproject.example.com].", serverURL), exception.getMessage());
+        assertFalse(exception.isConflict());
+        verify(this.openProjectApiClientFactory, never()).builder();
+        verifyNoInteractions(this.openProjectApiClient);
+        verify(xwiki, never()).saveDocument(any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject",
+        "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com/" })
+    void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
+    {
+        when(this.query.execute()).thenReturn(List.of());
+        mockConnectionObjects();
+        openProjectConnection.setServerURL(serverURL);
+
+        handleConnectionsService.handleConnection(openProjectConnection, documentReference);
+
+        verify(this.openProjectApiClientBuilder).serverUrl(serverURL);
+        verify(xwiki).saveDocument(doc, "Saved OpenProject and OIDC config via REST", xContext);
+    }
+
+    @Test
     void handleConnectionRefusesPageOutsideConnectionsSpace() throws Exception
     {
         DocumentReference outsideReference = new DocumentReference(WIKI_NAME, List.of("Space"), "Connection");
         when(this.compactSerializer.serialize(outsideReference)).thenReturn("Space.Connection");
 
-        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> handleConnectionsService.handleConnection(openProjectConnection, outsideReference));
 
         assertEquals("The connection can't be saved on the page [Space.Connection]: the connections must be saved in "
             + "the [OpenProject.Code.OpenProjectConfigurations] space.", exception.getMessage());
+        assertFalse(exception.isConflict());
         verify(xwiki, never()).getDocument(eq(outsideReference), any(XWikiContext.class));
         verify(xwiki, never()).saveDocument(any(), any(), any());
     }
@@ -278,10 +347,11 @@ public class HandleConnectionsServiceTest
         when(this.query.execute()).thenReturn(List.of());
         openProjectConnection.setClientSecret(" ");
 
-        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> handleConnectionsService.handleConnection(openProjectConnection, documentReference));
 
         assertEquals("The client secret is required.", exception.getMessage());
+        assertFalse(exception.isConflict());
         verify(xwiki, never()).saveDocument(any(), any(), any());
     }
 

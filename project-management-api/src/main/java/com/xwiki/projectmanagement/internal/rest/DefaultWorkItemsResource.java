@@ -25,7 +25,6 @@ import java.util.Collections;
 import javax.inject.Named;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.livedata.LiveDataException;
@@ -47,6 +46,8 @@ import com.xwiki.projectmanagement.rest.WorkItemsResource;
 @Named("com.xwiki.projectmanagement.internal.rest.DefaultWorkItemsResource")
 public class DefaultWorkItemsResource extends AbstractProjectManagementResource implements WorkItemsResource
 {
+    private static final int HTTP_NOT_IMPLEMENTED = 501;
+
     @Override
     public Response getWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
@@ -92,18 +93,24 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
     @Override
     public Response createWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
     {
-        throw new NotImplementedException();
+        return notImplemented("creating");
     }
 
     @Override
     public Response updateWorkItem(String wiki, String projectManagementHint, WorkItem workItem)
     {
-        throw new NotImplementedException();
+        return notImplemented("updating");
     }
 
     @Override
     public Response deleteWorkItem(String wiki, String projectManagementHint, String workItemId)
     {
-        throw new NotImplementedException();
+        return notImplemented("deleting");
+    }
+
+    private Response notImplemented(String operation)
+    {
+        return Response.status(HTTP_NOT_IMPLEMENTED)
+            .entity(String.format("The REST API doesn't support %s work items.", operation)).build();
     }
 }

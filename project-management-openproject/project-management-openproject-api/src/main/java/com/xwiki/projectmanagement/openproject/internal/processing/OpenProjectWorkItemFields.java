@@ -51,7 +51,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  * between instances, and the other fields by their key in the OpenProject API (e.g. {@code category}).
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public final class OpenProjectWorkItemFields
 {

@@ -100,7 +100,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
      *
      * @param index the index of the connection from the livedata. It starts at 1.
      * @param showPublicData {@code true} to show the public data of the connection to these users
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void setShowPublicData(int index, boolean showPublicData)
     {
@@ -123,7 +123,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
      *
      * @param index the index of the connection from the livedata. It starts at 1.
      * @return the hint displayed under the client secret field, or an empty string when there is none
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getEditConnectionClientSecretHint(int index)
     {
@@ -136,7 +136,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
      * without saving.
      *
      * @return the hint displayed under the client secret field, or an empty string when there is none
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getNewConnectionClientSecretHint()
     {
@@ -280,7 +280,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     /**
      * @param index the index of the connection in the connections Live Data, starting from 1
      * @return the number of actions that can be performed on the connection
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public int getConnectionActionCount(int index)
     {

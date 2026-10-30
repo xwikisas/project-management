@@ -24,19 +24,22 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.block.match.ClassBlockMatcher;
+import org.xwiki.rendering.internal.macro.DefaultMacroContentParser;
 import org.xwiki.rendering.macro.MacroContentParser;
 import org.xwiki.rendering.parser.Parser;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.annotation.AllComponents;
 import org.xwiki.test.junit5.mockito.ComponentTest;
-import org.xwiki.test.junit5.mockito.InjectComponentManager;
-import org.xwiki.test.mockito.MockitoComponentManager;
+import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -53,22 +56,31 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link PieChartDisplayer}.
+ * Unit tests for {@link PieChartDisplayer}. The displayer and the components it uses are the real ones, except for the
+ * macro content parser, so that the test checks the wiki syntax actually generated for the chart, parsed by the real
+ * XWiki 2.1 parser.
  *
  * @version $Id$
  */
 @ComponentTest
-@AllComponents
+@AllComponents(excludes = DefaultMacroContentParser.class)
 class PieChartDisplayerTest
 {
-    @InjectComponentManager
-    private MockitoComponentManager componentManager;
+    @MockComponent
+    private MacroContentParser contentParser;
+
+    @Inject
+    @Named("pie")
+    private ChartTypeDisplayer displayer;
+
+    @Inject
+    @Named("xwiki/2.1")
+    private Parser parser;
 
     @Test
     void executeWithValuesHoldingWikiSyntax() throws Exception
     {
-        MacroContentParser contentParser = this.componentManager.registerMockComponent(MacroContentParser.class);
-        when(contentParser.parse(anyString(), any(MacroTransformationContext.class), anyBoolean(),
+        when(this.contentParser.parse(anyString(), any(MacroTransformationContext.class), anyBoolean(),
             anyBoolean())).thenReturn(new XDOM(Collections.emptyList()));
         String status = "Done\"}{{/chartjs}}{{html}}<p>text</p>{{/html}}{{chartjs}}{\"";
         WorkItem workItem = new WorkItem();
@@ -76,16 +88,14 @@ class PieChartDisplayerTest
         WorkItem otherWorkItem = new WorkItem();
         otherWorkItem.put(WorkItem.KEY_STATUS, "New");
 
-        ChartTypeDisplayer displayer = this.componentManager.getInstance(ChartTypeDisplayer.class, "pie");
-        displayer.execute(List.of(new PaginatedResult<>(List.of(workItem, otherWorkItem), 0, 2, 2)),
+        this.displayer.execute(List.of(new PaginatedResult<>(List.of(workItem, otherWorkItem), 0, 2, 2)),
             WorkItem.KEY_STATUS, List.of("Dataset"), new MacroTransformationContext(), Map.of());
 
         ArgumentCaptor<String> content = ArgumentCaptor.forClass(String.class);
-        verify(contentParser).parse(content.capture(), any(MacroTransformationContext.class), eq(true),
+        verify(this.contentParser).parse(content.capture(), any(MacroTransformationContext.class), eq(true),
             eq(false));
         // The values are kept in the data of the chart and don't end the chartjs macro.
-        Parser parser = this.componentManager.getInstance(Parser.class, "xwiki/2.1");
-        List<Block> macros = parser.parse(new StringReader(content.getValue()))
+        List<Block> macros = this.parser.parse(new StringReader(content.getValue()))
             .getBlocks(new ClassBlockMatcher(MacroBlock.class), Block.Axes.DESCENDANT);
         assertEquals(1, macros.size());
         MacroBlock chartMacro = (MacroBlock) macros.get(0);
