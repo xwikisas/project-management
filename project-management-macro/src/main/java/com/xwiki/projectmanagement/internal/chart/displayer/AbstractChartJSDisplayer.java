@@ -112,7 +112,24 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     public List<Block> execute(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
         MacroTransformationContext context, Object typeDisplayerParams) throws MacroExecutionException
     {
+        String chartMacro = getChartMacro(workItems, property, labels, typeDisplayerParams);
+        XDOM xdom = contentParser.parse(chartMacro, context, true, false);
+        return Collections.singletonList(new GroupBlock(xdom.getChildren()));
+    }
 
+    /**
+     * Count the work items of each dataset by value of the given property, and write the result as a chartjs macro.
+     *
+     * @param workItems the datasets of work items
+     * @param property the property whose values are the labels of the chart
+     * @param labels the labels of the datasets
+     * @param typeDisplayerParams the parameters of the chart type (metric, period)
+     * @return the chartjs macro call, in XWiki 2.1 syntax
+     * @throws MacroExecutionException if the data of the chart can't be serialized
+     */
+    String getChartMacro(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
+        Object typeDisplayerParams) throws MacroExecutionException
+    {
         Set<String> chartJSLabels = new TreeSet<>();
 
         String metric = PARAM_METRIC_COUNT;
@@ -125,18 +142,13 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         populateModel(workItems, property, labels, (Map<String, String>) typeDisplayerParams, chartJSData,
             chartJSLabels, metric);
 
-        String data = "";
         try {
-            data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
+            String data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
 
             WikiPrinter wikiPrinter = new DefaultWikiPrinter();
             renderer.render(new MacroBlock("chartjs", Map.of("type", getChartType()), data, false),
                 wikiPrinter);
-            String renderedChartJsMacro = wikiPrinter.toString();
-
-            XDOM xdom = contentParser.parse(renderedChartJsMacro, context, true, false);
-
-            return Collections.singletonList(new GroupBlock(xdom.getChildren()));
+            return wikiPrinter.toString();
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
         }
