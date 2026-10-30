@@ -238,10 +238,12 @@ public class OpenProjectSpentTimeMacro
         Linkable workPackage = entry.getWorkPackage();
         Linkable project = entry.getProjectLink();
 
-        String wpLabel = workPackage.getValue();
-        Block wpLink = buildLinkBlock(wpLabel, workPackage.getLocation());
-
         Block projectLink = buildLinkBlock(project.getValue(), project.getLocation());
+        // The time can be logged on the project itself, without work package.
+        if (workPackage == null) {
+            return List.of(projectLink);
+        }
+        Block wpLink = buildLinkBlock(workPackage.getValue(), workPackage.getLocation());
         return List.of(projectLink, new SpaceBlock(), new SpecialSymbolBlock('/'), new SpaceBlock(), wpLink);
     }
 

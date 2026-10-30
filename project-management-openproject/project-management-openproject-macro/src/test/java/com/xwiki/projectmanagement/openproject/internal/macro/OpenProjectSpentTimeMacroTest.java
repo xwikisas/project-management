@@ -35,6 +35,7 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -157,6 +158,28 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         assertEquals("Alpha -> " + SERVER_URL + "/projects/alpha", links.get(0));
         assertEquals("#1 Fix -> " + SERVER_URL + "/work_packages/1", links.get(1));
         assertEquals("View project dashboard -> " + SERVER_URL + "/projects/12", links.get(links.size() - 1));
+    }
+
+    @Test
+    void displaysOnlyTheProjectOfTimeLoggedWithoutWorkPackage() throws Exception
+    {
+        // A time entry logged on the project itself, as returned by OpenProject: its work package link is null.
+        TimeEntry entry = new TimeEntry(new ObjectMapper().readTree("{\"id\":1,\"spentOn\":\"2026-03-02\","
+            + "\"hours\":\"PT1H\",\"comment\":{\"raw\":\"Planning\"},\"_links\":{"
+            + "\"activity\":{\"href\":null},\"workPackage\":{\"href\":null},"
+            + "\"project\":{\"href\":\"" + SERVER_URL + "/projects/alpha\",\"title\":\"Alpha\"}}}"));
+        when(this.apiClient.getTimeEntries(any(), any(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(entry), 1, 10, 1));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("Total: " + hours(1) + " h\n"
+            + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
+            + "2026-03-02|||" + hours(1) + "|\n"
+            + "-|Alpha|Planning|" + hours(1) + "|\n"
+            + "View time entries\n", text(result));
+        assertEquals(List.of("Alpha -> " + SERVER_URL + "/projects/alpha", "View time entries -> " + SERVER_URL
+            + "/time_entries"), links(result));
     }
 
     @Test
