@@ -29,6 +29,7 @@ import java.util.Map;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.block.Block;
@@ -127,13 +128,15 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
         String value = workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER);
         String location = workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER);
         if (value != null) {
-            LinkBlock idLink = new LinkBlock(
-                Arrays.asList(new SpecialSymbolBlock('#'), new WordBlock(value)),
-                new ResourceReference(location != null ? location : "", ResourceType.URL),
-                false,
-                Collections.singletonMap(ATTRIBUTE_CLASS, "text-primary")
-            );
-            children.add(idLink);
+            List<Block> label = Arrays.asList(new SpecialSymbolBlock('#'), new WordBlock(value));
+            Map<String, String> parameters = Collections.singletonMap(ATTRIBUTE_CLASS, "text-primary");
+            // Don't link to nowhere when the work item has no location.
+            if (StringUtils.isEmpty(location)) {
+                children.add(new FormatBlock(label, Format.NONE, parameters));
+            } else {
+                children.add(new LinkBlock(label, new ResourceReference(location, ResourceType.URL), false,
+                    parameters));
+            }
             children.add(new SpaceBlock());
         }
     }
