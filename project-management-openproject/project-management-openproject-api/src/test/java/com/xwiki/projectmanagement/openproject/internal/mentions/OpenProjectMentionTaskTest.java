@@ -19,60 +19,64 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.mentions;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
-
-import javax.inject.Provider;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.XDOM;
+import org.xwiki.rendering.parser.ContentParser;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
-import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xpn.xwiki.test.MockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
+import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
+import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.commons.document.MacroBlockFinder;
 
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_INSTANCE;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_WORK_PACKAGE_ID;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.REFERENCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link OpenProjectMentionTask}.
+ * Unit tests for {@link OpenProjectMentionTask}, on a page stored in the wiki.
  *
  * @version $Id$
  */
-@ComponentTest
+@OldcoreTest
+@ReferenceComponentList
 class OpenProjectMentionTaskTest
 {
-    private static final DocumentReference DOCUMENT_REFERENCE = new DocumentReference("wiki", "Space", "Page");
+    private static final DocumentReference PAGE = new DocumentReference("xwiki", "Space", "Page");
 
     private static final String INSTANCE = "test";
 
-    @RegisterExtension
-    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+    @InjectMockitoOldcore
+    private MockitoOldcore oldcore;
 
     @InjectMockComponents
     private OpenProjectMentionTask task;
@@ -80,78 +84,109 @@ class OpenProjectMentionTaskTest
     @MockComponent
     private MacroBlockFinder macroBlockFinder;
 
+    /**
+     * Parses the page content: the macros of the content are given by the macro block finder.
+     */
     @MockComponent
-    private Provider<XWikiContext> xWikiContextProvider;
+    private ContentParser contentParser;
 
-    @Mock
-    private XWikiContext context;
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
-    @Mock
-    private XWiki xwiki;
-
-    @Mock
-    private XWikiDocument document;
-
-    private final Map<Object, Object> contextContent = new HashMap<>();
-
-    private final List<BaseObject> createdObjects = new ArrayList<>();
+    private Object executingFlagWhenSaving;
 
     @BeforeEach
     void setUp() throws Exception
     {
-        when(this.xWikiContextProvider.get()).thenReturn(this.context);
-        when(this.context.getWiki()).thenReturn(this.xwiki);
-        doAnswer(invocation -> this.contextContent.put(invocation.getArgument(0), invocation.getArgument(1)))
-            .when(this.context).put(any(), any());
-        doAnswer(invocation -> this.contextContent.remove(invocation.getArgument(0))).when(this.context)
-            .remove(any());
-        when(this.document.newXObject(REFERENCE, this.context)).thenAnswer(invocation -> {
-            BaseObject object = new BaseObject();
-            this.createdObjects.add(object);
-            return object;
-        });
-        when(this.document.getXObjects(REFERENCE)).thenReturn(Collections.emptyList());
-        // The document is saved while the task is executing, so that listeners can ignore this save.
-        when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenAnswer(invocation -> {
-            assertEquals(true, this.contextContent.get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
-            return this.document;
-        });
+        when(this.contentParser.parse(any(), any(), any())).thenReturn(new XDOM(List.of()));
+        // Record whether the page is saved while the task is executing, so that listeners can ignore this save.
+        doAnswer(invocation -> {
+            this.executingFlagWhenSaving =
+                invocation.<XWikiContext>getArgument(1).get(OpenProjectMentionTask.TASK_EXECUTING_KEY);
+            return invocation.callRealMethod();
+        }).when(this.oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+    }
+
+    /**
+     * Saves the page with the given mention objects, before the task is executed.
+     */
+    private void savePage(String... workPackageIdsAndInstances) throws Exception
+    {
+        XWikiContext context = this.oldcore.getXWikiContext();
+        XWikiDocument page = new XWikiDocument(PAGE);
+        for (int i = 0; i < workPackageIdsAndInstances.length; i += 2) {
+            BaseObject mention = page.newXObject(REFERENCE, context);
+            mention.setStringValue(PROP_WORK_PACKAGE_ID, workPackageIdsAndInstances[i]);
+            mention.setStringValue(PROP_INSTANCE, workPackageIdsAndInstances[i + 1]);
+        }
+        this.oldcore.getSpyXWiki().saveDocument(page, context);
+        this.executingFlagWhenSaving = null;
+        clearInvocations(this.oldcore.getSpyXWiki());
+    }
+
+    private XWikiDocument getPage() throws XWikiException
+    {
+        return this.oldcore.getSpyXWiki().getDocument(PAGE, this.oldcore.getXWikiContext());
+    }
+
+    /**
+     * @return the stored mentions, as {@code workPackageId@instance}
+     */
+    private List<String> getStoredMentions() throws XWikiException
+    {
+        // The list of xobjects holds a null entry in place of each removed object.
+        return getPage().getXObjects(REFERENCE).stream().filter(Objects::nonNull)
+            .map(mention -> mention.getStringValue(PROP_WORK_PACKAGE_ID) + '@' + mention.getStringValue(PROP_INSTANCE))
+            .collect(Collectors.toList());
+    }
+
+    private void assertNotSavedAgain() throws Exception
+    {
+        verify(this.oldcore.getSpyXWiki(), never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+        assertNull(this.oldcore.getXWikiContext().get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+    }
+
+    /**
+     * Asserts that the mentions were saved while the task was executing, without creating a new version of the page.
+     */
+    private void assertSavedByTheTask(String versionBefore) throws Exception
+    {
+        assertEquals(true, this.executingFlagWhenSaving);
+        assertNull(this.oldcore.getXWikiContext().get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+        assertEquals(versionBefore, getPage().getVersion());
     }
 
     @Test
     void noMacrosInContentAndNoObjects() throws Exception
     {
+        savePage();
         withMacros();
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, "1.1");
 
-        verify(this.document, never()).removeXObjects(REFERENCE);
-        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
-        assertFalse(this.contextContent.containsKey(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+        assertEquals(List.of(), getStoredMentions());
+        assertNotSavedAgain();
     }
 
     @Test
     void macrosWithIdsInContentAndNoObjects() throws Exception
     {
+        savePage();
+        String version = getPage().getVersion();
         withMacros(macro("12", INSTANCE), macro("http://op.example.org/projects/demo/work_packages/34/activity",
             "other"));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, version);
 
-        assertEquals(2, this.createdObjects.size());
-        assertMention(this.createdObjects.get(0), "12", INSTANCE);
         // The id of a work package URL is extracted.
-        assertMention(this.createdObjects.get(1), "34", "other");
-        // The mentions are saved without creating a new version of the document.
-        verify(this.document).setMetaDataDirty(false);
-        verify(this.document).setContentDirty(false);
-        verify(this.xwiki).saveDocument(this.document, this.context);
-        assertFalse(this.contextContent.containsKey(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+        assertEquals(List.of("12@test", "34@other"), getStoredMentions());
+        assertSavedByTheTask(version);
     }
 
     @Test
     void macrosNotDisplayingASingleWorkPackageAreIgnored() throws Exception
     {
+        savePage();
         MacroBlock withFilter = macro("12", INSTANCE);
         withFilter.setParameter("filter", "{}");
         withMacros(macro("12", null), withFilter, macro("1,2,3", INSTANCE), macro(null, INSTANCE),
@@ -159,68 +194,118 @@ class OpenProjectMentionTaskTest
             new MacroBlock("openprojectchart", Map.of("identifier", "12", PROP_INSTANCE, INSTANCE), false),
             macro("56", INSTANCE));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, "1.1");
 
-        assertEquals(1, this.createdObjects.size());
-        assertMention(this.createdObjects.get(0), "56", INSTANCE);
+        assertEquals(List.of("56@test"), getStoredMentions());
     }
 
     @Test
     void macrosInContentAndAllAssociatedObjects() throws Exception
     {
+        savePage("12", INSTANCE, "34", INSTANCE);
         withMacros(macro("12", INSTANCE), macro("34", INSTANCE));
-        withExistingMentions(mention("12", INSTANCE), mention("34", INSTANCE));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, "1.1");
 
-        verify(this.document, never()).removeXObjects(REFERENCE);
-        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+        assertEquals(List.of("12@test", "34@test"), getStoredMentions());
+        assertNotSavedAgain();
     }
 
     @Test
     void macrosRemovedFromContent() throws Exception
     {
+        savePage("12", INSTANCE, "34", INSTANCE);
+        String version = getPage().getVersion();
         withMacros(macro("12", INSTANCE));
-        withExistingMentions(mention("12", INSTANCE), mention("34", INSTANCE));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, version);
 
-        verify(this.document).removeXObjects(REFERENCE);
-        assertEquals(1, this.createdObjects.size());
-        assertMention(this.createdObjects.get(0), "12", INSTANCE);
-        verify(this.xwiki).saveDocument(this.document, this.context);
+        assertEquals(List.of("12@test"), getStoredMentions());
+        assertSavedByTheTask(version);
     }
 
     @Test
     void macroIdUpdated() throws Exception
     {
+        savePage("12", INSTANCE, "34", INSTANCE);
+        String version = getPage().getVersion();
         withMacros(macro("12", INSTANCE), macro("35", INSTANCE));
-        withExistingMentions(mention("12", INSTANCE), mention("34", INSTANCE));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, version);
 
-        verify(this.document).removeXObjects(REFERENCE);
-        assertEquals(2, this.createdObjects.size());
-        assertMention(this.createdObjects.get(0), "12", INSTANCE);
-        assertMention(this.createdObjects.get(1), "35", INSTANCE);
-        verify(this.xwiki).saveDocument(this.document, this.context);
+        assertEquals(List.of("12@test", "35@test"), getStoredMentions());
+        assertSavedByTheTask(version);
+    }
+
+    @Test
+    void macroInstanceUpdated() throws Exception
+    {
+        savePage("12", INSTANCE);
+        withMacros(macro("12", "other"));
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@other"), getStoredMentions());
+    }
+
+    @Test
+    void mentionAddedAfterARemovedMention() throws Exception
+    {
+        savePageWithARemovedMention();
+        withMacros(macro("12", INSTANCE), macro("56", INSTANCE));
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@test", "56@test"), getStoredMentions());
+        assertEquals(0, this.logCapture.size());
+    }
+
+    @Test
+    void sameMentionsAsTheRemainingOnesAfterARemovedMention() throws Exception
+    {
+        savePageWithARemovedMention();
+        withMacros(macro("12", INSTANCE));
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@test"), getStoredMentions());
+        assertNotSavedAgain();
+    }
+
+    /**
+     * Saves the page with a mention, after removing another one: the list of xobjects of the page holds a null entry
+     * in place of the removed object.
+     */
+    private void savePageWithARemovedMention() throws Exception
+    {
+        savePage("34", INSTANCE, "12", INSTANCE);
+        XWikiDocument page = getPage().clone();
+        page.removeXObject(page.getXObject(REFERENCE, 0));
+        this.oldcore.getSpyXWiki().saveDocument(page, this.oldcore.getXWikiContext());
+        clearInvocations(this.oldcore.getSpyXWiki());
     }
 
     @Test
     void saveFails() throws Exception
     {
+        savePage("34", INSTANCE);
         withMacros(macro("12", INSTANCE));
-        doAnswer(invocation -> {
-            throw new XWikiException();
-        }).when(this.xwiki).saveDocument(this.document, this.context);
+        doThrow(new XWikiException()).when(this.oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class),
+            any(XWikiContext.class));
 
-        this.task.consume(DOCUMENT_REFERENCE, "1.1");
+        this.task.consume(PAGE, "1.1");
 
         assertEquals("Failed to create the OpenProject mention objects for the document "
-            + "[wiki:Space.Page]. Cause: [XWikiException: Error number 0 in 0]", this.logCapture.getMessage(0));
-        assertFalse(this.contextContent.containsKey(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+            + "[xwiki:Space.Page]. Cause: [XWikiException: Error number 0 in 0]", this.logCapture.getMessage(0));
+        // The cached page isn't modified by the failed save.
+        assertEquals(List.of("34@test"), getStoredMentions());
+        assertNull(this.oldcore.getXWikiContext().get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
     }
 
+    /**
+     * The macros of the page content, as found by the macro block finder (which looks into the content and the
+     * nested macro content).
+     */
     @SuppressWarnings("unchecked")
     private void withMacros(MacroBlock... macros) throws Exception
     {
@@ -229,11 +314,6 @@ class OpenProjectMentionTaskTest
             Arrays.stream(macros).forEach(function::apply);
             return null;
         }).when(this.macroBlockFinder).find(any(), any(), any(Function.class));
-    }
-
-    private void withExistingMentions(BaseObject... mentions)
-    {
-        when(this.document.getXObjects(REFERENCE)).thenReturn(Arrays.asList(mentions));
     }
 
     private static MacroBlock macro(String identifier, String instance)
@@ -246,19 +326,5 @@ class OpenProjectMentionTaskTest
             parameters.put(PROP_INSTANCE, instance);
         }
         return new MacroBlock("openproject", parameters, false);
-    }
-
-    private static BaseObject mention(String workPackageId, String instance)
-    {
-        BaseObject object = new BaseObject();
-        object.setStringValue(PROP_WORK_PACKAGE_ID, workPackageId);
-        object.setStringValue(PROP_INSTANCE, instance);
-        return object;
-    }
-
-    private static void assertMention(BaseObject object, String workPackageId, String instance)
-    {
-        assertEquals(workPackageId, object.getStringValue(PROP_WORK_PACKAGE_ID));
-        assertEquals(instance, object.getStringValue(PROP_INSTANCE));
     }
 }
