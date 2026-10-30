@@ -53,6 +53,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,6 +127,105 @@ public class SuggestTest
         assertEquals(String.valueOf(workPackage.getId()), responseEntity.get(0).get("label"));
         assertEquals(String.valueOf(workPackage.getId()), responseEntity.get(0).get("value"));
         assertEquals(workPackage.getName(), responseEntity.get(0).get("hint"));
+    }
+
+    @Test
+    void getSuggestionsForIdentifierWhenSearchingAnId() throws ProjectManagementException
+    {
+        WorkPackage byId = createWorkPackage(11, "Eleventh");
+        WorkPackage bySubject = createWorkPackage(5, "Fix the 11 failing tests");
+        PaginatedResult<WorkPackage> idResult = new PaginatedResult<>();
+        idResult.setItems(List.of(byId));
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(bySubject, byId));
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenReturn(idResult);
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("11", "5"),
+            responseEntity.stream().map(suggestion -> suggestion.get("value")).collect(Collectors.toList()));
+    }
+
+    @Test
+    void getSuggestionsForIdentifierWhenSearchedIdFails() throws ProjectManagementException
+    {
+        WorkPackage bySubject = createWorkPackage(5, "Fix the 11 failing tests");
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(bySubject));
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenThrow(new ProjectManagementException("Invalid filter"));
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("5"),
+            responseEntity.stream().map(suggestion -> suggestion.get("value")).collect(Collectors.toList()));
+    }
+
+    @Test
+    void getSuggestionsForIdentifierWhenSearchingAnIdLimitsToPageSize() throws ProjectManagementException
+    {
+        PaginatedResult<WorkPackage> idResult = new PaginatedResult<>();
+        idResult.setItems(List.of(createWorkPackage(11, "Eleventh")));
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(createWorkPackage(5, "Fix the 11 failing tests")));
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenReturn(idResult);
+        when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]",
+            EMPTY_STRING)).thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", 1, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("11"),
+            responseEntity.stream().map(suggestion -> suggestion.get("value")).collect(Collectors.toList()));
+    }
+
+    @Test
+    void getSuggestionsForIdentifierWhenSearchingANumberTooLongForAnId() throws ProjectManagementException
+    {
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of());
+        when(this.openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
+            .thenReturn(subjectResult);
+
+        suggest.getSuggestions(WIKI, INSTANCE, "id", "12345678901", PAGE_SIZE, null);
+
+        verify(this.openProjectApiClient, never()).getWorkPackages(eq(1), eq(1), anyString(), anyString());
+    }
+
+    @Test
+    void getSuggestionsForParentWhenSearchingAnId() throws ProjectManagementException
+    {
+        Type task = new Type();
+        task.setId(1);
+        Type milestone = new Type();
+        milestone.setId(2);
+        milestone.setMilestone(true);
+        when(this.openProjectApiClient.getTypes()).thenReturn(new PaginatedResult<>(List.of(task, milestone), 0, 2, 2));
+        PaginatedResult<WorkPackage> idResult = new PaginatedResult<>();
+        idResult.setItems(List.of(createWorkPackage(11, "Eleventh")));
+        PaginatedResult<WorkPackage> subjectResult = new PaginatedResult<>();
+        subjectResult.setItems(List.of(createWorkPackage(5, "Fix the 11 failing tests")));
+        String typeFilter = "{\"type\":{\"operator\":\"=\",\"values\":[\"1\"]}}";
+        when(this.openProjectApiClient.getWorkPackages(1, 1,
+            "[" + typeFilter + ",{\"id\":{\"operator\":\"=\",\"values\":[\"11\"]}}]", EMPTY_STRING))
+            .thenReturn(idResult);
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[" + typeFilter + ",{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING))
+            .thenReturn(subjectResult);
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", "11", PAGE_SIZE, null);
+
+        List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
+        assertEquals(List.of("#11: Eleventh", "#5: Fix the 11 failing tests"),
+            responseEntity.stream().map(suggestion -> suggestion.get("label")).collect(Collectors.toList()));
     }
 
     @Test
@@ -287,6 +388,15 @@ public class SuggestTest
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "1.2", 1, null);
 
         verifySuccessResponse(response, List.of(version1));
+    }
+
+    private static WorkPackage createWorkPackage(int id, String subject)
+    {
+        WorkPackage workPackage = new WorkPackage();
+        workPackage.setId(id);
+        workPackage.setName(subject);
+        workPackage.setSelf(new Linkable(String.valueOf(id), "location" + id));
+        return workPackage;
     }
 
     private static Version createVersion(int id, String name)
