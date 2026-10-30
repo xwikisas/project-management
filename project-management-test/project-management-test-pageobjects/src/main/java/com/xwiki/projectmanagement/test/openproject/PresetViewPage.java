@@ -61,18 +61,6 @@ public class PresetViewPage extends ViewPage
     }
 
     /**
-     * Wait for the saved filters to be displayed in the filter builders.
-     *
-     * @param count the expected number of filters, across all the datasets
-     */
-    public void waitUntilFiltersAreDisplayed(int count)
-    {
-        getDriver().waitUntilCondition(driver -> driver.findElements(
-            By.cssSelector(".project-management-filters .proj-manag-constraints .proj-manag-constraint")).size()
-            >= count);
-    }
-
-    /**
      * @return the serialized reference of the preset page, e.g. {@code xwiki:ProjectManagement.Code.Presets.Preset1}
      */
     public String getPresetReference()

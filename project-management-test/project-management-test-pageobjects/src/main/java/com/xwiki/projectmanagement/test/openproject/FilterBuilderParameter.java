@@ -63,7 +63,7 @@ public class FilterBuilderParameter extends BaseElement
     /**
      * @return the container of the parameter value.
      */
-    public WebElement getContainer()
+    private WebElement getContainer()
     {
         if (this.container != null) {
             return this.container;
@@ -77,8 +77,9 @@ public class FilterBuilderParameter extends BaseElement
      */
     public String getTitle()
     {
-        return getContainer().findElements(By.className("proj-manag-header-title")).stream().findFirst()
-            .map(WebElement::getText).orElse("");
+        // The builders without a title are expected, so don't wait for one.
+        return getDriver().findElementsWithoutWaiting(getContainer(), By.className("proj-manag-header-title"))
+            .stream().findFirst().map(WebElement::getText).orElse("");
     }
 
     /**
@@ -87,9 +88,11 @@ public class FilterBuilderParameter extends BaseElement
      */
     public boolean isReadOnly()
     {
+        // The builder is displayed with its filters, so don't wait for elements that a read-only builder doesn't have.
         WebElement builder = getContainer();
-        return builder.findElements(By.className(ADD_FILTER_CLASS)).isEmpty()
-            && builder.findElements(By.cssSelector(".proj-manag-constraints .proj-manag-constraint-value")).stream()
+        return getDriver().findElementsWithoutWaiting(builder, By.className(ADD_FILTER_CLASS)).isEmpty()
+            && getDriver().findElementsWithoutWaiting(builder,
+                By.cssSelector(".proj-manag-constraints .proj-manag-constraint-value")).stream()
             .noneMatch(WebElement::isEnabled);
     }
 

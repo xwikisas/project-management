@@ -33,6 +33,8 @@ public class PresetCreateModal extends BaseElement
 {
     private static final By POPUP = By.id("proj-manag-preset-popup");
 
+    private static final By NAME_INPUT = By.name("title");
+
     /**
      * Wait for the modal to be displayed.
      */
@@ -47,7 +49,7 @@ public class PresetCreateModal extends BaseElement
      */
     public PresetCreateModal setName(String name)
     {
-        WebElement input = getPopup().findElement(By.name("title"));
+        WebElement input = getPopup().findElement(NAME_INPUT);
         input.clear();
         input.sendKeys(name);
         return this;
@@ -67,11 +69,19 @@ public class PresetCreateModal extends BaseElement
     }
 
     /**
-     * Click the create button. Nothing happens if the name is empty.
+     * Click the create button while the name is empty, and wait for the modal to move the focus back to the name
+     * field. The modal checks the name synchronously, when the button is clicked: it doesn't create the preset if the
+     * name is empty.
+     *
+     * @return this object
+     * @since 1.4.0
      */
-    public void clickCreate()
+    public PresetCreateModal clickCreateWithoutName()
     {
-        getPopup().findElement(By.className("btn-primary")).click();
+        clickCreate();
+        WebElement input = getPopup().findElement(NAME_INPUT);
+        getDriver().waitUntilCondition(driver -> input.equals(driver.switchTo().activeElement()));
+        return this;
     }
 
     /**
@@ -83,6 +93,11 @@ public class PresetCreateModal extends BaseElement
     {
         clickCreate();
         return new PresetEditPage();
+    }
+
+    private void clickCreate()
+    {
+        getPopup().findElement(By.className("btn-primary")).click();
     }
 
     /**

@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.ckeditor.test.po.CKEditor;
@@ -32,6 +34,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test the OpenProject CKEditor plugin.
@@ -65,9 +68,18 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wysiwyg");
         WYSIWYGEditPage editPage = new WYSIWYGEditPage();
+        String subject = "Send invitation to speakers";
         new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
-            .insertWorkPackage(marker + "speakers", "Send invitation to speakers");
+            .insertWorkPackage(marker + "speakers", subject);
         editPage.clickSaveAndView();
+
+        // The work package is displayed inline: its identifier, linking to OpenProject, followed by its subject.
+        List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        assertEquals(subject, macros.get(0).getInlineWorkPackageSummary());
+        List<String> links = macros.get(0).getWorkPackageLinks();
+        assertEquals(1, links.size(), links.toString());
+        assertThat(links.get(0), startsWith("#"));
 
         setup.gotoPage(testReference, "edit", "editor=wiki");
         String content = new WikiEditPage().getContent();

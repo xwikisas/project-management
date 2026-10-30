@@ -102,23 +102,18 @@ public final class OpenProjectFixture
     private static void ensureConnection(TestUtils setup)
     {
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        int index = adminPage.getConnectionIndex(CONNECTION_ID);
-        if (index > 0 && connectionConfigured) {
+        boolean listed = adminPage.isConnectionListed(CONNECTION_ID);
+        if (listed && connectionConfigured) {
             return;
         }
-        if (index > 0) {
+        if (listed) {
             // The connection was left by a previous run and points to another OpenProject instance or OAuth app.
-            adminPage.deleteConnection(index);
-            adminPage.waitForNotificationSuccessMessage(
-                String.format("Connection %s has been deleted!", CONNECTION_ID));
-            adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.deleteConnection(CONNECTION_ID);
         }
 
         adminPage.addNewConnection(CONNECTION_ID, instance.getBaseUrl(), instance.getClientId(),
             instance.getClientSecret());
-        adminPage.waitForNotificationSuccessMessage(String.format("Connection %s has been saved!", CONNECTION_ID));
-        adminPage.getConnectionsLivedata().getTableLayout()
-            .clickAction(adminPage.getConnectionIndex(CONNECTION_ID), "authorize-connection");
+        adminPage.authorizeConnection(CONNECTION_ID);
         instance.authorize(setup.getDriver());
         new OpenProjectAdminPage().waitUntilPageIsReady();
         connectionConfigured = true;

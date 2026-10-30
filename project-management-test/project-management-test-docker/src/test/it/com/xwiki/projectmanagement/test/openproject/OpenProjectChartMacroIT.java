@@ -19,6 +19,11 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.test.docker.junit5.TestReference;
@@ -26,11 +31,12 @@ import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the OpenProject chart macro.
@@ -49,6 +55,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
 {
+    private static final String NEW = "New";
+
+    private static final String IN_PROGRESS = "In progress";
+
+    private static final String CLOSED = "Closed";
+
+    private static final String PIE = "pie";
+
     @Test
     @Order(1)
     void defaultChartsMacroTest(TestUtils setup, TestReference testReference)
@@ -61,14 +75,10 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 
-        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
-
+        // The chart is drawn by Chart.js, with one bar per status.
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("bar", chart.getChartType());
-        assertThat(chart.getDataSource(), not(emptyOrNullString()));
-        assertTrue(chart.hasLabel("New"));
-        assertTrue(chart.hasLabel("In progress"));
-        assertTrue(chart.hasLabel("Closed"));
+        assertThat(chart.getLabels(), hasItems(NEW, IN_PROGRESS, CLOSED));
     }
 
     @Test
@@ -81,12 +91,12 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         OpenProjectChartMacroEditModal modal = new OpenProjectChartMacroEditModal(setup, testReference);
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
-        modal.setChartType("pie");
+        modal.setChartType(PIE);
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
-        assertEquals("pie", new ChartJSCanvas().getChartType());
+        assertEquals(PIE, new ChartJSCanvas().getChartType());
 
-        for (String[] step : new String[][] { { "pie", "line" }, { "line", "doughnut" }, { "doughnut", "bar" } }) {
+        for (String[] step : new String[][] { { PIE, "line" }, { "line", "doughnut" }, { "doughnut", "bar" } }) {
             modal = new OpenProjectChartMacroEditModal(setup, testReference);
             modal.clickMore();
             assertEquals(step[0], modal.getChartType());
@@ -107,27 +117,24 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         OpenProjectChartMacroEditModal modal = new OpenProjectChartMacroEditModal(setup, testReference);
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
-        modal.setChartType("pie");
+        modal.setChartType(PIE);
         modal.setProperty("priority");
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 
-        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
-
         ChartJSCanvas chart = new ChartJSCanvas();
-        assertEquals("pie", chart.getChartType());
-        assertThat(chart.getDataSource(), not(emptyOrNullString()));
-
-        // Checks that the default status labels are not displayed.
-        assertFalse(chart.hasLabel("Closed"));
-        assertFalse(chart.hasLabel("In progress"));
-        assertFalse(chart.hasLabel("New"));
-        assertTrue(chart.hasLabel("Normal"));
+        assertEquals(PIE, chart.getChartType());
+        // The chart displays the priorities instead of the default status labels.
+        List<String> labels = chart.getLabels();
+        assertThat(labels, hasItem("Normal"));
+        assertThat(labels, not(hasItem(CLOSED)));
+        assertThat(labels, not(hasItem(IN_PROGRESS)));
+        assertThat(labels, not(hasItem(NEW)));
     }
 
     @Test
     @Order(4)
-    void chartsMacroFilterTest(TestUtils setup, TestReference testReference)
+    void chartsMacroFilterTest(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.deletePage(testReference);
 
@@ -135,16 +142,15 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         OpenProjectChartMacroEditModal modal = new OpenProjectChartMacroEditModal(setup, testReference);
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
-        new FilterBuilderParameter().addFilter("status").setSuggestValue(1, "New");
+        modal.getFilterBuilder().addFilter("status").setSuggestValue(1, NEW);
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 
-        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
-
-        ChartJSCanvas chart = new ChartJSCanvas();
-        assertTrue(chart.hasLabel("New"));
-        assertFalse(chart.hasLabel("In progress"));
-        assertFalse(chart.hasLabel("Closed"));
+        // A single bar, counting all the new work packages (the demo projects are public, so the anonymous API
+        // counts the same work packages as the administrator who views the chart).
+        int newCount = this.openProject.getApiResource("/work_packages?pageSize=1&filters=" + URLEncoder.encode(
+            "[{\"status\":{\"operator\":\"=\",\"values\":[\"1\"]}}]", StandardCharsets.UTF_8)).get("total").asInt();
+        assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
     }
 
     @Test
@@ -163,13 +169,9 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 
-        new ViewPageWithOpenProjectMacro().waitUntilPageIsReady();
-
         // Checks that the chart compares the open and closed work packages.
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("line", chart.getChartType());
-        assertEquals(2, chart.getDatasetCount());
-        assertTrue(chart.hasLabel("Open"));
-        assertTrue(chart.hasLabel("Closed"));
+        assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
     }
 }
