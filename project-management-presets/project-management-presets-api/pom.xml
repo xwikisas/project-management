@@ -23,13 +23,13 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management-presets</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-presets-api</artifactId>
 
   <properties>
-    <xwiki.jacoco.instructionRatio>0.89</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.90</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <!-- Needed for the class initializer and the manager.  -->

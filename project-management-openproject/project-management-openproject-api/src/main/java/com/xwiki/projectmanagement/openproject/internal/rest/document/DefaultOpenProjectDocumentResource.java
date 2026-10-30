@@ -21,7 +21,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest.document;
  */
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -205,7 +204,13 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
         }
     }
 
-    private List<DocumentReference> findAncestors(DocumentReference documentReference) throws QueryException
+    /**
+     * @param documentReference the page whose ancestors to find
+     * @return the existing space home pages above the page, from the top level one, followed by the page itself
+     *     unless it is a space home page
+     * @throws QueryException if the existing space home pages can't be queried
+     */
+    List<DocumentReference> findAncestors(DocumentReference documentReference) throws QueryException
     {
         List<String> parents = documentReference.getParent().getReversedReferenceChain().stream()
             .filter(e -> !(e instanceof WikiReference)).map(serializer::serialize).collect(Collectors.toList());
@@ -217,10 +222,6 @@ public class DefaultOpenProjectDocumentResource extends ModifiablePageResource
                         + "order by length(doc.space) asc", getCurrentLanguage()),
                 Query.XWQL).bindValue("ancestorList", parents).setWiki(documentReference.getWikiReference().getName())
             .execute();
-
-        if (result.isEmpty()) {
-            return Collections.emptyList();
-        }
 
         List<DocumentReference> ancestors =
             result.stream().map(item -> resolver.resolve(item, documentReference)).collect(Collectors.toList());

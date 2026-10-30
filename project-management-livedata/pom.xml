@@ -25,7 +25,7 @@
   <parent>
     <groupId>com.xwiki.projectmanagement</groupId>
     <artifactId>project-management</artifactId>
-    <version>1.3.1-SNAPSHOT</version>
+    <version>1.4.0-SNAPSHOT</version>
   </parent>
 
   <artifactId>project-management-livedata</artifactId>
@@ -33,7 +33,7 @@
   <name>Project Management - Livedata</name>
   <description>Provides the Livedata data source through which all the Project Management implementations will display work items.</description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.78</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.80</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <dependency>

@@ -93,7 +93,7 @@ public class UserTokenChecker
      * @param context the macro transformation context.
      * @return a warning block, to display instead of the OpenProject data, if the current user can't call the given
      *     OpenProject instance, neither with their own account nor anonymously.
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status,
         MacroTransformationContext context)
@@ -110,7 +110,7 @@ public class UserTokenChecker
      * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
      *     OpenProject account when they only see the public data of the given instance (see
      *     {@link #getConnectHintBlock(String, OpenProjectAccessStatus, MacroTransformationContext)})
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<Block> getConnectHintBlock(String instance, MacroTransformationContext context)
     {
@@ -124,7 +124,7 @@ public class UserTokenChecker
      * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
      *     OpenProject account when they only see the public data of the given instance; empty for guests, who can't
      *     connect an OpenProject account.
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public List<Block> getConnectHintBlock(String instance, OpenProjectAccessStatus status,
         MacroTransformationContext context)

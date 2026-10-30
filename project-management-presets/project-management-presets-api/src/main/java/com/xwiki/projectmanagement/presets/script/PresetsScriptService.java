@@ -64,7 +64,7 @@ public class PresetsScriptService implements ScriptService
      * @param chart whether to retrieve the chart presets or the normal ones.
      * @param offset the offset of the result set.
      * @param limit the limit of the results.
-     * @return a list of presets for the given client id.
+     * @return a list of presets for the given client id, limited to the presets the current user can view.
      */
     public List<Preset> getPresetsForClient(String client, Boolean chart, int offset, int limit)
     {
@@ -75,7 +75,7 @@ public class PresetsScriptService implements ScriptService
      * @param chart whether to retrieve the chart presets or the normal ones.
      * @param offset the offset of the result set.
      * @param limit the limit of the results.
-     * @return a list of presets.
+     * @return a list of presets, limited to the presets the current user can view.
      */
     public List<Preset> getPresets(Boolean chart, int offset, int limit)
     {
