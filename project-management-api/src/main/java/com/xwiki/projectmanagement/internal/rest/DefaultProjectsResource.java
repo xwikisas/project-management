@@ -67,6 +67,8 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the project.", e);
         } catch (NotImplementedException e) {
             return notImplemented(projectManagementHint);
+        } finally {
+            clearClientContext();
         }
     }
 
@@ -91,6 +93,8 @@ public class DefaultProjectsResource extends AbstractProjectManagementResource i
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the projects.", e);
         } catch (NotImplementedException e) {
             return notImplemented(projectManagementHint);
+        } finally {
+            clearClientContext();
         }
     }
 

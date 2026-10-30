@@ -32,6 +32,7 @@ import org.xwiki.livedata.LiveDataException;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.internal.Pagination;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.rest.WorkItemsResource;
@@ -65,6 +66,8 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
             return Response.status(Response.Status.NOT_FOUND).build();
         } catch (WorkItemRetrievalException e) {
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work item.", e);
+        } finally {
+            clearClientContext();
         }
     }
 
@@ -75,8 +78,7 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
         try {
             ProjectManagementClient client = componentManager.getInstance(ProjectManagementClient.class,
                 projectManagementHint);
-            // The page starts at 1, a smaller number being the first page.
-            int offset = (Math.max(page, 1) - 1) * pageSize;
+            int offset = Pagination.getOffset(page, pageSize);
             PaginatedResult<WorkItem> workItems =
                 client.getWorkItems(offset, pageSize, getFilters(filter), Collections.emptyList());
             return Response.ok(workItems).build();
@@ -89,6 +91,8 @@ public class DefaultWorkItemsResource extends AbstractProjectManagementResource 
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (WorkItemRetrievalException e) {
             return errorResponse(Response.Status.INTERNAL_SERVER_ERROR, "Failed to retrieve the work items.", e);
+        } finally {
+            clearClientContext();
         }
     }
 

@@ -17,108 +17,174 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package com.xwiki.projectmanagement.livedata;
 
-import java.lang.reflect.ParameterizedType;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.xwiki.component.manager.ComponentLookupException;
-import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.component.util.DefaultParameterizedType;
 import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
-import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataMeta;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
- * Test the flow of the {@link ProjectManagementConfigurationResolver}.
+ * Unit tests for {@link ProjectManagementConfigurationResolver}.
  *
  * @version $Id$
- * @since 1.0-rc-4
  */
 @ComponentTest
 class ProjectManagementConfigurationResolverTest
 {
+    private static final String CLIENT = "test";
+
+    private static final String TRANSLATION_PREFIX = "translationPrefix";
+
+    private static final String STATUS = "status";
+
+    private static final String DUE_DATE = "dueDate";
+
+    private static final String CUSTOM = "custom";
+
     @InjectMockComponents
     private ProjectManagementConfigurationResolver configurationResolver;
+
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @MockComponent
     private ContextualLocalizationManager l10n;
 
     @MockComponent
-    private ComponentManager componentManager;
-
-    @MockComponent
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
-    @Mock
-    private LiveDataConfigurationResolver<LiveDataConfiguration> dynamicCfgResolver;
+    @BeforeEach
+    void setUp() throws Exception
+    {
+        // The generic configuration, read from the JSON file of the module.
+        when(this.stringLiveDataConfigResolver.resolve(anyString())).thenAnswer(invocation -> {
+            LiveDataConfiguration defaultConfig = configuration(Map.of(TRANSLATION_PREFIX, "projectmanagement.",
+                "a", "default", "b", "default", "c", "default"), STATUS, DUE_DATE);
+            defaultConfig.getMeta().setActions(List.of(new LiveDataActionDescriptor("view")));
+            return defaultConfig;
+        });
+        when(this.l10n.getTranslationPlain("projectmanagement.property.status")).thenReturn("Status");
+        when(this.l10n.getTranslationPlain("projectmanagement.property.dueDate")).thenReturn("Due date");
+        when(this.l10n.getTranslationPlain("projectmanagement.property.dueDate.hint")).thenReturn("The due date");
+        when(this.l10n.getTranslationPlain("projectmanagement.action.view")).thenReturn("View");
+        when(this.l10n.getTranslationPlain("projectmanagement.action.view.hint")).thenReturn("View the item");
+    }
 
     @Test
-    void resolveUsesTheClientConfiguration() throws LiveDataException, ComponentLookupException
+    void resolveMergesTheInputOverTheClientOverTheGenericConfiguration() throws Exception
     {
-        LiveDataConfiguration clientConfig = new LiveDataConfiguration();
-        clientConfig.setQuery(new LiveDataQuery());
-        clientConfig.getQuery().setSource(new LiveDataQuery.Source());
-        clientConfig.getQuery().getSource().setId("projectmanagement");
-        clientConfig.getQuery().getSource().setParameter("translationPrefix", "testtranslation.");
+        LiveDataConfiguration clientConfig =
+            configuration(Map.of(TRANSLATION_PREFIX, "client.", "b", "client", "c", "client"), STATUS, CUSTOM);
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT, "c", "input"));
+        registerClientConfiguration(input, clientConfig);
+        // The client translates the properties it knows, the generic translations are the fallback.
+        when(this.l10n.getTranslationPlain("client.property.status")).thenReturn("State");
+        when(this.l10n.getTranslationPlain("client.property.status.hint")).thenReturn("The state");
 
-        LiveDataConfiguration defaultConfig = new LiveDataConfiguration();
-        defaultConfig.setQuery(new LiveDataQuery());
-        defaultConfig.getQuery().setSource(new LiveDataQuery.Source());
-        defaultConfig.getQuery().getSource().setId("projectmanagement");
-        defaultConfig.getQuery().getSource().setParameter("translationPrefix", "projectmanagement.");
-        defaultConfig.setMeta(new LiveDataMeta());
-        LiveDataPropertyDescriptor propertyDescriptor = new LiveDataPropertyDescriptor();
-        propertyDescriptor.setId("propId");
-        defaultConfig.getMeta().setPropertyDescriptors(Collections.singletonList(propertyDescriptor));
-        LiveDataActionDescriptor actionDescriptor = new LiveDataActionDescriptor("someaction");
-        defaultConfig.getMeta().setActions(List.of(actionDescriptor));
-        when(stringLiveDataConfigResolver.resolve(contains("projectmanagement."))).thenReturn(defaultConfig);
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
 
-        LiveDataConfiguration input = new LiveDataConfiguration();
-        input.setQuery(new LiveDataQuery());
-        input.getQuery().setSource(new LiveDataQuery.Source());
-        input.getQuery().getSource().setParameter("client", "test");
-
-        when(componentManager.hasComponent(any(ParameterizedType.class), eq("test"))).thenReturn(true);
-
-        when(componentManager.getInstance(any(ParameterizedType.class), eq("test"))).thenReturn(dynamicCfgResolver);
-        when(dynamicCfgResolver.resolve(input)).thenReturn(clientConfig);
-
-        LiveDataConfiguration result = configurationResolver.resolve(input);
-
-        // Verify that the default config is handled.
-        verify(stringLiveDataConfigResolver).resolve(contains("projectmanagement."));
-        // Verify that the entries get translated.
-        verify(l10n).getTranslationPlain("projectmanagement.property.propId");
-        verify(l10n).getTranslationPlain("projectmanagement.property.propId.hint");
-
-        verify(l10n).getTranslationPlain("projectmanagement.action.someaction");
-        verify(l10n).getTranslationPlain("projectmanagement.action.someaction.hint");
-
-        verify(componentManager).getInstance(any(ParameterizedType.class), eq("test"));
-        verify(dynamicCfgResolver).resolve(input);
-
-        assertEquals("testtranslation.", result.getQuery().getSource().getParameters().get("translationPrefix"));
-        assertEquals("test", result.getQuery().getSource().getParameters().get("client"));
+        Map<String, Object> parameters = result.getQuery().getSource().getParameters();
+        assertEquals("default", parameters.get("a"));
+        assertEquals("client", parameters.get("b"));
+        assertEquals("input", parameters.get("c"));
+        assertEquals("client.", parameters.get(TRANSLATION_PREFIX));
+        assertEquals(CLIENT, parameters.get("client"));
         assertEquals("projectmanagement", result.getQuery().getSource().getId());
+        // The properties of the client come first. The properties without translation are named after their id.
+        assertEquals(List.of("status: State (The state)", "custom: custom (null)", "dueDate: Due date (The due date)"),
+            describe(result));
+        assertEquals(List.of("view: View (View the item)"), result.getMeta().getActions().stream()
+            .map(action -> String.format("%s: %s (%s)", action.getId(), action.getName(), action.getDescription()))
+            .collect(Collectors.toList()));
+    }
+
+    @Test
+    void resolveWithoutClient() throws Exception
+    {
+        LiveDataConfiguration input = configuration(Map.of("c", "input"));
+        input.setId("myLiveData");
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        assertEquals("myLiveData", result.getId());
+        Map<String, Object> parameters = result.getQuery().getSource().getParameters();
+        assertEquals("default", parameters.get("b"));
+        assertEquals("input", parameters.get("c"));
+        assertNull(parameters.get("client"));
+        assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)"), describe(result));
+    }
+
+    @Test
+    void resolveWithAClientWithoutConfiguration() throws Exception
+    {
+        // No configuration resolver nor configuration file for this client: the generic configuration is used.
+        LiveDataConfiguration input = configuration(Map.of("client", "unknown", "c", "input"));
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        Map<String, Object> parameters = result.getQuery().getSource().getParameters();
+        assertEquals("default", parameters.get("b"));
+        assertEquals("input", parameters.get("c"));
+        assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)"), describe(result));
+    }
+
+    private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
+        throws Exception
+    {
+        LiveDataConfigurationResolver<LiveDataConfiguration> clientResolver =
+            configuration -> configuration == input ? clientConfig : null;
+        this.componentManager.registerComponent(
+            new DefaultParameterizedType(null, LiveDataConfigurationResolver.class, LiveDataConfiguration.class),
+            CLIENT, clientResolver);
+    }
+
+    private static LiveDataConfiguration configuration(Map<String, Object> parameters, String... propertyIds)
+    {
+        LiveDataConfiguration configuration = new LiveDataConfiguration();
+        configuration.setQuery(new LiveDataQuery());
+        configuration.getQuery().setSource(new LiveDataQuery.Source("projectmanagement"));
+        configuration.getQuery().getSource().getParameters().putAll(new LinkedHashMap<>(parameters));
+        if (propertyIds.length > 0) {
+            configuration.setMeta(new LiveDataMeta());
+            List<LiveDataPropertyDescriptor> properties = new ArrayList<>();
+            for (String propertyId : propertyIds) {
+                LiveDataPropertyDescriptor property = new LiveDataPropertyDescriptor();
+                property.setId(propertyId);
+                properties.add(property);
+            }
+            configuration.getMeta().setPropertyDescriptors(properties);
+        }
+        return configuration;
+    }
+
+    private static List<String> describe(LiveDataConfiguration configuration)
+    {
+        return configuration.getMeta().getPropertyDescriptors().stream()
+            .map(property -> String.format("%s: %s (%s)", property.getId(), property.getName(),
+                property.getDescription()))
+            .collect(Collectors.toList());
     }
 }

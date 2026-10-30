@@ -40,6 +40,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.Pagination;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -117,8 +118,7 @@ public class ProjectManagementScriptService implements ScriptService
         List<LiveDataQuery.SortEntry> livedataSortEntries =
             sortEntries.stream().map(sortEntry -> objectMapper.convertValue(sortEntry, LiveDataQuery.SortEntry.class))
                 .collect(Collectors.toList());
-        // The page starts at 1, a smaller number being the first page.
-        int offset = (Math.max(page, 1) - 1) * pageSize;
+        int offset = Pagination.getOffset(page, pageSize);
         return projectManagementManager.getWorkItems(client, offset, pageSize, livedataFilters, livedataSortEntries);
     }
 }

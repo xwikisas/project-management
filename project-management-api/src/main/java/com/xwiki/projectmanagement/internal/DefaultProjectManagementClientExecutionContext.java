@@ -64,5 +64,14 @@ public class DefaultProjectManagementClientExecutionContext implements ProjectMa
     {
         this.context.set(context);
     }
+
+    /**
+     * Remove the context of the current thread, so that it doesn't outlive the request that set it (the threads are
+     * reused for other requests).
+     */
+    public void clearContext()
+    {
+        this.context.remove();
+    }
 }
 

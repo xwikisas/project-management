@@ -111,18 +111,23 @@ class DefaultProjectsResourceTest
     }
 
     @Test
-    void getProject() throws Exception
+    void getProjectSetsTheClientContextForTheRequestOnly() throws Exception
     {
-        Project project = new Project();
-        when(this.projectsApi.get(PROJECT_ID)).thenReturn(project);
+        ProjectManagementClientExecutionContext executionContext =
+            this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
+        // The client returns a project named after the instance found in the context it was called with.
+        when(this.projectsApi.get(PROJECT_ID)).thenAnswer(invocation -> {
+            Project project = new Project();
+            project.setName((String) executionContext.get("instance"));
+            return project;
+        });
 
         Response response = this.resource.getProject(WIKI, CLIENT, PROJECT_ID);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertSame(project, response.getEntity());
-        assertEquals(Map.of("instance", "main"),
-            this.componentManager.<ProjectManagementClientExecutionContext>getInstance(
-                ProjectManagementClientExecutionContext.class).getContext());
+        assertEquals("main", ((Project) response.getEntity()).getName());
+        // The thread is reused for other requests, which must not see the context of this one.
+        assertEquals(Map.of(), executionContext.getContext());
     }
 
     @Test

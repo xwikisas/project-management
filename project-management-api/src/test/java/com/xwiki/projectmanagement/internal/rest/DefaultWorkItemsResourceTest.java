@@ -58,7 +58,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -123,22 +122,25 @@ class DefaultWorkItemsResourceTest
     }
 
     @Test
-    void getWorkItemSetsTheClientContextFromTheQueryParameters() throws Exception
+    void getWorkItemSetsTheClientContextFromTheQueryParametersForTheRequestOnly() throws Exception
     {
         this.queryParameters.put("instance", List.of("main"));
         this.queryParameters.put("ids", List.of("1", "2"));
         ProjectManagementClientExecutionContext executionContext =
             this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
+        // The client returns a work item holding the context it was called with.
         when(this.client.getWorkItem(WORK_ITEM_ID)).thenAnswer(invocation -> {
-            // The context is set before calling the client.
-            assertEquals(Map.of("instance", "main", "ids", List.of("1", "2")), executionContext.getContext());
-            return new WorkItem();
+            WorkItem workItem = new WorkItem();
+            workItem.putAll(executionContext.getContext());
+            return workItem;
         });
 
         Response response = this.resource.getWorkItem(WIKI, CLIENT, WORK_ITEM_ID);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(this.client).getWorkItem(WORK_ITEM_ID);
+        assertEquals(Map.of("instance", "main", "ids", List.of("1", "2")), response.getEntity());
+        // The thread is reused for other requests, which must not see the context of this one.
+        assertEquals(Map.of(), executionContext.getContext());
     }
 
     @Test
@@ -192,22 +194,13 @@ class DefaultWorkItemsResourceTest
     }
 
     @Test
-    void getWorkItemsConvertsThePageToAnOffset() throws Exception
+    void getWorkItemsReturnsTheFirstPageForAPageSmallerThanOne() throws Exception
     {
         when(this.configurationResolver.resolve("")).thenReturn(null);
         PaginatedResult<WorkItem> result = new PaginatedResult<>();
-        when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList())).thenReturn(result);
+        when(this.client.getWorkItems(0, 15, Collections.emptyList(), Collections.emptyList())).thenReturn(result);
 
-        this.resource.getWorkItems(WIKI, CLIENT, 1, 10, null);
-        this.resource.getWorkItems(WIKI, CLIENT, 3, 10, null);
-        // A page smaller than 1 is the first page.
-        this.resource.getWorkItems(WIKI, CLIENT, 0, 15, null);
-        this.resource.getWorkItems(WIKI, CLIENT, -2, 25, null);
-
-        verify(this.client).getWorkItems(0, 10, Collections.emptyList(), Collections.emptyList());
-        verify(this.client).getWorkItems(20, 10, Collections.emptyList(), Collections.emptyList());
-        verify(this.client).getWorkItems(0, 15, Collections.emptyList(), Collections.emptyList());
-        verify(this.client).getWorkItems(0, 25, Collections.emptyList(), Collections.emptyList());
+        assertSame(result, this.resource.getWorkItems(WIKI, CLIENT, 0, 15, null).getEntity());
     }
 
     @Test

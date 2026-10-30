@@ -32,8 +32,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -57,9 +55,9 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -105,9 +103,6 @@ class DefaultCalendarResourceTest
     @Mock
     private CalendarEventProvider calendarEventProvider;
 
-    @Captor
-    private ArgumentCaptor<List<LiveDataQuery.Filter>> filtersCaptor;
-
     private final LiveDataQuery.Filter statusFilter = new LiveDataQuery.Filter("status", "equals", "open");
 
     private final List<WorkItem> workItems = List.of(new WorkItem());
@@ -128,28 +123,29 @@ class DefaultCalendarResourceTest
         configuration.getQuery().setFilters(List.of(this.statusFilter));
         when(this.stringLiveDataConfigResolver.resolve(FILTERS)).thenReturn(configuration);
 
+        // Requests other than the expected ones find nothing.
         when(this.client.getWorkItems(anyInt(), anyInt(), anyList(), anyList()))
-            .thenReturn(new PaginatedResult<>(this.workItems, 1, 25, 1));
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 25, 0));
+        when(this.calendarEventProvider.getMoreEvents(anyList())).thenReturn(List.of());
         when(this.calendarEventConverter.convertAll(this.workItems)).thenReturn(List.of(this.workItemEvent));
-        when(this.calendarEventProvider.getMoreEvents(anyList())).thenReturn(List.of(this.providerEvent));
     }
 
     @Test
     void getCalendarEvents() throws Exception
     {
+        // The work items are filtered by the requested filters and by the calendar window: their date range must
+        // overlap it. The work items are read from the first one and a missing limit defaults to 25 work items.
+        List<String> expectedFilters = List.of("status equals open", "dateRange between " + START + '/' + END);
+        when(this.client.getWorkItems(eq(0), eq(25), filters(expectedFilters), eq(Collections.emptyList())))
+            .thenReturn(new PaginatedResult<>(this.workItems, 1, 25, 1));
+        // The provider of the additional events receives the same filters.
+        when(this.calendarEventProvider.getMoreEvents(filters(expectedFilters)))
+            .thenReturn(List.of(this.providerEvent));
+
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, false);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(List.of(this.workItemEvent, this.providerEvent), response.getEntity());
-
-        // The work items are filtered by the requested filters and by the calendar window: their date range must
-        // overlap it. The work items are read from the first one and a missing limit defaults to 25 work items.
-        verify(this.client).getWorkItems(eq(0), eq(25), this.filtersCaptor.capture(), eq(Collections.emptyList()));
-        List<LiveDataQuery.Filter> filters = this.filtersCaptor.getValue();
-        assertEquals(List.of("status equals open", "dateRange between " + START + '/' + END),
-            serialize(filters));
-        // The provider of the additional events receives the same filters.
-        verify(this.calendarEventProvider).getMoreEvents(filters);
     }
 
     @Test
@@ -157,27 +153,28 @@ class DefaultCalendarResourceTest
     {
         LiveDataConfiguration configuration = new LiveDataConfiguration();
         when(this.stringLiveDataConfigResolver.resolve("")).thenReturn(configuration);
+        when(this.client.getWorkItems(eq(0), eq(10), filters(List.of("dateRange between " + START + '/' + END)),
+            eq(Collections.emptyList()))).thenReturn(new PaginatedResult<>(this.workItems, 1, 10, 1));
 
         Response response = this.resource.getCalendarEvents(WIKI, HINT, null, START, END, 10, false);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        verify(this.client).getWorkItems(eq(0), eq(10), this.filtersCaptor.capture(), any());
-        assertEquals(List.of("dateRange between " + START + '/' + END),
-            serialize(this.filtersCaptor.getValue()));
+        assertEquals(List.of(this.workItemEvent), response.getEntity());
     }
 
     @Test
     void getCalendarEventsExcludingWorkItems() throws Exception
     {
+        when(this.calendarEventProvider.getMoreEvents(
+            filters(List.of("status equals open", "dateRange between " + START + '/' + END))))
+            .thenReturn(List.of(this.providerEvent));
+
         Response response = this.resource.getCalendarEvents(WIKI, HINT, FILTERS, START, END, 0, true);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(List.of(this.providerEvent), response.getEntity());
+        // No request to the project management server for the work items.
         verify(this.client, never()).getWorkItems(anyInt(), anyInt(), anyList(), anyList());
-        verifyNoInteractions(this.calendarEventConverter);
-        verify(this.calendarEventProvider).getMoreEvents(this.filtersCaptor.capture());
-        assertEquals(List.of("status equals open", "dateRange between " + START + '/' + END),
-            serialize(this.filtersCaptor.getValue()));
     }
 
     @Test
@@ -303,6 +300,14 @@ class DefaultCalendarResourceTest
         assertEquals("Failed to retrieve the calendar events."
             + " Root cause: [WorkItemRetrievalException: The request to the OpenProject API was invalid.]",
             this.logCapture.getMessage(0));
+    }
+
+    /**
+     * {@link LiveDataQuery.Filter} doesn't implement {@code equals}: match the filters on their serialization.
+     */
+    private static List<LiveDataQuery.Filter> filters(List<String> expected)
+    {
+        return argThat(filters -> filters != null && expected.equals(serialize(filters)));
     }
 
     private static List<String> serialize(List<LiveDataQuery.Filter> filters)

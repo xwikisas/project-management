@@ -100,4 +100,15 @@ public abstract class AbstractProjectManagementResource extends XWikiResource
                 .setContext(context);
         }
     }
+
+    /**
+     * Remove the client context set by {@link #prepareClientContext()}, to call once the request is handled: the
+     * thread is then reused for other requests, which must not see the parameters of this one.
+     */
+    protected void clearClientContext()
+    {
+        if (clientExecutionContext instanceof DefaultProjectManagementClientExecutionContext) {
+            ((DefaultProjectManagementClientExecutionContext) clientExecutionContext).clearContext();
+        }
+    }
 }
