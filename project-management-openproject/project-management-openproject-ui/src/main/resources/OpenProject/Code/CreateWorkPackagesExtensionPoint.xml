@@ -1661,7 +1661,7 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
       <parameters/>
     </property>
     <property>
-      <scope>global</scope>
+      <scope>wiki</scope>
     </property>
   </object>
 </xwikidoc>

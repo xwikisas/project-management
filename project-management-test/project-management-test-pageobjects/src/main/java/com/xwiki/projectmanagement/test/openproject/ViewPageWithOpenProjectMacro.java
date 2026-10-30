@@ -59,6 +59,24 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     }
 
     /**
+     * @return the number of "create work packages" menus that the page provides, from the selected text or tables
+     * @since 1.4.0
+     */
+    public int getCreateWorkPackagesMenuCount()
+    {
+        return getDriver().findElementsWithoutWaiting(By.id("selection-menu")).size();
+    }
+
+    /**
+     * @return the number of "edit work package" dialogs that the page provides, for the displayed work packages
+     * @since 1.4.0
+     */
+    public int getEditWorkPackageDialogCount()
+    {
+        return getDriver().findElementsWithoutWaiting(By.id("edit-work-package-modal")).size();
+    }
+
+    /**
      * @param property the work package property, e.g. {@code type}
      * @param value the value of the property, e.g. {@code Task}
      * @param instance the name of the OpenProject connection the work packages come from
