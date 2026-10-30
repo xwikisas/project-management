@@ -23,7 +23,10 @@ import java.util.List;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.ObjectReference;
 import org.xwiki.test.docker.junit5.UITest;
+import org.xwiki.test.ui.TestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
@@ -93,5 +96,26 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
         dashboard.waitUntilGadgetsAreDisplayed();
         assertEquals(List.of(), dashboard.getWarnings());
         assertTrue(dashboard.hasProjectPicker());
+    }
+
+    @Test
+    @Order(2)
+    void selectedProjectIsRemembered(TestUtils setup) throws Exception
+    {
+        OpenProjectDashboardPage dashboard = OpenProjectDashboardPage.gotoPage();
+        assertEquals(CONNECTION_ID, dashboard.getSelectedConnection());
+        // Not the first project, which the dashboard displays (without saving it) until a project is selected.
+        dashboard = dashboard.selectProject("Demo project").waitUntilGadgetsAreDisplayed();
+        assertEquals("Demo project", dashboard.getSelectedProject());
+
+        // The name of the project is saved with its id, so that the picker displays it without asking OpenProject.
+        DocumentReference dashboardReference = new DocumentReference("xwiki", "OpenProject", "WebHome");
+        org.xwiki.rest.model.jaxb.Object config = setup.rest()
+            .get(new ObjectReference("OpenProject.Code.DashboardConnectionConfigClass[0]", dashboardReference));
+        assertEquals("Demo project",
+            TestUtils.RestTestUtils.getProperty("selectedProjectLabel", config, false).getValue());
+
+        dashboard = OpenProjectDashboardPage.gotoPage();
+        assertEquals("Demo project", dashboard.getSelectedProject());
     }
 }

@@ -74,6 +74,20 @@
       <validationRegExp/>
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </selectedProject>
+    <selectedProjectLabel>
+      <customDisplay/>
+      <disabled>0</disabled>
+      <hint/>
+      <name>selectedProjectLabel</name>
+      <number>3</number>
+      <picker>1</picker>
+      <prettyName>selectedProjectLabel</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </selectedProjectLabel>
   </class>
   <object>
     <name>OpenProject.Code.DashboardConnectionConfigClass</name>

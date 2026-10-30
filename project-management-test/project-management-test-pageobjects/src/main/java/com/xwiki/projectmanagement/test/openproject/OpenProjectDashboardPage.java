@@ -28,6 +28,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.ViewPage;
 
 /**
@@ -39,6 +40,8 @@ import org.xwiki.test.ui.po.ViewPage;
 public class OpenProjectDashboardPage extends ViewPage
 {
     private static final By CONNECTION_SELECT = By.id("openproject-dashboard-connection-select");
+
+    private static final By PROJECT_SELECT = By.id("openproject-dashboard-project-select");
 
     private static final String CONNECTION_NAME_PARAMETER = "connectionName=";
 
@@ -86,7 +89,33 @@ public class OpenProjectDashboardPage extends ViewPage
      */
     public boolean hasProjectPicker()
     {
-        return getDriver().hasElementWithoutWaiting(By.id("openproject-dashboard-project-select"));
+        return getDriver().hasElementWithoutWaiting(PROJECT_SELECT);
+    }
+
+    /**
+     * @return the name of the project selected in the project picker, or {@code null} if no project is selected
+     */
+    public String getSelectedProject()
+    {
+        List<SuggestInputElement.SuggestionElement> selected = getProjectPicker().getSelectedSuggestions();
+        return selected.isEmpty() ? null : selected.get(0).getLabel();
+    }
+
+    /**
+     * Select a project in the project picker, and wait for the dashboard to be reloaded with it.
+     *
+     * @param project the name of the project to select, which must not be the selected one
+     * @return the reloaded dashboard
+     */
+    public OpenProjectDashboardPage selectProject(String project)
+    {
+        WebElement select = getDriver().findElement(PROJECT_SELECT);
+        new SuggestInputElement(select).click().sendKeys(project).waitForSuggestions().selectByVisibleText(project);
+        // Selecting a project saves it and reloads the dashboard.
+        getDriver().waitUntilCondition(ExpectedConditions.stalenessOf(select));
+        OpenProjectDashboardPage dashboard = new OpenProjectDashboardPage();
+        dashboard.waitUntilPageIsReady();
+        return dashboard;
     }
 
     /**
@@ -124,6 +153,11 @@ public class OpenProjectDashboardPage extends ViewPage
             .filter(WebElement::isDisplayed)
             .map(link -> getConnectionName(link.getAttribute("href")))
             .collect(Collectors.toList());
+    }
+
+    private SuggestInputElement getProjectPicker()
+    {
+        return new SuggestInputElement(getDriver().findElement(PROJECT_SELECT));
     }
 
     private static String getConnectionName(String url)
