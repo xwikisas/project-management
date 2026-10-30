@@ -49,6 +49,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -612,6 +613,30 @@ class OpenProjectClientTest
             argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
 
         assertEquals("42", this.openProjectClient.getWorkItem("42").getIdentifier().getValue());
+    }
+
+    @Test
+    void getWorkItemThatDoesNotExist() throws ProjectManagementException
+    {
+        doReturn(workPackages()).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"404\"]}}]")), eq(NO_SORTING));
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.getWorkItem("404"));
+
+        assertEquals("Work Item with ID [404] was not found.", exception.getMessage());
+    }
+
+    @Test
+    void getProjectThatDoesNotExist() throws ProjectManagementException
+    {
+        doReturn(new PaginatedResult<>(List.of(), 0, 1, 0)).when(this.openProjectApiClient)
+            .getProjects(eq(0), eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"404\"]}}]")));
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.projects().get("404"));
+
+        assertEquals("Project with ID [404] was not found.", exception.getMessage());
     }
 
     @Test

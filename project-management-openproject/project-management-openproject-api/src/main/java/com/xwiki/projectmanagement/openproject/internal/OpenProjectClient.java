@@ -143,7 +143,7 @@ public class OpenProjectClient implements ProjectManagementClient
             getWorkItems(0, 1, Collections.singletonList(filter), Collections.emptyList());
 
         if (result.getItems().isEmpty()) {
-            throw new WorkItemNotFoundException("Work Item with ID [%s] was not found.");
+            throw new WorkItemNotFoundException(String.format("Work Item with ID [%s] was not found.", workItemId));
         }
 
         return result.getItems().get(0);
@@ -237,7 +237,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 filter.getConstraints().add(new LiveDataQuery.Constraint(id, EQUALS));
                 PaginatedResult<Project> result = get(0, 1, Collections.singletonList(filter));
                 if (result.getItems().isEmpty()) {
-                    throw new WorkItemNotFoundException("Project with ID [%s] was not found.");
+                    throw new WorkItemNotFoundException(String.format("Project with ID [%s] was not found.", id));
                 }
 
                 return result.getItems().get(0);
