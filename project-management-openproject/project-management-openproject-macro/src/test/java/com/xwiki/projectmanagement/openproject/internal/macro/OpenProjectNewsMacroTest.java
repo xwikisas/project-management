@@ -101,6 +101,17 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void filtersOnAProjectWithSpecialCharacters() throws Exception
+    {
+        this.parameters.setProject("a\"b\\");
+        when(this.apiClient.getNews(null, 2,
+            "[{\"project_id\":{\"operator\":\"=\",\"values\":[\"a\\\"b\\\\\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 2, 0));
+
+        assertEquals("No news found.\n", text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void displaysTheNewsOfAllProjects() throws Exception
     {
         when(this.apiClient.getNews(null, 2, ""))

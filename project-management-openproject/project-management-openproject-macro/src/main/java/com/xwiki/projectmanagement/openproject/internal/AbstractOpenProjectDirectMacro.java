@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -141,6 +143,18 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     protected OpenProjectConfiguration getOpenProjectConfiguration()
     {
         return openProjectConfiguration;
+    }
+
+    /**
+     * @param serverUrl the URL of the OpenProject server
+     * @param project the project parameter of the macro, i.e. the id or the identifier of an OpenProject project
+     * @return the URL of the project overview on the OpenProject server
+     */
+    protected static String getProjectURL(String serverUrl, String project)
+    {
+        // The project is used as a single path segment.
+        return String.format("%s/projects/%s", serverUrl,
+            URLEncoder.encode(String.valueOf(project), StandardCharsets.UTF_8).replace("+", "%20"));
     }
 
     /**

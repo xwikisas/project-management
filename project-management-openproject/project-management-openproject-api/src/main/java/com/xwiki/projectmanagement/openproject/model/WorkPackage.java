@@ -204,7 +204,7 @@ public class WorkPackage extends BaseOpenProjectObject
      * @return the identifier displayed by OpenProject: the key of the work package (e.g. {@code XWIKI-123}) on the
      *     instances using project-based semantic identifiers, its id otherwise; {@code null} for the OpenProject
      *     versions that don't provide it
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public String getDisplayId()
     {
@@ -213,7 +213,7 @@ public class WorkPackage extends BaseOpenProjectObject
 
     /**
      * @param displayId see {@link #getDisplayId()}
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void setDisplayId(String displayId)
     {
@@ -467,7 +467,7 @@ public class WorkPackage extends BaseOpenProjectObject
      * @return the field values, keyed by the name of the field in the OpenProject API (e.g. {@code customField3}).
      *     A field that references other resources (e.g. a version) has a {@link Linkable} value, or a list of
      *     {@link Linkable} for a multi-value field, the other fields have a {@link String} value
-     * @since 1.3.1
+     * @since 1.4.0
      */
     @SuppressWarnings("unchecked")
     public Map<String, Object> getFieldValues()
@@ -480,7 +480,7 @@ public class WorkPackage extends BaseOpenProjectObject
      * Sets the values of the work package fields that this class doesn't model explicitly.
      *
      * @param fieldValues see {@link #getFieldValues()}
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public void setFieldValues(Map<String, Object> fieldValues)
     {

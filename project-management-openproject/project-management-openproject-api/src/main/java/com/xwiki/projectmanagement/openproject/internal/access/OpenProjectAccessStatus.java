@@ -23,7 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.access;
  * How the current user can reach an OpenProject connection.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public enum OpenProjectAccessStatus
 {

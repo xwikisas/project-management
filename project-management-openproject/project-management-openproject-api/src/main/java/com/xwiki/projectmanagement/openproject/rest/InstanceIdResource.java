@@ -34,6 +34,10 @@ import org.xwiki.instance.InstanceId;
 public interface InstanceIdResource
 {
     /**
+     * Returns the identifier of this XWiki instance. OpenProject requests it without credentials (when a wiki provider
+     * is created and when its configuration is checked), to find out which XWiki instance a wiki provider points to, so
+     * it is returned to any caller. It identifies the instance and doesn't grant any access.
+     *
      * @return the instance id of the xwiki.
      */
     @GET

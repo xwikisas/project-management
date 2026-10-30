@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * {@link Date}s.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 final class ModelValues
 {

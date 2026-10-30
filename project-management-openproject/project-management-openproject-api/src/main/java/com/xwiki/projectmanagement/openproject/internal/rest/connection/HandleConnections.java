@@ -39,6 +39,8 @@ import org.xwiki.security.authorization.Right;
 
 import com.xpn.xwiki.XWikiException;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
+import com.xwiki.projectmanagement.openproject.internal.service.ConnectionSaveException;
 import com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
@@ -66,8 +68,9 @@ public class HandleConnections extends XWikiResource
      * @param spaceName the full space path where the page resides
      * @param pageName the name of the page where the connection configuration will be stored
      * @param openProjectConnection the {@link OpenProjectConnection} to store
-     * @return 201 if the creation was successful; 409 if an instance with the same connection name exists; 500 if any
-     *     error was encountered.
+     * @return 201 if the creation was successful; 400 if the connection data or the page is not valid; 403 if the
+     *     current user is not allowed to save the connection; 409 if a connection with the same name exists or if
+     *     the page already exists and can't be updated; 500 if any other error was encountered.
      */
     @POST
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -89,8 +92,9 @@ public class HandleConnections extends XWikiResource
      * @param spaceName the full space path where the page resides
      * @param pageName the name of the page where the connection configuration is stored
      * @param openProjectConnection the {@link OpenProjectConnection} containing the updated data
-     * @return 200 if the update was successful; 409 if an instance with the same connection name exists; 500 if any
-     *     error was encountered.
+     * @return 200 if the update was successful; 400 if the connection data or the page is not valid; 403 if the
+     *     current user is not allowed to save the connection; 409 if a connection with the same name exists or if
+     *     the page can't be updated; 500 if any other error was encountered.
      */
     @PUT
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -108,14 +112,15 @@ public class HandleConnections extends XWikiResource
     private void checkAccessRights(DocumentReference documentReference) throws XWikiException
     {
         DocumentReference currentUserRef = getXWikiContext().getUserReference();
-        // The connection page must be saved on a wiki that the current user administers.
-        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, getXWikiContext().getWikiReference())
-            || !authorizationManager.hasAccess(Right.ADMIN, currentUserRef, documentReference.getWikiReference()))
+        // The connection page must be saved on a wiki that the current user administers, whatever the wiki the request
+        // is sent to, and the current user must be allowed to edit it.
+        if (!authorizationManager.hasAccess(Right.ADMIN, currentUserRef, documentReference.getWikiReference())
+            || !authorizationManager.hasAccess(Right.EDIT, currentUserRef, documentReference))
         {
             throw new XWikiException(
                 XWikiException.MODULE_XWIKI_ACCESS,
                 XWikiException.ERROR_XWIKI_ACCESS_DENIED,
-                "You need Admin rights to perform this operation."
+                "You need Admin rights on the wiki and Edit right on the page to perform this operation."
             );
         }
     }
@@ -134,17 +139,23 @@ public class HandleConnections extends XWikiResource
             checkAccessRights(documentReference);
             handleConnectionsService.handleConnection(openProjectConnection, documentReference);
 
-            if (isNewConnection) {
-                return Response.status(Response.Status.CREATED).build();
-            } else {
-                return Response.status(Response.Status.OK).build();
-            }
+            return Response.status(isNewConnection ? Response.Status.CREATED : Response.Status.OK).build();
         } catch (XWikiException e) {
             return Response.status(Response.Status.FORBIDDEN).entity(e.getMessage()).build();
         } catch (ProjectManagementException e) {
-            return Response.status(Response.Status.CONFLICT).entity(e.getMessage()).build();
+            return getErrorResponse(e);
         } catch (XWikiRestException e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
         }
+    }
+
+    private Response getErrorResponse(ProjectManagementException e)
+    {
+        if (e instanceof ConnectionSaveException) {
+            Response.Status status = ((ConnectionSaveException) e).isConflict() ? Response.Status.CONFLICT
+                : Response.Status.BAD_REQUEST;
+            return Response.status(status).entity(e.getMessage()).build();
+        }
+        return RestErrorResponses.errorResponse(getLogger(), e.getMessage(), e);
     }
 }

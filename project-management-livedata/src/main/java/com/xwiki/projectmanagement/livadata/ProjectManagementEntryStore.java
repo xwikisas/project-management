@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.livadata;
  */
 
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -120,8 +121,13 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         ld.getEntries().addAll(workItems.getItems());
         ld.setCount(workItems.getTotalItems());
         // PREPARE THE RESULTS FOR THE LIVEDATA - TURN THE LINKABLES TO PROPERTIES OF THE WORK ITEM -----------
+        // The displayers replace the linkables by their HTML display, so keep their locations to expose them as raw
+        // URLs, e.g. for the actions that open the work item.
+        Map<WorkItem, Map<String, Object>> locations = getLocations(workItems.getItems());
         applyDisplayers(workItems.getItems(), clientId);
         flatten(ld);
+        // The entries are the work items themselves.
+        locations.forEach(Map::putAll);
 
         return ld;
     }
@@ -142,6 +148,24 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
             logger.warn("Failed to find the project management livedata displayer with hint [{}].",
                 clientId);
         }
+    }
+
+    private static Map<WorkItem, Map<String, Object>> getLocations(List<WorkItem> workItems)
+    {
+        // The work items are maps whose content changes when they are displayed, so they are matched by identity.
+        Map<WorkItem, Map<String, Object>> locations = new IdentityHashMap<>();
+        for (WorkItem workItem : workItems) {
+            Map<String, Object> itemLocations = new HashMap<>();
+            for (String linkWorkItemProperty : LINK_PROPERTIES) {
+                Object property = workItem.get(linkWorkItemProperty);
+                if (property instanceof Map && ((Map<?, ?>) property).get(Linkable.KEY_LOCATION) != null) {
+                    itemLocations.put(String.format(FLATTEN_FORMAT, linkWorkItemProperty, Linkable.KEY_LOCATION),
+                        ((Map<?, ?>) property).get(Linkable.KEY_LOCATION));
+                }
+            }
+            locations.put(workItem, itemLocations);
+        }
+        return locations;
     }
 
     // TODO: Have a more generic method of flattening a work item.

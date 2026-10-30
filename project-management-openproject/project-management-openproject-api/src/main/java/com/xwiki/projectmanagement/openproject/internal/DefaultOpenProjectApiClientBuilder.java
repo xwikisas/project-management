@@ -53,6 +53,8 @@ public class DefaultOpenProjectApiClientBuilder implements OpenProjectApiClientB
     private static final HttpClient DEFAULT_HTTP_CLIENT =
         HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
 
+    private final WorkPackageDescriptionCleaner descriptionCleaner;
+
     private String serverUrl;
 
     private OpenProjectAuthenticator authenticator = NoOpAuthenticator.INSTANCE;
@@ -62,6 +64,14 @@ public class DefaultOpenProjectApiClientBuilder implements OpenProjectApiClientB
     private Cache<PaginatedResult<? extends BaseOpenProjectObject>> cache;
 
     private String cacheClientId;
+
+    /**
+     * @param descriptionCleaner cleans the HTML description of the work packages returned by the built clients
+     */
+    public DefaultOpenProjectApiClientBuilder(WorkPackageDescriptionCleaner descriptionCleaner)
+    {
+        this.descriptionCleaner = descriptionCleaner;
+    }
 
     @Override
     public OpenProjectApiClientBuilder serverUrl(String serverUrl)
@@ -102,7 +112,8 @@ public class DefaultOpenProjectApiClientBuilder implements OpenProjectApiClientB
             throw new IllegalStateException("A server URL is required to build an OpenProjectApiClient.");
         }
 
-        OpenProjectApiClient client = new DefaultOpenProjectApiClient(serverUrl, authenticator, httpClient);
+        OpenProjectApiClient client =
+            new DefaultOpenProjectApiClient(serverUrl, authenticator, httpClient, descriptionCleaner);
         if (cache != null) {
             client = new CachingOpenProjectApiClient(client, cacheClientId, cache);
         }

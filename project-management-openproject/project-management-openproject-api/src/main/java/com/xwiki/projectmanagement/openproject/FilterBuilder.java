@@ -20,10 +20,15 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Allows the creation of OpenProject filter that gets passed to the REST endpoints.
@@ -33,13 +38,9 @@ import org.apache.commons.lang3.StringUtils;
  */
 public class FilterBuilder
 {
-    private static final String FILTER_FORMAT = "{\"%s\":{\"operator\":\"%s\",\"values\":[%s]}}";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static final String VALUE_FORMAT = "\"%s\"";
-
-    private static final String DELIMITER = ",";
-
-    private final List<String> filters = new ArrayList<>();
+    private final List<Map<String, Map<String, Object>>> filters = new ArrayList<>();
 
     /**
      * Enumeration for storing the different types of OP operators.
@@ -96,20 +97,21 @@ public class FilterBuilder
     public FilterBuilder addFilter(String property, String operator, Object value)
     {
         // TODO: Handle the different types of possible values. i.e. numbers, booleans.
+        List<String> values;
         if (value instanceof List) {
-            String joinedValues = ((List<?>) value).stream()
-                .map(element -> String.format(VALUE_FORMAT, element))
-                .collect(Collectors.joining(DELIMITER));
-            if (joinedValues.isEmpty()) {
-                return this;
-            }
-            filters.add(String.format(FILTER_FORMAT, property, operator, joinedValues));
-            return this;
+            values = ((List<?>) value).stream().map(String::valueOf).collect(Collectors.toList());
+        } else if (value == null || StringUtils.isEmpty(value.toString())) {
+            values = List.of();
+        } else {
+            values = List.of(value.toString());
         }
-        if (value == null || StringUtils.isEmpty(value.toString())) {
-            return this;
+        if (!values.isEmpty()) {
+            // The filter is serialized as {"<property>":{"operator":"<operator>","values":["<value>", ...]}}.
+            Map<String, Object> constraint = new LinkedHashMap<>();
+            constraint.put("operator", operator);
+            constraint.put("values", values);
+            this.filters.add(Map.of(property, constraint));
         }
-        filters.add(String.format(FILTER_FORMAT, property, operator, String.format(VALUE_FORMAT, value)));
         return this;
     }
 
@@ -129,6 +131,11 @@ public class FilterBuilder
      */
     public String build()
     {
-        return "[" + String.join(DELIMITER, filters) + "]";
+        try {
+            return MAPPER.writeValueAsString(this.filters);
+        } catch (JsonProcessingException e) {
+            // Can't happen since the filters only hold strings, lists and maps.
+            throw new IllegalStateException("Failed to serialize the filters.", e);
+        }
     }
 }
