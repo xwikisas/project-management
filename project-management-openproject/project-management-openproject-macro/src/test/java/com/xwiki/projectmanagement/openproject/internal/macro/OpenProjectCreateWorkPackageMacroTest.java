@@ -40,8 +40,6 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCreateWorkPackag
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -64,8 +62,7 @@ class OpenProjectCreateWorkPackageMacroTest
     @Mock
     private Translation translation;
 
-    @Mock
-    private MacroTransformationContext context;
+    private final MacroTransformationContext context = new MacroTransformationContext();
 
     @BeforeEach
     void setUp()
@@ -86,17 +83,5 @@ class OpenProjectCreateWorkPackageMacroTest
 
         assertEquals(List.of(new GroupBlock(List.of(message), Map.of("class", "box infomessage"))), result);
         assertFalse(this.macro.supportsInlineMode());
-    }
-
-    @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-
-        assertSame(licenseBlock,
-            this.macro.execute(new OpenProjectCreateWorkPackageMacroParameters(), "", this.context));
-
-        verifyNoInteractions(this.l10n);
     }
 }

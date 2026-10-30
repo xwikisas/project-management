@@ -93,7 +93,7 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
         throws MacroExecutionException
     {
         String filters = "";
-        if (project != null && !project.isBlank()) {
+        if (hasProject(project)) {
             filters = FilterBuilder.get().addFilter("project_id", FilterBuilder.Operator.EQUALS, project).build();
         }
 

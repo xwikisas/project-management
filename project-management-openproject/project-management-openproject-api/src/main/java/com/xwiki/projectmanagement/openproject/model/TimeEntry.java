@@ -82,8 +82,11 @@ public class TimeEntry extends BaseOpenProjectObject
         setActivity(new Linkable(activityNode.path(KEY_TITLE).asText(), activityNode.path(KEY_HREF).asText()));
 
         JsonNode workPackageNode = linksNode.path(KEY_WORK_PACKAGE);
-        String workPackageRef = workPackageNode.path(KEY_HREF).asText();
-        setWorkPackage(new Linkable(workPackageNode.path(KEY_TITLE).asText(), workPackageRef));
+        // The time can be logged on the project itself, in which case the work package link has no href.
+        if (workPackageNode.path(KEY_HREF).isTextual() && !workPackageNode.path(KEY_HREF).asText().isBlank()) {
+            setWorkPackage(new Linkable(workPackageNode.path(KEY_TITLE).asText(),
+                workPackageNode.path(KEY_HREF).asText()));
+        }
 
         JsonNode projectNode = linksNode.path("project");
         setProjectLink(new Linkable(projectNode.path(KEY_TITLE).asText(), projectNode.path(KEY_HREF).asText()));

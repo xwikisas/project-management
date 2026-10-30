@@ -26,6 +26,8 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.Block;
@@ -66,8 +68,7 @@ class LicenseCheckerTest
     @Mock
     private XWikiContext xcontext;
 
-    @Mock
-    private MacroTransformationContext macroContext;
+    private final MacroTransformationContext macroContext = new MacroTransformationContext();
 
     @BeforeEach
     void setUp()
@@ -91,20 +92,22 @@ class LicenseCheckerTest
     {
         when(this.licensor.hasLicensure(LICENSED_CLASS)).thenReturn(true);
 
-        assertTrue(this.licenseChecker.getMissingLicenseBlock(this.macroContext).isEmpty());
+        assertEquals(List.of(), this.licenseChecker.getMissingLicenseBlock(this.macroContext));
     }
 
-    @Test
-    void getMissingLicenseBlockWhenNotLicensed()
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void getMissingLicenseBlockWhenNotLicensed(boolean inline)
     {
-        when(this.macroContext.isInline()).thenReturn(true);
+        this.macroContext.setInline(inline);
 
         List<Block> blocks = this.licenseChecker.getMissingLicenseBlock(this.macroContext);
 
+        // The message is displayed inline or as a block, like the macro it replaces.
         assertEquals(1, blocks.size());
         MacroBlock macroBlock = (MacroBlock) blocks.get(0);
         assertEquals("missingLicenseMessage", macroBlock.getId());
         assertEquals(Map.of("extensionName", "openproject.extension.name"), macroBlock.getParameters());
-        assertTrue(macroBlock.isInline());
+        assertEquals(inline, macroBlock.isInline());
     }
 }

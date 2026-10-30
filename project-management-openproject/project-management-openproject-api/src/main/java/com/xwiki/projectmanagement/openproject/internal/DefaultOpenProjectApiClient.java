@@ -670,9 +670,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         List<TimeEntry> entries = new ArrayList<>();
         for (JsonNode element : elements) {
             TimeEntry entry = new TimeEntry(element);
-            String wpHref = element.path(OP_RESPONSE_LINKS).path("workPackage").path(HREF).asText();
-            if (!wpHref.isBlank()) {
-                entry.getWorkPackage().setLocation(connectionUrl + wpHref.replaceFirst(API_URL_PART, ""));
+            // The API URL of the work package is replaced by the URL of its page.
+            if (entry.getWorkPackage() != null) {
+                entry.getWorkPackage().setLocation(
+                    connectionUrl + entry.getWorkPackage().getLocation().replaceFirst(API_URL_PART, ""));
             }
             entries.add(entry);
         }

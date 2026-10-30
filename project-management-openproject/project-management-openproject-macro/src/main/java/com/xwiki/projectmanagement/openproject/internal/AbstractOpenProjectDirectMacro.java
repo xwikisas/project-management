@@ -45,6 +45,8 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 
+import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
+
 /**
  * Base class for OpenProject macros that render content directly (not via LiveData/async). Handles license checking,
  * instance resolution, token validation, and API client resolution, so concrete subclasses only implement the
@@ -155,6 +157,21 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         // The project is used as a single path segment.
         return String.format("%s/projects/%s", serverUrl,
             URLEncoder.encode(String.valueOf(project), StandardCharsets.UTF_8).replace("+", "%20"));
+    }
+
+    /**
+     * @param project the project parameter of the macro
+     * @return {@code true} if the project is set, {@code false} if it's empty
+     * @throws MacroExecutionException if the project is the project selected on the OpenProject dashboard and it
+     *     couldn't be resolved, e.g. when the macro is not on the dashboard
+     */
+    protected boolean hasProject(String project) throws MacroExecutionException
+    {
+        if (USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project)) {
+            throw new MacroExecutionException("The project selected on the OpenProject dashboard couldn't be resolved."
+                + " Select a project explicitly when the macro is not on the dashboard.");
+        }
+        return project != null && !project.isBlank();
     }
 
     /**

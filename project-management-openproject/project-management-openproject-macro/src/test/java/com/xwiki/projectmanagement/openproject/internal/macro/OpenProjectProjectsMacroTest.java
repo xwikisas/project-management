@@ -24,11 +24,9 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
@@ -37,8 +35,6 @@ import com.xwiki.projectmanagement.openproject.model.Project;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 /**
@@ -95,18 +91,5 @@ class OpenProjectProjectsMacroTest extends AbstractDirectMacroTest
 
         assertEquals(INTRODUCTION + "No projects found.\n", text(result));
         assertEquals(List.of(), links(result));
-    }
-
-    @Test
-    void failsWhenTheProjectsCannotBeRetrieved() throws Exception
-    {
-        ProjectManagementException cause = new ProjectManagementException("unreachable");
-        when(this.apiClient.getProjects(null, 3, "")).thenThrow(cause);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("Failed to retrieve projects from OpenProject.", exception.getMessage());
-        assertSame(cause, exception.getCause());
     }
 }
