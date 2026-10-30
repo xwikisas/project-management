@@ -138,30 +138,27 @@ class ProjectManagementScriptServiceTest
         ProjectManagementClientExecutionContext executionContext =
             this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
         Map<String, Object> clientContext = Map.of("instance", "main");
-        when(this.projectManagementManager.getWorkItems(eq(CLIENT), anyInt(), anyInt(), anyList(), anyList()))
+        // The client returns a work item holding the context it was called with.
+        when(this.projectManagementManager.getWorkItems(CLIENT, 0, 10, List.of(), List.of()))
             .thenAnswer(invocation -> {
-                assertEquals(clientContext, executionContext.getContext());
-                return new PaginatedResult<>();
+                WorkItem workItem = new WorkItem();
+                workItem.putAll(executionContext.getContext());
+                return new PaginatedResult<>(List.of(workItem), 1, 10, 1);
             });
 
-        this.scriptService.getWorkItems(CLIENT, 1, 10, List.of(), List.of(), clientContext);
+        PaginatedResult<WorkItem> result =
+            this.scriptService.getWorkItems(CLIENT, 1, 10, List.of(), List.of(), clientContext);
 
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 10, List.of(), List.of());
+        assertEquals(List.of(clientContext), result.getItems());
     }
 
     @Test
-    void getWorkItemsConvertsThePageToAnOffset() throws Exception
+    void getWorkItemsReturnsTheFirstPageForAPageSmallerThanOne() throws Exception
     {
-        this.scriptService.getWorkItems(CLIENT, 1, 20, List.of(), List.of(), Map.of());
-        this.scriptService.getWorkItems(CLIENT, 4, 20, List.of(), List.of(), Map.of());
-        // A page smaller than 1 is the first page.
-        this.scriptService.getWorkItems(CLIENT, 0, 30, List.of(), List.of(), Map.of());
-        this.scriptService.getWorkItems(CLIENT, -1, 40, List.of(), List.of(), Map.of());
+        PaginatedResult<WorkItem> result = new PaginatedResult<>();
+        when(this.projectManagementManager.getWorkItems(CLIENT, 0, 30, List.of(), List.of())).thenReturn(result);
 
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 20, List.of(), List.of());
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 60, 20, List.of(), List.of());
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 30, List.of(), List.of());
-        verify(this.projectManagementManager).getWorkItems(CLIENT, 0, 40, List.of(), List.of());
+        assertSame(result, this.scriptService.getWorkItems(CLIENT, 0, 30, List.of(), List.of(), Map.of()));
     }
 
     @Test

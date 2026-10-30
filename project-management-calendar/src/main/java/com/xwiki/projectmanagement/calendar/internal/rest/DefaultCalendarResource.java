@@ -90,6 +90,8 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
             return Response.status(Response.Status.BAD_REQUEST).entity("The passed filter is invalid.").build();
         } catch (ProjectManagementException e) {
             return errorResponse(getErrorStatus(e), "Failed to retrieve the calendar events.", e);
+        } finally {
+            clearClientContext();
         }
     }
 
