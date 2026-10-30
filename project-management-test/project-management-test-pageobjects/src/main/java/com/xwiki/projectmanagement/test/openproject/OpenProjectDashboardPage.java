@@ -102,6 +102,18 @@ public class OpenProjectDashboardPage extends ViewPage
     }
 
     /**
+     * @return the titles of the gadgets displayed on the dashboard
+     */
+    public List<String> getGadgetTitles()
+    {
+        return getDriver()
+            .findElementsWithoutWaiting(By.cssSelector("#openproject-dashboard-gadgets .gadget-title"))
+            .stream()
+            .map(WebElement::getText)
+            .collect(Collectors.toList());
+    }
+
+    /**
      * @return the texts of the warnings displayed on the dashboard
      */
     public List<String> getWarnings()
