@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.livedata;
 
+import java.util.Map;
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveData;
@@ -142,6 +145,24 @@ class ProjectManagementEntryStoreTest
         LiveDataException exception = assertThrows(LiveDataException.class, () -> entryStore.get(query));
         assertEquals("The client property was not specified in the source parameters.", exception.getMessage());
         verifyNoInteractions(projectManagementManager);
+    }
+
+    @Test
+    void getEntry() throws LiveDataException
+    {
+        // The entry id alone doesn't say which client holds the work item.
+        assertEquals(Optional.empty(), entryStore.get("1"));
+        assertEquals(Optional.empty(), entryStore.get("1", WorkItem.KEY_SUMMARY));
+        assertEquals(Optional.empty(), entryStore.update("1", WorkItem.KEY_SUMMARY, "summary"));
+        verifyNoInteractions(projectManagementManager);
+    }
+
+    @Test
+    void saveAndRemoveAreNotSupported()
+    {
+        Map<String, Object> entry = Map.of(WorkItem.KEY_SUMMARY, "summary");
+        assertThrows(UnsupportedOperationException.class, () -> entryStore.save(entry));
+        assertThrows(UnsupportedOperationException.class, () -> entryStore.remove("1"));
     }
 
     private static LiveDataQuery createQuery(String clientId)
