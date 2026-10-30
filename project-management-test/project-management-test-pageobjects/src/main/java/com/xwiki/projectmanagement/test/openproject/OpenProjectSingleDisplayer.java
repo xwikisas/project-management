@@ -63,7 +63,7 @@ public class OpenProjectSingleDisplayer extends BaseElement
 
     /**
      * @return the displayed description of the work package
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public FormattedTextElement getFormattedDescription()
     {

@@ -134,7 +134,7 @@ public class OpenProjectMacroElement extends BaseElement
      * @param row the row index, starting from 1
      * @return the formatted text displayed in the given cell of the Live Data table, e.g. a work package description
      * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
-     * @since 1.3.1
+     * @since 1.4.0
      */
     public FormattedTextElement getFormattedCell(String column, int row) throws OperationNotSupportedException
     {

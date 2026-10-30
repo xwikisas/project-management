@@ -32,7 +32,7 @@ import org.xwiki.test.ui.po.BaseElement;
  * A formatted text displayed from OpenProject, e.g. the description of a work package.
  *
  * @version $Id$
- * @since 1.3.1
+ * @since 1.4.0
  */
 public class FormattedTextElement extends BaseElement
 {
