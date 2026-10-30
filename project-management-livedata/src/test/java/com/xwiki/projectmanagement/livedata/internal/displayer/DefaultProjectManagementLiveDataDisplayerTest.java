@@ -17,203 +17,152 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-
 package com.xwiki.projectmanagement.livedata.internal.displayer;
 
-import java.util.AbstractMap;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import javax.inject.Named;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
-import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.WordBlock;
-import org.xwiki.rendering.renderer.PrintRenderer;
-import org.xwiki.rendering.renderer.PrintRendererFactory;
-import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
+import org.xwiki.rendering.internal.renderer.html5.HTML5Renderer;
+import org.xwiki.rendering.internal.renderer.html5.HTML5RendererFactory;
+import org.xwiki.rendering.internal.renderer.xhtml.image.DefaultXHTMLImageRenderer;
+import org.xwiki.rendering.internal.renderer.xhtml.image.DefaultXHTMLImageTypeRenderer;
+import org.xwiki.rendering.internal.renderer.xhtml.link.DefaultXHTMLLinkRenderer;
+import org.xwiki.rendering.internal.renderer.xhtml.link.DefaultXHTMLLinkTypeRenderer;
+import org.xwiki.rendering.listener.Format;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
+import org.xwiki.xml.html.HTMLElementSanitizer;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Test the flow of the {@link DefaultProjectManagementLiveDataDisplayer}.
+ * Unit tests for {@link DefaultProjectManagementLiveDataDisplayer}, with the real HTML 5 renderer.
  *
  * @version $Id$
- * @since 1.0-rc-4
  */
 @ComponentTest
+@ComponentList({
+    DefaultProjectManagementClientExecutionContext.class,
+    HTML5RendererFactory.class,
+    HTML5Renderer.class,
+    DefaultXHTMLLinkRenderer.class,
+    DefaultXHTMLLinkTypeRenderer.class,
+    DefaultXHTMLImageRenderer.class,
+    DefaultXHTMLImageTypeRenderer.class
+})
 class DefaultProjectManagementLiveDataDisplayerTest
 {
-    private static final String WORK_ITEM_KEY = "key";
+    private static final String CLIENT = "test";
 
-    private static final String WORK_ITEM_VALUE = "value";
+    private static final String STATUS = "status";
 
     @InjectMockComponents
     private DefaultProjectManagementLiveDataDisplayer displayer;
+
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @MockComponent
     private WorkItemPropertyDisplayerManager defaultDisplayerManager;
 
     @MockComponent
-    @Named("html/5.0")
-    private PrintRendererFactory htmlRendererFactory;
-
-    @Mock
-    private PrintRenderer renderer;
-
-    @MockComponent
-    private ComponentManager componentManager;
-
-    @MockComponent
-    private ProjectManagementClientExecutionContext executionContext;
-
-    private final DefaultWikiPrinter printer = new DefaultWikiPrinter();
+    private HTMLElementSanitizer htmlElementSanitizer;
 
     @BeforeEach
     void setUp()
     {
-        when(htmlRendererFactory.createRenderer(any())).thenReturn(renderer);
-        when(renderer.getPrinter()).thenReturn(printer);
+        // The sanitizer only matters for HTML coming from the content, which the displayed values don't hold.
+        when(this.htmlElementSanitizer.isElementAllowed(anyString())).thenReturn(true);
+        when(this.htmlElementSanitizer.isAttributeAllowed(anyString(), anyString(), anyString())).thenReturn(true);
     }
 
     @Test
-    void displayWithDefaultPropertyDisplayer()
+    void displayRendersThePropertiesHavingADisplayerAndTheDatesAndLists()
     {
-        WorkItem workItem = prepareWorkItem();
-
-        // Force default displayer manager.
-        when(executionContext.get("client")).thenReturn(null);
-        when(defaultDisplayerManager.getDisplayerForProperty(WORK_ITEM_KEY))
-            .thenReturn(mock(WorkItemPropertyDisplayer.class));
-        when(defaultDisplayerManager.displayProperty(anyString(), any(), anyMap()))
-            .thenReturn(Collections.emptyList());
-
-        displayer.display(Collections.singleton(workItem));
-
-        verify(defaultDisplayerManager).displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap());
-    }
-
-    @Test
-    void displayPropertyWithDate()
-    {
-        Date now = new Date();
-        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("date", now);
+        Date dueDate = new Date(0);
+        List<String> versions = List.of("1.0", "2.0");
         WorkItem workItem = new WorkItem();
-        List<Block> dateBlocks = List.of(new WordBlock("today"));
-
-        // The displayer manager has no displayer for the property, but dates are always displayed.
-        when(defaultDisplayerManager.getDisplayerForProperty("date")).thenReturn(null);
-        when(defaultDisplayerManager.displayProperty("date", now, Map.of("workItem", workItem)))
-            .thenReturn(dateBlocks);
-        // Simulate the output of the renderer for the displayed blocks.
-        this.printer.print("<span>today</span>");
-
-        displayer.displayProperty(property, workItem, renderer, defaultDisplayerManager);
-
-        verify(renderer).beginDocument(any());
-        assertEquals("<span>today</span>", property.getValue());
-    }
-
-    @Test
-    void displayPropertyWithList()
-    {
-        List<String> values = List.of("1.0", "2.0");
-        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("Observed in", values);
-        WorkItem workItem = new WorkItem();
-
-        // The displayer manager has no displayer for the property, but lists are always displayed.
-        when(defaultDisplayerManager.getDisplayerForProperty("Observed in")).thenReturn(null);
-        when(defaultDisplayerManager.displayProperty("Observed in", values, Map.of("workItem", workItem)))
-            .thenReturn(List.of(new WordBlock("versions")));
-        this.printer.print("<div>1.0</div><div>2.0</div>");
-
-        displayer.displayProperty(property, workItem, renderer, defaultDisplayerManager);
-
-        assertEquals("<div>1.0</div><div>2.0</div>", property.getValue());
-    }
-
-    @Test
-    void displayPropertyWithoutDisplayer()
-    {
-        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
-        when(defaultDisplayerManager.getDisplayerForProperty(WORK_ITEM_KEY)).thenReturn(null);
-
-        displayer.displayProperty(property, new WorkItem(), renderer, defaultDisplayerManager);
-
-        // Values that have no displayer are kept as they are.
-        assertEquals(WORK_ITEM_VALUE, property.getValue());
-        verify(defaultDisplayerManager, never()).displayProperty(anyString(), any(), anyMap());
-    }
-
-    @Test
-    void getPropertyDisplayerManagerWithInvalidClient()
-    {
-        WorkItem workItem = prepareWorkItem();
-
-        // Force default displayer manager.
-        when(executionContext.get("client")).thenReturn("test");
-        when(componentManager.hasComponent(WorkItemPropertyDisplayerManager.class, "test")).thenReturn(false);
-        when(defaultDisplayerManager.getDisplayerForProperty(WORK_ITEM_KEY))
+        workItem.put(STATUS, "open");
+        workItem.put("dueDate", dueDate);
+        workItem.put("versions", versions);
+        workItem.put("summary", "Some <b>summary</b>");
+        Map<String, Object> parameters = Map.of("workItem", workItem);
+        // Only the status has a displayer, but the dates and the lists are always displayed.
+        when(this.defaultDisplayerManager.getDisplayerForProperty(STATUS))
             .thenReturn(mock(WorkItemPropertyDisplayer.class));
-        when(defaultDisplayerManager.displayProperty(anyString(), any(), anyMap()))
-            .thenReturn(Collections.emptyList());
+        when(this.defaultDisplayerManager.displayProperty(STATUS, "open", parameters))
+            .thenReturn(List.of(new FormatBlock(List.of(new WordBlock("open")), Format.BOLD)));
+        when(this.defaultDisplayerManager.displayProperty("dueDate", dueDate, parameters))
+            .thenReturn(List.of(new WordBlock("today")));
+        when(this.defaultDisplayerManager.displayProperty("versions", versions, parameters))
+            .thenReturn(List.of(new FormatBlock(List.<Block>of(new WordBlock("1.0")), Format.ITALIC),
+                new FormatBlock(List.<Block>of(new WordBlock("2.0")), Format.ITALIC)));
 
-        displayer.display(Collections.singleton(workItem));
+        this.displayer.display(List.of(workItem));
 
-        verify(defaultDisplayerManager).displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap());
+        // Each property is rendered on its own, without the HTML of the properties displayed before it.
+        // The values without displayer are kept as they are.
+        assertEquals(Map.of(STATUS, "<strong>open</strong>", "dueDate", "today",
+            "versions", "<em>1.0</em><em>2.0</em>", "summary", "Some <b>summary</b>"), workItem);
     }
 
     @Test
-    void getPropertyDisplayerManagerWithValidClientId() throws Exception
+    void displayUsesTheDisplayerManagerOfTheClient() throws Exception
     {
-        WorkItem workItem = prepareWorkItem();
+        WorkItemPropertyDisplayerManager clientDisplayerManager = mock(WorkItemPropertyDisplayerManager.class);
+        this.componentManager.registerComponent(WorkItemPropertyDisplayerManager.class, CLIENT,
+            clientDisplayerManager);
+        setClient(CLIENT);
+        WorkItem workItem = new WorkItem();
+        workItem.put(STATUS, "open");
+        when(clientDisplayerManager.getDisplayerForProperty(STATUS)).thenReturn(mock(WorkItemPropertyDisplayer.class));
+        when(clientDisplayerManager.displayProperty(STATUS, "open", Map.of("workItem", workItem)))
+            .thenReturn(List.of(new WordBlock("client")));
 
-        String clientId = "test";
-        WorkItemPropertyDisplayerManager customManager = mock(WorkItemPropertyDisplayerManager.class);
+        this.displayer.display(List.of(workItem));
 
-        when(executionContext.get("client")).thenReturn(clientId);
-        when(componentManager.hasComponent(WorkItemPropertyDisplayerManager.class, clientId))
-            .thenReturn(true);
-        when(componentManager.getInstance(WorkItemPropertyDisplayerManager.class, clientId))
-            .thenReturn(customManager);
-
-        when(customManager.getDisplayerForProperty(WORK_ITEM_KEY)).thenReturn(mock(WorkItemPropertyDisplayer.class));
-        when(customManager.displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap()))
-            .thenReturn(Collections.emptyList());
-
-        displayer.display(Collections.singleton(workItem));
-
-        verify(customManager).displayProperty(eq(WORK_ITEM_KEY), eq(WORK_ITEM_VALUE), anyMap());
+        assertEquals(Map.of(STATUS, "client"), workItem);
     }
 
-    private static WorkItem prepareWorkItem()
+    @Test
+    void displayUsesTheDefaultDisplayerManagerForAClientWithoutOne() throws Exception
     {
-        Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
+        setClient(CLIENT);
+        WorkItem workItem = new WorkItem();
+        workItem.put(STATUS, "open");
+        when(this.defaultDisplayerManager.getDisplayerForProperty(STATUS))
+            .thenReturn(mock(WorkItemPropertyDisplayer.class));
+        when(this.defaultDisplayerManager.displayProperty(STATUS, "open", Map.of("workItem", workItem)))
+            .thenReturn(List.of(new WordBlock("default")));
 
-        WorkItem workItem = mock(WorkItem.class);
-        when(workItem.entrySet()).thenReturn(Collections.singleton(property));
+        this.displayer.display(List.of(workItem));
 
-        return workItem;
+        assertEquals(Map.of(STATUS, "default"), workItem);
+    }
+
+    private void setClient(String client) throws Exception
+    {
+        ((DefaultProjectManagementClientExecutionContext) this.componentManager
+            .<ProjectManagementClientExecutionContext>getInstance(ProjectManagementClientExecutionContext.class))
+            .setContext(Map.of("client", client));
     }
 }
