@@ -41,6 +41,7 @@ import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -391,6 +392,56 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         expectedSubjects.forEach(subject -> ld.assertRow(SUBJECT_COLUMN, subject));
         // The target version column is named after the OpenProject field.
         ld.assertRow(versionColumnName, versionName);
+    }
+
+    @Test
+    @Order(9)
+    void displayWorkPackageAsynchronously(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // The work package is displayed the way the View action of the Live Data displays it in its modal.
+        String workPackageId = "1";
+        String subject = this.openProject.getApiResource("/work_packages/" + workPackageId).get("subject").asText();
+        setup.createPage(testReference, "");
+        setup.gotoPage(testReference);
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+
+        List<String> rows = page.displayWorkPackage("liveData", CONNECTION_ID, workPackageId).waitForLiveDataRows();
+        assertEquals(1, rows.size(), rows.toString());
+        assertThat(rows.get(0), containsString(subject));
+
+        setup.gotoPage(testReference);
+        page = new ViewPageWithOpenProjectMacro();
+        List<String> cards =
+            page.displayWorkPackage("liveDataCards", CONNECTION_ID, workPackageId).waitForLiveDataCards();
+        assertEquals(1, cards.size(), cards.toString());
+        assertThat(cards.get(0), containsString(subject));
+
+        setup.gotoPage(testReference);
+        page = new ViewPageWithOpenProjectMacro();
+        OpenProjectSingleDisplayer single = page.displayWorkPackage("workItemsSingle", CONNECTION_ID, workPackageId)
+            .getSingleWorkItem().waitUntilReady();
+        assertThat(single.getHeaderText(), containsString(subject));
+
+        // Guests aren't connected to OpenProject, so the rendering fails: the error is displayed with its cause, and
+        // its details are displayed when clicking on it.
+        setup.forceGuestUser();
+        try {
+            setup.gotoPage(testReference);
+            OpenProjectMacroElement failure = new ViewPageWithOpenProjectMacro().displayWorkPackage("workItemsSingle",
+                CONNECTION_ID, workPackageId);
+            String message = failure.waitForErrorMessage();
+            assertThat(message, containsString("Failed to display the work items."));
+            assertThat(message, containsString(
+                String.format("The current user isn't connected to the OpenProject instance [%s].", CONNECTION_ID)));
+            assertFalse(failure.isErrorDetailsDisplayed());
+
+            failure.toggleErrorDetails();
+            String details = failure.getErrorDetails();
+            assertThat(details, containsString("MacroExecutionException"));
+            assertThat(details, containsString("at com.xwiki.projectmanagement."));
+        } finally {
+            setup.loginAsSuperAdmin();
+        }
     }
 
     /**

@@ -20,6 +20,9 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
+import java.util.Map;
+
+import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,11 +30,17 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.FormatBlock;
+import org.xwiki.rendering.block.GroupBlock;
+import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.MacroMarkerBlock;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.rendering.util.ErrorBlockGenerator;
+import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -46,7 +55,6 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +69,8 @@ class ProjectManagementAsyncRendererTest
 {
     private static final String CONTENT = "content";
 
+    private static final String ASYNC_ERROR_CLASS = "proj-manag-async-error";
+
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
@@ -69,6 +79,10 @@ class ProjectManagementAsyncRendererTest
 
     @MockComponent
     private ErrorBlockGenerator errorBlockGenerator;
+
+    @MockComponent
+    @Named("jsrx")
+    private SkinExtension jsrx;
 
     @Mock
     private Macro<ProjectManagementAsyncMacroParams> displayer;
@@ -93,29 +107,62 @@ class ProjectManagementAsyncRendererTest
     @Test
     void executeAsyncWhenTheDisplayerFails() throws Exception
     {
-        when(this.displayer.execute(any(), any(), any()))
-            .thenThrow(new MacroExecutionException("Failed", new RuntimeException("Details")));
+        MacroExecutionException exception =
+            new MacroExecutionException("Failed", new RuntimeException("Details"));
+        when(this.displayer.execute(any(), any(), any())).thenThrow(exception);
         Block errorBlock = new WordBlock("error");
         when(this.errorBlockGenerator.generateErrorBlocks(false, "projectmanagement.macro.async.error",
-            "Failed to display the work items.", "See the server logs for more details.")).thenReturn(
-            List.of(errorBlock));
+            "Failed to display the work items.", null, exception)).thenReturn(List.of(errorBlock));
 
-        // The details of the failure don't reach the result of the asynchronous rendering.
-        assertEquals(List.of(errorBlock), this.renderer.execute(true, false).getChildren());
+        // The failure is displayed with its cause and its details, like a failing synchronous macro.
+        List<Block> result = this.renderer.execute(true, false).getChildren();
+
+        // The error is wrapped, so that the script made available makes it expandable once inserted in the page.
+        assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))), result);
+        verify(this.jsrx).use("js/projectmanagement/asyncError.js");
 
         assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
+        assertEquals("Failed", this.logCapture.getLogEvent(0).getThrowableProxy().getMessage());
     }
 
     @Test
     void executeAsyncWhenTheDisplayerThrowsARuntimeException() throws Exception
     {
-        when(this.displayer.execute(any(), any(), any())).thenThrow(new ClassCastException("Details"));
+        ClassCastException exception = new ClassCastException("Details");
+        when(this.displayer.execute(any(), any(), any())).thenThrow(exception);
         Block errorBlock = new WordBlock("error");
-        when(this.errorBlockGenerator.generateErrorBlocks(anyBoolean(), anyString(), anyString(), anyString()))
-            .thenReturn(List.of(errorBlock));
+        when(this.errorBlockGenerator.generateErrorBlocks(false, "projectmanagement.macro.async.error",
+            "Failed to display the work items.", null, exception)).thenReturn(List.of(errorBlock));
 
-        assertEquals(List.of(errorBlock), this.renderer.execute(true, false).getChildren());
+        assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))),
+            this.renderer.execute(true, false).getChildren());
 
+        assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void executeAsyncWhenTheDisplayerOfAMacroFails() throws Exception
+    {
+        MacroTransformationContext context = new MacroTransformationContext();
+        MacroBlock macroBlock = new MacroBlock("openproject", Map.of("instance", "test"), true);
+        context.setCurrentMacroBlock(macroBlock);
+        context.setInline(true);
+        this.renderer.initialize(this.displayer, this.parameters, CONTENT, context, null);
+        MacroExecutionException exception = new MacroExecutionException("Failed");
+        when(this.displayer.execute(any(), any(), any())).thenThrow(exception);
+        Block errorBlock = new WordBlock("error");
+        when(this.errorBlockGenerator.generateErrorBlocks(true, "projectmanagement.macro.async.error",
+            "Failed to display the work items.", null, exception)).thenReturn(List.of(errorBlock));
+
+        // The error is wrapped in a macro marker, like the result of a synchronous macro.
+        List<Block> result = this.renderer.execute(true, false).getChildren();
+
+        assertEquals(1, result.size());
+        MacroMarkerBlock marker = (MacroMarkerBlock) result.get(0);
+        assertEquals("openproject", marker.getId());
+        assertEquals(Map.of("instance", "test"), marker.getParameters());
+        assertEquals(List.of(new FormatBlock(List.of(errorBlock), Format.NONE, Map.of("class", ASYNC_ERROR_CLASS))),
+            marker.getChildren());
         assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
     }
 
@@ -130,7 +177,7 @@ class ProjectManagementAsyncRendererTest
             false));
 
         assertSame(cause, exception.getCause());
-        verify(this.errorBlockGenerator, never()).generateErrorBlocks(anyBoolean(), anyString(), anyString(),
-            anyString());
+        verify(this.errorBlockGenerator, never()).generateErrorBlocks(anyBoolean(), any(), any(), any(), any());
+        verify(this.jsrx, never()).use(any());
     }
 }

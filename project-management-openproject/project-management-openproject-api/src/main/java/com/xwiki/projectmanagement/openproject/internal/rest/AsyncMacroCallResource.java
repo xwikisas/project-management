@@ -83,6 +83,10 @@ public class AsyncMacroCallResource extends XWikiResource
 
     private static final String CLIENT_ID = "openproject";
 
+    private static final String LIVE_DATA_SOURCE = "projectmanagement";
+
+    private static final String PROPERTIES = "identifier,type,summary,description,startDate,assignees";
+
     private static final String ERROR_MESSAGE = "Failed to display the work package.";
 
     @Inject
@@ -177,6 +181,10 @@ public class AsyncMacroCallResource extends XWikiResource
 
         ProjectManagementMacroParameters parameters = new ProjectManagementMacroParameters();
         parameters.setWorkItemsDisplayer(displayer);
+        // The Live Data displayers get the work items from the project management Live Data source, and need
+        // properties known to OpenProject, unlike the generic default ones.
+        parameters.setSource(LIVE_DATA_SOURCE);
+        parameters.setProperties(PROPERTIES);
         // TODO: Would be nicer if we retrieved the translation prefix from the json configuration.
         parameters.setSourceParameters(String.format("instance=%s&client=%s&translationPrefix=%s", encode(instance),
             CLIENT_ID, encode(CLIENT_ID + '.')));

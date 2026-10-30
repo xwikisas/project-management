@@ -183,6 +183,15 @@ class AsyncMacroCallResourceTest
             + "</div>", response.getEntity());
         // Not the Live Data macro of the platform, which doesn't take the parameters of the displayers.
         verify(this.componentManager, never()).getInstance(Macro.class, "liveData");
+        // The Live Data gets its entries from the project management source.
+        ArgumentCaptor<ProjectManagementMacroParameters> parametersCaptor =
+            ArgumentCaptor.forClass(ProjectManagementMacroParameters.class);
+        verify(this.asyncRenderer).initialize(eq(this.displayerMacro), parametersCaptor.capture(), any(), any(),
+            any());
+        assertEquals("projectmanagement", parametersCaptor.getValue().getSource());
+        assertEquals("identifier,type,summary,description,startDate,assignees",
+            parametersCaptor.getValue().getProperties());
+        assertEquals(WorkItemsDisplayer.liveData, parametersCaptor.getValue().getWorkItemsDisplayer());
     }
 
     @Test
