@@ -81,6 +81,14 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <!-- The dashboard macro and the gadget class used by the OpenProject dashboard. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-dashboard-ui</artifactId>
+      <version>${platform.version}</version>
+      <type>xar</type>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-localization-script</artifactId>
       <version>${platform.version}</version>

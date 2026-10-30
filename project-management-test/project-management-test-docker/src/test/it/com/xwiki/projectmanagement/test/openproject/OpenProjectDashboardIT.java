@@ -29,6 +29,7 @@ import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -68,6 +69,9 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
         dashboard.waitUntilGadgetsAreDisplayed();
         assertEquals(List.of(), dashboard.getWarnings());
         assertTrue(dashboard.hasProjectPicker());
+        assertThat(dashboard.getGadgetTitles(), containsInAnyOrder("Open VS Closed", "Project Details", "Ticket types",
+            "Project members", "Open vs Closed Per Type", "Spent time last 7 days", "Project News", "SubProjects",
+            "All Work Packages"));
 
         // Only the warning of the selected connection is displayed.
         dashboard = dashboard.selectConnection(unauthorized);
