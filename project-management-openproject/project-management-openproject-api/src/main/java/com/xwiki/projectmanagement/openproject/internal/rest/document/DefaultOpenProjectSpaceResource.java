@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
@@ -279,7 +280,8 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
                 .filter(cfg -> instance.equals(cfg.getInstanceId())).findFirst().orElse(null);
 
         if (connection == null) {
-            throw new WebApplicationException(Response.status(Response.Status.NOT_FOUND)
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                .type(MediaType.TEXT_PLAIN_TYPE)
                 .entity(String.format("Could not find a configured instance for the id [%s].", instance)).build());
         }
 

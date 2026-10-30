@@ -25,6 +25,8 @@ import java.util.Locale;
 
 import javax.inject.Named;
 import javax.inject.Provider;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -62,11 +64,13 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
@@ -124,6 +128,9 @@ class DefaultOpenProjectSpaceResourceTest
 
     @MockComponent
     private URLShortenerManager urlShortenerManager;
+
+    @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @InjectComponentManager
     private MockitoComponentManager componentManager;
@@ -239,6 +246,21 @@ class DefaultOpenProjectSpaceResourceTest
 
         assertEquals(401, response.getStatus());
         assertNull(response.getEntity());
+    }
+
+    @Test
+    void createSpaceWithUnknownInstance() throws Exception
+    {
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of());
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.createSpace("Space.WebHome", false, "unknownInstanceId", null, null, "Title"));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals(MediaType.TEXT_PLAIN_TYPE, exception.getResponse().getMetadata().getFirst("Content-Type"));
+        assertEquals("Could not find a configured instance for the id [unknownInstanceId].",
+            exception.getResponse().getEntity());
+        verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
     }
 
     @Test
