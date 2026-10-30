@@ -58,6 +58,25 @@
     <module>project-management-calendar</module>
     <module>project-management-presets</module>
   </modules>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <!-- Same arguments as in the parent POM, plus the Byte Buddy agent used by Mockito's inline mock maker,
+                 loaded at startup instead of letting Mockito attach it at runtime: starting with Java 21, the JVM
+                 prints a warning on such a dynamic attach, which fails the tests that check that nothing is written to
+                 the console. The Byte Buddy agent is used because the Mockito version of the parent POM (5.7.0) can't
+                 be loaded as an agent itself. Remove once on a parent POM that does it (XWiki Commons loads Mockito as
+                 an agent since its upgrade to Mockito 5.24.0, XCOMMONS-3810, not backported to the 15.10 branch). -->
+            <argLine>@{argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${project.build.directory} --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED -javaagent:"${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${bytebuddy.version}/byte-buddy-agent-${bytebuddy.version}.jar"</argLine>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
   <profiles>
     <profile>
       <id>integration-tests</id>
