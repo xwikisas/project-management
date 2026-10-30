@@ -68,7 +68,6 @@ class RenewOAuthConnectionPageTest extends PageTest
         when(((CSRFTokenScriptService) this.csrfScriptService).isTokenValid("token")).thenReturn(true);
         this.request.setrequestURL(
             new StringBuffer("http://localhost:8080/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection"));
-        this.request.put("token", "token");
         this.request.put("connectionName", CONNECTION_NAME);
     }
 
@@ -76,6 +75,7 @@ class RenewOAuthConnectionPageTest extends PageTest
     @ValueSource(strings = { "/xwiki/bin/view/Main/", "http://localhost:8080/xwiki/bin/view/Main/" })
     void authorizeAndRedirectToALocalPage(String redirectURL) throws Exception
     {
+        this.request.put("token", "token");
         this.request.put("redirectUrl", redirectURL);
 
         renderPage(PAGE);
@@ -88,7 +88,20 @@ class RenewOAuthConnectionPageTest extends PageTest
         "http://localhost:8080.example.org/", "http://localhost:8080@www.example.org/", "javascript:alert(1)" })
     void dontRedirectToAnotherServer(String redirectURL) throws Exception
     {
+        this.request.put("token", "token");
         this.request.put("redirectUrl", redirectURL);
+
+        renderPage(PAGE);
+
+        verify((OAuth2ClientScriptService) this.oauth2ScriptService, never()).authorize(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "invalid", "" })
+    void dontAuthorizeWithAnInvalidCSRFToken(String token) throws Exception
+    {
+        this.request.put("token", token);
+        this.request.put("redirectUrl", "/xwiki/bin/view/Main/");
 
         renderPage(PAGE);
 
