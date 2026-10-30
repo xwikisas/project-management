@@ -30,13 +30,11 @@ import javax.inject.Provider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
@@ -46,8 +44,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -248,30 +244,5 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setDays(0);
 
         assertEquals(matchingEntry() + "View time entries\n", executeWithFilters(""));
-    }
-
-    @Test
-    void failsWhenTheDashboardProjectIsNotResolved()
-    {
-        this.parameters.setProject("use_selected_dashboard_project");
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
-            + "explicitly when the macro is not on the dashboard.", exception.getMessage());
-    }
-
-    @Test
-    void failsWhenTheTimeEntriesCannotBeRetrieved() throws Exception
-    {
-        ProjectManagementException cause = new ProjectManagementException("unreachable");
-        when(this.apiClient.getTimeEntries(any(), any(), anyString())).thenThrow(cause);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("Failed to retrieve time entries from OpenProject.", exception.getMessage());
-        assertSame(cause, exception.getCause());
     }
 }

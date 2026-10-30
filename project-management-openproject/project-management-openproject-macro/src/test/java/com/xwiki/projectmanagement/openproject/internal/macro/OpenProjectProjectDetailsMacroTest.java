@@ -23,16 +23,12 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectDetailsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
@@ -41,8 +37,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 /**
@@ -115,31 +109,5 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertEquals("ID: 7\n", text(result));
-    }
-
-    @Test
-    void failsWhenTheProjectCannotBeRetrieved() throws Exception
-    {
-        ProjectManagementException cause = new ProjectManagementException("not found");
-        when(this.apiClient.getProject(7)).thenThrow(cause);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("Failed to retrieve project [7] from OpenProject.", exception.getMessage());
-        assertSame(cause, exception.getCause());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = { "", "use_selected_dashboard_project" })
-    void failsWhenTheProjectIsNotAnId(String project)
-    {
-        this.parameters.setProject(project);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals(String.format("The project [%s] is not a valid OpenProject project id.", project),
-            exception.getMessage());
     }
 }

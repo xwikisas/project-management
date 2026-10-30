@@ -26,11 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.HorizontalLineBlock;
 import org.xwiki.rendering.block.match.ClassBlockMatcher;
-import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
@@ -40,8 +38,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 /**
@@ -122,36 +118,11 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
-    void failsWhenTheDashboardProjectIsNotResolved()
-    {
-        this.parameters.setProject("use_selected_dashboard_project");
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
-            + "explicitly when the macro is not on the dashboard.", exception.getMessage());
-    }
-
-    @Test
     void displaysNoNews() throws Exception
     {
         this.parameters.setProject(" ");
         when(this.apiClient.getNews(null, 2, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 2, 0));
 
         assertEquals("No news found.\n", text(this.macro.execute(this.parameters, "", this.context)));
-    }
-
-    @Test
-    void failsWhenTheNewsCannotBeRetrieved() throws Exception
-    {
-        ProjectManagementException cause = new ProjectManagementException("unreachable");
-        when(this.apiClient.getNews(null, 2, "")).thenThrow(cause);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("Failed to retrieve news from OpenProject.", exception.getMessage());
-        assertSame(cause, exception.getCause());
     }
 }

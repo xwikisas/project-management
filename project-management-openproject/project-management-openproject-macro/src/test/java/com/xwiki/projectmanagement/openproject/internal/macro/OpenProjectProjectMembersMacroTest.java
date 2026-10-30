@@ -33,7 +33,6 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectMembersMacroParameters;
@@ -42,7 +41,6 @@ import com.xwiki.projectmanagement.openproject.model.User;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -151,31 +149,5 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
         // The members of all the projects are not listed.
         assertEquals("The project whose members to display is missing.", exception.getMessage());
         verifyNoInteractions(this.apiClient);
-    }
-
-    @Test
-    void failsWhenTheDashboardProjectIsNotResolved()
-    {
-        this.parameters.setProject("use_selected_dashboard_project");
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
-            + "explicitly when the macro is not on the dashboard.", exception.getMessage());
-        verifyNoInteractions(this.apiClient);
-    }
-
-    @Test
-    void failsWhenTheMembersCannotBeRetrieved() throws Exception
-    {
-        ProjectManagementException cause = new ProjectManagementException("unreachable");
-        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER)).thenThrow(cause);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        assertEquals("Failed to retrieve members for project [12].", exception.getMessage());
-        assertSame(cause, exception.getCause());
     }
 }

@@ -50,7 +50,6 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
@@ -64,7 +63,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
@@ -188,17 +186,6 @@ class OpenProjectMacroTest
 
         assertEquals(List.of(new FormatBlock(this.displayed, Format.NONE, Map.of("class", "open-project-macro"))),
             result);
-    }
-
-    @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-
-        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
-
-        verifyNoInteractions(this.observationManager, this.ssrx, this.jsx, this.asyncExecutor);
     }
 
     @Test

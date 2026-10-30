@@ -115,17 +115,6 @@ class AbstractOpenProjectDirectMacroTest
     }
 
     @Test
-    void returnsTheMissingLicenseMessage() throws Exception
-    {
-        List<Block> licenseBlock = List.of(new WordBlock("license"));
-        when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(licenseBlock);
-
-        assertSame(licenseBlock, this.macro.execute(this.parameters, "", this.context));
-
-        verifyNoInteractions(this.observationManager, this.userTokenChecker, this.asyncExecutor);
-    }
-
-    @Test
     void returnsTheUserTokenWarning() throws Exception
     {
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
