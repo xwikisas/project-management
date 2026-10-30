@@ -32,12 +32,12 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class OpenProjectSortingHandlerTest
+class OpenProjectSortingHandlerTest
 {
     final ObjectMapper mapper = new ObjectMapper();
 
     @Test
-    void convertTest() throws ProjectManagementException, JsonProcessingException
+    void convertSortingToOpenProjectJson() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
         LiveDataQuery.SortEntry sortEntry1 = new LiveDataQuery.SortEntry("firstProperty", false);
@@ -56,7 +56,7 @@ public class OpenProjectSortingHandlerTest
     }
 
     @Test
-    void convertEmptySortEntryTest() throws ProjectManagementException, JsonProcessingException
+    void convertEmptySortEntries() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
 
@@ -90,7 +90,7 @@ public class OpenProjectSortingHandlerTest
     }
 
     @Test
-    void mergeSortEntriesTest() throws ProjectManagementException, JsonProcessingException
+    void mergeSortEntries() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
         LiveDataQuery.SortEntry sortEntry1 = new LiveDataQuery.SortEntry("property1", false);
@@ -112,7 +112,7 @@ public class OpenProjectSortingHandlerTest
     }
 
     @Test
-    void mergeSortEntriesWithSameKeysTest() throws ProjectManagementException, JsonProcessingException
+    void mergeSortEntriesWithSameKeys() throws ProjectManagementException, JsonProcessingException
     {
         List<LiveDataQuery.SortEntry> sortEntries = new ArrayList<>();
         LiveDataQuery.SortEntry sortEntry1 = new LiveDataQuery.SortEntry("property1", false);

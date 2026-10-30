@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.livadata.script;
+package com.xwiki.projectmanagement.livedata.script;
 
 /*
  * See the NOTICE file distributed with this work for additional

@@ -21,7 +21,6 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.time.LocalDate;
 import java.util.Date;
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +37,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
+import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.date;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -113,8 +113,8 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     void displaysTheTimeEntriesGroupedByDay() throws Exception
     {
         this.parameters.setProject("12");
-        Date firstDay = new GregorianCalendar(2026, 2, 2).getTime();
-        Date secondDay = new GregorianCalendar(2026, 2, 1).getTime();
+        Date firstDay = date(2026, 3, 2);
+        Date secondDay = date(2026, 3, 1);
         when(this.apiClient.getTimeEntries(any(), any(), anyString())).thenReturn(new PaginatedResult<>(List.of(
             entry(firstDay, "PT1H30M", "Review", new Linkable("Development", SERVER_URL + "/activities/1")),
             entry(secondDay, "invalid", null, new Linkable(" ", "")),

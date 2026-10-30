@@ -18,7 +18,7 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-package com.xwiki.projectmanagement.livedata;
+package com.xwiki.projectmanagement.livedata.internal.displayer;
 
 import java.util.AbstractMap;
 import java.util.Collections;
@@ -44,7 +44,6 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
-import com.xwiki.projectmanagement.livadata.internal.displayer.DefaultProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,7 +98,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplayWithDefaultPropertyDisplayer()
+    void displayWithDefaultPropertyDisplayer()
     {
         WorkItem workItem = prepareWorkItem();
 
@@ -116,7 +115,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplayPropertyWithDate()
+    void displayPropertyWithDate()
     {
         Date now = new Date();
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("date", now);
@@ -137,7 +136,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplayPropertyWithList()
+    void displayPropertyWithList()
     {
         List<String> values = List.of("1.0", "2.0");
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>("Observed in", values);
@@ -155,7 +154,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testDisplayPropertyWithoutDisplayer()
+    void displayPropertyWithoutDisplayer()
     {
         Map.Entry<String, Object> property = new AbstractMap.SimpleEntry<>(WORK_ITEM_KEY, WORK_ITEM_VALUE);
         when(defaultDisplayerManager.getDisplayerForProperty(WORK_ITEM_KEY)).thenReturn(null);
@@ -168,7 +167,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testGetPropertyDisplayerManagerWithInvalidClient()
+    void getPropertyDisplayerManagerWithInvalidClient()
     {
         WorkItem workItem = prepareWorkItem();
 
@@ -186,7 +185,7 @@ class DefaultProjectManagementLiveDataDisplayerTest
     }
 
     @Test
-    void testGetPropertyDisplayerManagerWithValidClientId() throws Exception
+    void getPropertyDisplayerManagerWithValidClientId() throws Exception
     {
         WorkItem workItem = prepareWorkItem();
 

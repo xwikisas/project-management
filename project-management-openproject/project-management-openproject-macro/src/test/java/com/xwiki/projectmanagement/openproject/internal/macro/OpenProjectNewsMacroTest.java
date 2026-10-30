@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +36,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.News;
 
+import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.date;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,7 +73,7 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
         news.setSelf(new Linkable(title, SERVER_URL + "/news/" + id));
         news.setProjectLink(project);
         news.setAuthor(new Linkable("Alice", SERVER_URL + "/users/1"));
-        news.setCreatedAt(new GregorianCalendar(2026, 1, 3).getTime());
+        news.setCreatedAt(date(2026, 2, 3));
         news.setSummary("Summary " + id);
         return news;
     }

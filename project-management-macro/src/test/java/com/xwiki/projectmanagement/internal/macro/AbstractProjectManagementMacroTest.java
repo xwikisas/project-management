@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package com.xwiki.projectmanagement;
+package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
 
@@ -38,7 +38,6 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.TestProjManagementMacro;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
-import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -53,14 +52,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Test the {@link com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro} through a test
- * implementation.
+ * Test the {@link AbstractProjectManagementMacro} through a test implementation.
  *
  * @version $Id$
  * @since 1.0-rc-4
  */
 @ComponentTest
-public class AbstractProjectManagementMacroTest
+class AbstractProjectManagementMacroTest
 {
     @InjectMockComponents
     private TestProjManagementMacro abstractMacro;
@@ -78,7 +76,7 @@ public class AbstractProjectManagementMacroTest
     private Macro<ProjectManagementAsyncMacroParams> displayerMacro;
 
     @Test
-    void executeMacroWithDefaultValuesTest()
+    void executeWithDefaultValues()
         throws MacroExecutionException, ComponentLookupException, JobException, RenderingException
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
@@ -94,7 +92,7 @@ public class AbstractProjectManagementMacroTest
     }
 
     @Test
-    void executeMacroWithSingleDisplayerTest() throws Exception
+    void executeWithSingleDisplayer() throws Exception
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
         params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);

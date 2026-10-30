@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.util.GregorianCalendar;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +37,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectDetailsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
+import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.date;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -86,7 +86,7 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
         project.setIdentifier("alpha");
         project.setDescription("The first project");
         project.setStatus(new Linkable("On track", SERVER_URL + "/statuses/on_track"));
-        project.setCreatedAt(new GregorianCalendar(2026, 0, 2).getTime());
+        project.setCreatedAt(date(2026, 1, 2));
         when(this.apiClient.getProject(7)).thenReturn(project);
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);

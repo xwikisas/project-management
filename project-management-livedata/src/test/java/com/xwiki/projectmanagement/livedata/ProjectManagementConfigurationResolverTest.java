@@ -40,8 +40,6 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xwiki.projectmanagement.livadata.ProjectManagementConfigurationResolver;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.contains;
@@ -56,7 +54,7 @@ import static org.mockito.Mockito.when;
  * @since 1.0-rc-4
  */
 @ComponentTest
-public class ProjectManagementConfigurationResolverTest
+class ProjectManagementConfigurationResolverTest
 {
     @InjectMockComponents
     private ProjectManagementConfigurationResolver configurationResolver;
@@ -74,7 +72,7 @@ public class ProjectManagementConfigurationResolverTest
     private LiveDataConfigurationResolver<LiveDataConfiguration> dynamicCfgResolver;
 
     @Test
-    void testResolve() throws LiveDataException, ComponentLookupException
+    void resolveUsesTheClientConfiguration() throws LiveDataException, ComponentLookupException
     {
         LiveDataConfiguration clientConfig = new LiveDataConfiguration();
         clientConfig.setQuery(new LiveDataQuery());

@@ -113,7 +113,8 @@ class OpenProjectLivedataConfigurationResolverTest
 
         LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
 
-        List<LiveDataPropertyDescriptor> descriptors = new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
+        List<LiveDataPropertyDescriptor> descriptors =
+            new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
         assertEquals(List.of("targetVersion"),
             descriptors.stream().map(LiveDataPropertyDescriptor::getId).collect(Collectors.toList()));
         assertEquals("/rest/wikis/wiki/openproject/instance/myInstance/suggest/versions?search={encodedQuery}",

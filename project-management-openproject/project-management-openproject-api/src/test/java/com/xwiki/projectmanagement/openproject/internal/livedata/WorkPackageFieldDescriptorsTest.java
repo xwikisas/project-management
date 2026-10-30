@@ -58,7 +58,8 @@ class WorkPackageFieldDescriptorsTest
                 field("customField9", "Odd", "[1]String", List.of("o")))));
 
         assertEquals(List.of("targetVersion", "category", "responsible", "estimatedTime", "Labels", "Notes", "Flag",
-            "Deadline", "Odd"), descriptors.stream().map(LiveDataPropertyDescriptor::getId).collect(Collectors.toList()));
+            "Deadline", "Odd"),
+            descriptors.stream().map(LiveDataPropertyDescriptor::getId).collect(Collectors.toList()));
 
         LiveDataPropertyDescriptor version = descriptors.get(0);
         assertEquals("Target versions", version.getName());

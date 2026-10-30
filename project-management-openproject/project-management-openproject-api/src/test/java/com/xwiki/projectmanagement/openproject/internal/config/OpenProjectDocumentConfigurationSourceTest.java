@@ -66,7 +66,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class OpenProjectDocumentConfigurationSourceTest
+class OpenProjectDocumentConfigurationSourceTest
 {
     @InjectMockComponents
     private OpenProjectDocumentConfigurationSource openProjectDocumentConfigurationSource;
@@ -167,7 +167,7 @@ public class OpenProjectDocumentConfigurationSourceTest
 
     @Test
     @SuppressWarnings("unchecked")
-    public void getBasePropertyTest() throws XWikiException
+    void getBasePropertyReturnsConnections() throws XWikiException
     {
         List<OpenProjectConnection> connections =
             (List<OpenProjectConnection>) openProjectDocumentConfigurationSource.getBaseProperty(

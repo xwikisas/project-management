@@ -1,4 +1,4 @@
-package com.xwiki.projectmanagement.livadata.internal.displayer;
+package com.xwiki.projectmanagement.livedata.internal.displayer;
 
 /*
  * See the NOTICE file distributed with this work for additional
@@ -42,7 +42,7 @@ import org.xwiki.rendering.renderer.printer.DefaultWikiPrinter;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
-import com.xwiki.projectmanagement.livadata.displayer.ProjectManagementLiveDataDisplayer;
+import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 /**

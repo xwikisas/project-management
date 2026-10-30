@@ -49,7 +49,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
-public class HandleConnectionsTest
+class HandleConnectionsTest
 {
     @InjectMockComponents
     private HandleConnections handleConnections;
@@ -88,7 +88,7 @@ public class HandleConnectionsTest
     private static final DocumentReference PAGE_REFERENCE = new DocumentReference(WIKI_NAME, SPACE_NAME, PAGE_NAME);
 
     @BeforeEach
-    public void setUp()
+    void setUp()
     {
         when(this.xContext.getUserReference()).thenReturn(userReference);
         when(this.xContext.getWikiReference()).thenReturn(wikiReference);
@@ -128,7 +128,7 @@ public class HandleConnectionsTest
     }
 
     @Test
-    public void handleConnectionSuccessTest()
+    void createAndUpdateConnectionSucceed()
     {
         Response createResponse = handleConnections.createConnection(
             WIKI_NAME,
@@ -149,7 +149,7 @@ public class HandleConnectionsTest
     }
 
     @Test
-    public void handleConnectionAccessRightsForbiddenTest()
+    void createAndUpdateConnectionWithoutAdminRightIsForbidden()
     {
         when(this.authorizationManager.hasAccess(Right.ADMIN, userReference, wikiReference)).thenReturn(false);
 
@@ -238,7 +238,7 @@ public class HandleConnectionsTest
     }
 
     @Test
-    public void handleInternalServerErrorTest()
+    void createAndUpdateConnectionOnInvalidPageFail()
     {
         Response createResponse = handleConnections.createConnection(
             "",
