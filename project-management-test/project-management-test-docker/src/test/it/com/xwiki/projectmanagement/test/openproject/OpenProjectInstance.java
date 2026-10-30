@@ -26,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -407,6 +408,38 @@ public class OpenProjectInstance
                 String.format("Failed to get [%s]: %s %s", uri, response.statusCode(), response.body()));
         }
         return new ObjectMapper().readTree(response.body());
+    }
+
+    /**
+     * Change the description of a work package, as the OpenProject admin.
+     *
+     * @param driver the webdriver used to navigate the instance
+     * @param id the id of the work package
+     * @param description the new description, in the markdown syntax of OpenProject
+     * @return the previous description, in the markdown syntax of OpenProject
+     */
+    public String setWorkPackageDescription(XWikiWebDriver driver, String id, String description)
+    {
+        maybeLogin(driver, true);
+        // The API accepts the session of the browser, given the CSRF token of an OpenProject page.
+        driver.get(getBaseUrl() + "/my/account");
+        waitPageLoad(driver);
+        Map<?, ?> result = (Map<?, ?>) driver.executeAsyncScript("const [id, raw, done] = arguments;"
+            + "const url = '/api/v3/work_packages/' + id;"
+            + "const headers = {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest',"
+            + "  'X-CSRF-Token': document.querySelector(\"meta[name='csrf-token']\").content};"
+            + "fetch(url, {headers}).then(response => response.json()).then(workPackage => fetch(url, {"
+            + "  method: 'PATCH', headers,"
+            + "  body: JSON.stringify({lockVersion: workPackage.lockVersion, description: {raw}})"
+            + "}).then(response => response.ok ? done({previous: workPackage.description.raw || ''})"
+            + "  : response.text().then(error => done({error}))))"
+            + ".catch(error => done({error: String(error)}));", id, description);
+        if (result.containsKey("error")) {
+            throw new IllegalStateException(
+                String.format("Failed to update the description of the work package [%s]: %s", id,
+                    result.get("error")));
+        }
+        return (String) result.get("previous");
     }
 
     private void changePassword(XWikiWebDriver driver)

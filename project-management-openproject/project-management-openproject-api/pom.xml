@@ -100,6 +100,19 @@
       <artifactId>xwiki-rendering-syntax-html5</artifactId>
       <version>${rendering.version}</version>
     </dependency>
+    <!--  Needed for cleaning the html work package description.  -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-xml</artifactId>
+      <version>${commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-xml</artifactId>
+      <version>${commons.version}</version>
+      <type>test-jar</type>
+      <scope>test</scope>
+    </dependency>
     <!--  Needed in order to provide the async renderer result through a rest endpoint.  -->
     <dependency>
       <groupId>com.xwiki.projectmanagement</groupId>

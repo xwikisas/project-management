@@ -49,6 +49,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.WorkPackageDescriptionCleaner;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Priority;
@@ -93,6 +94,8 @@ class DefaultOpenProjectApiClientTest
 
     private HttpResponse<String> response;
 
+    private WorkPackageDescriptionCleaner descriptionCleaner;
+
     private static final Integer OFFSET = 1;
 
     private static final Integer PAGE_SIZE = 10;
@@ -112,8 +115,10 @@ class DefaultOpenProjectApiClientTest
     {
         client = mock(HttpClient.class);
         response = mock(HttpResponse.class);
+        descriptionCleaner = mock(WorkPackageDescriptionCleaner.class);
+        when(descriptionCleaner.clean(any(), any())).thenAnswer(invocation -> invocation.getArgument(0));
         openProjectApiClient = new DefaultOpenProjectApiClient(OPEN_PROJECT_CONNECTION_URL,
-            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), client);
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), client, descriptionCleaner);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(this.response);
     }
 
@@ -155,6 +160,17 @@ class DefaultOpenProjectApiClientTest
         assertTrue(labels.isCustomField());
 
         assertEquals("[1]String", fields.get(8).getFilterValueType());
+    }
+
+    @Test
+    void getWorkPackagesCleansTheDescription() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
+        when(this.descriptionCleaner.clean("<p>First description</p>", OPEN_PROJECT_CONNECTION_URL))
+            .thenReturn("cleaned");
+
+        assertEquals("cleaned",
+            openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0).getDescription());
     }
 
     @Test
@@ -412,7 +428,7 @@ class DefaultOpenProjectApiClientTest
     void requestsStayUnderThePathOfTheConfiguredInstance() throws Exception
     {
         DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient("https://example.org/openproject",
-            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client);
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
         when(this.response.statusCode()).thenReturn(200);
         when(this.response.body()).thenReturn("{}");
 
