@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest;
 import javax.ws.rs.WebApplicationException;
 
 import org.junit.jupiter.api.Test;
-import org.xwiki.instance.InstanceId;
 import org.xwiki.instance.InstanceIdManager;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -30,7 +29,6 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link DefaultInstanceIdResource}.
@@ -47,20 +45,12 @@ class DefaultInstanceIdResourceTest
     private InstanceIdManager instanceIdManager;
 
     @Test
-    void getInstanceId()
-    {
-        InstanceId instanceId = new InstanceId("e3ee1b7e-4c4f-4b0a-9a4e-4a7e2c3b1d0f");
-        when(this.instanceIdManager.getInstanceId()).thenReturn(instanceId);
-
-        assertEquals(instanceId, this.instanceIdResource.getInstanceId());
-    }
-
-    @Test
     void getInstanceIdWhenNotInitialized()
     {
         WebApplicationException exception =
             assertThrows(WebApplicationException.class, () -> this.instanceIdResource.getInstanceId());
 
         assertEquals(500, exception.getResponse().getStatus());
+        assertEquals("The id was not initialized", exception.getResponse().getEntity());
     }
 }

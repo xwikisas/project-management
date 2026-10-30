@@ -145,7 +145,8 @@ public class HandleConnections extends XWikiResource
         } catch (ProjectManagementException e) {
             return getErrorResponse(e);
         } catch (XWikiRestException e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(e.getMessage()).build();
+            // The page path of the request is malformed.
+            return Response.status(Response.Status.BAD_REQUEST).entity(e.getMessage()).build();
         }
     }
 
