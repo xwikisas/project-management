@@ -32,7 +32,7 @@
   <name>Project Management - Macro</name>
   <description>Provides the basic tools for implementing a Project Management macro such as the Work Items displayers, macro parameters displayers, abstract macro definitions.</description>
   <properties>
-    <xwiki.jacoco.instructionRatio>0.74</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.77</xwiki.jacoco.instructionRatio>
     <application.chartjs.version>1.6.3</application.chartjs.version>
     <xwiki.enforcer.banneddependencytype-xar.skip>true</xwiki.enforcer.banneddependencytype-xar.skip>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml</checkstyle.suppressions.location>
