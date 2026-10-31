@@ -20,7 +20,6 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -28,6 +27,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
@@ -206,10 +207,21 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         + "retrieval url [%s].";
 
     /**
-     * Maximum time to wait for the response of the OpenProject API. Without it, an OpenProject instance that stops
-     * responding blocks the thread rendering the page forever.
+     * Maximum time to wait for the response of the OpenProject API, body included. Without it, an OpenProject instance
+     * that stops responding blocks the thread rendering the page forever.
      */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(20);
+
+    /**
+     * Maximum size of the JSON responses of the OpenProject API (a page of 1000 work packages is a few MB), so that an
+     * unexpectedly large response doesn't exhaust the memory.
+     */
+    private static final int MAX_RESPONSE_SIZE = 16 * 1024 * 1024;
+
+    /**
+     * Maximum size of an avatar, matching the default maximum attachment size of OpenProject.
+     */
+    private static final int MAX_AVATAR_SIZE = 5 * 1024 * 1024;
 
     /**
      * The image types the avatars are served with. Other types, e.g. SVG or HTML, are not served from the wiki.
@@ -218,9 +230,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         "image/webp", "image/bmp", "image/avif", "image/x-icon", "image/vnd.microsoft.icon");
 
     /**
-     * The maximum number of bytes of the body of a failed avatar request kept in the error message.
+     * The maximum number of characters of the body of a failed request kept in the error message.
      */
-    private static final int MAX_AVATAR_ERROR_MESSAGE_LENGTH = 1024;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 1024;
+
+    private static final String AVATAR_REQUEST_ERROR_MESSAGE =
+        "There was an issue in creating or sending the user avatar request.";
 
     private final HttpClient client;
 
@@ -425,7 +440,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         try {
             URI uri = createInstanceUri(urlPart);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendForJson(request);
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
 
@@ -434,7 +449,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (URISyntaxException e) {
             throw new ProjectManagementException(
                 String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, connectionUrl + urlPart), e);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, connectionUrl + urlPart), e);
         }
@@ -611,43 +626,45 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             URI uri = createInstanceUri(urlPart);
             HttpRequest request =
                 createAuthorizedGetHttpRequest(uri);
-            HttpResponse<InputStream> response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            // The avatar is read entirely before being returned, so that its size and the duration of its download
+            // are bounded like the other responses.
+            HttpResponse<byte[]> response =
+                send(request, LimitedBodyHandlers.ofByteArray(MAX_AVATAR_SIZE, REQUEST_TIMEOUT));
 
             if (response.statusCode() != 200) {
-                try (InputStream in = response.body()) {
-                    if (response.statusCode() == 404) {
-                        throw new WorkItemNotFoundException(
-                            String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
-                    }
-                    throw new WorkItemRetrievalException(
-                        String.format("Failed to get the user avatar with code [%s] and "
-                                + "message [%s]", response.statusCode(),
-                            new String(in.readNBytes(MAX_AVATAR_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
+                if (response.statusCode() == 404) {
+                    throw new WorkItemNotFoundException(
+                        String.format("No avatar found for user [%s] at [%s].", userId, uriStr));
                 }
+                byte[] errorBody = response.body();
+                throw new WorkItemRetrievalException(
+                    String.format("Failed to get the user avatar with code [%s] and message [%s]",
+                        response.statusCode(), new String(errorBody, 0,
+                            Math.min(errorBody.length, MAX_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
             }
             String contentType = getAvatarContentType(response.headers().firstValue(CONTENT_TYPE).orElse(""));
             if (contentType == null) {
-                try (InputStream ignored = response.body()) {
-                    throw new WorkItemRetrievalException(
-                        String.format("The avatar of user [%s] has an unsupported content type [%s].", userId,
-                            response.headers().firstValue(CONTENT_TYPE).orElse("")));
-                }
+                throw new WorkItemRetrievalException(
+                    String.format("The avatar of user [%s] has an unsupported content type [%s].", userId,
+                        response.headers().firstValue(CONTENT_TYPE).orElse("")));
             }
 
-            StreamingOutput streamingOutput = output -> {
-                try (InputStream in = response.body()) {
-                    byte[] buffer = new byte[8192];
-                    int len;
-                    while ((len = in.read(buffer)) != -1) {
-                        output.write(buffer, 0, len);
-                    }
-                }
-            };
+            StreamingOutput streamingOutput = output -> output.write(response.body());
 
             return new UserAvatar(streamingOutput, contentType);
-        } catch (URISyntaxException | IOException | InterruptedException e) {
-            throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
-                e);
+        } catch (HttpTimeoutException e) {
+            // Not an error of the wiki: reported as a failed retrieval, so that it's not logged as an error on each
+            // display of the avatar.
+            throw new WorkItemRetrievalException(
+                String.format("The avatar of user [%s] wasn't received in time.", userId), e);
+        } catch (IOException e) {
+            if (ExceptionUtils.indexOfType(e, LimitedBodyHandlers.ResponseTooLargeException.class) >= 0) {
+                throw new WorkItemRetrievalException(String.format("The avatar of user [%s] is too large.", userId),
+                    e);
+            }
+            throw new ProjectManagementException(AVATAR_REQUEST_ERROR_MESSAGE, e);
+        } catch (URISyntaxException e) {
+            throw new ProjectManagementException(AVATAR_REQUEST_ERROR_MESSAGE, e);
         }
     }
 
@@ -688,7 +705,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         try {
             URI uri = createInstanceUri(url);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendForJson(request);
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
 
@@ -697,7 +714,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (URISyntaxException | JsonProcessingException e) {
             throw new ProjectManagementException(
                 String.format("Failed to build the OpenProject entity creation url [%s].", uriStr), e);
-        } catch (IOException | InterruptedException | SecurityException e) {
+        } catch (IOException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
         }
@@ -711,7 +728,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         try {
             URI uri = createInstanceUri(urlPart);
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendForJson(request);
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
 
@@ -720,7 +737,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (URISyntaxException e) {
             throw new ProjectManagementException(
                 String.format(PROJECT_MANAGEMENT_EXCEPTION_MESSAGE, urlString), e);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, urlString), e);
         }
@@ -733,7 +750,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         try {
             URI uri = createInstanceUri(url);
             HttpRequest request = createAuthorizedPatchRequest(uri, jsonBody);
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendForJson(request);
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
 
@@ -742,7 +759,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (URISyntaxException | JsonProcessingException e) {
             throw new ProjectManagementException(
                 String.format("Failed to build the OpenProject entity update url [%s].", uriStr), e);
-        } catch (IOException | InterruptedException | SecurityException e) {
+        } catch (IOException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uriStr), e);
         }
@@ -779,7 +796,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
             HttpRequest request =
                 createAuthorizedGetHttpRequest(uriBuilder.build());
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sendForJson(request);
 
             handleOpenProjectWorkPackagesRequestExceptions(response);
 
@@ -791,7 +808,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         } catch (JsonProcessingException e) {
             throw new ProjectManagementException(
                 String.format("Error trying to read the OpenProject response from [%s].", uri), e);
-        } catch (IOException | InterruptedException | SecurityException e) {
+        } catch (IOException | SecurityException e) {
             throw new ProjectManagementException(
                 String.format(COMMUNICATING_ISSUE_MESSAGE, uri), e);
         }
@@ -1085,6 +1102,23 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         );
     }
 
+    private HttpResponse<String> sendForJson(HttpRequest request) throws IOException, ProjectManagementException
+    {
+        return send(request, LimitedBodyHandlers.ofString(MAX_RESPONSE_SIZE, REQUEST_TIMEOUT));
+    }
+
+    private <T> HttpResponse<T> send(HttpRequest request, HttpResponse.BodyHandler<T> bodyHandler)
+        throws IOException, ProjectManagementException
+    {
+        try {
+            return client.send(request, bodyHandler);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ProjectManagementException(
+                String.format("Interrupted while waiting for the response of [%s].", request.uri()), e);
+        }
+    }
+
     private void handleOpenProjectWorkPackagesRequestExceptions(HttpResponse<String> response)
         throws ProjectManagementException
     {
@@ -1092,11 +1126,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         if (statusCode >= 400 && statusCode <= 499) {
             throw new WorkItemRetrievalException(
-                String.format("The request to the OpenProject API was invalid. [%s]", response.body()), statusCode
+                String.format("The request to the OpenProject API was invalid. [%s]",
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH)), statusCode
             );
         } else if (statusCode >= 500) {
             throw new ProjectManagementException(
-                String.format("Failed to retrieve the OpenProject entities. [%s].", response.body())
+                String.format("Failed to retrieve the OpenProject entities. [%s].",
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH))
             );
         }
     }
