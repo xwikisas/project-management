@@ -202,7 +202,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         assertThat(errors.get(0), containsString("The preset id should be a number."));
         assertThat(errors.get(1), containsString("There is no preset with id [999999]."));
         assertThat(errors.get(2), containsString("The preset id should be a number."));
-        assertThat(errors.get(3), containsString("No preset was found with the given id."));
+        assertThat(errors.get(3), containsString("There is no preset with id [999999]."));
     }
 
     @Test
