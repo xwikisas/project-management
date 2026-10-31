@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -36,7 +37,11 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.BeforeComponent;
 import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -44,7 +49,9 @@ import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.mockito.MockitoComponentManager;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.api.ProjectsApi;
@@ -56,8 +63,10 @@ import com.xwiki.projectmanagement.model.Project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -68,7 +77,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(DefaultProjectManagementClientExecutionContext.class)
+@ComponentList({ DefaultProjectManagementClientExecutionContext.class, WikiRequestExecutor.class })
 class DefaultProjectsResourceTest
 {
     private static final String WIKI = "xwiki";
@@ -80,6 +89,17 @@ class DefaultProjectsResourceTest
     private static final String PROJECT_ID = "7";
 
     private static final String FILTER = "{\"query\":{\"filters\":[]}}";
+
+    @MockComponent
+    private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private WikiDescriptorManager wikiDescriptorManager;
+
+    @MockComponent
+    private Provider<XWikiContext> xcontextProvider;
+
+    private final XWikiContext xcontext = new XWikiContext();
 
     @InjectMockComponents
     private DefaultProjectsResource resource;
@@ -94,6 +114,15 @@ class DefaultProjectsResourceTest
     private LiveDataConfigurationResolver<String> configurationResolver;
 
     private final ProjectsApi projectsApi = mock(ProjectsApi.class);
+
+    @BeforeComponent
+    void beforeComponent() throws Exception
+    {
+        // The requests are handled on any existing wiki the current user can view.
+        when(this.xcontextProvider.get()).thenReturn(this.xcontext);
+        when(this.authorizationManager.hasAccess(eq(Right.VIEW), any(WikiReference.class))).thenReturn(true);
+        when(this.wikiDescriptorManager.exists(any())).thenReturn(true);
+    }
 
     @BeforeEach
     void setUp() throws Exception
@@ -237,5 +266,23 @@ class DefaultProjectsResourceTest
         response = this.resource.getProjects(WIKI, "noprojects", 1, 10, null);
         assertEquals(501, response.getStatus());
         assertEquals(expectedMessage, response.getEntity());
+    }
+
+    @Test
+    void getProjectReadsTheClientConfigurationFromTheWikiOfTheRequest() throws Exception
+    {
+        this.xcontext.setWikiId("xwiki");
+        // The client returns a project named after the context wiki it was called with.
+        when(this.projectsApi.get(PROJECT_ID)).thenAnswer(invocation -> {
+            Project project = new Project();
+            project.setName(this.xcontext.getWikiId());
+            return project;
+        });
+
+        Response response = this.resource.getProject("subwiki", CLIENT, PROJECT_ID);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals("subwiki", ((Project) response.getEntity()).getName());
+        assertEquals("xwiki", this.xcontext.getWikiId());
     }
 }

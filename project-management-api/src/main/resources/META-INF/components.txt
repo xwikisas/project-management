@@ -4,3 +4,4 @@ com.xwiki.projectmanagement.internal.displayer.DefaultWorkItemPropertyDisplayerM
 com.xwiki.projectmanagement.internal.rest.DefaultWorkItemsResource
 com.xwiki.projectmanagement.internal.rest.DefaultProjectsResource
 com.xwiki.projectmanagement.script.ProjectManagementScriptService
+com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor

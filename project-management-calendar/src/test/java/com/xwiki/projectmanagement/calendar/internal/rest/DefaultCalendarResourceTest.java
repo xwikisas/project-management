@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -40,21 +41,30 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -70,6 +80,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WikiRequestExecutor.class)
 class DefaultCalendarResourceTest
 {
     private static final String WIKI = "xwiki";
@@ -81,6 +92,17 @@ class DefaultCalendarResourceTest
     private static final String START = "2026-03-01T00:00:00Z";
 
     private static final String END = "2026-04-12T00:00:00Z";
+
+    @MockComponent
+    private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private WikiDescriptorManager wikiDescriptorManager;
+
+    @MockComponent
+    private Provider<XWikiContext> xcontextProvider;
+
+    private final XWikiContext xcontext = new XWikiContext();
 
     @InjectMockComponents
     private DefaultCalendarResource resource;
@@ -110,6 +132,15 @@ class DefaultCalendarResourceTest
     private final CalendarEvent workItemEvent = new CalendarEvent();
 
     private final CalendarEvent providerEvent = new CalendarEvent();
+
+    @BeforeComponent
+    void beforeComponent() throws Exception
+    {
+        // The requests are handled on any existing wiki the current user can view.
+        when(this.xcontextProvider.get()).thenReturn(this.xcontext);
+        when(this.authorizationManager.hasAccess(eq(Right.VIEW), any(WikiReference.class))).thenReturn(true);
+        when(this.wikiDescriptorManager.exists(any())).thenReturn(true);
+    }
 
     @BeforeEach
     void setUp() throws Exception
@@ -319,5 +350,22 @@ class DefaultCalendarResourceTest
                 .collect(Collectors.joining(", ")));
         }
         return result;
+    }
+
+    @Test
+    void getCalendarEventsReadsTheClientConfigurationFromTheWikiOfTheRequest() throws Exception
+    {
+        this.xcontext.setWikiId("xwiki");
+        List<String> clientWikis = new ArrayList<>();
+        when(this.client.getWorkItems(eq(0), eq(25), any(), eq(Collections.emptyList()))).thenAnswer(invocation -> {
+            clientWikis.add(this.xcontext.getWikiId());
+            return new PaginatedResult<>(this.workItems, 1, 25, 1);
+        });
+
+        Response response = this.resource.getCalendarEvents("subwiki", HINT, FILTERS, START, END, 0, false);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(List.of("subwiki"), clientWikis);
+        assertEquals("xwiki", this.xcontext.getWikiId());
     }
 }
