@@ -41,8 +41,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
 import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
-import com.xwiki.projectmanagement.presets.Preset;
-import com.xwiki.projectmanagement.presets.PresetsManager;
+import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
 
 /**
  * Abstract calendar macro meant to be implemented by project management implementers. It constructs a REST URL pointing
@@ -67,7 +66,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     private SkinExtension ssrx;
 
     @Inject
-    private PresetsManager presetsManager;
+    private PresetFiltersCombiner presetFiltersCombiner;
 
     /**
      * Constructor.
@@ -107,18 +106,9 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
 
     private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
     {
-        try {
-            if (StringUtils.isEmpty(parameters.getPresetId())) {
-                return;
-            }
-            Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
-            if (preset == null) {
-                throw new MacroExecutionException(
-                    String.format("There is no preset with id [%s].", parameters.getPresetId()));
-            }
-            parameters.setFilters(preset.getFilter());
-        } catch (NumberFormatException e) {
-            throw new MacroExecutionException("The preset id should be a number.");
+        if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+            parameters.setFilters(
+                this.presetFiltersCombiner.combine(parameters.getPresetId(), parameters.getFilters()));
         }
     }
 

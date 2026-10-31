@@ -39,6 +39,7 @@ import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -50,6 +51,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
+import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 
@@ -69,6 +71,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(PresetFiltersCombiner.class)
 class AbstractProjectManagementCalendarMacroTest
 {
     private static final String REST_PATH = "/xwiki/rest/wikis/mywiki/projectmanagement/test/calendar";
@@ -225,17 +228,17 @@ class AbstractProjectManagementCalendarMacroTest
     @Test
     void executeWithPreset() throws Exception
     {
-        String presetFilters = "{\"query\":{\"filters\":[{\"property\":\"status\"}]}}";
         Preset preset = mock(Preset.class);
-        when(preset.getFilter()).thenReturn(presetFilters);
+        when(preset.getFilter()).thenReturn("{\"query\":{\"filters\":[{\"property\":\"status\"}]}}");
         when(this.presetsManager.getPreset(42)).thenReturn(preset);
         this.parameters.setPresetId("42");
-        this.parameters.setFilters("{\"query\":{\"filters\":[]}}");
+        this.parameters.setFilters("{\"query\":{\"filters\":[{\"property\":\"type\"}]}}");
 
         URIBuilder url = new URIBuilder(execute().getParameter(JSON));
 
-        // The preset filters replace the filters parameter in the REST URL.
-        assertEquals(List.of("filters=" + presetFilters, "limit=25", EXTRA_PARAMETER), getQueryParameters(url));
+        // The preset filters are combined with the filters parameter in the REST URL.
+        assertEquals(List.of("filters={\"query\":{\"filters\":[{\"property\":\"status\"},{\"property\":\"type\"}]}}",
+            "limit=25", EXTRA_PARAMETER), getQueryParameters(url));
     }
 
     @Test

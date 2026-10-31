@@ -117,15 +117,18 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         macroModal.getEditPage().clickSaveAndView();
 
         // The filters and the preset are alternatives in the macro editor, so a macro having both can only be written
-        // in wiki syntax. The preset takes precedence over the macro filters.
-        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"presetPrecedence\" "
-            + "presetId=\"%s\" filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"status~\",~\"constraints~\":"
-            + "[{~\"operator~\":~\"equals~\",~\"value~\":~\"1~\"}]}]}}\"/}}", CONNECTION_ID, presetId));
+        // in wiki syntax. The macro filters narrow down the preset: here, no work package was created in 1970.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"presetCombination\" "
+            + "presetId=\"%s\" filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"creationDate~\","
+            + "~\"constraints~\":[{~\"operator~\":~\"between~\",~\"value~\":~\"1970-01-01/1970-01-02~\"}]}]}}\"/}}",
+            CONNECTION_ID, presetId));
         OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
-        assertEquals("Entries 1 - 1 out of 1", getPaginationEntriesText(macro));
-        assertSubjectsContain(macro.getLivedata().getTableLayout(), "speakers");
+        assertEquals(0, macro.waitForTableLayout().countRows());
 
         // The macro uses the updated preset filters.
+        setup.createPage(testReference,
+            String.format("{{openproject instance=\"%s\" id=\"presetUpdate\" presetId=\"%s\"/}}", CONNECTION_ID,
+                presetId));
         setup.gotoPage(presetReference, "edit");
         editPage = new PresetEditPage();
         editPage.getFilterBuilders().get(0).getFilters().get(0).typeValue(1, "sp");

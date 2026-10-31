@@ -21,18 +21,30 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.rendering.macro.Macro;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
+import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
+import com.xwiki.projectmanagement.presets.Preset;
+import com.xwiki.projectmanagement.presets.PresetsManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -41,6 +53,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(PresetFiltersCombiner.class)
 class OpenProjectAssignedToMeMacroTest
 {
     @InjectMockComponents
@@ -51,6 +64,24 @@ class OpenProjectAssignedToMeMacroTest
 
     @MockComponent
     private OpenProjectAccess openProjectAccess;
+
+    @MockComponent
+    private PresetsManager presetsManager;
+
+    @MockComponent
+    private ComponentManager componentManager;
+
+    @MockComponent
+    private LicenseChecker licenseChecker;
+
+    @MockComponent
+    private UserTokenChecker userTokenChecker;
+
+    @MockComponent
+    private ProjectManagementAsyncExecutor asyncExecutor;
+
+    @Mock
+    private Macro<ProjectManagementAsyncMacroParams> displayerMacro;
 
     @Mock
     private OpenProjectApiClient apiClient;
@@ -70,6 +101,28 @@ class OpenProjectAssignedToMeMacroTest
         // The identifier is not passed to the live data source.
         assertEquals("client=openproject&instance=main&translationPrefix=openproject.",
             parameters.getSourceParameters());
+    }
+
+    @Test
+    void executeCombinesThePresetWithTheAssignedToMeFilter() throws Exception
+    {
+        Preset preset = mock(Preset.class);
+        when(preset.getFilter()).thenReturn("{\"query\":{\"filters\":["
+            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]},"
+            + "{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"5\"}]}]}}");
+        when(this.presetsManager.getPreset(3)).thenReturn(preset);
+        when(this.componentManager.getInstance(Macro.class, "proj-manag-liveData")).thenReturn(this.displayerMacro);
+        OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
+        parameters.setInstance("main");
+        parameters.setPresetId("3");
+
+        this.macro.execute(parameters, "", new MacroTransformationContext());
+
+        // The preset narrows down the work packages assigned to the current user instead of replacing the filter.
+        assertEquals("{\"query\":{\"filters\":["
+            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]},"
+            + "{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"5\"},"
+            + "{\"operator\":\"=\",\"value\":\"me\"}],\"matchAll\":true}]}}", parameters.getFilters());
     }
 
     @Test
