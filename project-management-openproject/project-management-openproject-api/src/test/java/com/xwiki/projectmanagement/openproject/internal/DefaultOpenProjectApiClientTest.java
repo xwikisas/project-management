@@ -19,13 +19,17 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -34,13 +38,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.apache.tools.ant.filters.StringInputStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
+import com.sun.net.httpserver.HttpServer;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
@@ -62,6 +66,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -486,11 +491,11 @@ class DefaultOpenProjectApiClientTest
     @Test
     void getAvatarAndGetOtherResponseCodeWithLongBody() throws Exception
     {
-        HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);
+        HttpResponse<byte[]> avatarResponse = mock(HttpResponse.class);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
-            inputStreamResponse);
-        when(inputStreamResponse.statusCode()).thenReturn(500);
-        when(inputStreamResponse.body()).thenReturn(new StringInputStream("a".repeat(5000)));
+            avatarResponse);
+        when(avatarResponse.statusCode()).thenReturn(500);
+        when(avatarResponse.body()).thenReturn("a".repeat(5000).getBytes(StandardCharsets.UTF_8));
 
         WorkItemRetrievalException exception =
             assertThrows(WorkItemRetrievalException.class, () -> openProjectApiClient.getUserAvatar("1"));
@@ -501,13 +506,11 @@ class DefaultOpenProjectApiClientTest
     @Test
     void getAvatarAndGetOtherResponseCode() throws ProjectManagementException, IOException, InterruptedException
     {
-        HttpResponse<InputStream> inputStreamResponse = mock(HttpResponse.class);
+        HttpResponse<byte[]> avatarResponse = mock(HttpResponse.class);
         when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
-            inputStreamResponse);
-        when(inputStreamResponse.statusCode()).thenReturn(400);
-        InputStream in = new StringInputStream("error");
-
-        when(inputStreamResponse.body()).thenReturn(in);
+            avatarResponse);
+        when(avatarResponse.statusCode()).thenReturn(400);
+        when(avatarResponse.body()).thenReturn("error".getBytes(StandardCharsets.UTF_8));
         assertThrows(WorkItemRetrievalException.class, () -> {
             openProjectApiClient.getUserAvatar("test");
         });
@@ -615,6 +618,71 @@ class DefaultOpenProjectApiClientTest
         ProjectManagementException exception = assertThrows(ProjectManagementException.class,
             () -> openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
         assertSame(timeout, exception.getCause());
+    }
+
+    @Test
+    void interruptedRequestRestoresTheInterruptFlag() throws IOException, InterruptedException
+    {
+        InterruptedException interrupted = new InterruptedException();
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenThrow(interrupted);
+
+        try {
+            ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+                () -> openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+            assertSame(interrupted, exception.getCause());
+            assertTrue(Thread.currentThread().isInterrupted());
+        } finally {
+            // Clear the flag so that it doesn't leak to the other tests.
+            Thread.interrupted();
+        }
+    }
+
+    @Test
+    void getUserAvatarReturnsTheAvatarBytes() throws Exception
+    {
+        HttpResponse<byte[]> avatarResponse = mock(HttpResponse.class);
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(
+            avatarResponse);
+        when(avatarResponse.statusCode()).thenReturn(200);
+        when(avatarResponse.headers())
+            .thenReturn(HttpHeaders.of(Map.of("Content-Type", List.of("image/png")), (a, b) -> true));
+        when(avatarResponse.body()).thenReturn(new byte[] { 1, 2, 3 });
+
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        openProjectApiClient.getUserAvatar("test").getStreamingOutput().write(output);
+
+        assertArrayEquals(new byte[] { 1, 2, 3 }, output.toByteArray());
+    }
+
+    @Test
+    void tooLargeResponseIsReportedAsProjectManagementException() throws Exception
+    {
+        // 17 MB, above the 16 MB limit of the JSON responses.
+        byte[] chunk = new byte[1024 * 1024];
+        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream body = exchange.getResponseBody()) {
+                for (int i = 0; i < 17; i++) {
+                    body.write(chunk);
+                }
+            } catch (IOException e) {
+                // The client closes the connection once the limit is exceeded.
+            }
+        });
+        server.start();
+        try {
+            DefaultOpenProjectApiClient realClient = new DefaultOpenProjectApiClient(
+                "http://localhost:" + server.getAddress().getPort(), new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN),
+                HttpClient.newHttpClient(), this.descriptionCleaner);
+
+            ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+                () -> realClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+            assertThat(exception.getCause().getMessage(),
+                containsString("larger than the maximum allowed size of [16777216] bytes"));
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test
