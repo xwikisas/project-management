@@ -28,8 +28,10 @@ import org.junit.jupiter.api.Test;
 import org.xwiki.repository.test.SolrTestUtils;
 import org.xwiki.rest.model.jaxb.SearchResult;
 import org.xwiki.rest.model.jaxb.SearchResults;
+import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
+import org.xwiki.test.docker.junit5.servletengine.ServletEngine;
 import org.xwiki.test.ui.TestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -56,14 +58,18 @@ public class OpenProjectLinkSearchIT extends AbstractOpenProjectIT
 
     @Test
     @Order(1)
-    void searchLinkedPages(TestUtils setup, TestReference testReference) throws Exception
+    void searchLinkedPages(TestUtils setup, TestReference testReference, TestConfiguration testConfiguration)
+        throws Exception
     {
         setup.rest().delete(testReference);
         setup.rest().savePage(testReference, "Page linked to OpenProject", "Linked page");
         // Ids that no other test links to.
         setup.addObject(testReference, RELATION_CLASS, "client", "openproject", "project", "9001",
             "workItem", "9002");
-        new SolrTestUtils(setup).waitEmptyQueue();
+        // The URL of XWiki for the test, which can't use the one of the browser when XWiki runs in a container.
+        ServletEngine servletEngine = testConfiguration.getServletEngine();
+        new SolrTestUtils(setup,
+            String.format("http://%s:%d/xwiki", servletEngine.getIP(), servletEngine.getPort())).waitEmptyQueue();
 
         String pageFullName = setup.serializeReference(testReference.getLocalDocumentReference());
         assertEquals(List.of(pageFullName), searchLinkedPages(setup, "projects", "9001"));
