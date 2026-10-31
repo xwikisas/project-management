@@ -124,6 +124,11 @@ public class StylingSetupManager
     private AdminAuthorChecker adminAuthorChecker;
 
     /**
+     * The locks serializing the styling updates of each wiki.
+     */
+    private final WikiLocks wikiLocks = new WikiLocks();
+
+    /**
      * Generate the styling for the configured OpenProject instances, reading their statuses and types with the current
      * user's account or as the users who aren't connected to them when the connection shows its public data. Nothing
      * is done when the current user doesn't have administration right on the current wiki, since the styles are saved
@@ -140,7 +145,8 @@ public class StylingSetupManager
      *
      * @param anonymousFallback whether to read the statuses and types of the connections that the current user can't
      *     call (not connected, and no public data shown) without credentials, since they're the same for every user;
-     *     these requests aren't cached, so this is meant for the styling job, not for each rendering
+     *     these requests aren't cached, so this is meant for the styling job, not for each rendering; the styling
+     *     job waits for an update already running on the wiki, while the other callers skip the update then
      * @since 1.4.0
      */
     public void setupInstanceStyles(boolean anonymousFallback)
@@ -151,6 +157,25 @@ public class StylingSetupManager
                 context.getUserReference());
             return;
         }
+        // Concurrent updates (e.g. the job triggered by a connection save and the "Sync colors" button) would save
+        // the same styles pages: run them one after the other. The rendering of a calendar doesn't wait for a running
+        // update, since it generates the same styles.
+        String wikiId = context.getWikiId();
+        if (anonymousFallback) {
+            this.wikiLocks.lock(wikiId);
+        } else if (!this.wikiLocks.tryLock(wikiId)) {
+            LOGGER.debug("Skipping the styling update since another one is running on the wiki [{}].", wikiId);
+            return;
+        }
+        try {
+            setupInstanceStyles(context, anonymousFallback);
+        } finally {
+            this.wikiLocks.unlock(wikiId);
+        }
+    }
+
+    private void setupInstanceStyles(XWikiContext context, boolean anonymousFallback)
+    {
         List<String> instanceIds =
             opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
                 .collect(Collectors.toList());

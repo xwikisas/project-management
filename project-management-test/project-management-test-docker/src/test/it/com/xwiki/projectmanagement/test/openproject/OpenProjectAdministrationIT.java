@@ -130,8 +130,9 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.triggerColorSyncJob();
         assertTrue(adminPage.isColorSyncJobTriggered());
-        // The scheduler doesn't run the job during the test, so the styles are generated synchronously, by a page
-        // that is rendered when saved.
+        // The scheduler doesn't execute the jobs during the test (neither the job triggered when saving a connection,
+        // nor the one triggered above), so the styles are generated synchronously, by a page that is rendered when
+        // saved.
         setup.createPage(List.of("StartStylingJob"), "WebHome",
             "{{velocity}}$services.openproject.generateStyling(){{/velocity}}", "");
 

@@ -20,6 +20,11 @@
 package com.xwiki.projectmanagement.openproject.internal.displayer;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Named;
 import javax.inject.Provider;
@@ -55,6 +60,7 @@ import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Type;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -62,6 +68,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -127,6 +134,7 @@ class StylingSetupManagerTest
         when(this.xcontext.getWiki()).thenReturn(this.xwiki);
         when(this.xcontext.getUserReference()).thenReturn(USER);
         when(this.xcontext.getWikiReference()).thenReturn(USER.getWikiReference());
+        when(this.xcontext.getWikiId()).thenReturn(USER.getWikiReference().getName());
         when(this.adminAuthorChecker.isAdmin(USER, USER.getWikiReference())).thenReturn(true);
         when(this.adminAuthorChecker.isLastSavedByAdmin(this.stylesDocument)).thenReturn(true);
         when(this.stylesDocument.clone()).thenReturn(this.stylesDocument);
@@ -317,5 +325,42 @@ class StylingSetupManagerTest
 
         verify(this.openProjectAccess, never()).getAnonymousClient(any());
         verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
+    }
+
+    @Test
+    void setupInstanceStylesWhileAnotherUpdateIsRunning() throws Exception
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        PaginatedResult<Status> statuses = this.client.getStatuses();
+        when(this.client.getStatuses()).thenAnswer(invocation -> {
+            started.countDown();
+            release.await(10, TimeUnit.SECONDS);
+            return statuses;
+        });
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            // The styling job.
+            Future<?> job = executor.submit(() -> this.stylingSetupManager.setupInstanceStyles(true));
+            assertTrue(started.await(10, TimeUnit.SECONDS));
+
+            // A calendar rendered meanwhile doesn't wait for the job, and doesn't update the styles itself.
+            this.stylingSetupManager.setupInstanceStyles();
+
+            verify(this.openProjectAccess).resolve(CONNECTION_NAME);
+            release.countDown();
+            job.get(10, TimeUnit.SECONDS);
+        } finally {
+            release.countDown();
+            executor.shutdownNow();
+        }
+        verify(this.xwiki).saveDocument(this.stylesDocument, "Updated styles.", this.xcontext);
+
+        // Once the job is done, the styles can be updated again.
+        this.stylingSetupManager.setupInstanceStyles();
+
+        verify(this.openProjectAccess, times(2)).resolve(CONNECTION_NAME);
     }
 }
