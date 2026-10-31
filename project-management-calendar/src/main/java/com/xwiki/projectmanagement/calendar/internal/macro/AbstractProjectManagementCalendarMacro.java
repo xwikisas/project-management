@@ -113,7 +113,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
             }
             Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
             if (preset == null) {
-                throw new MacroExecutionException("No preset was found with the given id.");
+                throw new MacroExecutionException(
+                    String.format("There is no preset with id [%s].", parameters.getPresetId()));
             }
             parameters.setFilters(preset.getFilter());
         } catch (NumberFormatException e) {

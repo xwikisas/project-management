@@ -275,7 +275,7 @@ class AbstractProjectManagementCalendarMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, null, this.macroTransformationContext));
 
-        assertEquals("No preset was found with the given id.", exception.getCause().getMessage());
+        assertEquals("There is no preset with id [42].", exception.getCause().getMessage());
         verify(this.presetsManager).getPreset(42);
     }
 
