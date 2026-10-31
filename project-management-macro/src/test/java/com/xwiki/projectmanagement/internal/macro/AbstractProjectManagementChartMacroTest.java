@@ -19,11 +19,8 @@
  */
 package com.xwiki.projectmanagement.internal.macro;
 
-import javax.inject.Named;
-
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -47,29 +44,6 @@ import static org.mockito.Mockito.verify;
 @ComponentTest
 class AbstractProjectManagementChartMacroTest
 {
-    /**
-     * Implementation of the abstract chart macro for testing purposes.
-     */
-    @Component
-    @Named("testChart")
-    public static class TestChartMacro
-        extends AbstractProjectManagementChartMacro<ProjectManagementChartMacroParameters>
-    {
-        /**
-         * Default constructor.
-         */
-        public TestChartMacro()
-        {
-            super("testChart", "testChart", ProjectManagementChartMacroParameters.class);
-        }
-
-        @Override
-        public boolean supportsInlineMode()
-        {
-            return false;
-        }
-    }
-
     @InjectMockComponents
     private TestChartMacro macro;
 
@@ -88,7 +62,6 @@ class AbstractProjectManagementChartMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(parameters, null, this.macroTransformationContext));
 
-        // The message names the missing preset, like the one of the work items macro.
         assertEquals("There is no preset with id [42].", exception.getMessage());
         verify(this.presetsManager).getPreset(42);
     }
