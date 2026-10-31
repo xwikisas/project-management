@@ -585,7 +585,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       <parameters/>
     </property>
     <property>
-      <scope>global</scope>
+      <scope>wiki</scope>
     </property>
   </object>
 </xwikidoc>
