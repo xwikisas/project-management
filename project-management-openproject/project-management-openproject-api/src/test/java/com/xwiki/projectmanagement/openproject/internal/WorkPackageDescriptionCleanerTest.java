@@ -97,10 +97,49 @@ class WorkPackageDescriptionCleanerTest
     }
 
     @Test
+    void replaceWorkPackageQuickInfosWithLinks()
+    {
+        // The ##2 and ###PROJ-3 references, as rendered by OpenProject; the second one has a project-based
+        // identifier, which OpenProject displays without #.
+        assertEquals("<p>Depends on <a class=\"issue work_package op-uc-link\""
+            + " href=\"https://example.org/openproject/work_packages/2\">#2</a> and"
+            + " <a class=\"issue work_package op-uc-link\""
+            + " href=\"https://example.org/openproject/work_packages/3\">PROJ-3</a>.</p>",
+            this.cleaner.clean("<p>Depends on <opce-macro-wp-quickinfo data-id=\"2\" data-display-id=\"2\" "
+                + "data-detailed=\"false\"></opce-macro-wp-quickinfo> and <opce-macro-wp-quickinfo data-id=\"3\" "
+                + "data-display-id=\"PROJ-3\" data-detailed=\"true\"></opce-macro-wp-quickinfo>.</p>",
+                "https://example.org/openproject"));
+    }
+
+    @Test
+    void replaceInvalidWorkPackageQuickInfos()
+    {
+        assertEquals("<p>Depends on <a class=\"issue work_package op-uc-link\""
+            + " href=\"https://op.example.org/work_packages/4\">#4</a> and .</p>",
+            this.cleaner.clean("<p>Depends on <opce-macro-wp-quickinfo data-id=\"4\"></opce-macro-wp-quickinfo> and "
+                + "<opce-macro-wp-quickinfo data-id=\"../x\" data-display-id=\"5\"></opce-macro-wp-quickinfo>.</p>",
+                SERVER_URL));
+    }
+
+    @Test
+    void replaceTaskListCheckboxes()
+    {
+        assertEquals("<ul class=\"op-uc-list\">\n<li class=\"op-uc-list--item\">☑ done item</li>\n"
+            + "<li class=\"op-uc-list--item\">☐ open item</li>\n</ul>",
+            this.cleaner.clean("<ul class=\"op-uc-list\">\n<li class=\"op-uc-list--item\"><input type=\"checkbox\" "
+                + "class=\"op-uc-list--task-checkbox\" checked disabled> done item</li>\n"
+                + "<li class=\"op-uc-list--item\"><input type=\"checkbox\" class=\"op-uc-list--task-checkbox\" "
+                + "disabled> open item</li>\n</ul>", SERVER_URL));
+    }
+
+    @Test
     void cleanWithoutServerUrl()
     {
-        assertEquals("<p><a href=\"/work_packages/13\">#13</a></p>",
-            this.cleaner.clean("<p><a href=\"/work_packages/13\" onclick=\"alert(1)\">#13</a></p>", null));
+        // The work package quick info reference isn't a link, which would point to the wiki.
+        assertEquals("<p><a href=\"/work_packages/13\">#13</a> #14</p>",
+            this.cleaner.clean("<p><a href=\"/work_packages/13\" onclick=\"alert(1)\">#13</a> "
+                + "<opce-macro-wp-quickinfo data-id=\"14\" data-display-id=\"14\"></opce-macro-wp-quickinfo></p>",
+                null));
     }
 
     @Test
