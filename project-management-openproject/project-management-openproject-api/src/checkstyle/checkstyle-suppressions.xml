@@ -34,5 +34,6 @@
   <suppress checks="ClassFanOutComplexity" files="DefaultOpenProjectDocumentResource.java"/>
   <suppress checks="ClassFanOutComplexity" files="HandleWorkPackages.java"/>
   <suppress checks="FanOutComplexity" files="HandleWorkItems.java"/>
+  <suppress checks="ClassFanOutComplexity" files="StylingSetupManager.java"/>
 
 </suppressions>
