@@ -28,6 +28,7 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectDashboardIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectLinkSearchIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT;
@@ -81,6 +82,12 @@ public class AllIT
     @Nested
     @DisplayName("OpenProject work package keys")
     class NestedOpenProjectWorkPackageKeysIT extends OpenProjectWorkPackageKeysIT
+    {
+    }
+
+    @Nested
+    @DisplayName("OpenProject link search")
+    class NestedOpenProjectLinkSearchIT extends OpenProjectLinkSearchIT
     {
     }
 }
