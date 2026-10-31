@@ -51,8 +51,6 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
-import com.xwiki.projectmanagement.presets.Preset;
-import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Abstract chart macro meant to be implemented by project management implementers.
@@ -81,7 +79,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private XWikiVersionChecker xWikiVersionChecker;
 
     @Inject
-    private PresetsManager presetsManager;
+    private PresetFiltersCombiner presetFiltersCombiner;
 
     /**
      * constructor.
@@ -109,7 +107,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     {
         try {
             if (StringUtils.isNotEmpty(parameters.getPresetId())) {
-                maybeSetPresetFilters(parameters);
+                parameters.setFilters(
+                    this.presetFiltersCombiner.combine(parameters.getPresetId(), parameters.getFilters()));
             }
             List<List<LiveDataQuery.Filter>> filters = getFiltersList(parameters.getFilters());
             updateFilters(filters, parameters);
@@ -171,20 +170,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     protected void updateFilters(List<List<LiveDataQuery.Filter>> filters, T parameters) throws MacroExecutionException
     {
         // The extending class can update the filters if needed.
-    }
-
-    private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
-    {
-        try {
-            Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
-            if (preset == null) {
-                throw new MacroExecutionException(
-                    String.format("There is no preset with id [%s].", parameters.getPresetId()));
-            }
-            parameters.setFilters(preset.getFilter());
-        } catch (NumberFormatException e) {
-            throw new MacroExecutionException("The preset id should be a number.");
-        }
     }
 
     protected void prepareContext(T parameters)
