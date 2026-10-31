@@ -23,8 +23,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import javax.naming.OperationNotSupportedException;
-
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.livedata.test.po.TableLayoutElement;
@@ -68,7 +66,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
 
     @Test
     @Order(1)
-    void listPresetLifecycle(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    void listPresetLifecycle(TestUtils setup, TestReference testReference) throws Exception
     {
         String presetName = "Speakers list preset";
 
@@ -116,24 +114,29 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         macroModal.clickSubmit();
         macroModal.getEditPage().clickSaveAndView();
 
-        // The filters and the preset are alternatives in the macro editor, so a macro having both can only be written
-        // in wiki syntax. The preset takes precedence over the macro filters.
-        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"presetPrecedence\" "
-            + "presetId=\"%s\" filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"status~\",~\"constraints~\":"
-            + "[{~\"operator~\":~\"equals~\",~\"value~\":~\"1~\"}]}]}}\"/}}", CONNECTION_ID, presetId));
-        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
-        assertEquals("Entries 1 - 1 out of 1", getPaginationEntriesText(macro));
-        assertSubjectsContain(macro.getLivedata().getTableLayout(), "speakers");
-
         // The macro uses the updated preset filters.
         setup.gotoPage(presetReference, "edit");
         editPage = new PresetEditPage();
         editPage.getFilterBuilders().get(0).getFilters().get(0).typeValue(1, "sp");
         editPage.clickSaveAndViewPreset();
         setup.gotoPage(testReference);
-        macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
         assertEquals("Entries 1 - 3 out of 3", getPaginationEntriesText(macro));
         assertSubjectsContain(macro.getLivedata().getTableLayout(), "sp");
+
+        // The filters and the preset are alternatives in the macro editor, so a macro having both can only be written
+        // in wiki syntax. The macro filters narrow down the preset: of the two work packages they keep, only one
+        // matches the preset.
+        String speakersId = getWorkPackageId("~", "speakers");
+        String otherId = getWorkPackageId("!~", "sp");
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"presetCombination\" "
+            + "presetId=\"%s\" filters=\"{~\"query~\":{~\"filters~\":[{~\"property~\":~\"identifier~\","
+            + "~\"constraints~\":[{~\"operator~\":~\"equals~\",~\"value~\":~\"%s~\"},"
+            + "{~\"operator~\":~\"equals~\",~\"value~\":~\"%s~\"}]}]}}\"/}}", CONNECTION_ID, presetId, speakersId,
+            otherId));
+        macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        assertEquals("Entries 1 - 1 out of 1", getPaginationEntriesText(macro));
+        assertSubjectsContain(macro.getLivedata().getTableLayout(), "speakers");
 
         // The macro displays an error once the preset is deleted.
         setup.deletePage(presetReference);
@@ -266,5 +269,17 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             String subject = ld.getCell(SUBJECT_COLUMN, i).getText();
             assertThat(subject.toLowerCase(), containsString(text));
         }
+    }
+
+    /**
+     * @return the id of a work package whose subject matches the given OpenProject operator and value
+     */
+    private String getWorkPackageId(String operator, String subject) throws Exception
+    {
+        String filters =
+            String.format("[{\"subject\":{\"operator\":\"%s\",\"values\":[\"%s\"]}}]", operator, subject);
+        return this.openProject.getApiResource("/work_packages?pageSize=1&filters="
+            + URLEncoder.encode(filters, StandardCharsets.UTF_8)).get("_embedded").get("elements").get(0).get("id")
+            .asText();
     }
 }

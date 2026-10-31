@@ -42,8 +42,6 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
-import com.xwiki.projectmanagement.presets.Preset;
-import com.xwiki.projectmanagement.presets.PresetsManager;
 
 /**
  * Provides the logic and extension points for implementing the base work item filtering macro. When implementing a
@@ -64,7 +62,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     private ProjectManagementAsyncExecutor asyncExecutor;
 
     @Inject
-    private PresetsManager presetsManager;
+    private PresetFiltersCombiner presetFiltersCombiner;
 
     /**
      * @param name the name of the macro.
@@ -122,17 +120,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
 
     private void maybeUpdateFilterFromPreset(T parameters) throws MacroExecutionException
     {
-        try {
-            if (StringUtils.isNotEmpty(parameters.getPresetId())) {
-                Preset preset = presetsManager.getPreset(Integer.parseInt(parameters.getPresetId()));
-                if (preset == null) {
-                    throw new MacroExecutionException(String.format("There is no preset with id [%s].",
-                        parameters.getPresetId()));
-                }
-                parameters.setFilters(preset.getFilter());
-            }
-        } catch (NumberFormatException e) {
-            throw new MacroExecutionException("The preset id should be a number.");
+        // The preset is combined with the filters of the macro, including the ones set by processParameters().
+        if (StringUtils.isNotEmpty(parameters.getPresetId())) {
+            parameters.setFilters(
+                this.presetFiltersCombiner.combine(parameters.getPresetId(), parameters.getFilters()));
         }
     }
 
