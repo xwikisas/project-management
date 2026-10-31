@@ -19,20 +19,25 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.listener;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.InOrder;
 import org.quartz.Trigger;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.WikiReference;
+import org.xwiki.observation.remote.RemoteObservationManagerContext;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
+import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.mockito.MockitoComponentManager;
 import org.xwiki.user.UserReferenceResolver;
 
@@ -45,6 +50,7 @@ import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.plugin.XWikiPluginManager;
 import com.xpn.xwiki.plugin.scheduler.JobState;
 import com.xpn.xwiki.plugin.scheduler.SchedulerPlugin;
+import com.xpn.xwiki.plugin.scheduler.SchedulerPluginException;
 import com.xpn.xwiki.test.MockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
@@ -54,8 +60,10 @@ import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -93,6 +101,9 @@ class StyleSetupJobSchedulerListenerTest
     @InjectComponentManager
     private MockitoComponentManager componentManager;
 
+    @MockComponent
+    private RemoteObservationManagerContext remoteObservationManagerContext;
+
     @InjectMockComponents
     private StyleSetupJobSchedulerListener listener;
 
@@ -121,12 +132,18 @@ class StyleSetupJobSchedulerListenerTest
 
     private void createJob(DocumentReference reference, String contextUser) throws XWikiException
     {
+        createJob(reference, contextUser, JobState.STATE_NORMAL);
+    }
+
+    private void createJob(DocumentReference reference, String contextUser, String status) throws XWikiException
+    {
         XWikiContext context = this.oldcore.getXWikiContext();
         XWikiDocument jobDocument = new XWikiDocument(reference);
         jobDocument.getAuthors().setEffectiveMetadataAuthor(this.userResolver.resolve(JOB_AUTHOR));
         jobDocument.getAuthors().setOriginalMetadataAuthor(this.userResolver.resolve(JOB_AUTHOR));
         BaseObject job = jobDocument.newXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE, context);
         job.setStringValue(CONTEXT_USER, contextUser);
+        job.setStringValue("status", status);
         this.oldcore.getSpyXWiki().saveDocument(jobDocument, context);
     }
 
@@ -190,20 +207,37 @@ class StyleSetupJobSchedulerListenerTest
     }
 
     @Test
-    void schedulesAndTriggersAnUnscheduledJob() throws Exception
+    void schedulesAndTriggersAJobNotScheduledYet() throws Exception
     {
         setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        // E.g. a job page just installed: the scheduler only schedules the existing jobs when it starts.
         createJob(JOB_DOCUMENT, "XWiki.Author");
         setJobState(Trigger.TriggerState.NONE);
 
         this.listener.onEvent(new XObjectAddedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
             this.oldcore.getXWikiContext());
 
-        assertEquals(this.userResolver.resolve(CONNECTION_AUTHOR),
-            getJobDocument().getAuthors().getOriginalMetadataAuthor());
+        // The job user didn't change, so the job page isn't saved.
+        assertJobFields("XWiki.Author", JOB_AUTHOR);
         verify(this.scheduler, never()).unscheduleJob(any(), any());
-        verify(this.scheduler).scheduleJob(any(), any());
-        verify(this.scheduler).triggerJob(any(), any());
+        InOrder inOrder = inOrder(this.scheduler);
+        inOrder.verify(this.scheduler).scheduleJob(any(), any());
+        inOrder.verify(this.scheduler).triggerJob(any(), any());
+    }
+
+    @Test
+    void leavesAJobUnscheduledByAnAdministratorAlone() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        createJob(JOB_DOCUMENT, "XWiki.JobAuthor", JobState.STATE_NONE);
+        setJobState(Trigger.TriggerState.NONE);
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
+
+        assertJobFields("XWiki.JobAuthor", JOB_AUTHOR);
+        verify(this.scheduler, never()).scheduleJob(any(), any());
+        verify(this.scheduler, never()).triggerJob(any(), any());
     }
 
     @Test
@@ -227,6 +261,14 @@ class StyleSetupJobSchedulerListenerTest
         DocumentReference subwikiJob = JOB_DOCUMENT.setWikiReference(SUBWIKI);
         createJob(subwikiJob, "XWiki.JobAuthor");
         XWikiContext context = this.oldcore.getXWikiContext();
+        // The scheduler identifies and runs the job in the context wiki.
+        List<WikiReference> triggerWikis = new ArrayList<>();
+        List<DocumentReference> triggeredJobs = new ArrayList<>();
+        doAnswer(invocation -> {
+            triggerWikis.add(invocation.<XWikiContext>getArgument(1).getWikiReference());
+            triggeredJobs.add(invocation.<BaseObject>getArgument(0).getDocumentReference());
+            return null;
+        }).when(this.scheduler).triggerJob(any(), any());
 
         this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, SUBWIKI.getName()),
             context);
@@ -236,10 +278,52 @@ class StyleSetupJobSchedulerListenerTest
             jobDocument.getXObject(SchedulerPlugin.XWIKI_JOB_CLASSREFERENCE).getStringValue(CONTEXT_USER));
         assertEquals(this.userResolver.resolve(CONNECTION_AUTHOR),
             jobDocument.getAuthors().getOriginalMetadataAuthor());
+        assertEquals(List.of(SUBWIKI), triggerWikis);
+        assertEquals(List.of(subwikiJob), triggeredJobs);
         // The job of the current wiki is left alone, and the current wiki is restored.
         assertJobFields("XWiki.JobAuthor", JOB_AUTHOR);
         assertEquals(MAIN_WIKI, context.getWikiReference());
-        verify(this.scheduler).triggerJob(any(), any());
+    }
+
+    @Test
+    void logsAFailureToTriggerTheJob() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        createJob(JOB_DOCUMENT, "XWiki.Author");
+        doThrow(new SchedulerPluginException(0, "Error")).when(this.scheduler).triggerJob(any(), any());
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
+
+        assertEquals("Failed to update or trigger the job [OpenProject.Code.StylingSetupJob] for the connection author "
+            + "[xwiki:XWiki.Author]. Cause: [SchedulerPluginException: Error number 0 in 5: Exception in plugin "
+            + "[com.xpn.xwiki.plugin.scheduler.SchedulerPlugin]: Error].",
+            this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void ignoresRemoteEvents() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        when(this.remoteObservationManagerContext.isRemoteState()).thenReturn(true);
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
+
+        assertJobUnchanged();
+    }
+
+    @Test
+    void ignoresAMissingScheduler() throws Exception
+    {
+        setAdmin(CONNECTION_AUTHOR, MAIN_WIKI);
+        XWikiPluginManager pluginManager = mock(XWikiPluginManager.class);
+        doReturn(pluginManager).when(this.oldcore.getSpyXWiki()).getPluginManager();
+
+        this.listener.onEvent(new XObjectUpdatedEvent(), connectionSavedBy(CONNECTION_AUTHOR, "xwiki"),
+            this.oldcore.getXWikiContext());
+
+        assertJobUnchanged();
     }
 
     @Test
@@ -284,8 +368,8 @@ class StyleSetupJobSchedulerListenerTest
             this.oldcore.getXWikiContext());
 
         assertJobFields("XWiki.JobAuthor", JOB_AUTHOR);
-        assertEquals("Failed to set the context user [xwiki:XWiki.Author] for the job "
-            + "[OpenProject.Code.StylingSetupJob] and trigger it. Cause: [XWikiException: Error number 0 in 0].",
+        assertEquals("Failed to update or trigger the job [OpenProject.Code.StylingSetupJob] for the connection author "
+            + "[xwiki:XWiki.Author]. Cause: [XWikiException: Error number 0 in 0].",
             this.logCapture.getMessage(0));
         verify(this.scheduler, never()).triggerJob(any(), any());
     }
