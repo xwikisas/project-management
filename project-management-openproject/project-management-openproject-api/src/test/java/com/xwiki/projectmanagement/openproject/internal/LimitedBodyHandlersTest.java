@@ -35,11 +35,13 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.sun.net.httpserver.HttpServer;
 
@@ -48,6 +50,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link LimitedBodyHandlers}, against a local HTTP server.
@@ -58,7 +61,7 @@ class LimitedBodyHandlersTest
 {
     private static final Duration TIMEOUT = Duration.ofSeconds(10);
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     private final CountDownLatch releaseSlowBody = new CountDownLatch(1);
 
@@ -74,6 +77,14 @@ class LimitedBodyHandlersTest
             exchange.sendResponseHeaders(200, body.length);
             try (OutputStream output = exchange.getResponseBody()) {
                 output.write(body);
+            }
+        });
+        this.server.createContext("/fixed", exchange -> {
+            exchange.sendResponseHeaders(200, 1000);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(new byte[1000]);
+            } catch (IOException e) {
+                // The client closes the connection without reading the body when it's too large.
             }
         });
         this.server.createContext("/bytes", exchange -> {
@@ -112,7 +123,7 @@ class LimitedBodyHandlersTest
     @Test
     void ofStringDecodesWithTheCharsetOfTheResponse() throws Exception
     {
-        String body = this.httpClient.send(request("/latin1"), LimitedBodyHandlers.ofString(1000, TIMEOUT)).body();
+        String body = HTTP_CLIENT.send(request("/latin1"), LimitedBodyHandlers.ofString(1000, TIMEOUT)).body();
 
         assertEquals("café", body);
     }
@@ -120,25 +131,37 @@ class LimitedBodyHandlersTest
     @Test
     void ofByteArrayReadsABodyOfTheMaximumSize() throws Exception
     {
-        byte[] body = this.httpClient.send(request("/bytes"), LimitedBodyHandlers.ofByteArray(1000, TIMEOUT)).body();
+        byte[] body = HTTP_CLIENT.send(request("/bytes"), LimitedBodyHandlers.ofByteArray(1000, TIMEOUT)).body();
 
         assertArrayEquals(new byte[1000], body);
     }
 
     @Test
-    void ofByteArrayFailsWhenTheBodyIsTooLarge()
+    void ofByteArrayReadsABodyOfTheDeclaredLength() throws Exception
     {
+        byte[] body = HTTP_CLIENT.send(request("/fixed"), LimitedBodyHandlers.ofByteArray(1000, TIMEOUT)).body();
+
+        assertArrayEquals(new byte[1000], body);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/bytes", "/fixed" })
+    void ofByteArrayFailsWhenTheBodyIsTooLarge(String path)
+    {
+        // The body of "/bytes" has no declared length and is read until the limit, the one of "/fixed" has a
+        // Content-Length larger than the limit and isn't read.
         IOException exception = assertThrows(IOException.class,
-            () -> this.httpClient.send(request("/bytes"), LimitedBodyHandlers.ofByteArray(999, TIMEOUT)));
+            () -> HTTP_CLIENT.send(request(path), LimitedBodyHandlers.ofByteArray(999, TIMEOUT)));
 
         assertThat(exception.getMessage(), containsString("larger than the maximum allowed size of [999] bytes"));
+        assertTrue(ExceptionUtils.indexOfType(exception, LimitedBodyHandlers.ResponseTooLargeException.class) >= 0);
     }
 
     @Test
     void ofStringFailsWhenTheBodyIsTooSlow()
     {
         HttpTimeoutException exception = assertThrows(HttpTimeoutException.class,
-            () -> this.httpClient.send(request("/slow"),
+            () -> HTTP_CLIENT.send(request("/slow"),
                 LimitedBodyHandlers.ofString(1000, Duration.ofMillis(500))));
 
         assertEquals("The response of the OpenProject API was not fully received in time", exception.getMessage());
@@ -148,7 +171,7 @@ class LimitedBodyHandlersTest
     void ofStringFailsWhenTheDeadlineIsExceededBeforeTheResponse()
     {
         assertThrows(HttpTimeoutException.class,
-            () -> this.httpClient.send(request("/latin1"), LimitedBodyHandlers.ofString(1000, Duration.ZERO)));
+            () -> HTTP_CLIENT.send(request("/latin1"), LimitedBodyHandlers.ofString(1000, Duration.ZERO)));
     }
 
     @ParameterizedTest
@@ -171,7 +194,8 @@ class LimitedBodyHandlersTest
 
     private HttpRequest request(String path)
     {
-        return HttpRequest.newBuilder(URI.create("http://localhost:" + this.server.getAddress().getPort() + path))
-            .build();
+        InetSocketAddress address = this.server.getAddress();
+        return HttpRequest.newBuilder(
+            URI.create("http://" + address.getHostString() + ':' + address.getPort() + path)).build();
     }
 }

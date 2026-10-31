@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.StreamingOutput;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
 
@@ -228,9 +230,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         "image/webp", "image/bmp", "image/avif", "image/x-icon", "image/vnd.microsoft.icon");
 
     /**
-     * The maximum number of bytes of the body of a failed avatar request kept in the error message.
+     * The maximum number of characters of the body of a failed request kept in the error message.
      */
-    private static final int MAX_AVATAR_ERROR_MESSAGE_LENGTH = 1024;
+    private static final int MAX_ERROR_MESSAGE_LENGTH = 1024;
+
+    private static final String AVATAR_REQUEST_ERROR_MESSAGE =
+        "There was an issue in creating or sending the user avatar request.";
 
     private final HttpClient client;
 
@@ -635,7 +640,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
                 throw new WorkItemRetrievalException(
                     String.format("Failed to get the user avatar with code [%s] and message [%s]",
                         response.statusCode(), new String(errorBody, 0,
-                            Math.min(errorBody.length, MAX_AVATAR_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
+                            Math.min(errorBody.length, MAX_ERROR_MESSAGE_LENGTH), StandardCharsets.UTF_8)));
             }
             String contentType = getAvatarContentType(response.headers().firstValue(CONTENT_TYPE).orElse(""));
             if (contentType == null) {
@@ -647,9 +652,19 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             StreamingOutput streamingOutput = output -> output.write(response.body());
 
             return new UserAvatar(streamingOutput, contentType);
-        } catch (URISyntaxException | IOException e) {
-            throw new ProjectManagementException("There was an issue in creating or sending the user avatar request.",
-                e);
+        } catch (HttpTimeoutException e) {
+            // Not an error of the wiki: reported as a failed retrieval, so that it's not logged as an error on each
+            // display of the avatar.
+            throw new WorkItemRetrievalException(
+                String.format("The avatar of user [%s] wasn't received in time.", userId), e);
+        } catch (IOException e) {
+            if (ExceptionUtils.indexOfType(e, LimitedBodyHandlers.ResponseTooLargeException.class) >= 0) {
+                throw new WorkItemRetrievalException(String.format("The avatar of user [%s] is too large.", userId),
+                    e);
+            }
+            throw new ProjectManagementException(AVATAR_REQUEST_ERROR_MESSAGE, e);
+        } catch (URISyntaxException e) {
+            throw new ProjectManagementException(AVATAR_REQUEST_ERROR_MESSAGE, e);
         }
     }
 
@@ -1111,11 +1126,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         if (statusCode >= 400 && statusCode <= 499) {
             throw new WorkItemRetrievalException(
-                String.format("The request to the OpenProject API was invalid. [%s]", response.body()), statusCode
+                String.format("The request to the OpenProject API was invalid. [%s]",
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH)), statusCode
             );
         } else if (statusCode >= 500) {
             throw new ProjectManagementException(
-                String.format("Failed to retrieve the OpenProject entities. [%s].", response.body())
+                String.format("Failed to retrieve the OpenProject entities. [%s].",
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH))
             );
         }
     }

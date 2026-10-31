@@ -29,8 +29,9 @@ import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
@@ -54,6 +55,8 @@ final class LimitedBodyHandlers
 {
     private static final String CHARSET_PARAMETER = "charset=";
 
+    private static final int DEFAULT_BUFFER_SIZE = 8192;
+
     private LimitedBodyHandlers()
     {
     }
@@ -71,7 +74,8 @@ final class LimitedBodyHandlers
         long deadline = System.nanoTime() + timeout.toNanos();
         return responseInfo -> {
             Charset charset = getCharset(responseInfo.headers());
-            return HttpResponse.BodySubscribers.mapping(new LimitedBodySubscriber(maxBytes, deadline),
+            return HttpResponse.BodySubscribers.mapping(
+                new LimitedBodySubscriber(maxBytes, deadline, getContentLength(responseInfo.headers())),
                 bytes -> new String(bytes, charset));
         };
     }
@@ -85,7 +89,17 @@ final class LimitedBodyHandlers
     static HttpResponse.BodyHandler<byte[]> ofByteArray(int maxBytes, Duration timeout)
     {
         long deadline = System.nanoTime() + timeout.toNanos();
-        return responseInfo -> new LimitedBodySubscriber(maxBytes, deadline);
+        return responseInfo ->
+            new LimitedBodySubscriber(maxBytes, deadline, getContentLength(responseInfo.headers()));
+    }
+
+    private static OptionalLong getContentLength(HttpHeaders headers)
+    {
+        try {
+            return headers.firstValueAsLong("Content-Length");
+        } catch (NumberFormatException e) {
+            return OptionalLong.empty();
+        }
     }
 
     static Charset getCharset(HttpHeaders headers)
@@ -106,6 +120,21 @@ final class LimitedBodyHandlers
     }
 
     /**
+     * Thrown when the body of a response is larger than the maximum allowed size.
+     *
+     * @version $Id$
+     */
+    static final class ResponseTooLargeException extends IOException
+    {
+        private static final long serialVersionUID = 1L;
+
+        ResponseTooLargeException(long maxBytes)
+        {
+            super(String.format("The response body is larger than the maximum allowed size of [%s] bytes", maxBytes));
+        }
+    }
+
+    /**
      * Accumulates the body until it exceeds the maximum size or the deadline, in which case the subscription is
      * cancelled, which closes the connection.
      */
@@ -119,13 +148,21 @@ final class LimitedBodyHandlers
 
         private final AtomicReference<Flow.Subscription> subscription = new AtomicReference<>();
 
-        private final List<byte[]> chunks = new ArrayList<>();
+        private byte[] buffer;
 
-        private long received;
+        private int received;
 
-        LimitedBodySubscriber(int maxBytes, long deadline)
+        LimitedBodySubscriber(int maxBytes, long deadline, OptionalLong contentLength)
         {
             this.maxBytes = maxBytes;
+            if (contentLength.isPresent() && contentLength.getAsLong() > maxBytes) {
+                // Fail without reading the body. The subscription is cancelled as soon as it's received.
+                this.buffer = new byte[0];
+                this.result.completeExceptionally(new ResponseTooLargeException(maxBytes));
+            } else {
+                // The size of the body is known in advance most of the time, so that it's read without copies.
+                this.buffer = new byte[(int) contentLength.orElse(Math.min(DEFAULT_BUFFER_SIZE, maxBytes))];
+            }
             long remaining = deadline - System.nanoTime();
             long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(remaining);
             // The scheduled timeout is cancelled as soon as the result is completed.
@@ -159,7 +196,7 @@ final class LimitedBodyHandlers
             if (!this.subscription.compareAndSet(null, newSubscription)) {
                 newSubscription.cancel();
             } else if (this.result.isDone()) {
-                // The deadline was already exceeded.
+                // The deadline was already exceeded or the body is too large.
                 cancelSubscription();
             } else {
                 newSubscription.request(Long.MAX_VALUE);
@@ -172,17 +209,19 @@ final class LimitedBodyHandlers
             if (this.result.isDone()) {
                 return;
             }
-            for (ByteBuffer buffer : buffers) {
-                this.received += buffer.remaining();
-                if (this.received > this.maxBytes) {
-                    this.chunks.clear();
-                    this.result.completeExceptionally(new IOException(String.format(
-                        "The response body is larger than the maximum allowed size of [%s] bytes", this.maxBytes)));
+            for (ByteBuffer item : buffers) {
+                int length = item.remaining();
+                if (length > this.maxBytes - this.received) {
+                    this.buffer = new byte[0];
+                    this.result.completeExceptionally(new ResponseTooLargeException(this.maxBytes));
                     return;
                 }
-                byte[] chunk = new byte[buffer.remaining()];
-                buffer.get(chunk);
-                this.chunks.add(chunk);
+                if (this.received + length > this.buffer.length) {
+                    long newSize = Math.max((long) this.buffer.length * 2, (long) this.received + length);
+                    this.buffer = Arrays.copyOf(this.buffer, (int) Math.min(newSize, this.maxBytes));
+                }
+                item.get(this.buffer, this.received, length);
+                this.received += length;
             }
         }
 
@@ -198,13 +237,9 @@ final class LimitedBodyHandlers
             if (this.result.isDone()) {
                 return;
             }
-            byte[] bytes = new byte[(int) this.received];
-            int position = 0;
-            for (byte[] chunk : this.chunks) {
-                System.arraycopy(chunk, 0, bytes, position, chunk.length);
-                position += chunk.length;
-            }
-            this.chunks.clear();
+            byte[] bytes =
+                (this.received == this.buffer.length) ? this.buffer : Arrays.copyOf(this.buffer, this.received);
+            this.buffer = null;
             this.result.complete(bytes);
         }
 
