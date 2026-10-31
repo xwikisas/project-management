@@ -56,6 +56,12 @@ import static org.mockito.Mockito.when;
 @ComponentList(PresetFiltersCombiner.class)
 class OpenProjectAssignedToMeMacroTest
 {
+    private static final String STATUS_NEW =
+        "{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]}";
+
+    private static final String ASSIGNED_TO_ME =
+        "{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"me\"}]}";
+
     @InjectMockComponents
     private OpenProjectAssignedToMeMacro macro;
 
@@ -106,10 +112,24 @@ class OpenProjectAssignedToMeMacroTest
     @Test
     void executeCombinesThePresetWithTheAssignedToMeFilter() throws Exception
     {
+        // The preset narrows down the work packages assigned to the current user instead of replacing the filter.
+        assertEquals("{\"query\":{\"filters\":[" + STATUS_NEW + ',' + ASSIGNED_TO_ME + "]}}",
+            executeWithPreset(STATUS_NEW));
+    }
+
+    @Test
+    void executeKeepsTheAssignedToMeFilterOverThePresetOne() throws Exception
+    {
+        // The "assigned to me" filter can't be overridden by the preset.
+        assertEquals("{\"query\":{\"filters\":[" + STATUS_NEW + ',' + ASSIGNED_TO_ME + "]}}",
+            executeWithPreset("{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"5\"}]},"
+                + STATUS_NEW));
+    }
+
+    private String executeWithPreset(String presetFilters) throws Exception
+    {
         Preset preset = mock(Preset.class);
-        when(preset.getFilter()).thenReturn("{\"query\":{\"filters\":["
-            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]},"
-            + "{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"5\"}]}]}}");
+        when(preset.getFilter()).thenReturn("{\"query\":{\"filters\":[" + presetFilters + "]}}");
         when(this.presetsManager.getPreset(3)).thenReturn(preset);
         when(this.componentManager.getInstance(Macro.class, "proj-manag-liveData")).thenReturn(this.displayerMacro);
         OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
@@ -118,11 +138,7 @@ class OpenProjectAssignedToMeMacroTest
 
         this.macro.execute(parameters, "", new MacroTransformationContext());
 
-        // The preset narrows down the work packages assigned to the current user instead of replacing the filter.
-        assertEquals("{\"query\":{\"filters\":["
-            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]},"
-            + "{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\",\"value\":\"5\"},"
-            + "{\"operator\":\"=\",\"value\":\"me\"}],\"matchAll\":true}]}}", parameters.getFilters());
+        return parameters.getFilters();
     }
 
     @Test

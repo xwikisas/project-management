@@ -118,29 +118,25 @@ class PresetFiltersCombinerTest
     @Test
     void combineFiltersOnTheSameProperty() throws Exception
     {
-        setPresetFilter(config(STATUS_OPEN + ',' + TYPE_BUG));
+        setPresetFilter(config(TYPE_BUG + ',' + STATUS_OPEN));
+        String typeTask = "{\"property\":\"type\",\"constraints\":[{\"operator\":\"=\",\"value\":\"task\"}]}";
 
-        // A single filter is kept for the property, holding the constraints of both sides, which must all match.
-        assertEquals(config(STATUS_OPEN + ",{\"property\":\"type\",\"constraints\":["
-            + "{\"operator\":\"=\",\"value\":\"bug\"},{\"operator\":\"!\",\"value\":\"task\"}],\"matchAll\":true}"),
-            this.combiner.combine(PRESET_ID, config("{\"property\":\"type\",\"matchAll\":false,"
-                + "\"constraints\":[{\"operator\":\"!\",\"value\":\"task\"}]}")));
+        // The filter of the macro replaces the one of the preset on the same property.
+        assertEquals(config(STATUS_OPEN + ',' + typeTask), this.combiner.combine(PRESET_ID, config(typeTask)));
     }
 
     @Test
-    void combineFiltersOnAPropertyWithoutPresetConstraints() throws Exception
+    void combineFiltersWithoutConstraintsOrProperty() throws Exception
     {
-        setPresetFilter(config("{\"property\":\"type\"}"));
+        setPresetFilter(config("{\"property\":\"type\"},{\"constraints\":[]}," + STATUS_OPEN));
 
-        // Only the macro restricts the property, so its own matchAll is kept.
-        assertEquals(config("{\"property\":\"type\",\"matchAll\":false,"
-            + "\"constraints\":[{\"operator\":\"=\",\"value\":\"bug\"},{\"operator\":\"=\",\"value\":\"task\"}]}"),
-            this.combiner.combine(PRESET_ID, config("{\"property\":\"type\",\"matchAll\":false,\"constraints\":["
-                + "{\"operator\":\"=\",\"value\":\"bug\"},{\"operator\":\"=\",\"value\":\"task\"}]}")));
-        assertEquals(config(TYPE_BUG), this.combiner.combine(PRESET_ID, config(TYPE_BUG)));
-        // A macro filter without constraints doesn't change the preset filter.
-        setPresetFilter(config(TYPE_BUG));
-        assertEquals(config(TYPE_BUG), this.combiner.combine(PRESET_ID, config("{\"property\":\"type\"}")));
+        // A macro filter without constraints doesn't replace the preset filter, and the filters without property are
+        // ignored.
+        assertEquals(config("{\"property\":\"type\"}," + STATUS_OPEN),
+            this.combiner.combine(PRESET_ID, config("{\"property\":\"status\"},{\"property\":\"type\"},{}")));
+        assertEquals(config(STATUS_OPEN + ',' + TYPE_BUG), this.combiner.combine(PRESET_ID, config(TYPE_BUG)));
+        assertEquals(config("{\"property\":\"type\"}," + STATUS_OPEN + ",{\"property\":\"date\"}"),
+            this.combiner.combine(PRESET_ID, config("{\"property\":\"date\"}")));
     }
 
     @Test

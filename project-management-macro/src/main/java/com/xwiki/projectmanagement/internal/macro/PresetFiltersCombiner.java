@@ -21,9 +21,9 @@ package com.xwiki.projectmanagement.internal.macro;
  */
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -45,10 +45,12 @@ import com.xwiki.projectmanagement.presets.PresetsManager;
  * preset. Both are serialized Live Data configurations ({@code {"query":{"filters":[...]}}}), or arrays of them for
  * the charts having several datasets.
  * <p>
- * The filters of the two sides are combined with AND: a property filtered by only one side keeps its filter, and a
- * property filtered by both sides gets a single filter holding the constraints of the two sides, with
- * {@code matchAll} set so that all of them have to match. A single filter per property is kept since the Live Data
- * user interface handles only one filter per property.
+ * The filters on different properties are combined with AND. When both sides filter the same property, the filter of
+ * the macro replaces the one of the preset, like the other settings of the macro take precedence over the ones of the
+ * preset. Merging the constraints of the two sides in a single filter would not narrow down the preset: the constraints
+ * of a filter are usually combined with OR (e.g. by the filter builder and by the OpenProject client, which ignores
+ * {@code matchAll}). A macro filter without constraints doesn't replace the preset filter, and the filters without
+ * property are ignored.
  * <p>
  * When one side defines several datasets, the filters of the other side are applied to each of them. Both sides can't
  * define several datasets.
@@ -67,8 +69,6 @@ public class PresetFiltersCombiner
     private static final String PROPERTY = "property";
 
     private static final String CONSTRAINTS = "constraints";
-
-    private static final String MATCH_ALL = "matchAll";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -192,44 +192,39 @@ public class PresetFiltersCombiner
 
     private ArrayNode combineFilterList(JsonNode presetFilters, JsonNode macroFilters)
     {
+        List<JsonNode> preset = getPropertyFilters(presetFilters);
+        List<JsonNode> macro = getPropertyFilters(macroFilters);
+        Set<String> presetProperties = preset.stream().map(this::getProperty).collect(Collectors.toSet());
+        Set<String> replacedProperties = macro.stream().filter(this::hasConstraints).map(this::getProperty)
+            .collect(Collectors.toSet());
+
         ArrayNode result = this.objectMapper.createArrayNode();
-        Map<String, ObjectNode> filtersByProperty = new LinkedHashMap<>();
-        for (JsonNode filter : presetFilters) {
+        preset.stream().filter(filter -> !replacedProperties.contains(getProperty(filter)))
+            .forEach(filter -> result.add(filter.deepCopy()));
+        macro.stream().filter(filter -> hasConstraints(filter) || !presetProperties.contains(getProperty(filter)))
+            .forEach(filter -> result.add(filter.deepCopy()));
+        return result;
+    }
+
+    private List<JsonNode> getPropertyFilters(JsonNode filters)
+    {
+        List<JsonNode> result = new ArrayList<>();
+        for (JsonNode filter : filters) {
             checkObject(filter);
-            ObjectNode copy = (ObjectNode) filter.deepCopy();
-            result.add(copy);
-            filtersByProperty.putIfAbsent(filter.path(PROPERTY).asText(), copy);
-        }
-        for (JsonNode filter : macroFilters) {
-            checkObject(filter);
-            ObjectNode presetFilter = filtersByProperty.get(filter.path(PROPERTY).asText());
-            if (presetFilter == null) {
-                result.add(filter.deepCopy());
-            } else {
-                mergeConstraints(presetFilter, filter);
+            if (StringUtils.isNotEmpty(getProperty(filter))) {
+                result.add(filter);
             }
         }
         return result;
     }
 
-    private void mergeConstraints(ObjectNode presetFilter, JsonNode macroFilter)
+    private String getProperty(JsonNode filter)
     {
-        JsonNode macroConstraints = macroFilter.path(CONSTRAINTS);
-        if (macroConstraints.isEmpty()) {
-            return;
-        }
-        JsonNode presetConstraints = presetFilter.path(CONSTRAINTS);
-        ArrayNode constraints = this.objectMapper.createArrayNode();
-        presetConstraints.forEach(constraint -> constraints.add(constraint.deepCopy()));
-        macroConstraints.forEach(constraint -> constraints.add(constraint.deepCopy()));
-        if (presetConstraints.isEmpty()) {
-            // Only the macro restricts this property, so its own semantics are kept.
-            if (macroFilter.has(MATCH_ALL)) {
-                presetFilter.set(MATCH_ALL, macroFilter.get(MATCH_ALL).deepCopy());
-            }
-        } else {
-            presetFilter.put(MATCH_ALL, true);
-        }
-        presetFilter.set(CONSTRAINTS, constraints);
+        return filter.path(PROPERTY).asText();
+    }
+
+    private boolean hasConstraints(JsonNode filter)
+    {
+        return !filter.path(CONSTRAINTS).isEmpty();
     }
 }
