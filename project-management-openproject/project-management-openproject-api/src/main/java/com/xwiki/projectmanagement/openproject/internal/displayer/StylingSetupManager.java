@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.displayer;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -49,6 +50,7 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
@@ -85,6 +87,14 @@ public class StylingSetupManager
     private static final EntityReference STYLESHEET_EXTENSION = new LocalDocumentReference(SPACE_XWIKI,
         "StyleSheetExtension");
 
+    /**
+     * The HTTP status codes of OpenProject when it refuses a request: 401 (not authenticated) and 403 (forbidden).
+     */
+    private static final Set<Integer> REFUSED_STATUS_CODES = Set.of(401, 403);
+
+    private static final String REFUSED_MESSAGE =
+        "Skipping styling update for [{}] since OpenProject refused to give its statuses or types to ";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(StylingSetupManager.class);
 
     @Inject
@@ -114,10 +124,26 @@ public class StylingSetupManager
     private AdminAuthorChecker adminAuthorChecker;
 
     /**
-     * Generate the styling for the configured OpenProject instances. Nothing is done when the current user doesn't
-     * have administration right on the current wiki, since the styles are saved as the current user.
+     * Generate the styling for the configured OpenProject instances, reading their statuses and types with the current
+     * user's account or as the users who aren't connected to them when the connection shows its public data. Nothing
+     * is done when the current user doesn't have administration right on the current wiki, since the styles are saved
+     * as the current user.
      */
     public void setupInstanceStyles()
+    {
+        setupInstanceStyles(false);
+    }
+
+    /**
+     * Generate the styling for the configured OpenProject instances. Nothing is done when the current user doesn't
+     * have administration right on the current wiki, since the styles are saved as the current user.
+     *
+     * @param anonymousFallback whether to read the statuses and types of the connections that the current user can't
+     *     call (not connected, and no public data shown) without credentials, since they're the same for every user;
+     *     these requests aren't cached, so this is meant for the styling job, not for each rendering
+     * @since 1.4.0
+     */
+    public void setupInstanceStyles(boolean anonymousFallback)
     {
         XWikiContext context = contextProvider.get();
         if (!this.adminAuthorChecker.isAdmin(context.getUserReference(), context.getWikiReference())) {
@@ -125,13 +151,12 @@ public class StylingSetupManager
                 context.getUserReference());
             return;
         }
-        List<String> instanceIds = null;
-        instanceIds =
+        List<String> instanceIds =
             opConfiguration.getOpenProjectConnections().stream().map(OpenProjectConnection::getConnectionName)
                 .collect(Collectors.toList());
 
         LOGGER.debug("Found [{}] configured OpenProject instances.", instanceIds);
-        computeStylesheet(instanceIds, context);
+        computeStylesheet(instanceIds, context, anonymousFallback);
     }
 
     /**
@@ -146,46 +171,75 @@ public class StylingSetupManager
         ssx.use(serializer.serialize(stylesDocRef));
     }
 
-    private void computeStylesheet(List<String> openProjCfgNames, XWikiContext context)
+    private void computeStylesheet(List<String> openProjCfgNames, XWikiContext context, boolean anonymousFallback)
     {
         for (String openProjCfgName : openProjCfgNames) {
             DocumentReference stylesDocRef = documentReferenceResolver.resolve(
                 new EntityReference(openProjCfgName, EntityType.DOCUMENT, OPEN_PROJECT_SSX_EXTENSIONS.getParent()));
             LOGGER.debug("Generating style for instance [{}] at document [{}].", openProjCfgName, stylesDocRef);
+            OpenProjectAccessResult access = this.openProjectAccess.resolve(openProjCfgName);
+            OpenProjectApiClient apiClient = access.getClient();
+            if (apiClient == null && anonymousFallback
+                && access.getStatus() == OpenProjectAccessStatus.NOT_CONNECTED)
+            {
+                LOGGER.debug("The current user isn't connected to [{}]: reading its statuses and types anonymously.",
+                    openProjCfgName);
+                apiClient = this.openProjectAccess.getAnonymousClient(openProjCfgName);
+            }
+            if (apiClient == null) {
+                LOGGER.debug("Skipping styling update for [{}] since the current user can't call it.",
+                    openProjCfgName);
+                continue;
+            }
             try {
-                // Only users with their own OpenProject account generate the styling, which saves the styles page as
-                // the current user: users seeing the public data of a connection may be guests.
-                OpenProjectAccessResult access = openProjectAccess.resolve(openProjCfgName);
-                if (access.getStatus() == OpenProjectAccessStatus.ANONYMOUS) {
-                    LOGGER.debug("Skipping styling update for [{}] since the current user isn't connected to it.",
-                        openProjCfgName);
-                    continue;
-                }
-                OpenProjectApiClient apiClient = access.getAuthenticatedClient();
-                if (apiClient == null) {
-                    LOGGER.warn("Skipping styling update for [{}] due to missing configuration or access token.",
-                        openProjCfgName);
-                    continue;
-                }
-
-                List<Status> statuses = apiClient.getStatuses().getItems();
-                LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
-                List<Type> types = apiClient.getTypes().getItems();
-                LOGGER.debug("Retrieved [{}] types.", types.size());
-                String styleSheet =
-                    StyleSheetComposer.compose(IdGenerator.generate(openProjCfgName), statuses, types);
-
-                if (styleSheet.isEmpty()) {
-                    LOGGER.debug("Generated style sheet is empty.");
-                    continue;
-                }
-
-                updateStylePage(context, stylesDocRef, styleSheet, userRefResolver);
+                computeStylesheet(openProjCfgName, apiClient, stylesDocRef, context);
+            } catch (WorkItemRetrievalException e) {
+                logRetrievalFailure(openProjCfgName, access.getAuthenticatedClient() != null, context, e);
             } catch (XWikiException | ProjectManagementException e) {
-                LOGGER.warn("Failed to update the styling for the configured OpenProject instance [{}]. Cause: [{}].",
-                    openProjCfgName, ExceptionUtils.getRootCauseMessage(e));
+                logFailure(openProjCfgName, e);
             }
         }
+    }
+
+    private void computeStylesheet(String openProjCfgName, OpenProjectApiClient apiClient,
+        DocumentReference stylesDocRef, XWikiContext context) throws XWikiException, ProjectManagementException
+    {
+        List<Status> statuses = apiClient.getStatuses().getItems();
+        LOGGER.debug("Retrieved [{}] statuses.", statuses.size());
+        List<Type> types = apiClient.getTypes().getItems();
+        LOGGER.debug("Retrieved [{}] types.", types.size());
+        String styleSheet = StyleSheetComposer.compose(IdGenerator.generate(openProjCfgName), statuses, types);
+
+        if (styleSheet.isEmpty()) {
+            LOGGER.debug("Generated style sheet is empty.");
+            return;
+        }
+
+        updateStylePage(context, stylesDocRef, styleSheet, userRefResolver);
+    }
+
+    private void logRetrievalFailure(String connectionName, boolean authenticated, XWikiContext context,
+        WorkItemRetrievalException e)
+    {
+        Integer statusCode = e.getStatusCode();
+        if (statusCode == null || !REFUSED_STATUS_CODES.contains(statusCode)) {
+            logFailure(connectionName, e);
+        } else if (authenticated) {
+            LOGGER.warn(REFUSED_MESSAGE
+                + "the user [{}]: their OpenProject account may have been disconnected or lack permissions. Cause: "
+                + "[{}].", connectionName, context.getUserReference(), ExceptionUtils.getRootCauseMessage(e));
+        } else {
+            LOGGER.warn(REFUSED_MESSAGE
+                + "anonymous users. Either connect the user [{}] to OpenProject, or allow anonymous users to see them "
+                + "in the OpenProject administration (e.g. by disabling \"Login required\" and making a project "
+                + "public).", connectionName, context.getUserReference());
+        }
+    }
+
+    private void logFailure(String connectionName, Exception e)
+    {
+        LOGGER.warn("Failed to update the styling for the configured OpenProject instance [{}]. Cause: [{}].",
+            connectionName, ExceptionUtils.getRootCauseMessage(e));
     }
 
     private void updateStylePage(XWikiContext context, DocumentReference stylesDocRef, String styleSheet,

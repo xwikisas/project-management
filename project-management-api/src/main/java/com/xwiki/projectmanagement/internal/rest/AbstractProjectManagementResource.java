@@ -56,6 +56,9 @@ public abstract class AbstractProjectManagementResource extends XWikiResource
     @Inject
     protected ProjectManagementClientExecutionContext clientExecutionContext;
 
+    @Inject
+    private WikiRequestExecutor wikiRequestExecutor;
+
     protected List<LiveDataQuery.Filter> getFilters(String filtersString) throws LiveDataException
     {
         String serializedCfg = filtersString == null ? "" : filtersString;
@@ -83,6 +86,26 @@ public abstract class AbstractProjectManagementResource extends XWikiResource
     {
         this.slf4Jlogger.warn("{} Root cause: [{}]", message, ExceptionUtils.getRootCauseMessage(e));
         return Response.status(status).entity(message).build();
+    }
+
+    /**
+     * Handles a request made on the given wiki, with that wiki as context wiki (which holds the configuration of the
+     * project management clients), and with the query parameters of the request as client context.
+     *
+     * @param wiki the wiki on which the request is made
+     * @param request the request to handle
+     * @return the response of the request, see {@link WikiRequestExecutor#execute(String, WikiRequestExecutor.Request)}
+     */
+    protected Response handleRequest(String wiki, WikiRequestExecutor.Request<RuntimeException> request)
+    {
+        return this.wikiRequestExecutor.execute(wiki, () -> {
+            prepareClientContext();
+            try {
+                return request.handle();
+            } finally {
+                clearClientContext();
+            }
+        });
     }
 
     protected void prepareClientContext()

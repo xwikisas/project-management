@@ -49,6 +49,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -168,6 +169,9 @@ public class HandleWorkPackages extends XWikiResource
     @Inject
     private OpenProjectAccess openProjectAccess;
 
+    @Inject
+    private WikiRequestExecutor wikiRequestExecutor;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -191,6 +195,13 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("offset") @DefaultValue("0") int offset,
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
+    {
+        return this.wikiRequestExecutor.execute(wiki,
+            () -> getAvailableProjects(instance, search, offset, pageSize, selected));
+    }
+
+    private Response getAvailableProjects(String instance, String search, int offset, int pageSize, Integer selected)
+        throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
@@ -245,6 +256,13 @@ public class HandleWorkPackages extends XWikiResource
         @QueryParam("search") @DefaultValue("") String search,
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
         @QueryParam("selectedItem") Integer selected) throws ProjectManagementException
+    {
+        return this.wikiRequestExecutor.execute(wiki,
+            () -> getAvailableAssignees(instance, project, search, pageSize, selected));
+    }
+
+    private Response getAvailableAssignees(String instance, String project, String search, int pageSize,
+        Integer selected) throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
@@ -301,6 +319,12 @@ public class HandleWorkPackages extends XWikiResource
     @Path("/create")
     public Response createWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance, CreateWorkPackage workPackage) throws ProjectManagementException
+    {
+        return this.wikiRequestExecutor.execute(wiki, () -> createWorkPackage(instance, workPackage));
+    }
+
+    private Response createWorkPackage(String instance, CreateWorkPackage workPackage)
+        throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
@@ -364,6 +388,11 @@ public class HandleWorkPackages extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("workPackageId") String workPackageId) throws ProjectManagementException
     {
+        return this.wikiRequestExecutor.execute(wiki, () -> getEditForm(instance, workPackageId));
+    }
+
+    private Response getEditForm(String instance, String workPackageId) throws ProjectManagementException
+    {
         OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();
 
         if (apiClient == null) {
@@ -405,6 +434,12 @@ public class HandleWorkPackages extends XWikiResource
     public Response updateWorkPackage(@PathParam("wikiName") String wiki,
         @PathParam("instance") String instance,
         @PathParam("workPackageId") String workPackageId, CreateWorkPackage workPackage)
+        throws ProjectManagementException
+    {
+        return this.wikiRequestExecutor.execute(wiki, () -> updateWorkPackage(instance, workPackageId, workPackage));
+    }
+
+    private Response updateWorkPackage(String instance, String workPackageId, CreateWorkPackage workPackage)
         throws ProjectManagementException
     {
         OpenProjectApiClient apiClient = openProjectAccess.resolve(instance).getAuthenticatedClient();

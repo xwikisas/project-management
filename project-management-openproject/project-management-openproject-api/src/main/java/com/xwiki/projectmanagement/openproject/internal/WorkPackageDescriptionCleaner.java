@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -49,6 +50,11 @@ import org.xwiki.xml.html.filter.HTMLFilter;
  * sanitizer are kept (the formatting, lists, links, tables, code...);</li>
  * <li>the permalinks that OpenProject adds to the headings (empty links to an anchor of the page) are removed, since
  * they would be displayed with a generated label;</li>
+ * <li>the work package "quick info" references ({@code ##1234} and {@code ###1234}), which OpenProject renders as
+ * an empty {@code opce-macro-wp-quickinfo} element filled by its own JavaScript, are replaced with a link to the work
+ * package, as the {@code #1234} references;</li>
+ * <li>the checkboxes of the task lists, which the sanitizer removes, are replaced with a checked (&#x2611;) or
+ * unchecked (&#x2610;) box character;</li>
  * <li>the relative links and images (e.g. the {@code /work_packages/1234} link of a {@code #1234} work package
  * reference) are made absolute against the URL of the OpenProject instance, so that they don't point to the
  * wiki.</li>
@@ -68,6 +74,22 @@ public class WorkPackageDescriptionCleaner
     private static final String HTML_START = "<html>";
 
     private static final String HTML_END = "</html>";
+
+    /**
+     * Marks the {@code span} elements that replace the {@code opce-macro-wp-quickinfo} elements before the HTML is
+     * parsed: the HTML cleaner removes the elements it doesn't know, with their attributes.
+     */
+    private static final String QUICK_INFO_MARKER = "data-xwiki-wp-quickinfo";
+
+    private static final Pattern QUICK_INFO_START_TAG =
+        Pattern.compile("<opce-macro-wp-quickinfo\\b", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern QUICK_INFO_END_TAG =
+        Pattern.compile("</opce-macro-wp-quickinfo\\b", Pattern.CASE_INSENSITIVE);
+
+    private static final String SPAN = "span";
+
+    private static final String LINK = "a";
 
     @Inject
     private HTMLCleaner htmlCleaner;
@@ -94,7 +116,9 @@ public class WorkPackageDescriptionCleaner
         filters.addAll(configuration.getFilters());
         configuration.setFilters(filters);
 
-        Document document = this.htmlCleaner.clean(new StringReader(html), configuration);
+        String markedHtml = QUICK_INFO_START_TAG.matcher(html).replaceAll("<span " + QUICK_INFO_MARKER + "=\"\"");
+        markedHtml = QUICK_INFO_END_TAG.matcher(markedHtml).replaceAll("</span");
+        Document document = this.htmlCleaner.clean(new StringReader(markedHtml), configuration);
         HTMLUtils.stripHTMLEnvelope(document);
         String result = HTMLUtils.toString(document, true, true).trim();
         if (result.startsWith(HTML_START) && result.endsWith(HTML_END)) {
@@ -104,11 +128,23 @@ public class WorkPackageDescriptionCleaner
     }
 
     /**
-     * Removes the heading permalinks and makes the relative URLs absolute.
+     * Removes the heading permalinks, replaces the work package quick info references and the task list checkboxes,
+     * and makes the relative URLs absolute.
      */
     private static final class OpenProjectLinksFilter extends AbstractHTMLFilter
     {
         private static final String SRC = "src";
+
+        /**
+         * The ids of the work packages are numbers, or project-based identifiers such as {@code PROJ-12}.
+         */
+        private static final Pattern WORK_PACKAGE_ID = Pattern.compile("[\\w-]+");
+
+        private static final String LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+        private static final String CHECKED_BOX = "\u2611";
+
+        private static final String UNCHECKED_BOX = "\u2610";
 
         private final URI baseUri;
 
@@ -120,8 +156,11 @@ public class WorkPackageDescriptionCleaner
         @Override
         public void filter(Document document, Map<String, String> cleaningParameters)
         {
+            replaceQuickInfos(document);
+            replaceTaskCheckboxes(document);
+
             List<Element> permalinks = new ArrayList<>();
-            for (Element link : filterDescendants(document.getDocumentElement(), new String[] { "a" })) {
+            for (Element link : filterDescendants(document.getDocumentElement(), new String[] { LINK })) {
                 if (isPermalink(link)) {
                     permalinks.add(link);
                 }
@@ -130,6 +169,45 @@ public class WorkPackageDescriptionCleaner
 
             if (this.baseUri != null) {
                 makeAbsolute(document.getDocumentElement().getElementsByTagName("*"));
+            }
+        }
+
+        private void replaceQuickInfos(Document document)
+        {
+            for (Element quickInfo : filterDescendants(document.getDocumentElement(), new String[] { SPAN })) {
+                if (!quickInfo.hasAttribute(QUICK_INFO_MARKER)) {
+                    continue;
+                }
+                String id = quickInfo.getAttribute("data-id");
+                String displayId = StringUtils.defaultIfBlank(quickInfo.getAttribute("data-display-id"), id);
+                // As OpenProject, prefix the numeric ids with #, but not the project-based ones (PROJ-12).
+                String label = StringUtils.containsAny(displayId, LETTERS) ? displayId : ANCHOR_PREFIX + displayId;
+                Node replacement;
+                if (!WORK_PACKAGE_ID.matcher(id).matches() || !WORK_PACKAGE_ID.matcher(displayId).matches()) {
+                    replacement = document.createTextNode("");
+                } else if (this.baseUri == null) {
+                    // Without the URL of the OpenProject instance, a link would point to the wiki.
+                    replacement = document.createTextNode(label);
+                } else {
+                    // The link that OpenProject renders for a #1234 reference. The relative URL is made absolute
+                    // afterwards.
+                    Element link = document.createElement(LINK);
+                    link.setAttribute("class", "issue work_package op-uc-link");
+                    link.setAttribute(HREF, "work_packages/" + id);
+                    link.setTextContent(label);
+                    replacement = link;
+                }
+                quickInfo.getParentNode().replaceChild(replacement, quickInfo);
+            }
+        }
+
+        private void replaceTaskCheckboxes(Document document)
+        {
+            for (Element input : filterDescendants(document.getDocumentElement(), new String[] { "input" })) {
+                if ("checkbox".equalsIgnoreCase(input.getAttribute("type"))) {
+                    input.getParentNode().replaceChild(
+                        document.createTextNode(input.hasAttribute("checked") ? CHECKED_BOX : UNCHECKED_BOX), input);
+                }
             }
         }
 

@@ -12,7 +12,7 @@ rights to access. It works also for guests.
 Note: Bearer Token authentication is only available if you configured the Token authenticator in your
 wiki: https://extensions.xwiki.org/xwiki/bin/view/Extension/OpenID%20Connect/Token%20Authenticator/
 
-**Content type:** All endpoints accept and return **JSON** (`application/json`) or **XML** (`application/xml`).
+**Content type:** Unless stated otherwise, the endpoints accept and return **JSON** (`application/json`) or **XML** (`application/xml`).
 
 ---
 
@@ -175,7 +175,7 @@ Returned by the document and space endpoints. Represents a wiki page.
 #### Objects Structure (when `objects=true`)
 
 When the `objects` query parameter is set to `true`, the `objects` field contains an object with `links` and
-`objectSummaries`. Each entry in `objectSummaries` represents one XWiki object attached to the page:
+`objectSummaries`. Each entry in `objectSummaries` represents one XWiki object attached to the page. The link between a page and OpenProject (see endpoint 3) is stored as a `ProjectManagement.Code.RelationClass` object (the `attributes` arrays are shortened in this example):
 
 ```json
 {
@@ -185,7 +185,7 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
       {
         "links": [
           {
-            "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0",
+            "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/ProjectManagement.Code.RelationClass/0",
             "rel": "self",
             "type": null,
             "hrefLang": null
@@ -200,14 +200,44 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
         "pageName": "WebHome",
         "pageAuthor": "XWiki.JohnDoe",
         "pageAuthorName": null,
-        "className": "OpenProject.Code.WorkPackageLink",
+        "className": "ProjectManagement.Code.RelationClass",
         "number": 0,
-        "headline": "",
+        "headline": "openproject",
         "properties": [
           {
             "links": [
               {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/project",
+                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/ProjectManagement.Code.RelationClass/0/properties/client",
+                "rel": "self",
+                "type": null,
+                "hrefLang": null
+              }
+            ],
+            "attributes": [
+              {
+                "links": [],
+                "name": "name",
+                "value": "client"
+              },
+              {
+                "links": [],
+                "name": "prettyName",
+                "value": "Project Management Client ID"
+              },
+              {
+                "links": [],
+                "name": "size",
+                "value": "20"
+              }
+            ],
+            "value": "openproject",
+            "name": "client",
+            "type": "String"
+          },
+          {
+            "links": [
+              {
+                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/ProjectManagement.Code.RelationClass/0/properties/project",
                 "rel": "self",
                 "type": null,
                 "hrefLang": null
@@ -222,7 +252,7 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               {
                 "links": [],
                 "name": "prettyName",
-                "value": "OpenProject Project ID"
+                "value": "Project ID"
               },
               {
                 "links": [],
@@ -237,7 +267,7 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
           {
             "links": [
               {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/workPackage",
+                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/ProjectManagement.Code.RelationClass/0/properties/workItem",
                 "rel": "self",
                 "type": null,
                 "hrefLang": null
@@ -247,12 +277,12 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               {
                 "links": [],
                 "name": "name",
-                "value": "workPackage"
+                "value": "workItem"
               },
               {
                 "links": [],
                 "name": "prettyName",
-                "value": "OpenProject Work Package ID"
+                "value": "Work item ID"
               },
               {
                 "links": [],
@@ -261,13 +291,13 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               }
             ],
             "value": "125",
-            "name": "workPackage",
+            "name": "workItem",
             "type": "String"
           },
           {
             "links": [
               {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/instance",
+                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/ProjectManagement.Code.RelationClass/0/properties/clientParams",
                 "rel": "self",
                 "type": null,
                 "hrefLang": null
@@ -277,12 +307,12 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
               {
                 "links": [],
                 "name": "name",
-                "value": "instance"
+                "value": "clientParams"
               },
               {
                 "links": [],
                 "name": "prettyName",
-                "value": "Open Project Instance Name"
+                "value": "Client Parameters"
               },
               {
                 "links": [],
@@ -290,39 +320,9 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
                 "value": "40"
               }
             ],
-            "value": "",
-            "name": "instance",
-            "type": "String"
-          },
-          {
-            "links": [
-              {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/primary",
-                "rel": "self",
-                "type": null,
-                "hrefLang": null
-              }
-            ],
-            "attributes": [
-              {
-                "links": [],
-                "name": "name",
-                "value": "primary"
-              },
-              {
-                "links": [],
-                "name": "prettyName",
-                "value": "Is Primary Link?"
-              },
-              {
-                "links": [],
-                "name": "displayFormType",
-                "value": "select"
-              }
-            ],
-            "value": "",
-            "name": "primary",
-            "type": "Boolean"
+            "value": "{\"instance\":\"My OpenProject\"}",
+            "name": "clientParams",
+            "type": "TextArea"
           }
         ]
       }
@@ -330,6 +330,15 @@ When the `objects` query parameter is set to `true`, the `objects` field contain
   }
 }
 ```
+
+The properties of a `ProjectManagement.Code.RelationClass` object:
+
+| Property       | Description                                                                                                                                                       |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `client`       | The project management tool the link points to. Always `openproject` for the links created by these endpoints.                                                    |
+| `project`      | The OpenProject project ID (empty if the page isn't linked to a project).                                                                                         |
+| `workItem`     | The OpenProject work package ID (empty if the page isn't linked to a work package).                                                                               |
+| `clientParams` | A JSON object holding the name of the wiki's OpenProject connection the link was made for (e.g. `{"instance":"My OpenProject"}`). Empty if no instance was given. |
 
 ### `Page` (Request Body — for PUT)
 
@@ -342,31 +351,30 @@ When creating or updating a page, you send a `Page` object in the request body. 
 }
 ```
 
-### `WorkPackageLink` (Request Body — for POST link)
+### `WorkPackageLink` (Request Body — for PUT link)
 
 ```json
 {
   "project": "42",
   "workPackage": "123",
-  "instance": "my-openproject"
+  "instance": "6a1fd2c3-6b7e-4c3d-9a0f-1c2d3e4f5a6b"
 }
 ```
 
-| Field         | Type     | Required | Description                                 |
-|---------------|----------|----------|---------------------------------------------|
-| `project`     | `String` | ❌        | The OpenProject project ID to link to.      |
-| `workPackage` | `String` | ❌        | The OpenProject work package ID to link to. |
-| `instance`    | `String` | ❌        | The id of the OpenProject instance.         |
+| Field         | Type     | Required | Description                                                                                                                                                                                                           |
+|---------------|----------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `project`     | `String` | ❌        | The OpenProject project ID to link to.                                                                                                                                                                                |
+| `workPackage` | `String` | ❌        | The OpenProject work package ID to link to.                                                                                                                                                                           |
+| `instance`    | `String` | ❌        | The instance id of the OpenProject server. It must match the instance id of one of the OpenProject connections configured in the wiki; the name of that connection is stored in the `clientParams` property of the link. |
 
 ### `SearchResults` (Response)
 
-Returned by the link search endpoints (endpoints 4 and 5). The response is a standard XWiki `SearchResults` object.
-Each search result entry represents a page that matches the query, and includes an `object` field with the full
-`WorkPackageLink` object data.
+Returned by the search endpoints (endpoints 4, 5 and 8). The response is a standard XWiki `SearchResults` object, built from a Solr search. Each search result entry represents a page that matches the query.
 
 ```json
 {
   "links": [],
+  "template": "http://localhost:8080/xwiki/rest/?q={solrquery}(&number={number})(&start={start})(&orderField={fieldname}(&order={asc|desc}))(&distinct=1)(&prettyNames={false|true})(&wikis={wikis})(&className={classname})",
   "searchResults": [
     {
       "links": [
@@ -389,181 +397,7 @@ Each search result entry represents a page that matches the query, and includes 
       "authorName": null,
       "version": "3.1",
       "language": "",
-      "className": "OpenProject.Code.WorkPackageLink",
-      "objectNumber": 0,
-      "score": 0.0,
-      "object": {
-        "links": [
-          {
-            "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0",
-            "rel": "self",
-            "type": null,
-            "hrefLang": null
-          }
-        ],
-        "id": "xwiki:Projects.MyProject.WebHome:a0e1f2d3-b4c5-6789-abcd-ef0123456789",
-        "guid": "a0e1f2d3-b4c5-6789-abcd-ef0123456789",
-        "pageId": "xwiki:Projects.MyProject.WebHome",
-        "pageVersion": "3.1",
-        "wiki": "xwiki",
-        "space": "Projects.MyProject",
-        "pageName": "WebHome",
-        "pageAuthor": "XWiki.JohnDoe",
-        "pageAuthorName": null,
-        "className": "OpenProject.Code.WorkPackageLink",
-        "number": 0,
-        "headline": "",
-        "properties": [
-          {
-            "links": [
-              {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/project",
-                "rel": "self",
-                "type": null,
-                "hrefLang": null
-              }
-            ],
-            "attributes": [
-              {
-                "links": [],
-                "name": "name",
-                "value": "project"
-              },
-              {
-                "links": [],
-                "name": "prettyName",
-                "value": "OpenProject Project ID"
-              },
-              {
-                "links": [],
-                "name": "size",
-                "value": "20"
-              }
-            ],
-            "value": "45",
-            "name": "project",
-            "type": "String"
-          },
-          {
-            "links": [
-              {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/workPackage",
-                "rel": "self",
-                "type": null,
-                "hrefLang": null
-              }
-            ],
-            "attributes": [
-              {
-                "links": [],
-                "name": "name",
-                "value": "workPackage"
-              },
-              {
-                "links": [],
-                "name": "prettyName",
-                "value": "OpenProject Work Package ID"
-              },
-              {
-                "links": [],
-                "name": "size",
-                "value": "20"
-              }
-            ],
-            "value": "125",
-            "name": "workPackage",
-            "type": "String"
-          },
-          {
-            "links": [
-              {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/instance",
-                "rel": "self",
-                "type": null,
-                "hrefLang": null
-              }
-            ],
-            "attributes": [
-              {
-                "links": [],
-                "name": "name",
-                "value": "instance"
-              },
-              {
-                "links": [],
-                "name": "prettyName",
-                "value": "Open Project Instance Name"
-              },
-              {
-                "links": [],
-                "name": "size",
-                "value": "40"
-              }
-            ],
-            "value": "",
-            "name": "instance",
-            "type": "String"
-          },
-          {
-            "links": [
-              {
-                "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.WorkPackageLink/0/properties/primary",
-                "rel": "self",
-                "type": null,
-                "hrefLang": null
-              }
-            ],
-            "attributes": [
-              {
-                "links": [],
-                "name": "name",
-                "value": "primary"
-              },
-              {
-                "links": [],
-                "name": "prettyName",
-                "value": "Is Primary Link?"
-              },
-              {
-                "links": [],
-                "name": "displayFormType",
-                "value": "select"
-              }
-            ],
-            "value": "",
-            "name": "primary",
-            "type": "Boolean"
-          }
-        ]
-      },
-      "hierarchy": {
-        "items": [
-          {
-            "label": "xwiki",
-            "name": "xwiki",
-            "type": "wiki",
-            "url": "http://localhost:8080/xwiki/bin/view/Main/"
-          },
-          {
-            "label": "Projects",
-            "name": "Projects",
-            "type": "space",
-            "url": "http://localhost:8080/xwiki/bin/view/Projects/"
-          },
-          {
-            "label": "MyProject",
-            "name": "MyProject",
-            "type": "space",
-            "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/"
-          },
-          {
-            "label": "WebHome",
-            "name": "WebHome",
-            "type": "document",
-            "url": "http://localhost:8080/xwiki/bin/view/Projects/MyProject/"
-          }
-        ]
-      }
+      "score": 1.0
     }
   ]
 }
@@ -571,22 +405,58 @@ Each search result entry represents a page that matches the query, and includes 
 
 Each search result entry contains:
 
-| Field          | Type      | Description                                                                                |
-|----------------|-----------|--------------------------------------------------------------------------------------------|
-| `type`         | `String`  | Always `"page"`.                                                                           |
-| `id`           | `String`  | The full qualified identifier of the page.                                                 |
-| `pageFullName` | `String`  | The full name of the page (e.g. `Projects.MyProject.WebHome`).                             |
-| `title`        | `String`  | The title of the page.                                                                     |
-| `wiki`         | `String`  | The wiki the page belongs to.                                                              |
-| `space`        | `String`  | The space the page is in.                                                                  |
-| `pageName`     | `String`  | The technical name of the page.                                                            |
-| `modified`     | `Long`    | Last modification timestamp (Unix milliseconds).                                           |
-| `author`       | `String`  | The reference of the last author.                                                          |
-| `version`      | `String`  | The page version.                                                                          |
-| `className`    | `String`  | The class name of the matched object (`OpenProject.Code.WorkPackageLink`).                 |
-| `objectNumber` | `Integer` | The index of the matched object.                                                           |
-| `object`       | `Object`  | The full object data with all properties (same structure as in the Objects section above). |
-| `hierarchy`    | `Object`  | The breadcrumb hierarchy of the page.                                                      |
+| Field          | Type     | Description                                                                                      |
+|----------------|----------|--------------------------------------------------------------------------------------------------|
+| `type`         | `String` | Always `"page"`.                                                                                 |
+| `id`           | `String` | The full qualified identifier of the page.                                                       |
+| `pageFullName` | `String` | The full name of the page (e.g. `Projects.MyProject.WebHome`).                                   |
+| `title`        | `String` | The title of the page.                                                                           |
+| `wiki`         | `String` | The wiki the page belongs to.                                                                    |
+| `space`        | `String` | The space the page is in.                                                                        |
+| `pageName`     | `String` | The technical name of the page.                                                                  |
+| `modified`     | `Long`   | Last modification timestamp (Unix milliseconds).                                                 |
+| `author`       | `String` | The reference of the last author.                                                                |
+| `authorName`   | `String` | The display name of the last author. Present when `prettyNames=true`.                            |
+| `version`      | `String` | The page version.                                                                                |
+| `language`     | `String` | The language of the page (empty for the default language).                                       |
+| `score`        | `Float`  | The Solr relevance score.                                                                        |
+| `hierarchy`    | `Object` | The breadcrumb hierarchy of the page. Only returned by recent XWiki versions (not by XWiki 15.10). |
+
+The search results don't contain the matched link or mention objects. Use endpoint 11 to get the link of a page, and endpoints 12 or 13 to get its mentions.
+
+### `Objects` (Response)
+
+Returned by the page mentions endpoints (endpoints 12 and 13). It's a standard XWiki `Objects` object: its `objectSummaries` array holds one summary per `OpenProject.Code.MentionClass` object of the page, i.e. per work package mentioned in the page content. The summaries don't contain the object properties (`workPackageId`, the mentioned work package ID, and `instance`, the name of the OpenProject connection); `headline` holds the value of one of them, and the `http://www.xwiki.org/rel/object` link points to the full object, with its properties.
+
+```json
+{
+  "links": [],
+  "objectSummaries": [
+    {
+      "links": [
+        {
+          "href": "http://localhost:8080/xwiki/rest/wikis/xwiki/spaces/Projects/spaces/MyProject/pages/WebHome/objects/OpenProject.Code.MentionClass/0",
+          "rel": "http://www.xwiki.org/rel/object",
+          "type": null,
+          "hrefLang": null
+        }
+      ],
+      "id": "xwiki:Projects.MyProject.WebHome:b1c2d3e4-f5a6-7890-bcde-f01234567890",
+      "guid": "b1c2d3e4-f5a6-7890-bcde-f01234567890",
+      "pageId": "xwiki:Projects.MyProject.WebHome",
+      "pageVersion": "3.1",
+      "wiki": "xwiki",
+      "space": "Projects.MyProject",
+      "pageName": "WebHome",
+      "pageAuthor": "XWiki.JohnDoe",
+      "pageAuthorName": null,
+      "className": "OpenProject.Code.MentionClass",
+      "number": 0,
+      "headline": "125"
+    }
+  ]
+}
+```
 
 ---
 
@@ -599,7 +469,7 @@ Each search result entry contains:
 Retrieves a wiki page using its short unique identifier.
 
 ```
-GET /xwiki/rest/openproject/documents/{id}
+GET /openproject/documents/{id}
 ```
 
 **Parameters:**
@@ -620,12 +490,13 @@ GET /xwiki/rest/openproject/documents/{id}
 
 **Responses:**
 
-| Status                        | Body                 | When                                          |
-|-------------------------------|----------------------|-----------------------------------------------|
-| **200 OK**                    | `Page` (JSON or XML) | The page was found and returned successfully. |
-| **400 Bad Request**           | `"Missing page id."` | The `id` parameter was empty or not provided. |
-| **404 Not Found**             | —                    | No page exists with the given identifier.     |
-| **500 Internal Server Error** | —                    | An unexpected error occurred.                 |
+| Status                        | Body                            | When                                                                     |
+|-------------------------------|---------------------------------|--------------------------------------------------------------------------|
+| **200 OK**                    | `Page` (JSON or XML)            | The page was found and returned successfully.                            |
+| **400 Bad Request**           | `"Missing page id."`            | The `id` parameter was empty or not provided.                            |
+| **401 Unauthorized**          | —                               | The current user doesn't have view right on the page.                    |
+| **404 Not Found**             | —                               | No page is associated with the given identifier, or the page was deleted. |
+| **500 Internal Server Error** | `"Failed to retrieve the page."` or no body | The page couldn't be retrieved (with that message), or another unexpected error occurred, e.g. while resolving the identifier (no body). |
 
 ---
 
@@ -640,64 +511,69 @@ PUT /openproject/documents
 
 **Parameters:**
 
-| Parameter       | Location | Type          | Required | Default | Description                                                                                              |
-|-----------------|----------|---------------|----------|---------|----------------------------------------------------------------------------------------------------------|
-| `docRef`        | query    | `String`      | ✅        | —       | The full page reference where the page should be created or updated (e.g. `Projects.MyProject.WebHome`). |
-| `minorRevision` | query    | `Boolean`     | ❌        | —       | If `true`, the edit is saved as a minor version (does not appear prominently in page history).           |
-| `create`        | query    | `Boolean`     | ❌        | false   | If `true`, the request will fail if the document already exists.                                         |
-| *(body)*        | body     | `Page` (JSON) | ✅        | —       | The page data (title, content, etc.). See the `Page` request model above.                                |
+| Parameter       | Location | Type          | Required | Default | Description                                                                                                                                                  |
+|-----------------|----------|---------------|----------|---------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `docRef`        | query    | `String`      | ✅        | —       | The full page reference where the page should be created or updated (e.g. `Projects.MyProject.WebHome`). If it doesn't specify a wiki, the main wiki is used. |
+| `minorRevision` | query    | `Boolean`     | ❌        | —       | If `true`, the edit is saved as a minor version (does not appear prominently in page history).                                                               |
+| `create`        | query    | `Boolean`     | ❌        | `false` | If `true`, the request will fail if the document already exists.                                                                                             |
+| *(body)*        | body     | `Page` (JSON) | ✅        | —       | The page data (title, content, etc.). See the `Page` request model above.                                                                                    |
 
 **What happens:**
 
 1. If the page at `docRef` does not exist, it is **created** with the provided content.
 2. If it already exists, it is **updated** with the provided content.
-3. A short unique identifier is generated and permanently associated with this page.
-4. The response contains the full page data, with the `id` field set to the new short identifier.
+3. A short unique identifier is associated with this page (the existing one is kept if the page already has one).
+4. The response contains the full page data, with the `id` field set to the short identifier.
 
 **Responses:**
 
-| Status                        | Body                    | When                                                           |
-|-------------------------------|-------------------------|----------------------------------------------------------------|
-| **201 Created**               | `Page` (JSON) with `id` | A new page was created.                                        |
-| **202 Accepted**              | `Page` (JSON) with `id` | An existing page was updated.                                  |
-| **400 Bad Request**           | Error message           | The `docRef` query parameter was missing.                      |
-| **401 Unauthorized**          | —                       | The authenticated user does not have permission to edit.       |
-| **409 Unauthorized**          | —                       | If the `create` param is used and the document already exists. |
-| **500 Internal Server Error** | Error message           | Failed to generate the short identifier or save the page.      |
+| Status                        | Body                                                            | When                                                                                       |
+|-------------------------------|-----------------------------------------------------------------|--------------------------------------------------------------------------------------------|
+| **201 Created**               | `Page` (JSON) with `id`                                         | A new page was created.                                                                    |
+| **202 Accepted**              | `Page` (JSON) with `id`                                         | An existing page was updated (also returned when the request didn't change the page).      |
+| **400 Bad Request**           | Error message                                                   | The `docRef` query parameter was missing.                                                  |
+| **401 Unauthorized**          | —                                                               | The current user doesn't have view or edit right on the page.                              |
+| **401 Unauthorized**          | `"Access denied in view mode. Can't attach unique identifier."` | The page was saved but the current user doesn't have view right on it.                     |
+| **409 Conflict**              | —                                                               | The `create` parameter is `true` and the document already exists.                          |
+| **500 Internal Server Error** | Error message                                                   | Failed to save the page (`"Failed to save the page [...]."`) or to attach its identifier.  |
 
 ---
 
 ### 3. Create Link between Page and OpenProject Entity
 
-Attaches a project and/or work package to a wiki page. Multiple links can be made to a single page.
+Links a wiki page to an OpenProject project and/or work package. A page holds at most one link to OpenProject: if the page is already linked, the existing link is updated.
 
 ```
-POST /openproject/documents/{id}/links
+PUT /openproject/documents/{id}/links
 ```
 
 **Parameters:**
 
-| Parameter       | Location | Type                     | Required | Default | Description                                                               |
-|-----------------|----------|--------------------------|----------|---------|---------------------------------------------------------------------------|
-| `id`            | path     | `String`                 | ✅        | —       | The short unique identifier of the page (obtained from endpoints 1 or 2). |
-| `minorRevision` | query    | `Boolean`                | ❌        | —       | If `true`, adding the link is saved as a minor version change.            |
-| *(body)*        | body     | `WorkPackageLink` (JSON) | ✅        | —       | The link data. See the `WorkPackageLink` model above.                     |
+| Parameter       | Location | Type                     | Required | Default | Description                                                                              |
+|-----------------|----------|--------------------------|----------|---------|------------------------------------------------------------------------------------------|
+| `id`            | path     | `String`                 | ✅        | —       | The short unique identifier of the page (obtained from endpoints 2, 9 or 10).            |
+| `minorRevision` | query    | `Boolean`                | ❌        | —       | If `true`, adding the link is saved as a minor version change.                           |
+| *(body)*        | body     | `WorkPackageLink` (JSON) | ✅        | —       | The link data. See the `WorkPackageLink` model above.                                    |
 
 **What happens:**
 
 1. Looks up the page associated with the given `id`.
-2. A link object is created on the page with the provided project ID, work package ID, instance name, and primary flag.
-3. The link can later be searched for using the link search endpoints (endpoints 4 and 5).
+2. If `instance` is set, looks for the OpenProject connection of the wiki with this instance id.
+3. If the page doesn't have a link to OpenProject yet, a `ProjectManagement.Code.RelationClass` object is created on the page with the provided project ID, work package ID and connection name. Otherwise, the existing object is updated with the provided values (the values that aren't provided are kept).
+4. The link can later be searched for using the link search endpoints (endpoints 4 and 5), and retrieved with endpoint 11.
 
 **Responses:**
 
-| Status                        | Body                    | When                                                                                                     |
-|-------------------------------|-------------------------|----------------------------------------------------------------------------------------------------------|
-| **201 Created**               | —                       | The link was created. The `Location` header contains the URL of the new link object.                     |
-| **400 Bad Request**           | `"Missing link entity"` | The request body was empty/null OR if the instance id does not correspond to any configured OP instances |
-| **401 Unauthorized**          | Error message           | The bearer token is missing, invalid, or doesn't match any configured OpenProject instance.              |
-| **404 Not Found**             | —                       | No page exists with the given `id`.                                                                      |
-| **500 Internal Server Error** | Error message           | An unexpected error occurred.                                                                            |
+| Status                        | Body                                                       | When                                                                                     |
+|-------------------------------|------------------------------------------------------------|------------------------------------------------------------------------------------------|
+| **201 Created**               | `Object` (JSON or XML)                                     | The link was created. The `Location` header contains the URL of the new link object.    |
+| **202 Accepted**              | `Object` (JSON or XML)                                     | The existing link of the page was updated.                                               |
+| **304 Not Modified**          | —                                                          | The page is already linked with the provided values.                                     |
+| **400 Bad Request**           | `"Missing link entity"`                                    | The request body was empty.                                                              |
+| **400 Bad Request**           | `"Could not find a configured instance for the id [...]."` | The `instance` doesn't match the instance id of any OpenProject connection of the wiki. |
+| **401 Unauthorized**          | —                                                          | The current user doesn't have view or edit right on the page.                            |
+| **404 Not Found**             | —                                                          | No page is associated with the given `id`, or the page was deleted.                      |
+| **500 Internal Server Error** | `"Failed to link the page."`                               | An unexpected error occurred.                                                            |
 
 ---
 
@@ -711,30 +587,29 @@ GET /openproject/links/projects/{id}
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default   | Description                                                           |
-|---------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
-| `id`          | path     | `String`  | ✅        | —         | The OpenProject **project ID** (must be a number).                    |
-| `instance`    | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
-| `number`      | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`       | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
-| `orderField`  | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
-| `order`       | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames` | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
+| Parameter     | Location | Type      | Required | Default | Description                                                                                                                                                                                               |
+|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —       | The OpenProject **project ID** (must be a number).                                                                                                                                                        |
+| `instance`    | query    | `String`  | ❌        | —       | The instance id of an OpenProject server. Only the links made for the wiki's OpenProject connections to this instance are returned. If no connection has this instance id, the value is matched against the connection names. |
+| `number`      | query    | `Integer` | ❌        | `25`    | Maximum number of results to return. A value of `0` or less doesn't remove the limit: the default page size of the Solr search applies.                                                                  |
+| `start`       | query    | `Integer` | ❌        | `0`     | Offset for pagination (0-based).                                                                                                                                                                          |
+| `orderField`  | query    | `String`  | ❌        | `""`    | Name of the (Solr) field to sort results by.                                                                                                                                                              |
+| `order`       | query    | `String`  | ❌        | `asc`   | Sort direction: `asc` (ascending) or `desc` (descending).                                                                                                                                                 |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are displayed as readable names.                                                                                                                                               |
 
 **What happens:**
 
-1. Searches all wiki pages that have a link object with a `project` value matching the given `id`.
-2. If `instance` is not empty, results are further filtered to only include links belonging to the caller's
-   OpenProject instance.
-3. Only pages the current user has permission to view are returned.
+1. Searches all wiki pages (of the current wiki) that have a link object with a `project` value matching the given `id`.
+2. If `instance` is not empty, results are further filtered to only include links made for this OpenProject instance.
+3. Only pages the current user has permission to view are returned. Hidden pages are only returned to users with programming right, and page translations aren't returned.
 
 **Responses:**
 
-| Status                        | Body                                 | When                                                          |
-|-------------------------------|--------------------------------------|---------------------------------------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)        | Search completed. May contain zero or more results.           |
-| **400 Bad Request**           | `"Project id should be an integer."` | The `id` was not a valid number.                              |
-| **500 Internal Server Error** | Error object                         | An unexpected error occurred (e.g. token resolution failure). |
+| Status                        | Body                                 | When                                                |
+|-------------------------------|--------------------------------------|-----------------------------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)        | Search completed. May contain zero or more results. |
+| **400 Bad Request**           | `"Project id should be an integer."` | The `id` was not a valid number.                    |
+| **500 Internal Server Error** | Error object                         | An unexpected error occurred.                       |
 
 ---
 
@@ -749,21 +624,21 @@ GET /openproject/links/workPackages/{id}
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default | Description                                                           |
-|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------|
-| `id`          | path     | `String`  | ✅        | —       | The OpenProject **work package ID** (must be a number).               |
-| `instance`    | query    | `String`  | ❌        | —       | Matches the links based on the instance that was used to create them. |
-| `number`      | query    | `Integer` | ❌        | `0`     | Max results.                                                          |
-| `start`       | query    | `Integer` | ❌        | `0`     | Pagination offset.                                                    |
-| `orderField`  | query    | `String`  | ❌        | `""`    | Sort field.                                                           |
-| `order`       | query    | `String`  | ❌        | `asc`   | Sort direction.                                                       |
-| `prettyNames` | query    | `Boolean` | ❌        | `false` | Human-readable names.                                                 |
+| Parameter     | Location | Type      | Required | Default | Description                                                                                    |
+|---------------|----------|-----------|----------|---------|------------------------------------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —       | The OpenProject **work package ID** (must be a number).                                        |
+| `instance`    | query    | `String`  | ❌        | —       | The instance id of an OpenProject server (see endpoint 4).                                     |
+| `number`      | query    | `Integer` | ❌        | `-1`    | Max results. A value of `0` or less (the default) means the default page size of the Solr search. |
+| `start`       | query    | `Integer` | ❌        | `0`     | Pagination offset.                                                                             |
+| `orderField`  | query    | `String`  | ❌        | `""`    | Sort field.                                                                                    |
+| `order`       | query    | `String`  | ❌        | `asc`   | Sort direction.                                                                                |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | Human-readable names.                                                                          |
 
 **What happens:**
 
-1. Searches all wiki pages that have a link object with a `workPackage` value matching the given `id`.
-2. If `instance` is not empty, only links belonging to the caller's OpenProject instance are returned.
-3. Only pages the current user can view are returned.
+1. Searches all wiki pages (of the current wiki) that have a link object with a `workItem` value matching the given `id`.
+2. If `instance` is not empty, only links made for this OpenProject instance are returned.
+3. Only pages the current user can view are returned (same filtering as endpoint 4).
 
 **Responses:**
 
@@ -786,14 +661,14 @@ POST /openproject/spaces
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default              | Description                                                                                                             |
-|---------------|----------|-----------|----------|----------------------|-------------------------------------------------------------------------------------------------------------------------|
-| `docRef`      | query    | `String`  | ✅        | —                    | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`).                          |
-| `withId`      | query    | `Boolean` | ❌        | `false`              | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3). |
-| `instance`    | query    | `String`  | ❌        | —                    | The OpenProject instance id. If set, the created space will contain a link object that will point to the OP instance.   |
-| `project`     | query    | `Int`     | ❌        | —                    | The id of a OP project. If set, the space will contain a link to the project.                                           |
-| `workPackage` | query    | `Int`     | ❌        | —                    | The if of a WorkPackage. If set, the space will contain a link to the work package.                                     |
-| `title`       | query    | `String`  | ❌        | `Open Project Space` | The title of the newly created space.                                                                                   |
+| Parameter     | Location | Type      | Required | Default             | Description                                                                                                                                         |
+|---------------|----------|-----------|----------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `docRef`      | query    | `String`  | ✅        | —                   | The full page reference where the space should be created (e.g. `Projects.MyProject.WebHome`). If it doesn't specify a wiki, the main wiki is used. |
+| `withId`      | query    | `Boolean` | ❌        | `false`             | If `true`, each created page will also get a short unique identifier assigned (so they can be used with endpoints 1–3).                             |
+| `instance`    | query    | `String`  | ❌        | `""`                | The OpenProject instance id. If set, the created space will contain a link object that will point to the OP instance.                               |
+| `project`     | query    | `Integer` | ❌        | —                   | The id of an OP project. If set, the space will contain a link to the project.                                                                      |
+| `workPackage` | query    | `Integer` | ❌        | —                   | The id of a work package. If set, the space will contain a link to the work package.                                                                |
+| `title`       | query    | `String`  | ❌        | `OpenProject Space` | The title of the newly created space.                                                                                                               |
 
 **Responses:**
 
@@ -812,10 +687,10 @@ POST /openproject/spaces
 
 ### 7. Get XWiki Instance ID
 
-Retrieve the xwiki instance id.
+Retrieves the id of the XWiki instance. It doesn't check any right.
 
 ```
-POST /openproject/metadata
+GET /openproject/metadata
 ```
 
 **Parameters:**
@@ -824,10 +699,10 @@ No params
 
 **Responses:**
 
-| Status                        | Body                      | When                             |
-|-------------------------------|---------------------------|----------------------------------|
-| **200 OK**                    | `InstanceId` (JSON array) | Request was successful           |
-| **500 Internal Server Error** | Error details             | The instance id was not present. |
+| Status                        | Body                                       | When                                 |
+|-------------------------------|--------------------------------------------|--------------------------------------|
+| **200 OK**                    | `{"instanceId": "<id>"}` (JSON)            | Request was successful.              |
+| **500 Internal Server Error** | `"The id was not initialized"`             | The instance id was not initialized. |
 
 ---
 
@@ -841,27 +716,31 @@ GET /openproject/mentions
 
 **Parameters:**
 
-| Parameter     | Location | Type      | Required | Default   | Description                                                           |
-|---------------|----------|-----------|----------|-----------|-----------------------------------------------------------------------|
-| `workPackage` | query    | `Integer` | ❌        | —         | A work package id.                                                    |
-| `instance`    | query    | `String`  | ❌        | —         | Matches the links based on the instance that was used to create them. |
-| `number`      | query    | `Integer` | ❌        | `0` (all) | Maximum number of results to return. Use `0` for no limit.            |
-| `start`       | query    | `Integer` | ❌        | `0`       | Offset for pagination (0-based).                                      |
-| `orderField`  | query    | `String`  | ❌        | `""`      | Name of the field to sort results by.                                 |
-| `order`       | query    | `String`  | ❌        | `asc`     | Sort direction: `asc` (ascending) or `desc` (descending).             |
-| `prettyNames` | query    | `Boolean` | ❌        | `false`   | If `true`, user references are displayed as readable names.           |
+| Parameter     | Location | Type      | Required | Default | Description                                                                                                                                                                                                 |
+|---------------|----------|-----------|----------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `workPackage` | query    | `String`  | ❌        | `""`    | A work package id (must be a number). If empty, the pages mentioning any work package are returned.                                                                                                         |
+| `instance`    | query    | `String`  | ❌        | `""`    | The instance id of an OpenProject server. Only the mentions made for the wiki's OpenProject connections to this instance are returned. If no connection has this instance id, the value is matched against the connection names. |
+| `number`      | query    | `Integer` | ❌        | `25`    | Maximum number of results to return. A value of `0` or less doesn't remove the limit: the default page size of the Solr search applies.                                                                    |
+| `start`       | query    | `Integer` | ❌        | `0`     | Offset for pagination (0-based).                                                                                                                                                                            |
+| `orderField`  | query    | `String`  | ❌        | `""`    | Name of the (Solr) field to sort results by.                                                                                                                                                                |
+| `order`       | query    | `String`  | ❌        | `asc`   | Sort direction: `asc` (ascending) or `desc` (descending).                                                                                                                                                   |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are displayed as readable names.                                                                                                                                                 |
+
+Only pages the current user can view are returned (same filtering as endpoint 4).
 
 **Responses:**
 
-| Status                        | Body                                      | When                                                          |
-|-------------------------------|-------------------------------------------|---------------------------------------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)             | Search completed. May contain zero or more results.           |
-| **400 Bad Request**           | `"Work package id should be an integer."` | The `id` was not a valid number.                              |
-| **500 Internal Server Error** | Error object                              | An unexpected error occurred (e.g. token resolution failure). |
+| Status                        | Body                                      | When                                                 |
+|-------------------------------|-------------------------------------------|------------------------------------------------------|
+| **200 OK**                    | `SearchResults` (JSON or XML)             | Search completed. May contain zero or more results.  |
+| **400 Bad Request**           | `"Work package id should be an integer."` | The `workPackage` parameter was not a valid number. |
+| **500 Internal Server Error** | Error object                              | An unexpected error occurred.                        |
 
 ---
 
-### 8. Retrieve the page info and unique id based of a document reference.
+### 9. Get Document by Reference
+
+Retrieves a wiki page using its reference, and assigns it a short unique identifier if it doesn't have one yet.
 
 ```
 GET /openproject/documents
@@ -871,7 +750,7 @@ GET /openproject/documents
 
 | Parameter     | Location | Type      | Required | Default | Description                                                                                                           |
 |---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------|
-| `docRef`      | query    | `String`  | ✅        | —       | The document reference of a page.                                                                                     |
+| `docRef`      | query    | `String`  | ✅        | —       | The document reference of a page. If it doesn't specify a wiki, the main wiki is used.                                |
 | `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, user references are added to the response as human-readable display names instead of technical references. |
 | `objects`     | query    | `Boolean` | ❌        | `false` | If `true`, the response includes all structured data objects attached to the page.                                    |
 | `class`       | query    | `Boolean` | ❌        | `false` | If `true`, the response includes class definition metadata.                                                           |
@@ -879,21 +758,22 @@ GET /openproject/documents
 
 **Responses:**
 
-| Status                        | Body                                                                           | When                                                          |
-|-------------------------------|--------------------------------------------------------------------------------|---------------------------------------------------------------|
-| **200 OK**                    | `SearchResults` (JSON or XML)                                                  | Search completed. May contain zero or more results.           |
-| **400 Bad Request**           | "Missing `docRef` query parameter pointing to the document with an unique id." | The document reference query param is empty                   |
-| **404 Not Found**             |                                                                                | The document reference does not point to an existing page.    |
-| **500 Internal Server Error** | Error object                                                                   | An unexpected error occurred (e.g. token resolution failure). |
+| Status                        | Body                                                                             | When                                                       |
+|-------------------------------|----------------------------------------------------------------------------------|------------------------------------------------------------|
+| **200 OK**                    | `Page` (JSON or XML) with `id`                                                   | The page was found. Its `id` field holds its short unique identifier. |
+| **400 Bad Request**           | "Missing `docRef` query parameter pointing to the document with an unique id."   | The document reference query param is empty.               |
+| **401 Unauthorized**          | —                                                                                | The current user doesn't have view right on the page.      |
+| **404 Not Found**             | —                                                                                | The document reference does not point to an existing page. |
+| **500 Internal Server Error** | `"Could not create a unique id for the page."` or `"Failed to retrieve the page."` | An unexpected error occurred.                              |
 
 ---
 
-### 9. Get Document by ID
+### 10. Get Document Ancestors by ID
 
-Retrieves a wiki page using its short unique identifier.
+Retrieves a wiki page and its ancestors, using the short unique identifier of the page.
 
 ```
-GET /xwiki/rest/openproject/documents/{id}/ancestors
+GET /openproject/documents/{id}/ancestors
 ```
 
 **Parameters:**
@@ -909,34 +789,190 @@ GET /xwiki/rest/openproject/documents/{id}/ancestors
 **What happens:**
 
 1. Looks up the page associated with the given short `id`.
-2. If found, look for its ancestors that are also non-terminal pages.
-3. Attach unique ids to each page found.
-4. Return a list of all the pages in ascending order.
+2. If found, looks for its existing ancestors, i.e. the non-terminal pages (`WebHome`) of the spaces containing it.
+3. Attaches unique ids to each page found.
+4. Returns the list of these pages, from the top-level ancestor down to the page itself.
 
 **Responses:**
 
-| Status                        | Body                       | When                                                                                                                 |
-|-------------------------------|----------------------------|----------------------------------------------------------------------------------------------------------------------|
-| **200 OK**                    | `List<Page>` (JSON or XML) | The page and its ancestors were found, their unique <br/>ids were initialized and the list was returned successully. |
-| **400 Bad Request**           | `"Missing page id."`       | The `id` parameter was empty or not provided.                                                                        |
-| **404 Not Found**             | —                          | No page exists with the given identifier.                                                                            |
-| **500 Internal Server Error** | —                          | An unexpected error occurred. I.e. unique id initialization failed; database issues.                                 |
+| Status                        | Body                       | When                                                                                         |
+|-------------------------------|----------------------------|----------------------------------------------------------------------------------------------|
+| **200 OK**                    | `List<Page>` (JSON or XML) | The page and its ancestors were found, their unique ids were initialized and the list was returned successfully. |
+| **400 Bad Request**           | `"Missing page id."`       | The `id` parameter was empty or not provided.                                                |
+| **401 Unauthorized**          | —                          | The current user doesn't have view right on the page or on one of its ancestors.             |
+| **404 Not Found**             | —                          | No page is associated with the given identifier, or the page (other than a space home page) was deleted. |
+| **500 Internal Server Error** | —                          | An unexpected error occurred. I.e. unique id initialization failed; database issues.         |
+
+---
+
+### 11. Get the Link of a Page
+
+Retrieves the link between a wiki page and OpenProject (created by endpoint 3 or 6), using the short unique identifier of the page.
+
+```
+GET /openproject/documents/{id}/links
+```
+
+**Parameters:**
+
+| Parameter | Location | Type     | Required | Default | Description                              |
+|-----------|----------|----------|----------|---------|------------------------------------------|
+| `id`      | path     | `String` | ✅        | —       | The short unique identifier of the page. |
+
+**Responses:**
+
+| Status                        | Body                                         | When                                                                                                                                                                              |
+|-------------------------------|----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **200 OK**                    | `Object` (JSON or XML)                       | The `ProjectManagement.Code.RelationClass` object of the page whose `client` is `openproject`, with its properties (same structure as an entry of the Objects Structure above). |
+| **401 Unauthorized**          | —                                            | The current user doesn't have view right on the page.                                                                                                                             |
+| **404 Not Found**             | —                                            | No page is associated with the given identifier, the page was deleted, or the page isn't linked to OpenProject.                                                                   |
+| **500 Internal Server Error** | `"Failed to retrieve the link of the page."` | An unexpected error occurred.                                                                                                                                                     |
+
+---
+
+### 12. Get the Mentions of a Page by ID
+
+Retrieves the work package mentions of a wiki page, using the short unique identifier of the page.
+
+```
+GET /openproject/documents/{id}/mentions
+```
+
+**Parameters:**
+
+| Parameter     | Location | Type      | Required | Default | Description                                                                                    |
+|---------------|----------|-----------|----------|---------|------------------------------------------------------------------------------------------------|
+| `id`          | path     | `String`  | ✅        | —       | The short unique identifier of the page.                                                       |
+| `instance`    | query    | `String`  | ❌        | `""`    | Currently ignored: the mentions made for all the OpenProject connections are returned.         |
+| `number`      | query    | `Integer` | ❌        | `25`    | Maximum number of mentions to return.                                                          |
+| `start`       | query    | `Integer` | ❌        | `0`     | Offset for pagination (0-based).                                                               |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, the last author of the page is also returned as a readable name (`pageAuthorName`). |
+
+**Responses:**
+
+| Status                        | Body                                              | When                                                                      |
+|-------------------------------|---------------------------------------------------|---------------------------------------------------------------------------|
+| **200 OK**                    | `Objects` (JSON or XML)                           | The mentions of the page (possibly none).                                 |
+| **401 Unauthorized**          | —                                                 | The current user doesn't have view right on the page.                     |
+| **404 Not Found**             | —                                                 | No page is associated with the given identifier, or the page was deleted. |
+| **500 Internal Server Error** | `"Failed to resolve the page id."` or `"Failed to retrieve the mentions of the page."` | An unexpected error occurred.                                             |
+
+---
+
+### 13. Get the Mentions of a Page by Reference
+
+Retrieves the work package mentions of a wiki page, using the reference of the page. Works exactly like endpoint 12, but identifies the page by its reference.
+
+```
+GET /openproject/pages/{docRef}/mentions
+```
+
+**Parameters:**
+
+| Parameter     | Location | Type      | Required | Default | Description                                                                                                                       |
+|---------------|----------|-----------|----------|---------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `docRef`      | path     | `String`  | ✅        | —       | The (URL-encoded) reference of the page, e.g. `Projects.MyProject.WebHome`. If it doesn't specify a wiki, the current wiki is used. |
+| `instance`    | query    | `String`  | ❌        | `""`    | Currently ignored: the mentions made for all the OpenProject connections are returned.                                            |
+| `number`      | query    | `Integer` | ❌        | `25`    | Maximum number of mentions to return.                                                                                             |
+| `start`       | query    | `Integer` | ❌        | `0`     | Offset for pagination (0-based).                                                                                                  |
+| `prettyNames` | query    | `Boolean` | ❌        | `false` | If `true`, the last author of the page is also returned as a readable name (`pageAuthorName`).                                    |
+
+**Responses:**
+
+| Status                        | Body                                              | When                                                  |
+|-------------------------------|---------------------------------------------------|-------------------------------------------------------|
+| **200 OK**                    | `Objects` (JSON or XML)                           | The mentions of the page (possibly none).             |
+| **401 Unauthorized**          | —                                                 | The current user doesn't have view right on the page. |
+| **404 Not Found**             | —                                                 | The page doesn't exist.                               |
+| **500 Internal Server Error** | `"Failed to retrieve the mentions of the page."` | An unexpected error occurred.                         |
+
+---
+
+## Internal Endpoints
+
+These endpoints are used by the administration UI of the OpenProject integration (the OpenProject connections administration section) and aren't meant to be called by OpenProject.
+
+---
+
+### Create or Update an OpenProject Connection
+
+Saves the configuration of a connection to an OpenProject server on the given page: the connection itself and the OpenID Connect client configuration used to authenticate the wiki users on OpenProject. The instance id of the OpenProject server is retrieved from the server and stored with the connection (an empty one is stored if the server can't be reached).
+
+```
+POST /wikis/{wikiName}/spaces/{spaceName}/pages/{pageName}/openproject/configurations
+PUT  /wikis/{wikiName}/spaces/{spaceName}/pages/{pageName}/openproject/configurations
+```
+
+`POST` is used to create a connection and `PUT` to update one, but both save the connection on the page, whether it exists or not; only the success status differs.
+
+**Parameters:**
+
+| Parameter   | Location | Type                           | Required | Default | Description                                                                                                                       |
+|-------------|----------|--------------------------------|----------|---------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `wikiName`  | path     | `String`                       | ✅        | —       | The wiki of the connection page.                                                                                                  |
+| `spaceName` | path     | `String`                       | ✅        | —       | The space of the connection page, in the REST format (e.g. `OpenProject/spaces/Code/spaces/OpenProjectConfigurations`).           |
+| `pageName`  | path     | `String`                       | ✅        | —       | The name of the connection page.                                                                                                  |
+| *(body)*    | body     | `OpenProjectConnection` (JSON) | ✅        | —       | The connection configuration (see below).                                                                                         |
+
+The connection page must be in the `OpenProject.Code.OpenProjectConfigurations` space of the wiki. The request body:
+
+```json
+{
+  "connectionName": "My OpenProject",
+  "serverURL": "https://openproject.example.com",
+  "clientId": "XYZ",
+  "clientSecret": "secret",
+  "showPublicData": true
+}
+```
+
+| Field            | Type      | Required | Description                                                                                                                         |
+|------------------|-----------|----------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `connectionName` | `String`  | ✅        | The name of the connection. It must not be used by another connection of the wiki.                                                  |
+| `serverURL`      | `String`  | ✅        | The URL of the OpenProject server. It must be an absolute HTTP or HTTPS URL.                                                        |
+| `clientId`       | `String`  | ✅        | The client ID of the OAuth application created in OpenProject.                                                                      |
+| `clientSecret`   | `String`  | ❌        | The client secret of the OAuth application. If empty, the secret already stored on the page is kept (the request fails if the page doesn't store one). |
+| `showPublicData` | `Boolean` | ❌        | Whether the users who can't call OpenProject with their own account (guests, or users who haven't connected their OpenProject account) see the data that OpenProject shows to anonymous users. Defaults to `false`. |
+
+The endpoint only validates the server URL and the client secret; the administration UI also requires the connection name and the client ID. The `instanceId` field, if sent, is ignored.
+
+**Required rights:** admin right on the wiki of the connection page, and edit right on the connection page.
+
+**Responses:**
+
+| Status                        | Body          | When                                                                                                                                                                                                                                               |
+|-------------------------------|---------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **201 Created**               | —             | `POST`: the connection was saved.                                                                                                                                                                                                                  |
+| **200 OK**                    | —             | `PUT`: the connection was saved.                                                                                                                                                                                                                   |
+| **400 Bad Request**           | Error message | The page isn't in the `OpenProject.Code.OpenProjectConfigurations` space, the server URL isn't valid, the client secret is missing, or the page path is malformed.                                                                                 |
+| **403 Forbidden**             | Error message | The current user doesn't have admin right on the wiki or edit right on the page.                                                                                                                                                                   |
+| **409 Conflict**              | Error message | Another connection of the wiki already uses this name, or the page exists and was last modified by a user without admin right on the wiki (the connection has to be deleted and created again).                                                  |
+| **500 Internal Server Error** | Error message | Failed to save the connection.                                                                                                                                                                                                                     |
 
 ---
 
 ## Quick Reference
 
-| # | Method | Path                                   | Description                                          |
-|---|--------|----------------------------------------|------------------------------------------------------|
-| 1 | `GET`  | `/openproject/documents/{id}`          | Get a page by its short ID                           |
-| 2 | `PUT`  | `/openproject/documents`               | Create/update a page and get a short ID              |
-| 3 | `POST` | `/openproject/documents/{id}/links`    | Link a page to an OpenProject project/work package   |
-| 4 | `GET`  | `/openproject/links/projects/{id}`     | Find pages linked to an OpenProject project          |
-| 5 | `GET`  | `/openproject/links/workPackages/{id}` | Find pages linked to an OpenProject work package     |
-| 6 | `POST` | `/openproject/spaces`                  | Create a full OpenProject space from template        |
-| 7 | `GET`  | `/openproject/metadata`                | Retrieves the XWiki instance id.                     |
-| 8 | `GET`  | `/openproject/mentions`                | Find pages that contain a mention to a work package. |
-| 9 | `GET`  | `/openproject/documents`               | Retrieve the information and unique id for a page.   |
+| #  | Method | Path                                    | Description                                          |
+|----|--------|-----------------------------------------|------------------------------------------------------|
+| 1  | `GET`  | `/openproject/documents/{id}`           | Get a page by its short ID                           |
+| 2  | `PUT`  | `/openproject/documents`                | Create/update a page and get a short ID              |
+| 3  | `PUT`  | `/openproject/documents/{id}/links`     | Link a page to an OpenProject project/work package   |
+| 4  | `GET`  | `/openproject/links/projects/{id}`      | Find pages linked to an OpenProject project          |
+| 5  | `GET`  | `/openproject/links/workPackages/{id}`  | Find pages linked to an OpenProject work package     |
+| 6  | `POST` | `/openproject/spaces`                   | Create a full OpenProject space from template        |
+| 7  | `GET`  | `/openproject/metadata`                 | Retrieve the XWiki instance id                       |
+| 8  | `GET`  | `/openproject/mentions`                 | Find pages that contain a mention to a work package  |
+| 9  | `GET`  | `/openproject/documents`                | Retrieve the information and unique id for a page    |
+| 10 | `GET`  | `/openproject/documents/{id}/ancestors` | Get a page and its ancestors by the page's short ID  |
+| 11 | `GET`  | `/openproject/documents/{id}/links`     | Get the OpenProject link of a page                   |
+| 12 | `GET`  | `/openproject/documents/{id}/mentions`  | Get the work package mentions of a page by short ID  |
+| 13 | `GET`  | `/openproject/pages/{docRef}/mentions`  | Get the work package mentions of a page by reference |
+
+Internal endpoints:
+
+| Method        | Path                                                                            | Description                               |
+|---------------|---------------------------------------------------------------------------------|-------------------------------------------|
+| `POST`, `PUT` | `/wikis/{wikiName}/spaces/{spaceName}/pages/{pageName}/openproject/configurations` | Create or update an OpenProject connection |
 
 ---
-

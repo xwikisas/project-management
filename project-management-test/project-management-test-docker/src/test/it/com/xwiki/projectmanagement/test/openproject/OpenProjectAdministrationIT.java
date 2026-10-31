@@ -36,6 +36,8 @@ import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -59,6 +61,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 {
     private static final String CONNECTIONS_SPACE = "OpenProject.Code.OpenProjectConfigurations";
+
+    private static final List<String> STYLE_SHEETS_SPACE = List.of("OpenProject", "Code", "StyleSheets");
 
     @Test
     @Order(1)
@@ -114,10 +118,14 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 
     @Test
     @Order(4)
-    void styleSyncJob(TestUtils setup, TestReference testReference)
+    void styleSyncJob(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.createPage(testReference,
             String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
+        // A connection that the current user isn't connected to: its statuses and types are read without credentials.
+        String notConnected = "styles-not-connected";
+        OpenProjectAdminPage.gotoPage()
+            .addNewConnection(notConnected, this.openProject.getBaseUrl(), "someid", "somesecret");
 
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.triggerColorSyncJob();
@@ -131,6 +139,12 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         // Compare one rendered type property with a known OpenProject color.
         assertEquals("rgb(26, 103, 163)",
             new ViewPageWithOpenProjectMacro().getPropertyColor("type", "Task", CONNECTION_ID));
+
+        org.xwiki.rest.model.jaxb.Object styleSheet = setup.rest().get(new ObjectReference(
+            "XWiki.StyleSheetExtension[0]", new DocumentReference("xwiki", STYLE_SHEETS_SPACE, notConnected)));
+        assertThat(TestUtils.RestTestUtils.getProperty("code", styleSheet, false).getValue().toLowerCase(),
+            containsString("color: #1a67a3"));
+        OpenProjectAdminPage.gotoPage().deleteConnection(notConnected);
     }
 
     @Test

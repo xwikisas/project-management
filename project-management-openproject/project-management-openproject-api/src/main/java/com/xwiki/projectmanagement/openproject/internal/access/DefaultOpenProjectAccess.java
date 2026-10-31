@@ -96,6 +96,16 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
         return resolveWithoutAccount(connection);
     }
 
+    @Override
+    public OpenProjectApiClient getAnonymousClient(String connectionName)
+    {
+        OpenProjectConnection connection = this.openProjectConfiguration.getConnection(connectionName);
+        if (connection == null) {
+            return null;
+        }
+        return this.openProjectApiClientFactory.builder().serverUrl(connection.getServerURL()).build();
+    }
+
     private OpenProjectAccessResult resolveWithoutAccount(OpenProjectConnection connection)
     {
         if (connection.isShowPublicData()) {

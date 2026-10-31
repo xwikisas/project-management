@@ -41,6 +41,7 @@ import org.xwiki.rest.XWikiResource;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -66,6 +67,9 @@ public class OpenProjectAvatarResource extends XWikiResource
     private OpenProjectAccess openProjectAccess;
 
     @Inject
+    private WikiRequestExecutor wikiRequestExecutor;
+
+    @Inject
     private SkinAccessBridge skinAccessBridge;
 
     /**
@@ -82,6 +86,11 @@ public class OpenProjectAvatarResource extends XWikiResource
         @PathParam("instance") String instance,
         @PathParam("id") String userId
     ) throws URISyntaxException
+    {
+        return this.wikiRequestExecutor.execute(wiki, () -> getAvatar(instance, userId));
+    }
+
+    private Response getAvatar(String instance, String userId) throws URISyntaxException
     {
         OpenProjectApiClient openProjectApiClient = openProjectAccess.resolve(instance).getClient();
         if (openProjectApiClient == null) {

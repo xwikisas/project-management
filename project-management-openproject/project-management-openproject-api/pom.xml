@@ -33,7 +33,7 @@
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
-    <xwiki.jacoco.instructionRatio>0.73</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.77</xwiki.jacoco.instructionRatio>
     <xwiki.extension.namespaces>{root}</xwiki.extension.namespaces>
   </properties>
   <dependencies>
@@ -93,6 +93,13 @@
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-rest-api</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <!-- Provides the "solr" REST search source used to search the pages linked to OpenProject. It's not part of every
+      XWiki distribution. -->
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-search-solr-rest</artifactId>
       <version>${platform.version}</version>
     </dependency>
     <!-- Needed for scheduling the automatic syncing of OpenProject styles. -->

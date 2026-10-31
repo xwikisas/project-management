@@ -19,11 +19,13 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -32,13 +34,21 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -55,6 +65,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -64,10 +75,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ComponentTest
+@ComponentList(WikiRequestExecutor.class)
 class SuggestTest
 {
     @MockComponent
     private OpenProjectAccess openProjectAccess;
+
+    @MockComponent
+    private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private WikiDescriptorManager wikiDescriptorManager;
+
+    @MockComponent
+    private Provider<XWikiContext> xcontextProvider;
+
+    private final XWikiContext xcontext = new XWikiContext();
 
     @InjectMockComponents
     private Suggest suggest;
@@ -89,6 +112,15 @@ class SuggestTest
     private static final String EMPTY_STRING = "";
 
     private static final String SEARCH_STRING = "searchString";
+
+    @BeforeComponent
+    void beforeComponent() throws Exception
+    {
+        // The requests are handled on any existing wiki the current user can view.
+        when(this.xcontextProvider.get()).thenReturn(this.xcontext);
+        when(this.authorizationManager.hasAccess(eq(Right.VIEW), any(WikiReference.class))).thenReturn(true);
+        when(this.wikiDescriptorManager.exists(any())).thenReturn(true);
+    }
 
     @BeforeEach
     void setUp()
@@ -366,5 +398,22 @@ class SuggestTest
                 .collect(Collectors.toList()),
             response.getEntity()
         );
+    }
+
+    @Test
+    void getSuggestionsReadsTheConnectionFromTheWikiOfTheRequest()
+    {
+        this.xcontext.setWikiId("xwiki");
+        List<String> connectionWikis = new ArrayList<>();
+        when(this.openProjectAccess.resolve(INSTANCE)).thenAnswer(invocation -> {
+            connectionWikis.add(this.xcontext.getWikiId());
+            return OpenProjectAccessResult.notConfigured();
+        });
+
+        Response response = this.suggest.getSuggestions("subwiki", INSTANCE, "types", SEARCH_STRING, 10, null);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
+        assertEquals(List.of("subwiki"), connectionWikis);
+        assertEquals("xwiki", this.xcontext.getWikiId());
     }
 }

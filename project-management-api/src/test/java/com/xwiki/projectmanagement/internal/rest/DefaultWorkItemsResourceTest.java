@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Provider;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -36,7 +37,11 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.model.reference.WikiReference;
+import org.xwiki.security.authorization.ContextualAuthorizationManager;
+import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.BeforeComponent;
 import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -44,7 +49,9 @@ import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.mockito.MockitoComponentManager;
+import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.ProjectManagementClient;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
@@ -55,8 +62,10 @@ import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -67,7 +76,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(DefaultProjectManagementClientExecutionContext.class)
+@ComponentList({ DefaultProjectManagementClientExecutionContext.class, WikiRequestExecutor.class })
 class DefaultWorkItemsResourceTest
 {
     private static final String WIKI = "xwiki";
@@ -79,6 +88,17 @@ class DefaultWorkItemsResourceTest
     private static final String WORK_ITEM_ID = "42";
 
     private static final String FILTER = "{\"query\":{\"filters\":[]}}";
+
+    @MockComponent
+    private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private WikiDescriptorManager wikiDescriptorManager;
+
+    @MockComponent
+    private Provider<XWikiContext> xcontextProvider;
+
+    private final XWikiContext xcontext = new XWikiContext();
 
     @InjectMockComponents
     private DefaultWorkItemsResource resource;
@@ -95,6 +115,15 @@ class DefaultWorkItemsResourceTest
     private ProjectManagementClient client;
 
     private final Map<String, List<String>> queryParameters = new LinkedHashMap<>();
+
+    @BeforeComponent
+    void beforeComponent() throws Exception
+    {
+        // The requests are handled on any existing wiki the current user can view.
+        when(this.xcontextProvider.get()).thenReturn(this.xcontext);
+        when(this.authorizationManager.hasAccess(eq(Right.VIEW), any(WikiReference.class))).thenReturn(true);
+        when(this.wikiDescriptorManager.exists(any())).thenReturn(true);
+    }
 
     @BeforeEach
     void setUp() throws Exception
@@ -272,5 +301,23 @@ class DefaultWorkItemsResourceTest
         assertEquals(501, response.getStatus());
         assertEquals("The REST API doesn't support deleting work items.", response.getEntity());
         verifyNoInteractions(this.client);
+    }
+
+    @Test
+    void getWorkItemReadsTheClientConfigurationFromTheWikiOfTheRequest() throws Exception
+    {
+        this.xcontext.setWikiId("xwiki");
+        // The client returns a work item holding the context wiki it was called with.
+        when(this.client.getWorkItem(WORK_ITEM_ID)).thenAnswer(invocation -> {
+            WorkItem workItem = new WorkItem();
+            workItem.put("wiki", this.xcontext.getWikiId());
+            return workItem;
+        });
+
+        Response response = this.resource.getWorkItem("subwiki", CLIENT, WORK_ITEM_ID);
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals("subwiki", ((WorkItem) response.getEntity()).get("wiki"));
+        assertEquals("xwiki", this.xcontext.getWikiId());
     }
 }

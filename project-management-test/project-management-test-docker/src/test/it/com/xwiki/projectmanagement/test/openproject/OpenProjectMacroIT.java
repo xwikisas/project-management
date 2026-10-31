@@ -447,37 +447,43 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     void displayFormattedDescription(TestUtils setup, TestReference testReference) throws Exception
     {
         JsonNode workPackages = this.openProject.getApiResource(String.format(
-            "/projects/%s/work_packages?pageSize=2&sortBy=%s", DEMO_PROJECT_ID, encode("[[\"id\",\"asc\"]]")));
+            "/projects/%s/work_packages?pageSize=3&sortBy=%s", DEMO_PROJECT_ID, encode("[[\"id\",\"asc\"]]")));
         String referencedId = workPackages.get(EMBEDDED).get(ELEMENTS).get(0).get("id").asText();
         String describedId = workPackages.get(EMBEDDED).get(ELEMENTS).get(1).get("id").asText();
+        String quickInfoId = workPackages.get(EMBEDDED).get(ELEMENTS).get(2).get("id").asText();
         String reference = "#" + referencedId;
 
         // A description with a heading (to which OpenProject adds a permalink), a reference to another work package
-        // (which OpenProject renders as a relative link) and some formatting.
+        // (which OpenProject renders as a relative link), a "quick info" reference to a work package (which
+        // OpenProject renders as an empty element filled by its JavaScript), a task list and some formatting.
         String previousDescription = this.openProject.setWorkPackageDescription(setup.getDriver(), describedId,
-            String.format("# Release notes%n%nThe **new** feature is tracked by %s.%n%n* first%n* second%n",
-                reference));
+            String.format("# Release notes%n%nThe **new** feature is tracked by %s and depends on ##%s.%n%n"
+                + "* first%n* second%n%n- [x] done item%n- [ ] open item%n", reference, quickInfoId));
         try {
             setup.createPage(testReference, String.format("{{openproject instance=\"%1$s\" identifier=\"%2$s\" "
                 + "workItemsDisplayer=\"workItemsSingle\"/}}%n%n{{openproject instance=\"%1$s\" id=\"description\" "
                 + "identifier=\"%2$s\" properties=\"identifier,description\"/}}", CONNECTION_ID, describedId));
 
             List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+            // The quick info reference is displayed as a link to the work package.
             Map<String, String> expectedLinks =
-                Map.of(reference, this.openProject.getBaseUrl() + "/work_packages/" + referencedId);
+                Map.of(reference, this.openProject.getBaseUrl() + "/work_packages/" + referencedId,
+                    "#" + quickInfoId, this.openProject.getBaseUrl() + "/work_packages/" + quickInfoId);
+            // The task list items show whether they're done.
+            List<String> expectedListItems = List.of("first", "second", "\u2611 done item", "\u2610 open item");
 
             FormattedTextElement description =
                 macros.get(0).getSingleWorkItem().waitUntilReady().getFormattedDescription();
             assertEquals(List.of("Release notes"), description.getHeadings());
             assertEquals(List.of("new"), description.getBoldTexts());
-            assertEquals(List.of("first", "second"), description.getListItems());
+            assertEquals(expectedListItems, description.getListItems());
             // The heading permalink is not displayed and the reference links to OpenProject.
             assertEquals(expectedLinks, description.getLinks());
 
             FormattedTextElement cell = macros.get(1).getFormattedCell("Description", 1);
             assertEquals(List.of("Release notes"), cell.getHeadings());
             assertEquals(List.of("new"), cell.getBoldTexts());
-            assertEquals(List.of("first", "second"), cell.getListItems());
+            assertEquals(expectedListItems, cell.getListItems());
             assertEquals(expectedLinks, cell.getLinks());
         } finally {
             this.openProject.setWorkPackageDescription(setup.getDriver(), describedId, previousDescription);
