@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.internal.access;
 
 import org.xwiki.component.annotation.Role;
 
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+
 /**
  * Decides how the current user reaches a configured OpenProject connection, and provides the client to call it with.
  * This is the single place that looks up the connection and the current user's OAuth token: callers should not
@@ -37,4 +39,14 @@ public interface OpenProjectAccess
      * @return how the current user reaches the connection, with the client to use when they can call it
      */
     OpenProjectAccessResult resolve(String connectionName);
+
+    /**
+     * To read the data that is the same for every user and that the current user can't read with their own account,
+     * whatever the connection shows to the users who aren't connected to it.
+     *
+     * @param connectionName the name of an OpenProject connection configured in the administration
+     * @return a client calling the connection without credentials, with no cache, or {@code null} if no connection
+     *     with this name is configured
+     */
+    OpenProjectApiClient getAnonymousClient(String connectionName);
 }
