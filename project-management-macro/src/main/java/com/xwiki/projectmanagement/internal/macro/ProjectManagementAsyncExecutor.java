@@ -33,6 +33,7 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.job.JobException;
 import org.xwiki.rendering.RenderingException;
+import org.xwiki.rendering.async.AsyncContext;
 import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
 import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
 import org.xwiki.rendering.block.Block;
@@ -60,6 +61,9 @@ public class ProjectManagementAsyncExecutor
     @Inject
     private ComponentManager componentManager;
 
+    @Inject
+    private AsyncContext asyncContext;
+
     /**
      * @param displayerMacro the macro that will be executed asynchronously.
      * @param parameters the parameters of the macro.
@@ -67,7 +71,9 @@ public class ProjectManagementAsyncExecutor
      * @param context the macro transformation context.
      * @param paramsConsumer processes the parameters of the macro before execution, i.e. make another api call in
      *     the async context, and returns the blocks to display instead of the macro, or an empty list to execute it.
-     * @param forcePlaceholder denotes whether to force the placeholder or nah.
+     * @param forcePlaceholder whether to display a placeholder, filled asynchronously, even when the result is
+     *     available; ignored when the result can't be rendered asynchronously (e.g. when the WYSIWYG editor renders
+     *     the macro, or when the request doesn't support asynchronous rendering), where it is rendered synchronously
      * @return the placeholder blocks that will be asynchronously populated.
      * @throws RenderingException if some exception was thrown during the rendering of the placeholder.
      * @throws JobException if some exception was thrown during the execution of the render job. This should not
@@ -81,10 +87,11 @@ public class ProjectManagementAsyncExecutor
     {
 
         try {
-            AsyncRendererConfiguration configuration = getAsyncRendererConfiguration(forcePlaceholder);
             ProjectManagementAsyncRenderer asyncRenderer =
                 componentManager.getInstance(ProjectManagementAsyncRenderer.class);
             asyncRenderer.initialize(displayerMacro, parameters, content, context, paramsConsumer);
+            AsyncRendererConfiguration configuration =
+                getAsyncRendererConfiguration(forcePlaceholder && asyncRenderer.isAsyncAllowed());
             Block result = executor.execute(asyncRenderer, configuration);
             return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
         } catch (ComponentLookupException e) {
@@ -101,8 +108,10 @@ public class ProjectManagementAsyncExecutor
         configuration.setContextEntries(
             Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
                 XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
-        // We always want the results to be displayed async, since we make calls to other servers.
-        configuration.setPlaceHolderForced(forcePlaceholder);
+        // The results are displayed asynchronously since they come from other servers. A forced placeholder is only
+        // filled when the request supports asynchronous rendering: otherwise nothing fills it and the macro stays
+        // empty, so the result is rendered synchronously instead.
+        configuration.setPlaceHolderForced(forcePlaceholder && this.asyncContext.isEnabled());
         return configuration;
     }
 }

@@ -38,6 +38,7 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.rendering.util.ErrorBlockGenerator;
 import org.xwiki.skinx.SkinExtension;
@@ -51,8 +52,10 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
@@ -104,6 +107,26 @@ class ProjectManagementAsyncRendererTest
         when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
 
         assertEquals(List.of(block), this.renderer.execute(true, false).getChildren());
+    }
+
+    @Test
+    void isAsyncAllowed()
+    {
+        assertTrue(this.renderer.isAsyncAllowed());
+
+        initializeWithTargetSyntax(Syntax.HTML_5_0);
+        assertTrue(this.renderer.isAsyncAllowed());
+    }
+
+    @Test
+    void isAsyncAllowedWhenRenderingForTheWYSIWYGEditor()
+    {
+        // The WYSIWYG editor renders the macros to annotated HTML and doesn't fill the asynchronous placeholders.
+        initializeWithTargetSyntax(Syntax.ANNOTATED_HTML_5_0);
+        assertFalse(this.renderer.isAsyncAllowed());
+
+        initializeWithTargetSyntax(Syntax.ANNOTATED_XHTML_1_0);
+        assertFalse(this.renderer.isAsyncAllowed());
     }
 
     @Test
@@ -203,5 +226,12 @@ class ProjectManagementAsyncRendererTest
         assertSame(cause, exception.getCause());
         verify(this.errorBlockGenerator, never()).generateErrorBlocks(anyBoolean(), any(), any(), any(), any());
         verify(this.jsrx, never()).use(any());
+    }
+
+    private void initializeWithTargetSyntax(Syntax targetSyntax)
+    {
+        MacroTransformationContext context = new MacroTransformationContext();
+        context.getTransformationContext().setTargetSyntax(targetSyntax);
+        this.renderer.initialize(this.displayer, this.parameters, CONTENT, context, null);
     }
 }

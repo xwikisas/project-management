@@ -66,6 +66,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private static final String CLASS_PARAMETER = "class";
 
+    private static final String ANNOTATED_SYNTAX_PREFIX = "annotated";
+
     @Inject
     private Logger logger;
 
@@ -200,9 +202,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     @Override
     public boolean isAsyncAllowed()
     {
-        // TODO: Not sure if we should take into consideration any external factors when deciding whether to render
-        //  this asynchronously or not.
-        return true;
+        // The WYSIWYG editor renders the macros to annotated HTML and doesn't fill the asynchronous placeholders, so
+        // the macro would stay empty in the editor.
+        return this.targetSyntax == null || !this.targetSyntax.getType().getId().startsWith(ANNOTATED_SYNTAX_PREFIX);
     }
 
     @Override
