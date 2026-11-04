@@ -242,33 +242,6 @@
         }
       },
       {
-        "id": "updateDate",
-        "filterable": true,
-        "sortable": true,
-        "displayer": "html",
-        "filter": {
-          "id": "date",
-          "operators": [
-            {
-              "id": "t",
-              "name": "Today"
-            },
-            {
-              "id": "w",
-              "name": "This week"
-            },
-            {
-              "id": "=d",
-              "name": "On"
-            },
-            {
-              "id": "between",
-              "name": "Between"
-            }
-          ]
-        }
-      },
-      {
         "id": "creator",
         "filterable": true,
         "sortable": true,
