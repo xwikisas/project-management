@@ -40,6 +40,7 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.displayer.property.DatePropertyDisplayer;
+import com.xwiki.projectmanagement.internal.displayer.property.IdentifierPropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.LinkablePropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.ListPropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.StringPropertyDisplayer;
@@ -94,8 +95,9 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     {
         assertInstanceOf(LinkablePropertyDisplayer.class,
             this.manager.getDisplayerForProperty(Linkable.class.getName()));
-        for (String property : List.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_SUMMARY, WorkItem.KEY_PROJECT,
-            WorkItem.KEY_CREATOR))
+        assertInstanceOf(IdentifierPropertyDisplayer.class,
+            this.manager.getDisplayerForProperty(WorkItem.KEY_IDENTIFIER));
+        for (String property : List.of(WorkItem.KEY_SUMMARY, WorkItem.KEY_PROJECT, WorkItem.KEY_CREATOR))
         {
             assertSame(this.manager.getDisplayerForProperty(Linkable.class.getName()),
                 this.manager.getDisplayerForProperty(property));
@@ -165,6 +167,21 @@ class DefaultWorkItemPropertyDisplayerManagerTest
             assertEquals(URL, link.getReference().getReference());
             assertWord("Fix the bug", link.getChildren());
         }
+    }
+
+    @Test
+    void displayTheIdentifierWithTheKeyOfTheWorkItem()
+    {
+        WorkItem workItem = new WorkItem();
+        workItem.setKey("XWIKI-42");
+
+        // E.g. the identifier column of the Live Data table, whose displayer receives the displayed work item.
+        List<Block> blocks = this.manager.displayProperty(WorkItem.KEY_IDENTIFIER, new Linkable("42", URL),
+            Map.of(IdentifierPropertyDisplayer.PARAMETER_WORK_ITEM, workItem));
+
+        LinkBlock link = assertInstanceOf(LinkBlock.class, blocks.get(0));
+        assertEquals(URL, link.getReference().getReference());
+        assertWord("XWIKI-42", link.getChildren());
     }
 
     @Test
