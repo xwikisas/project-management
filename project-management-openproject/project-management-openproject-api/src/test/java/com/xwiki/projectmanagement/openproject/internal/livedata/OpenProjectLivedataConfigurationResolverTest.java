@@ -19,7 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.livedata;
 
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,6 +42,8 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -49,6 +53,7 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -140,6 +145,21 @@ class OpenProjectLivedataConfigurationResolverTest
 
         assertEquals(0, configuration.getMeta().getPropertyDescriptors().size());
         verify(this.openProjectAccess, never()).resolve(anyString());
+    }
+
+    @Test
+    void configurationDeclaresEachPropertyOnce() throws Exception
+    {
+        JsonNode descriptors;
+        try (InputStream configuration = getClass().getResourceAsStream("/openProjectLiveDataConfiguration.json")) {
+            descriptors = new ObjectMapper().readTree(configuration).path("meta").path("propertyDescriptors");
+        }
+
+        // A property declared twice is proposed twice by the property pickers of the macros.
+        List<String> ids = new ArrayList<>();
+        descriptors.forEach(descriptor -> ids.add(descriptor.path("id").asText()));
+        assertFalse(ids.isEmpty());
+        assertEquals(new LinkedHashSet<>(ids).size(), ids.size(), ids.toString());
     }
 
     private static LiveDataConfiguration getInput(String instance)
