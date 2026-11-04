@@ -26,15 +26,42 @@
  *   configuration defined by that client.
  *#
 #macro (propertyPicker $params $clientHint $isSinglePick)
+  #propertyPickerExcluding($params $clientHint $isSinglePick [])
+#end
+
+#**
+ * Generate a picker of the work item property displayed by a chart, for the client identified by its hint. The
+ * properties whose value is unique, or almost, to each work item (e.g. the identifier or the description) are not
+ * proposed, since a chart grouping by them would have one slice or bar per work item, nor the actions of the Live Data
+ * table.
+ *
+ * @param $params a map of parameters that will be passed to the static picker.
+ * @param $clientHint the hint of the project management client implementation.
+ *#
+#macro (chartPropertyPicker $params $clientHint)
+  #propertyPickerExcluding($params $clientHint true ['identifier', 'summary', 'description', 'progress', '_actions'])
+#end
+
+#**
+ * Generate a property picker for the client identified by its hint, without the given properties.
+ *
+ * @param $params a map of parameters that will be passed to the static picker.
+ * @param $clientHint the hint of the project management client implementation.
+ * @param $isSinglePick whether a single property can be picked.
+ * @param $excludedProperties the ids of the properties that are not proposed.
+ *#
+#macro (propertyPickerExcluding $params $clientHint $isSinglePick $excludedProperties)
   #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js', {'minify': false}))
   #set ($config = $services.projectmanagement.livedata.getLivedataConfiguration($clientHint))
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
   #set ($options = [])
   #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
-    #set ($discard = $options.add({
-      'name': $propertyDescriptor.name,
-      'value': $propertyDescriptor.id
-    }))
+    #if (!$excludedProperties.contains($propertyDescriptor.id))
+      #set ($discard = $options.add({
+        'name': $propertyDescriptor.name,
+        'value': $propertyDescriptor.id
+      }))
+    #end
   #end
   #set ($parameters = {
     'class': 'proj-manag-property-picker',
