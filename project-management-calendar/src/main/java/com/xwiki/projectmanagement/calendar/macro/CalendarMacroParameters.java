@@ -21,7 +21,6 @@
 package com.xwiki.projectmanagement.calendar.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyFeature;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.stability.Unstable;
@@ -141,7 +140,7 @@ public class CalendarMacroParameters
      * @param filters see {@link #getFilters()}.
      */
     @PropertyDisplayType(ProjectManagementFilter.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -178,7 +177,7 @@ public class CalendarMacroParameters
      * @param preset see {@link #getPresetId()}.
      * @since 1.3.0
      */
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setPresetId(String preset)
     {
         this.presetId = preset;

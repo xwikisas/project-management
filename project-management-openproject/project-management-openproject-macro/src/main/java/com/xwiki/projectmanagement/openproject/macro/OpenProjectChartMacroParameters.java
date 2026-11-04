@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyFeature;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyMandatory;
 import org.xwiki.properties.annotation.PropertyOrder;
@@ -76,7 +75,7 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     }
 
     @PropertyDisplayType(OpenProjectFilters.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
@@ -101,7 +100,7 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     }
 
     @PropertyDisplayType(OpenProjectChartPreset.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     @Override
     public void setPresetId(String preset)
     {

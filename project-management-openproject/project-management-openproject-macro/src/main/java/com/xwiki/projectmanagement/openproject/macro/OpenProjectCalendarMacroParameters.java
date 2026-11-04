@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyFeature;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyMandatory;
 import org.xwiki.properties.annotation.PropertyOrder;
@@ -107,7 +106,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject instance
      */
     @PropertyDisplayType(OpenProjectFilter.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
@@ -165,7 +164,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
     }
 
     @PropertyDisplayType(OpenProjectPreset.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     @Override
     public void setPresetId(String preset)
     {

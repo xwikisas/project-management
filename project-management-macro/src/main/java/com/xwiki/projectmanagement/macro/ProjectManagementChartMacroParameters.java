@@ -21,7 +21,6 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyFeature;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
 
@@ -127,7 +126,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param filters see {@link #getFilters()}.
      */
     @PropertyDisplayType(ProjectManagementFilters.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setFilters(String filters)
     {
         this.filters = filters;
@@ -219,7 +218,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param preset see {@link #getPresetId()}.
      * @since 1.3.0
      */
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setPresetId(String preset)
     {
         this.presetId = preset;
