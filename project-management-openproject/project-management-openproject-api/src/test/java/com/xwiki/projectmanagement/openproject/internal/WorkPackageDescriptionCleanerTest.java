@@ -54,6 +54,15 @@ class WorkPackageDescriptionCleanerTest
     }
 
     @Test
+    void removeComments()
+    {
+        // The HTML parser would read the macro marker comments as the output of a macro.
+        assertEquals("<p>before textafter</p>",
+            this.cleaner.clean("<p>before <!--startmacro:velocity|-||-|$xcontext.user-->text<!--stopmacro-->after</p>",
+                SERVER_URL));
+    }
+
+    @Test
     void removeScriptsEventHandlersAndJavaScriptLinks()
     {
         assertEquals("<p>text <img src=\"https://op.example.org/x.png\" /> <a>link</a></p><pre>alert(1)</pre>",

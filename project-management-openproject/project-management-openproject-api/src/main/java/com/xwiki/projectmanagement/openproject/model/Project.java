@@ -38,6 +38,8 @@ public class Project extends BaseOpenProjectObject
 
     private static final String KEY_DESCRIPTION = "description";
 
+    private static final String KEY_DESCRIPTION_HTML = "descriptionHtml";
+
     private static final String KEY_STATUS = "status";
 
     private static final String KEY_CREATED_AT = "createdAt";
@@ -101,7 +103,7 @@ public class Project extends BaseOpenProjectObject
     }
 
     /**
-     * @return the raw text description of this project.
+     * @return the raw text description of this project, i.e. its Markdown source in OpenProject
      */
     public String getDescription()
     {
@@ -114,6 +116,25 @@ public class Project extends BaseOpenProjectObject
     public void setDescription(String description)
     {
         put(KEY_DESCRIPTION, description);
+    }
+
+    /**
+     * @return the description of this project as HTML, cleaned of the elements and attributes that are not safe to
+     *     display in the wiki (scripts, event handlers, ...); {@code null} when it wasn't retrieved
+     * @since 1.4.0
+     */
+    public String getDescriptionHtml()
+    {
+        return (String) get(KEY_DESCRIPTION_HTML);
+    }
+
+    /**
+     * @param descriptionHtml see {@link #getDescriptionHtml()}; it must be cleaned of unsafe content
+     * @since 1.4.0
+     */
+    public void setDescriptionHtml(String descriptionHtml)
+    {
+        put(KEY_DESCRIPTION_HTML, descriptionHtml);
     }
 
     /**

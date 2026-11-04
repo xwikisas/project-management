@@ -115,6 +115,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_DESCRIPTION = "description";
 
+    private static final String OP_HTML = "html";
+
     private static final String OP_START_DATE = "startDate";
 
     private static final String OP_DUE_DATE = "dueDate";
@@ -580,6 +582,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         JsonNode projectJson = getOpenProjectResponse(urlPart, null, null, "", "", "");
         Project project = new Project(projectJson);
         project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));
+        // The HTML rendered by OpenProject is cleaned, as the work package descriptions, since it is displayed in the
+        // wiki.
+        project.setDescriptionHtml(this.descriptionCleaner.clean(
+            projectJson.path(OP_DESCRIPTION).path(OP_HTML).asText(), this.connectionUrl));
         return project;
     }
 
@@ -843,7 +849,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         WorkPackage workPackage = new WorkPackage();
 
         workPackage.setDescription(
-            this.descriptionCleaner.clean(element.path(OP_DESCRIPTION).path("html").asText(), this.connectionUrl));
+            this.descriptionCleaner.clean(element.path(OP_DESCRIPTION).path(OP_HTML).asText(), this.connectionUrl));
         workPackage.setPercentageDone(element.path(OP_RESPONSE_PERCENTAGE_DONE).asInt());
         int id = element.path(OP_RESPONSE_ID).asInt();
         workPackage.setId(id);

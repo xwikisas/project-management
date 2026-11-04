@@ -273,6 +273,23 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getProjectCleansTheHTMLDescription() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"_type\": \"Project\", \"id\": 7, \"name\": \"Doc\", "
+            + "\"identifier\": \"doc\", \"description\": {\"format\": \"markdown\", "
+            + "\"raw\": \"Versions &gt;= 1.6\", \"html\": \"<p>Versions &gt;= 1.6<script>alert(1)</script></p>\"}}");
+        when(this.descriptionCleaner.clean("<p>Versions &gt;= 1.6<script>alert(1)</script></p>",
+            OPEN_PROJECT_CONNECTION_URL)).thenReturn("<p>Versions &gt;= 1.6</p>");
+
+        Project project = openProjectApiClient.getProject(7);
+
+        // The HTML displayed in the wiki is the one cleaned of the unsafe content.
+        assertEquals("<p>Versions &gt;= 1.6</p>", project.getDescriptionHtml());
+        assertEquals("Versions &gt;= 1.6", project.getDescription());
+        assertEquals("doc", project.getIdentifier());
+    }
+
+    @Test
     void getProjectsParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());

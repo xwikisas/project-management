@@ -19,6 +19,13 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
+import java.util.List;
+
+import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.stability.Unstable;
+
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectDetailsProperty;
+
 /**
  * Parameters for the OpenProject Project Details macro.
  *
@@ -27,4 +34,28 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 public class OpenProjectProjectDetailsMacroParameters extends BaseDirectOpenProjectMacroParameters
 {
+    private List<OpenProjectProjectDetailsProperty> properties =
+        List.of(OpenProjectProjectDetailsProperty.NAME, OpenProjectProjectDetailsProperty.DESCRIPTION,
+            OpenProjectProjectDetailsProperty.STATUS);
+
+    /**
+     * @return the properties of the project to display, in the order of {@link OpenProjectProjectDetailsProperty}
+     * @since 1.4.0
+     */
+    @Unstable
+    public List<OpenProjectProjectDetailsProperty> getProperties()
+    {
+        return this.properties;
+    }
+
+    /**
+     * @param properties see {@link #getProperties()}
+     * @since 1.4.0
+     */
+    @Unstable
+    @PropertyDisplayType(OpenProjectProjectDetailsProperty.class)
+    public void setProperties(List<OpenProjectProjectDetailsProperty> properties)
+    {
+        this.properties = properties;
+    }
 }
