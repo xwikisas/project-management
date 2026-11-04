@@ -45,6 +45,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -95,6 +96,24 @@ class PieChartDisplayerTest
     }
 
     @Test
+    void countsTheWorkItemsOnceForEachOfTheirValues() throws Exception
+    {
+        String alice = "Alice";
+        String bob = "Bob";
+        List<PaginatedResult<WorkItem>> datasets = List.of(result(
+            assignedTo(new Linkable(alice, "https://op/users/1")),
+            assignedTo(new Linkable(alice, "https://op/users/1"), new Linkable(bob, "https://op/users/2")),
+            assignedTo(),
+            new WorkItem()));
+
+        JsonNode data = getChartData(datasets, WorkItem.KEY_ASSIGNEES, List.of("Dataset"), Map.of());
+
+        // The labels are the names of the assignees, not the raw values of the assignee lists.
+        assertEquals(List.of(alice, bob, "UNSET"), texts(data.path("labels")));
+        assertEquals(List.of("2", "1", "2"), texts(data.path("datasets").path(0).path("data")));
+    }
+
+    @Test
     void accumulatesTheCountsWithTheAccumulateMetric() throws Exception
     {
         List<PaginatedResult<WorkItem>> datasets =
@@ -139,7 +158,13 @@ class PieChartDisplayerTest
     private JsonNode getChartData(List<PaginatedResult<WorkItem>> datasets, List<String> labels,
         Map<String, String> parameters) throws Exception
     {
-        String chartMacro = getDisplayer().getChartMacro(datasets, WorkItem.KEY_STATUS, labels, parameters);
+        return getChartData(datasets, WorkItem.KEY_STATUS, labels, parameters);
+    }
+
+    private JsonNode getChartData(List<PaginatedResult<WorkItem>> datasets, String property, List<String> labels,
+        Map<String, String> parameters) throws Exception
+    {
+        String chartMacro = getDisplayer().getChartMacro(datasets, property, labels, parameters);
         List<Block> macros = this.parser.parse(new StringReader(chartMacro))
             .getBlocks(new ClassBlockMatcher(MacroBlock.class), Block.Axes.DESCENDANT);
         assertEquals(1, macros.size());
@@ -165,6 +190,13 @@ class PieChartDisplayerTest
         if (status != null) {
             workItem.put(WorkItem.KEY_STATUS, status);
         }
+        return workItem;
+    }
+
+    private static WorkItem assignedTo(Linkable... assignees)
+    {
+        WorkItem workItem = new WorkItem();
+        workItem.setAssignees(List.of(assignees));
         return workItem;
     }
 

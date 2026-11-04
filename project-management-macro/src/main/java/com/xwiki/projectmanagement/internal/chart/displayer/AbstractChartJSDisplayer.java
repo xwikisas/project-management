@@ -23,11 +23,13 @@ package com.xwiki.projectmanagement.internal.chart.displayer;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -58,6 +60,7 @@ import com.xwiki.projectmanagement.chart.ChartPeriod;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.chart.model.ChartJSData;
 import com.xwiki.projectmanagement.internal.chart.model.ChartJSDataset;
+import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -165,12 +168,13 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             Map<String, Integer> dataSet = new TreeMap<>();
             chartJSLabels.forEach(label -> dataSet.put(label, 0));
             for (WorkItem item : workItems.get(i).getItems()) {
-                String propValue = getChartJSLabel(item, property, typeDisplayerParams);
-                if (UNSET.equals(propValue)) {
+                List<String> propValues = getChartJSLabels(item, property, typeDisplayerParams);
+                if (propValues.isEmpty()) {
                     unsetValuesCount.put(i, unsetValuesCount.getOrDefault(i, 0) + 1);
                     anyUnset = true;
                 } else {
-                    dataSet.put(propValue, dataSet.getOrDefault(propValue, 0) + 1);
+                    // A work item having several values (e.g. assignees) is counted for each of them.
+                    propValues.forEach(propValue -> dataSet.put(propValue, dataSet.getOrDefault(propValue, 0) + 1));
                 }
             }
             chartJSData.getDatasets().get(i).setLabel(labels.size() > i ? labels.get(i) : "Unlabeled");
@@ -195,14 +199,34 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         // Create the set of all possible labels across all datasets.
         for (int i = 0; i < workItems.size(); i++) {
             for (WorkItem item : workItems.get(i).getItems()) {
-                String propValue = getChartJSLabel(item, property, typeDisplayerParams);
-                if (UNSET.equals(propValue)) {
-                    continue;
-                }
-                chartJSLabels.add(propValue);
+                chartJSLabels.addAll(getChartJSLabels(item, property, typeDisplayerParams));
             }
         }
         return chartJSData;
+    }
+
+    /**
+     * @return the labels under which the work item is counted: one per value of the property (e.g. the names of the
+     *     assignees), empty when the property has no value
+     */
+    private List<String> getChartJSLabels(WorkItem workItem, String property, Map<String, String> typeDisplayerParams)
+    {
+        Object value = workItem.get(property);
+        if (value instanceof Collection) {
+            return ((Collection<?>) value).stream().map(AbstractChartJSDisplayer::getLabel)
+                .filter(StringUtils::isNotEmpty).distinct().collect(Collectors.toList());
+        }
+        String label = getChartJSLabel(workItem, property, typeDisplayerParams);
+        return label.isEmpty() ? List.of() : List.of(label);
+    }
+
+    private static String getLabel(Object value)
+    {
+        // The values of the multi-value properties are linkables (e.g. users) or plain values.
+        if (value instanceof Map) {
+            return Objects.toString(((Map<?, ?>) value).get(Linkable.KEY_VALUE), "");
+        }
+        return Objects.toString(value, "");
     }
 
     private String getChartJSLabel(WorkItem workItem, String property, Map<String, String> typeDisplayerParams)
@@ -235,12 +259,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             return dateFormat.format(date);
         }
 
-        String propValue = workItem.getStringValue(property);
-        if (propValue.isEmpty()) {
-            propValue = UNSET;
-        }
-
-        return propValue;
+        return workItem.getStringValue(property);
     }
 
     private static void applyMetric(String metric, ChartJSData chartJSData, int i, Map<String, Integer> dataSet)
