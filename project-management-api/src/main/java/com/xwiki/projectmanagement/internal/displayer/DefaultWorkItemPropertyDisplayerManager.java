@@ -40,6 +40,7 @@ import org.xwiki.rendering.parser.Parser;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.internal.displayer.property.DatePropertyDisplayer;
+import com.xwiki.projectmanagement.internal.displayer.property.IdentifierPropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.LinkablePropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.ListPropertyDisplayer;
 import com.xwiki.projectmanagement.internal.displayer.property.StringPropertyDisplayer;
@@ -84,8 +85,11 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         if (propertyDisplayer == null && propertyValue instanceof List) {
             propertyDisplayer = getDisplayerForProperty(LIST_DISPLAYER);
         }
+        // A linkable value is displayed as a link whatever the displayer of its property, except by the identifier
+        // displayer, which displays it as a link labelled with the key of the work item.
         if (propertyValue instanceof Map && ((Map<?, ?>) propertyValue).containsKey(Linkable.KEY_VALUE) && ((Map<?,
-            ?>) propertyValue).containsKey(Linkable.KEY_LOCATION))
+            ?>) propertyValue).containsKey(Linkable.KEY_LOCATION)
+            && !(propertyDisplayer instanceof IdentifierPropertyDisplayer))
         {
             propertyDisplayer = getDisplayerForProperty(Linkable.class.getName());
         }
@@ -106,7 +110,8 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
     {
         WorkItemPropertyDisplayer linkableDisplayer = new LinkablePropertyDisplayer(plainParser);
         displayers.put(Linkable.class.getName(), linkableDisplayer);
-        displayers.put(WorkItem.KEY_IDENTIFIER, linkableDisplayer);
+        // The identifier is labelled with the key of the work item when it has one.
+        displayers.put(WorkItem.KEY_IDENTIFIER, new IdentifierPropertyDisplayer(linkableDisplayer));
         displayers.put(WorkItem.KEY_SUMMARY, linkableDisplayer);
         displayers.put(WorkItem.KEY_PROJECT, linkableDisplayer);
         displayers.put(WorkItem.KEY_CREATOR, linkableDisplayer);
