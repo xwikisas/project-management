@@ -1,0 +1,64 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#set ($selectedProperties = [])
+#foreach ($property in $displayer.value)
+  #set ($discard = $selectedProperties.add("$property"))
+#end
+## The macro editor may not give an id to the parameter, so the field is found by a generated one.
+#set ($containerId = "openproject-project-details-properties-$util.generateRandomString(8)")
+<div class="openproject-project-details-properties" id="$escapetool.xml($containerId)">
+  <input type="hidden" name="$escapetool.xml($displayer.parameters.name)"
+    value="$escapetool.xml($stringtool.join($selectedProperties, ','))"/>
+  #foreach ($property in ['ID', 'NAME', 'IDENTIFIER', 'DESCRIPTION', 'STATUS', 'CREATED'])
+    <label style="display:block;">
+      <input type="checkbox" value="$property"#if ($selectedProperties.contains($property)) checked="checked"#end/>
+      $escapetool.xml($services.localization.render(
+        "openproject.openproject-project-details.labels.$property.toLowerCase()"))
+    </label>
+  #end
+</div>
+<script>
+  (function() {
+    var container = document.getElementById($jsontool.serialize($containerId));
+    if (!container) {
+      return;
+    }
+    var hiddenInput = container.querySelector('input[type=hidden]');
+    var checkboxes = container.querySelectorAll('input[type=checkbox]');
+    // Check the properties of the parameter value, which the macro editor may set after displaying the parameter.
+    function syncCheckboxes() {
+      var selected = (hiddenInput.value || '').split(',').map(function(value) { return value.trim(); });
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = selected.indexOf(checkbox.value) !== -1;
+      });
+    }
+    syncCheckboxes();
+    new MutationObserver(syncCheckboxes).observe(hiddenInput, {attributes: true, attributeFilter: ['value']});
+    checkboxes.forEach(function(checkbox) {
+      checkbox.addEventListener('change', function() {
+        var selected = [];
+        container.querySelectorAll('input[type=checkbox]:checked').forEach(function(checked) {
+          selected.push(checked.value);
+        });
+        hiddenInput.value = selected.join(',');
+      });
+    });
+  })();
+</script>

@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -43,9 +44,12 @@ import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.OpenProjectProjectDetailsProperty;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectDetailsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
@@ -83,6 +87,10 @@ public class OpenProjectProjectDetailsMacro
     @Inject
     private ContextualLocalizationManager l10n;
 
+    @Inject
+    @Named("openproject")
+    private WorkItemPropertyDisplayerManager displayerManager;
+
     /**
      * Default constructor.
      */
@@ -100,7 +108,7 @@ public class OpenProjectProjectDetailsMacro
     {
         Project project = fetchProject(apiClient, getProjectId(parameters.getProject()));
         return Collections.singletonList(
-            new GroupBlock(buildProjectDetailsBlocks(project), Collections.emptyMap()));
+            new GroupBlock(buildProjectDetailsBlocks(project, parameters.getProperties()), Collections.emptyMap()));
     }
 
     private Project fetchProject(OpenProjectApiClient apiClient, Integer projectId) throws MacroExecutionException
@@ -113,18 +121,57 @@ public class OpenProjectProjectDetailsMacro
         }
     }
 
-    private List<Block> buildProjectDetailsBlocks(Project project)
+    private List<Block> buildProjectDetailsBlocks(Project project, List<OpenProjectProjectDetailsProperty> properties)
     {
         List<Block> blocks = new ArrayList<>();
-
-        addStringBlock(blocks, ID, String.valueOf(project.getId()));
-        addNameBlock(blocks, project);
-        addStringBlock(blocks, IDENTIFIER, project.getIdentifier());
-        addStringBlock(blocks, DESCRIPTION, project.getDescription());
-        addStringBlock(blocks, STATUS, project.getStatus() != null ? project.getStatus().getValue() : null);
-        addCreatedBlock(blocks, project);
-
+        // The properties are displayed in a fixed order, whatever the order in which they were selected.
+        for (OpenProjectProjectDetailsProperty property : OpenProjectProjectDetailsProperty.values()) {
+            if (properties != null && properties.contains(property)) {
+                addPropertyBlocks(blocks, project, property);
+            }
+        }
         return blocks;
+    }
+
+    private void addPropertyBlocks(List<Block> blocks, Project project, OpenProjectProjectDetailsProperty property)
+    {
+        switch (property) {
+            case ID:
+                addStringBlock(blocks, ID, String.valueOf(project.getId()));
+                break;
+            case NAME:
+                addNameBlock(blocks, project);
+                break;
+            case IDENTIFIER:
+                addStringBlock(blocks, IDENTIFIER, project.getIdentifier());
+                break;
+            case DESCRIPTION:
+                addDescriptionBlocks(blocks, project);
+                break;
+            case STATUS:
+                addStringBlock(blocks, STATUS, project.getStatus() != null ? project.getStatus().getValue() : null);
+                break;
+            case CREATED:
+            default:
+                addCreatedBlock(blocks, project);
+                break;
+        }
+    }
+
+    private void addDescriptionBlocks(List<Block> blocks, Project project)
+    {
+        // The description is displayed from the HTML rendered by OpenProject, which the API client cleaned of the
+        // unsafe content (scripts, event handlers, JavaScript links...), as the work package descriptions, since its
+        // raw Markdown source holds HTML entities and Markdown syntax.
+        String html = project.getDescriptionHtml();
+        if (html == null || html.isBlank()) {
+            return;
+        }
+        List<Block> description = this.displayerManager.displayProperty(WorkItem.KEY_DESCRIPTION, html, Map.of());
+        if (!description.isEmpty()) {
+            blocks.add(buildLabelValueBlock(DESCRIPTION, List.of()));
+            blocks.add(new GroupBlock(description));
+        }
     }
 
     private void addNameBlock(List<Block> blocks, Project project)
