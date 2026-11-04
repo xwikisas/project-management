@@ -96,6 +96,12 @@ public class OpenProjectProjectMembersMacro
             throw new MacroExecutionException(
                 String.format("Failed to retrieve members for project [%s].", project), e);
         }
+        if (members.isEmpty()) {
+            List<Block> warning = getEmptyAnonymousResultWarning(instance, context);
+            if (!warning.isEmpty()) {
+                return warning;
+            }
+        }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
         String viewAllUrl = getProjectURL(serverUrl, project) + "/members";

@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.inject.Named;
 
@@ -81,8 +82,12 @@ class OpenProjectSourceJsonPageTest extends PageTest
     @Named("query")
     private ScriptService queryScriptService;
 
-    @Test
-    void connectionValuesAreEscaped() throws Exception
+    /**
+     * Renders the connection list with a single connection, set up by the given consumer.
+     *
+     * @return the row of the connection
+     */
+    private JSONObject renderConnectionRow(Consumer<BaseObject> connectionSetup) throws Exception
     {
         loadPage(new DocumentReference(WIKI, CODE_SPACE, "OpenProjectConnectionClass"));
         DocumentReference connectionReference =
@@ -90,9 +95,7 @@ class OpenProjectSourceJsonPageTest extends PageTest
         XWikiDocument connectionDocument = new XWikiDocument(connectionReference);
         BaseObject connection = connectionDocument.newXObject(
             new DocumentReference(WIKI, CODE_SPACE, "OpenProjectConnectionClass"), this.context);
-        connection.setStringValue("connectionName", CONNECTION_NAME);
-        connection.setStringValue("serverURL", SERVER_URL);
-        connection.setStringValue("clientId", "<b class=\"injected\">id</b>");
+        connectionSetup.accept(connection);
         this.xwiki.saveDocument(connectionDocument, this.context);
 
         QueryManagerScriptService queryManager = (QueryManagerScriptService) this.queryScriptService;
@@ -110,8 +113,18 @@ class OpenProjectSourceJsonPageTest extends PageTest
         ArgumentCaptor<Object> data = ArgumentCaptor.forClass(Object.class);
         verify(jsonTool).serialize(data.capture());
         JSONObject json = JSONObject.fromObject(new JSONTool().serialize(data.getValue()));
+        return json.getJSONArray("rows").getJSONObject(0);
+    }
 
-        JSONObject row = json.getJSONArray("rows").getJSONObject(0);
+    @Test
+    void connectionValuesAreEscaped() throws Exception
+    {
+        JSONObject row = renderConnectionRow(connection -> {
+            connection.setStringValue("connectionName", CONNECTION_NAME);
+            connection.setStringValue("serverURL", SERVER_URL);
+            connection.setStringValue("clientId", "<b class=\"injected\">id</b>");
+        });
+
         Document connectionName = Jsoup.parseBodyFragment(row.getString("connectionName"));
         assertEquals(CONNECTION_NAME, connectionName.text());
 
@@ -128,6 +141,28 @@ class OpenProjectSourceJsonPageTest extends PageTest
         assertEquals(CONNECTION_NAME, editButton.attr("data-connection-name"));
         assertEquals(SERVER_URL, editButton.attr("data-server-url"));
         assertFalse(editButton.hasAttr("onfocus"), actions.html());
+        // A connection without access mode is a connection where the users connect their OpenProject account.
+        assertEquals("USER_ACCOUNTS", editButton.attr("data-access-mode"));
         assertEquals(CONNECTION_NAME, actions.selectFirst(".delete-button").attr("data-connection-name"));
+        // The current user hasn't authorized the connection.
+        assertEquals(1, actions.select(".op-auth-button").size(), actions.html());
+    }
+
+    @Test
+    void connectionShowingOnlyPublicDataHasNoOAuthApplication() throws Exception
+    {
+        JSONObject row = renderConnectionRow(connection -> {
+            connection.setStringValue("connectionName", "public");
+            connection.setStringValue("serverURL", "https://op.example.org");
+            connection.setStringValue("clientId", "obsolete client id");
+            connection.setStringValue("accessMode", "PUBLIC_DATA");
+        });
+
+        Document actions = Jsoup.parseBodyFragment(row.getString("actions"));
+        assertEquals("PUBLIC_DATA", actions.selectFirst(".edit-button").attr("data-access-mode"));
+        // Nothing to authorize: everybody calls OpenProject anonymously.
+        assertTrue(actions.select(".op-auth-button").isEmpty(), actions.html());
+        assertFalse(row.getString("clientId").contains("obsolete client id"), row.getString("clientId"));
+        assertFalse(row.getString("clientSecret").contains("•"), row.getString("clientSecret"));
     }
 }

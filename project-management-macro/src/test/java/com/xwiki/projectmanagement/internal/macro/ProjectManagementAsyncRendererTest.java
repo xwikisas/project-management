@@ -57,6 +57,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -71,6 +72,7 @@ class ProjectManagementAsyncRendererTest
 
     private static final String ASYNC_ERROR_CLASS = "proj-manag-async-error";
 
+    // Fails the tests that log a warning or an error: the failures of the displayers are displayed, not logged.
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
@@ -105,6 +107,32 @@ class ProjectManagementAsyncRendererTest
     }
 
     @Test
+    void executeDisplaysTheBlocksOfTheParametersProcessorInsteadOfTheDisplayer() throws Exception
+    {
+        Block message = new WordBlock("message");
+        this.renderer.initialize(this.displayer, this.parameters, CONTENT, new MacroTransformationContext(),
+            (params, context) -> List.of(message));
+
+        assertEquals(List.of(message), this.renderer.execute(true, false).getChildren());
+        verifyNoInteractions(this.displayer);
+    }
+
+    @Test
+    void executeRunsTheDisplayerWhenTheParametersProcessorReturnsNoBlock() throws Exception
+    {
+        Block block = new WordBlock("item");
+        when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
+        this.renderer.initialize(this.displayer, this.parameters, CONTENT, new MacroTransformationContext(),
+            (params, context) -> {
+                ((ProjectManagementMacroParameters) params).setSourceParameters("processed");
+                return List.of();
+            });
+
+        assertEquals(List.of(block), this.renderer.execute(true, false).getChildren());
+        assertEquals("processed", this.parameters.getSourceParameters());
+    }
+
+    @Test
     void executeAsyncWhenTheDisplayerFails() throws Exception
     {
         MacroExecutionException exception =
@@ -121,8 +149,6 @@ class ProjectManagementAsyncRendererTest
         assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))), result);
         verify(this.jsrx).use("js/projectmanagement/asyncError.js");
 
-        assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
-        assertEquals("Failed", this.logCapture.getLogEvent(0).getThrowableProxy().getMessage());
     }
 
     @Test
@@ -137,7 +163,6 @@ class ProjectManagementAsyncRendererTest
         assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))),
             this.renderer.execute(true, false).getChildren());
 
-        assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
     }
 
     @Test
@@ -163,7 +188,6 @@ class ProjectManagementAsyncRendererTest
         assertEquals(Map.of("instance", "test"), marker.getParameters());
         assertEquals(List.of(new FormatBlock(List.of(errorBlock), Format.NONE, Map.of("class", ASYNC_ERROR_CLASS))),
             marker.getChildren());
-        assertEquals("Failed to display the work items.", this.logCapture.getMessage(0));
     }
 
     @Test

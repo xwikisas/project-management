@@ -55,7 +55,6 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
@@ -68,6 +67,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -307,13 +307,11 @@ class OpenProjectClientTest
         when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
         doReturn("").when(this.openProjectApiClient).getQueryResultsUrl(QUERY_ID);
 
-        PaginatedResult<WorkItem> result =
-            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+        List<LiveDataQuery.Filter> filters = List.of(getSummaryFilter());
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, filters, List.of()));
 
-        assertEquals(0, result.getItems().size());
-        assertEquals(0, result.getTotalItems());
-        assertEquals("Failed to retrieve work packages: The saved query [27] has no results link.",
-            this.logCapture.getMessage(0));
+        assertEquals("The saved query [27] has no results link.", exception.getMessage());
     }
 
     @Test
@@ -323,13 +321,11 @@ class OpenProjectClientTest
         when(this.executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL))
             .thenReturn("/api/v3/work_packages?filters=%5B%7Bnot-json");
 
-        PaginatedResult<WorkItem> result =
-            this.openProjectClient.getWorkItems(0, 10, List.of(getSummaryFilter()), List.of());
+        List<LiveDataQuery.Filter> filters = List.of(getSummaryFilter());
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, filters, List.of()));
 
-        assertEquals(0, result.getItems().size());
-        assertEquals(0, result.getTotalItems());
-        assertEquals("Failed to retrieve work packages: Failed to read the filters of the saved query",
-            this.logCapture.getMessage(0));
+        assertEquals("Failed to read the filters of the saved query", exception.getMessage());
     }
 
     @Test
@@ -441,11 +437,14 @@ class OpenProjectClientTest
             exception.getCause().getMessage());
     }
 
-    @Test
-    void getWorkItemsLogsBadRequestAndReturnsNothing() throws ProjectManagementException
+    @ParameterizedTest
+    @ValueSource(ints = { 400, 404, 500 })
+    void getWorkItemsReturnsNothingWhenTheRequestOfLiveDataFails(int statusCode) throws ProjectManagementException
     {
+        // Live Data can't display the failure, and its viewers can combine filters and sorts that OpenProject rejects.
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
         when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages");
-        doThrow(new WorkPackageRetrievalBadRequestException("Invalid filter")).when(this.openProjectApiClient)
+        doThrow(new WorkItemRetrievalException("Invalid filter", statusCode)).when(this.openProjectApiClient)
             .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(1, 10, List.of(), List.of());
@@ -453,6 +452,41 @@ class OpenProjectClientTest
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
         assertEquals("Failed to retrieve work packages: Invalid filter", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getWorkItemsReturnsNothingWhenOpenProjectFailsForLiveData() throws ProjectManagementException
+    {
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
+        doThrow(new ProjectManagementException("Server error")).when(this.openProjectApiClient)
+            .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        assertEquals(0, this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getTotalItems());
+        assertEquals("Failed to retrieve work packages: Server error", this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 401, 403 })
+    void getWorkItemsReportsTheRejectionOfTheUserToLiveData(int statusCode) throws ProjectManagementException
+    {
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
+        WorkItemRetrievalException failure = new WorkItemRetrievalException("Rejected", statusCode);
+        doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        assertSame(failure, assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 400, 404, 500 })
+    void getWorkItemsReportsTheFailuresOutsideLiveData(int statusCode) throws ProjectManagementException
+    {
+        // E.g. a chart, whose filters are those of the macro: an empty result would hide the failure.
+        WorkItemRetrievalException failure = new WorkItemRetrievalException("Failed", statusCode);
+        doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        assertSame(failure, assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
     }
 
     @Test
@@ -499,9 +533,10 @@ class OpenProjectClientTest
     {
         when(this.openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConfigured());
 
-        assertEquals(0, this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getItems().size());
-        assertEquals("Failed to retrieve work packages: No configuration for instance [] was found.",
-            this.logCapture.getMessage(0));
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+
+        assertEquals("No configuration for instance [] was found.", exception.getMessage());
     }
 
     @Test

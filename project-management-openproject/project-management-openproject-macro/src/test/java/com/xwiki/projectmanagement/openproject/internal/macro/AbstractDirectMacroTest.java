@@ -19,21 +19,28 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.util.List;
+
 import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.xwiki.configuration.ConfigurationSource;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
 import static org.mockito.Mockito.when;
 
@@ -62,6 +69,9 @@ abstract class AbstractDirectMacroTest
     @Named("wiki")
     protected ConfigurationSource wikiConfigSource;
 
+    @MockComponent
+    protected UserTokenChecker userTokenChecker;
+
     protected final MacroTransformationContext context = new MacroTransformationContext();
 
     @Mock
@@ -75,5 +85,23 @@ abstract class AbstractDirectMacroTest
             .thenReturn(new OpenProjectConnection("main", SERVER_URL, "id", "secret", "instanceId"));
         when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy")).thenReturn("yyyy-MM-dd");
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
+    }
+
+    /**
+     * Make the current user call OpenProject anonymously through a connection with the given access mode.
+     *
+     * @param accessMode the access mode of the connection
+     * @return the warning asking the user to connect their OpenProject account
+     */
+    protected List<Block> useAnonymousAccess(OpenProjectAccessMode accessMode)
+    {
+        OpenProjectConnection connection = new OpenProjectConnection("main", SERVER_URL, "id", "secret", "instanceId");
+        connection.setAccessMode(accessMode);
+        when(this.openProjectConfiguration.getConnection("main")).thenReturn(connection);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
+        List<Block> warning = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.ANONYMOUS, true, this.context))
+            .thenReturn(warning);
+        return warning;
     }
 }

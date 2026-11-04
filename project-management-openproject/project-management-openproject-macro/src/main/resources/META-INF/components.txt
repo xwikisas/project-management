@@ -1,3 +1,4 @@
+com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector
 com.xwiki.projectmanagement.openproject.internal.LicenseChecker
 com.xwiki.projectmanagement.openproject.internal.OpenProjectCalendarEventProvider
 com.xwiki.projectmanagement.openproject.internal.SystemClockProvider

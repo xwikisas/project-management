@@ -35,6 +35,16 @@ import org.xwiki.component.annotation.Role;
 public interface ProjectManagementClientExecutionContext
 {
     /**
+     * The key of the context value that is {@link Boolean#TRUE} when the work items are requested by Live Data, whose
+     * viewers can filter and sort them, and which can't display why a request failed. A client can then return no work
+     * item for a request it can't answer (e.g. an unsupported combination of filters), while it reports the failure to
+     * the other callers (e.g. a chart, which displays it).
+     *
+     * @since 1.4.0
+     */
+    String LIVE_DATA = "liveData";
+
+    /**
      * @return a map containing various information that can be used by the client. Returns an empty map if the context
      *     was not set.
      */

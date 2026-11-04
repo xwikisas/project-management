@@ -37,6 +37,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
@@ -44,6 +45,7 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -196,6 +198,24 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
 
         assertEquals("No time entries found.\nView time entries\n", text(result));
         assertEquals(List.of("View time entries -> " + SERVER_URL + "/time_entries"), links(result));
+    }
+
+    @Test
+    void asksAnonymousUsersToConnectTheirAccountWhenNoTimeEntryIsVisible() throws Exception
+    {
+        // OpenProject usually hides the time entries from anonymous users, without failing.
+        List<Block> warning = useAnonymousAccess(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+
+        assertSame(warning, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void displaysNoTimeEntryToAnonymousUsersWhenTheyCantConnectTheirAccount() throws Exception
+    {
+        useAnonymousAccess(OpenProjectAccessMode.PUBLIC_DATA);
+
+        assertEquals("No time entries found.\nView time entries\n",
+            text(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test

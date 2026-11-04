@@ -20,7 +20,7 @@
 #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
 #set ($discard = $xwiki.jsrx.use('openproject/js/createWorkPackage.js'))
 #template("create_work_package_helper_macros.vm")
-#set ($connectionOptions = $services.openproject.getConnectionOptions())
+#setUserAccountConnectionOptions()
 <div class="withLock xform">
   #connectionInput('op-connection' $connectionOptions)
   #incorrectToken('incorrect-token-create-work-package')

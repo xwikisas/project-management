@@ -17,6 +17,17 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+## Sets $connectionOptions to the options of the connections to which the users can connect their OpenProject account:
+## creating a work package requires it, so the connections that only show public data are left out.
+#macro (setUserAccountConnectionOptions)
+  #set ($userAccountConnections = $services.openproject.userAccountConnections)
+  #set ($connectionOptions = [])
+  #foreach ($option in $services.openproject.getConnectionOptions())
+    #if ($userAccountConnections.contains($option.value))
+      #set ($discard = $connectionOptions.add($option))
+    #end
+  #end
+#end
 #macro (connectionInput $selectConnectionId $connectionOptions)
 <div class="form-group">
   #if ($connectionOptions.size() == 0)

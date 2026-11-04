@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +34,7 @@ import javax.inject.Singleton;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -43,9 +45,11 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -93,6 +97,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private OpenProjectIdentifierResolver identifierResolver;
 
     @Inject
+    private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @Inject
+    private ContextualLocalizationManager l10n;
+
+    @Inject
     private Logger logger;
 
     /**
@@ -131,25 +141,54 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     }
 
     @Override
-    public void asyncProcessParameters(OpenProjectMacroParameters parameters)
+    public List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters,
+        MacroTransformationContext context)
     {
         String queryId = identifierResolver.getStandaloneQueryId(parameters.getIdentifier());
         if (queryId == null) {
-            return;
+            return Collections.emptyList();
         }
 
         OpenProjectApiClient apiClient = openProjectAccess.resolve(parameters.getInstance()).getClient();
         if (apiClient == null) {
-            return;
+            return Collections.emptyList();
         }
 
         try {
             addToSourceParams(parameters, OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL,
                 identifierResolver.getSavedQueryResultsUrl(apiClient, queryId));
         } catch (ProjectManagementException e) {
+            // OpenProject answers 404 for the saved queries that the user isn't allowed to see too: an empty list of
+            // work packages would wrongly mean that the query matches none.
+            if (isNotFoundOrForbidden(e)) {
+                logger.debug("The saved query [{}] of the instance [{}] is not available. Cause: [{}].", queryId,
+                    parameters.getInstance(), ExceptionUtils.getRootCauseMessage(e));
+                return userTokenChecker.getWarningBlock(parameters.getInstance(),
+                    l10n.getTranslation("openproject.savedQuery.unavailable").render(queryId), context.isInline());
+            }
             logger.warn("Failed to retrieve the saved query [{}] of the instance [{}]. Cause: [{}].", queryId,
                 parameters.getInstance(), ExceptionUtils.getRootCauseMessage(e));
         }
+        return Collections.emptyList();
+    }
+
+    private static boolean isNotFoundOrForbidden(ProjectManagementException e)
+    {
+        Integer statusCode = e instanceof WorkItemRetrievalException ? ((WorkItemRetrievalException) e).getStatusCode()
+            : null;
+        return statusCode != null
+            && (statusCode == HttpURLConnection.HTTP_NOT_FOUND || statusCode == HttpURLConnection.HTTP_FORBIDDEN);
+    }
+
+    /**
+     * @param parameters the parameters of the macro
+     * @return {@code true} if the displayed work packages depend on the OpenProject account of the current user, which
+     *     anonymous requests can't use: the work packages are filtered on the current user
+     */
+    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters)
+    {
+        return this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters())
+            || this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier(parameters.getIdentifier());
     }
 
     @Override
@@ -167,13 +206,13 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
+        List<Block> warningBlock =
+            userTokenChecker.getWarningBlock(instanceToUse, requiresUserAccount(parameters), context);
 
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
-        List<Block> result = new ArrayList<>(userTokenChecker.getConnectHintBlock(instanceToUse, context));
-        result.addAll(super.execute(parameters, content, context));
+        List<Block> result = new ArrayList<>(super.execute(parameters, content, context));
         Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
         return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
             : Collections.singletonList(new GroupBlock(result, params));

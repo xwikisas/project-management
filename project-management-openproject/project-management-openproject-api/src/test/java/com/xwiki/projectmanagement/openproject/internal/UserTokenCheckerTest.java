@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Provider;
 
@@ -35,7 +36,9 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -45,6 +48,9 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
@@ -75,6 +81,9 @@ class UserTokenCheckerTest
     private OpenProjectAccess openProjectAccess;
 
     @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @MockComponent
     private CSRFToken csrfToken;
 
     @MockComponent
@@ -93,7 +102,13 @@ class UserTokenCheckerTest
 
     private final Block linkLabel = new WordBlock("connect");
 
-    private final Block publicDataHint = new WordBlock("public data");
+    private final Block accountRequiredHint = new WordBlock("account required");
+
+    private final Block accountRequiredLinkLabel = new WordBlock("connect to see it");
+
+    private final Block accountUnavailableHint = new WordBlock("account unavailable");
+
+    private final Block publicDataUnavailableHint = new WordBlock("public data unavailable");
 
     @BeforeEach
     void setUp()
@@ -119,12 +134,25 @@ class UserTokenCheckerTest
         Translation linkTranslation = mock(Translation.class);
         when(linkTranslation.render()).thenReturn(this.linkLabel);
         when(this.l10n.getTranslation("openproject.oauth.notauthorized.link")).thenReturn(linkTranslation);
-        Translation publicDataHintTranslation = mock(Translation.class);
-        when(publicDataHintTranslation.render()).thenReturn(this.publicDataHint);
-        when(this.l10n.getTranslation("openproject.oauth.publicdata.hint")).thenReturn(publicDataHintTranslation);
-        Translation publicDataLinkTranslation = mock(Translation.class);
-        when(publicDataLinkTranslation.render()).thenReturn(this.linkLabel);
-        when(this.l10n.getTranslation("openproject.oauth.publicdata.link")).thenReturn(publicDataLinkTranslation);
+        mockTranslation("openproject.oauth.accountrequired.hint", this.accountRequiredHint);
+        mockTranslation("openproject.oauth.accountrequired.link", this.accountRequiredLinkLabel);
+        mockTranslation("openproject.oauth.accountunavailable.hint", this.accountUnavailableHint);
+        mockTranslation("openproject.oauth.publicdataunavailable.hint", this.publicDataUnavailableHint);
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.USER_ACCOUNTS);
+    }
+
+    private void mockTranslation(String key, Block rendered)
+    {
+        Translation translation = mock(Translation.class);
+        when(translation.render()).thenReturn(rendered);
+        when(this.l10n.getTranslation(key)).thenReturn(translation);
+    }
+
+    private void mockConnection(String name, OpenProjectAccessMode accessMode)
+    {
+        OpenProjectConnection connection = new OpenProjectConnection(name, "https://op.example.org", null, null, null);
+        connection.setAccessMode(accessMode);
+        when(this.openProjectConfiguration.getConnection(name)).thenReturn(connection);
     }
 
     @Test
@@ -146,9 +174,10 @@ class UserTokenCheckerTest
         assertEquals(1, result.size());
         GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
         assertEquals("box warningmessage", group.getParameter("class"));
-        assertEquals(2, group.getChildren().size());
+        assertEquals(3, group.getChildren().size());
         assertEquals(this.hint, group.getChildren().get(0));
-        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(1));
+        assertInstanceOf(SpaceBlock.class, group.getChildren().get(1));
+        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(2));
         assertEquals("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?connectionName=main"
             + "&redirectUrl=%2Fxwiki%2Fbin%2Fview%2FSome%2FPage&token=csrf+token", link.getReference().getReference());
         assertEquals(List.of(this.linkLabel), link.getChildren());
@@ -157,10 +186,13 @@ class UserTokenCheckerTest
     @Test
     void connectLinkEncodesTheConnectionName()
     {
-        List<Block> result = this.checker.getWarningBlock("a&redirectUrl=https://example.org/#",
-            OpenProjectAccessStatus.NOT_CONNECTED, this.macroContext);
+        String connectionName = "a&redirectUrl=https://example.org/#";
+        mockConnection(connectionName, OpenProjectAccessMode.USER_ACCOUNTS);
 
-        LinkBlock link = (LinkBlock) result.get(0).getChildren().get(1);
+        List<Block> result = this.checker.getWarningBlock(connectionName,
+            OpenProjectAccessStatus.NOT_CONNECTED, false, this.macroContext);
+
+        LinkBlock link = (LinkBlock) result.get(0).getChildren().get(2);
         assertEquals("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection"
             + "?connectionName=a%26redirectUrl%3Dhttps%3A%2F%2Fexample.org%2F%23"
             + "&redirectUrl=%2Fxwiki%2Fbin%2Fview%2FSome%2FPage&token=csrf+token", link.getReference().getReference());
@@ -172,19 +204,31 @@ class UserTokenCheckerTest
         when(this.xcontext.getUserReference()).thenReturn(null);
 
         List<Block> result =
-            this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED, this.macroContext);
+            this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED, false,
+                this.macroContext);
 
         GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
         assertEquals(List.of(this.hint), group.getChildren());
     }
 
     @Test
-    void warningWhenTheConnectionIsNotConfigured()
+    void warningWithoutConnectLinkWhenTheConnectionIsNotConfigured()
     {
         List<Block> result =
-            this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONFIGURED, this.macroContext);
+            this.checker.getWarningBlock("unknown", OpenProjectAccessStatus.NOT_CONFIGURED, false, this.macroContext);
 
-        assertEquals(1, result.size());
+        assertEquals(List.of(this.hint), result.get(0).getChildren());
+    }
+
+    @Test
+    void publicDataUnavailableWarningWhenOpenProjectRejectsAnonymousRequests()
+    {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA);
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED,
+            false, this.macroContext);
+
+        assertEquals(List.of(this.publicDataUnavailableHint), result.get(0).getChildren());
     }
 
     @Test
@@ -193,7 +237,8 @@ class UserTokenCheckerTest
         when(this.macroContext.isInline()).thenReturn(true);
 
         List<Block> result =
-            this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED, this.macroContext);
+            this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED, false,
+                this.macroContext);
 
         FormatBlock format = assertInstanceOf(FormatBlock.class, result.get(0));
         assertEquals("box warningmessage", format.getParameter("class"));
@@ -202,39 +247,105 @@ class UserTokenCheckerTest
     @Test
     void noWarningWithAnonymousAccess()
     {
-        assertTrue(this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS, this.macroContext)
-            .isEmpty());
-    }
-
-    @Test
-    void connectHintWithAnonymousAccess()
-    {
         when(this.openProjectAccess.resolve(CONNECTION_NAME))
             .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
 
-        List<Block> result = this.checker.getConnectHintBlock(CONNECTION_NAME, this.macroContext);
+        assertTrue(this.checker.getWarningBlock(CONNECTION_NAME, this.macroContext).isEmpty());
+    }
+
+    @Test
+    void noWarningWhenAuthenticatedAndTheAccountIsRequired()
+    {
+        assertTrue(this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.AUTHENTICATED, true,
+            this.macroContext).isEmpty());
+    }
+
+    @Test
+    void accountRequiredWarningWithAnonymousAccess()
+    {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, true, this.macroContext);
 
         GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
-        assertEquals("box infomessage", group.getParameter("class"));
-        assertEquals(this.publicDataHint, group.getChildren().get(0));
-        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(1));
+        assertEquals("box warningmessage", group.getParameter("class"));
+        assertEquals(this.accountRequiredHint, group.getChildren().get(0));
+        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(2));
         assertTrue(link.getReference().getReference()
             .startsWith("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?connectionName=main"));
+        assertEquals(List.of(this.accountRequiredLinkLabel), link.getChildren());
     }
 
     @Test
-    void noConnectHintForGuests()
+    void accountRequiredWarningWithoutConnectLinkForGuests()
     {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
         when(this.xcontext.getUserReference()).thenReturn(null);
 
-        assertTrue(this.checker.getConnectHintBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS,
-            this.macroContext).isEmpty());
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS, true,
+            this.macroContext);
+
+        assertEquals(List.of(this.accountRequiredHint), result.get(0).getChildren());
     }
 
     @Test
-    void noConnectHintWhenAuthenticated()
+    void accountUnavailableWarningWhenTheConnectionOnlyShowsPublicData()
     {
-        assertTrue(this.checker.getConnectHintBlock(CONNECTION_NAME, OpenProjectAccessStatus.AUTHENTICATED,
-            this.macroContext).isEmpty());
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA);
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.ANONYMOUS, true,
+            this.macroContext);
+
+        GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
+        assertEquals("box warningmessage", group.getParameter("class"));
+        // The users can't connect their OpenProject account: no link.
+        assertEquals(List.of(this.accountUnavailableHint), group.getChildren());
+    }
+
+    @Test
+    void messageWarningWithConnectLinkWithAnonymousAccess()
+    {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+        Block message = new WordBlock("not found");
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, message, false);
+
+        GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
+        assertEquals("box warningmessage", group.getParameter("class"));
+        assertEquals(message, group.getChildren().get(0));
+        LinkBlock link = assertInstanceOf(LinkBlock.class, group.getChildren().get(2));
+        assertEquals(List.of(this.accountRequiredLinkLabel), link.getChildren());
+    }
+
+    @Test
+    void messageWarningWithoutConnectLinkWhenAuthenticated()
+    {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(mock(OpenProjectApiClient.class)));
+        Block message = new WordBlock("not found");
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, message, true);
+
+        // Displayed inline, without link: the account of the user can't see more.
+        assertEquals(List.of(new FormatBlock(List.of(message), Format.NONE, Map.of("class", "box warningmessage"))),
+            result);
+    }
+
+    @Test
+    void messageWarningWithoutConnectLinkWhenTheConnectionOnlyShowsPublicData()
+    {
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA);
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+        Block message = new WordBlock("not found");
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, message, false);
+
+        assertEquals(List.of(new GroupBlock(List.of(message), Map.of("class", "box warningmessage"))), result);
     }
 }

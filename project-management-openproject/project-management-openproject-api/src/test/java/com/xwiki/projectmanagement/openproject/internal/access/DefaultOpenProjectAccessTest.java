@@ -36,6 +36,9 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.contrib.oidc.OAuth2Exception;
+import org.xwiki.contrib.oidc.OAuth2TokenStore;
+import org.xwiki.contrib.oidc.auth.store.OIDCClientConfiguration;
+import org.xwiki.contrib.oidc.auth.store.OIDCClientConfigurationStore;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.test.LogLevel;
@@ -45,18 +48,23 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -96,6 +104,12 @@ class DefaultOpenProjectAccessTest
 
     @MockComponent
     private Provider<XWikiContext> contextProvider;
+
+    @MockComponent
+    private OIDCClientConfigurationStore oidcClientConfigurationStore;
+
+    @MockComponent
+    private OAuth2TokenStore tokenStore;
 
     @Mock
     private XWikiContext xcontext;
@@ -215,7 +229,7 @@ class DefaultOpenProjectAccessTest
     @Test
     void resolveAnonymousForGuests()
     {
-        this.connection.setShowPublicData(true);
+        this.connection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
         when(this.xcontext.getUserReference()).thenReturn(null);
         when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(this.anonymousClient);
 
@@ -229,7 +243,7 @@ class DefaultOpenProjectAccessTest
     @Test
     void resolveAnonymousForUsersWithoutToken() throws Exception
     {
-        this.connection.setShowPublicData(true);
+        this.connection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
         when(this.oauth2Client.getAccessToken(CONNECTION_NAME)).thenReturn(null);
         when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(this.anonymousClient);
 
@@ -242,7 +256,7 @@ class DefaultOpenProjectAccessTest
     @Test
     void resolveNotConnectedWhenOpenProjectRejectsAnonymousRequests()
     {
-        this.connection.setShowPublicData(true);
+        this.connection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
         when(this.xcontext.getUserReference()).thenReturn(null);
         when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(null);
 
@@ -255,7 +269,7 @@ class DefaultOpenProjectAccessTest
     @Test
     void resolveAuthenticatedEvenWhenShowingPublicData()
     {
-        this.connection.setShowPublicData(true);
+        this.connection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
 
         OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
 
@@ -288,5 +302,60 @@ class DefaultOpenProjectAccessTest
     {
         assertNull(this.access.getAnonymousClient("unknown"));
         verifyNoInteractions(this.openProjectApiClientFactory);
+    }
+
+    @Test
+    void resolveAnonymousIgnoringTheTokenWhenOnlyShowingPublicData() throws Exception
+    {
+        this.connection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA);
+        when(this.publicDataClientProvider.getClient(this.connection)).thenReturn(this.anonymousClient);
+
+        OpenProjectAccessResult result = this.access.resolve(CONNECTION_NAME);
+
+        assertEquals(OpenProjectAccessStatus.ANONYMOUS, result.getStatus());
+        assertSame(this.anonymousClient, result.getClient());
+        verifyNoInteractions(this.oauth2Client);
+    }
+
+    @Test
+    void disconnectDeletesTheToken() throws Exception
+    {
+        OIDCClientConfiguration configuration = mock(OIDCClientConfiguration.class);
+        when(this.oidcClientConfigurationStore.getOIDCClientConfiguration(CONNECTION_NAME)).thenReturn(configuration);
+
+        this.access.disconnect(CONNECTION_NAME);
+
+        verify(this.tokenStore).deleteToken(configuration);
+    }
+
+    @Test
+    void disconnectWithoutOAuthClient() throws Exception
+    {
+        this.access.disconnect(CONNECTION_NAME);
+
+        verifyNoInteractions(this.tokenStore);
+    }
+
+    @Test
+    void disconnectGuest() throws Exception
+    {
+        when(this.xcontext.getUserReference()).thenReturn(null);
+
+        this.access.disconnect(CONNECTION_NAME);
+
+        verifyNoInteractions(this.oidcClientConfigurationStore, this.tokenStore);
+    }
+
+    @Test
+    void disconnectWhenTheTokenCantBeDeleted() throws Exception
+    {
+        OIDCClientConfiguration configuration = mock(OIDCClientConfiguration.class);
+        when(this.oidcClientConfigurationStore.getOIDCClientConfiguration(CONNECTION_NAME)).thenReturn(configuration);
+        doThrow(new OAuth2Exception("Store error")).when(this.tokenStore).deleteToken(configuration);
+
+        ProjectManagementException exception =
+            assertThrows(ProjectManagementException.class, () -> this.access.disconnect(CONNECTION_NAME));
+
+        assertEquals("Failed to disconnect from the OpenProject connection [main].", exception.getMessage());
     }
 }

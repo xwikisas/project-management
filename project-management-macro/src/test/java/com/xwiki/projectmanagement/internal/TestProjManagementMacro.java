@@ -19,9 +19,13 @@
  */
 package com.xwiki.projectmanagement.internal;
 
+import java.util.List;
+
 import javax.inject.Named;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
@@ -52,8 +56,10 @@ public class TestProjManagementMacro extends AbstractProjectManagementMacro<Proj
     }
 
     @Override
-    public void asyncProcessParameters(ProjectManagementMacroParameters parameters)
+    public List<Block> asyncProcessParameters(ProjectManagementMacroParameters parameters,
+        MacroTransformationContext context)
     {
+        return List.of();
     }
 
     @Override

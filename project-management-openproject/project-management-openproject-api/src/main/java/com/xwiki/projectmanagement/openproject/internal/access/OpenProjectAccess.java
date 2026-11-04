@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal.access;
 
 import org.xwiki.component.annotation.Role;
 
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 
 /**
@@ -49,4 +50,13 @@ public interface OpenProjectAccess
      *     with this name is configured
      */
     OpenProjectApiClient getAnonymousClient(String connectionName);
+
+    /**
+     * Disconnects the OpenProject account of the current user from the given connection, by deleting their OAuth
+     * token. Does nothing for guests or when the user isn't connected.
+     *
+     * @param connectionName the name of an OpenProject connection configured in the administration
+     * @throws ProjectManagementException if the token can't be deleted
+     */
+    void disconnect(String connectionName) throws ProjectManagementException;
 }

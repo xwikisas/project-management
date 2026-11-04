@@ -119,22 +119,19 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
-     * Enable or disable showing the public data of a connection to the users without an OpenProject account, and wait
-     * for the connection to be saved.
+     * Change the access mode of a connection, and wait for the connection to be saved.
      *
      * @param name the name of the connection
-     * @param showPublicData {@code true} to show the public data of the connection to these users
+     * @param accessMode the name of the access mode: {@code USER_ACCOUNTS}, {@code PUBLIC_DATA_AND_USER_ACCOUNTS} or
+     *     {@code PUBLIC_DATA}
      * @since 1.4.0
      */
-    public void setShowPublicData(String name, boolean showPublicData)
+    public void setAccessMode(String name, String accessMode)
     {
         clickConnectionAction(name, EDIT_CONNECTION_ACTION);
         getDriver().waitUntilElementIsVisible(CONNECTION_MODAL);
         WebElement modal = getDriver().findElement(CONNECTION_MODAL);
-        WebElement checkbox = modal.findElement(By.id("show-public-data"));
-        if (checkbox.isSelected() != showPublicData) {
-            checkbox.click();
-        }
+        modal.findElement(By.cssSelector(String.format("input[name='access-mode'][value='%s']", accessMode))).click();
         modal.findElement(By.className("btn-primary")).click();
         // The modal is closed once the connection is saved.
         getDriver().waitUntilElementDisappears(CONNECTION_MODAL);

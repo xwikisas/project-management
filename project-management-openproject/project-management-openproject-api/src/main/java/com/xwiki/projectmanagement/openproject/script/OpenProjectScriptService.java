@@ -155,6 +155,52 @@ public class OpenProjectScriptService implements ScriptService
     }
 
     /**
+     * @param instanceName the name of the OpenProject instance configuration
+     * @return {@code true} if the current user can read the data of the given connection, either with their own
+     *     OpenProject account or anonymously, when the connection shows its public data
+     * @since 1.4.0
+     */
+    public boolean canReadData(String instanceName)
+    {
+        OpenProjectAccessStatus status = openProjectAccess.resolve(instanceName).getStatus();
+        return status == OpenProjectAccessStatus.AUTHENTICATED || status == OpenProjectAccessStatus.ANONYMOUS;
+    }
+
+    /**
+     * @return the names of the configured OpenProject connections to which the users can connect their OpenProject
+     *     account, i.e. whose access mode doesn't only show public data
+     * @since 1.4.0
+     */
+    public List<String> getUserAccountConnections()
+    {
+        List<String> names = new ArrayList<>();
+        for (OpenProjectConnection connection : openProjectConfiguration.getOpenProjectConnections()) {
+            if (connection.getAccessMode().allowsUserAccounts()) {
+                names.add(connection.getConnectionName());
+            }
+        }
+        return names;
+    }
+
+    /**
+     * Disconnects the OpenProject account of the current user from the given connection. The caller is responsible
+     * for checking the CSRF token of the request.
+     *
+     * @param instanceName the name of the OpenProject instance configuration
+     * @return {@code true} if the account was disconnected, {@code false} if it failed
+     * @since 1.4.0
+     */
+    public boolean disconnect(String instanceName)
+    {
+        try {
+            openProjectAccess.disconnect(instanceName);
+            return true;
+        } catch (ProjectManagementException e) {
+            return false;
+        }
+    }
+
+    /**
      * @return the option representing the "use the dashboard-selected project" choice.
      * @since 1.2
      */

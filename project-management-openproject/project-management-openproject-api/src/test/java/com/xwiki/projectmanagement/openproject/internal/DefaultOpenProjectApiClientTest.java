@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -488,6 +489,51 @@ class DefaultOpenProjectApiClientTest
         assertThrows(WorkItemRetrievalException.class, () -> {
             openProjectApiClient.getWorkPackagesFormResponse("{}");
         });
+    }
+
+    @Test
+    void invalidRequestHasTheMessageOfTheOpenProjectErrorAsRootCause()
+    {
+        when(this.response.statusCode()).thenReturn(400);
+        String body = "{\"_type\":\"Error\",\"errorIdentifier\":\"urn:openproject-org:api:v3:errors:InvalidQuery\","
+            + "\"message\":\"Assignee filter has invalid values.\"}";
+        when(this.response.body()).thenReturn(body);
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+
+        // The users see the message of the root cause, the details keep the whole response.
+        assertEquals(String.format("The request to the OpenProject API was invalid. [%s]", body),
+            exception.getMessage());
+        assertEquals(400, exception.getStatusCode());
+        assertEquals("OpenProject rejected the request: Assignee filter has invalid values.",
+            ExceptionUtils.getRootCause(exception).getMessage());
+    }
+
+    @Test
+    void serverErrorHasTheMessageOfTheOpenProjectErrorAsRootCause()
+    {
+        when(this.response.statusCode()).thenReturn(500);
+        when(this.response.body()).thenReturn("{\"_type\":\"Error\",\"message\":\"An internal error has occurred.\"}");
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> this.openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+
+        assertEquals("OpenProject failed to answer the request: An internal error has occurred.",
+            ExceptionUtils.getRootCause(exception).getMessage());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "<html>Bad Gateway</html>", "{}" })
+    void invalidRequestWithoutOpenProjectErrorHasNoCause(String body)
+    {
+        when(this.response.statusCode()).thenReturn(400);
+        when(this.response.body()).thenReturn(body);
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", ""));
+
+        assertNull(exception.getCause());
     }
 
     @Test

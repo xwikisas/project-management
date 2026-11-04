@@ -46,6 +46,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 /**
@@ -148,7 +149,7 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
                 String instanceId = baseObject.getStringValue("instanceId");
                 OpenProjectConnection connection =
                     new OpenProjectConnection(connectionName, serverURL, clientId, clientSecret, instanceId);
-                connection.setShowPublicData(baseObject.getIntValue("showPublicData") == 1);
+                connection.setAccessMode(OpenProjectAccessMode.fromString(baseObject.getStringValue("accessMode")));
                 objects.add(connection);
             }
             return objects;

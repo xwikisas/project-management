@@ -21,7 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -41,9 +41,11 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
@@ -96,6 +98,16 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         return false;   
     }
 
+    /**
+     * @return {@code true} when the displayed data depends on the OpenProject account of the current user, so that a
+     *     user who can only call OpenProject anonymously sees a warning instead of the public data of the instance
+     * @since 1.4.0
+     */
+    protected boolean requiresUserAccount()
+    {
+        return false;
+    }
+
     @Override
     public final List<Block> execute(P parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
@@ -109,7 +121,8 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         String instanceToUse = parameters.getInstance();
 
         OpenProjectAccessResult access = openProjectAccess.resolve(instanceToUse);
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), context);
+        List<Block> warningBlock =
+            userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), requiresUserAccount(), context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
@@ -128,10 +141,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
                 public List<Block> execute(ProjectManagementAsyncMacroParams x, String y, MacroTransformationContext z)
                     throws MacroExecutionException
                 {
-                    List<Block> result = new ArrayList<>(
-                        userTokenChecker.getConnectHintBlock(instanceToUse, access.getStatus(), context));
-                    result.addAll(executeInternal(parameters, content, context, apiClient, instanceToUse));
-                    return result;
+                    return executeInternal(parameters, content, context, apiClient, instanceToUse);
                 }
             }, parameters, content, context, null, true);
         } catch (RenderingException | JobException e) {
@@ -145,6 +155,29 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     protected OpenProjectConfiguration getOpenProjectConfiguration()
     {
         return openProjectConfiguration;
+    }
+
+    /**
+     * OpenProject hides some data from anonymous users (e.g. the time entries or the members of a project) without
+     * failing: the anonymous requests return no result. When a macro finds no result for a user who didn't connect
+     * their OpenProject account, the result can be told apart from "nothing to display" by asking the user to connect
+     * the account.
+     *
+     * @param instance the name of the OpenProject connection
+     * @param context the macro transformation context
+     * @return the warning asking the current user to connect their OpenProject account, or an empty list when the user
+     *     is authenticated to OpenProject or when the connection doesn't let users connect their account
+     */
+    protected List<Block> getEmptyAnonymousResultWarning(String instance, MacroTransformationContext context)
+    {
+        OpenProjectConnection connection = openProjectConfiguration.getConnection(instance);
+        OpenProjectAccessStatus status = openProjectAccess.resolve(instance).getStatus();
+        if (status != OpenProjectAccessStatus.ANONYMOUS || connection == null
+            || !connection.getAccessMode().allowsUserAccounts())
+        {
+            return Collections.emptyList();
+        }
+        return userTokenChecker.getWarningBlock(instance, status, true, context);
     }
 
     /**

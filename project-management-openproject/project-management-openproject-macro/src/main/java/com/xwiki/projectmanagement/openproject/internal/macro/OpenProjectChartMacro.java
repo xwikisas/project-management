@@ -20,7 +20,6 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +37,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -59,6 +59,9 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
 
     @Inject
     private UserTokenChecker userTokenChecker;
+
+    @Inject
+    private CurrentUserFilterDetector currentUserFilterDetector;
 
     @Inject
     private ObservationManager observationManager;
@@ -104,14 +107,14 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         String instanceToUse = parameters.getInstance();
 
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, context);
+        // Filtering on the current user requires the OpenProject account of the user.
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse,
+            currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters()), context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
         parameters.setClient("openproject");
-        List<Block> result = new ArrayList<>(userTokenChecker.getConnectHintBlock(instanceToUse, context));
-        result.addAll(super.execute(parameters, content, context));
-        return result;
+        return super.execute(parameters, content, context);
     }
 
     @Override

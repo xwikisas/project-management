@@ -174,8 +174,7 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", clientSecret);
         // The form explains that the client secret is not displayed when editing a connection.
         assertEquals("", adminPage.getNewConnectionClientSecretHint());
-        assertEquals("The current client secret is not displayed, but it is still set. Leave this field empty to keep "
-            + "it, or enter a new value to replace it.", adminPage.getEditConnectionClientSecretHint(name));
+        assertEquals("Leave empty to keep the current secret.", adminPage.getEditConnectionClientSecretHint(name));
         // Leaving the client secret empty keeps the current one.
         adminPage.updateConnection(name, name, this.openProject.getBaseUrl(), "someid", "");
 

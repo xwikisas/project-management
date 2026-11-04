@@ -20,10 +20,15 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Collections;
+import java.util.List;
+
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -54,9 +59,18 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
     }
 
     @Override
-    public void asyncProcessParameters(OpenProjectMacroParameters parameters)
+    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters)
     {
+        // The "me" filter can only be resolved for a connected OpenProject account.
+        return true;
+    }
 
+    @Override
+    public List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters,
+        MacroTransformationContext context)
+    {
+        // The work packages assigned to the user are not filtered by a saved query.
+        return Collections.emptyList();
     }
 
     @Override

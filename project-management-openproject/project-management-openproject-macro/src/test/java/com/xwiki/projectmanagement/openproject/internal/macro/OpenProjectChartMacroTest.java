@@ -45,6 +45,7 @@ import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecut
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -77,6 +78,9 @@ class OpenProjectChartMacroTest
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
+
+    @MockComponent
+    private CurrentUserFilterDetector currentUserFilterDetector;
 
     @MockComponent
     private ObservationManager observationManager;
@@ -144,11 +148,24 @@ class OpenProjectChartMacroTest
     void returnsTheUserTokenWarning() throws Exception
     {
         List<Block> warningBlock = List.of(new WordBlock("warning"));
-        when(this.userTokenChecker.getWarningBlock("main", this.context)).thenReturn(warningBlock);
+        when(this.userTokenChecker.getWarningBlock("main", false, this.context)).thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
 
         verifyNoInteractions(this.asyncExecutor, this.projectManagementManager);
         assertNull(this.executionContext.get("instance"));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheFiltersUseTheCurrentUser() throws Exception
+    {
+        this.parameters.setFilters("filters");
+        when(this.currentUserFilterDetector.hasCurrentUserFilter(null, "filters")).thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
+
+        verifyNoInteractions(this.asyncExecutor, this.projectManagementManager);
     }
 }

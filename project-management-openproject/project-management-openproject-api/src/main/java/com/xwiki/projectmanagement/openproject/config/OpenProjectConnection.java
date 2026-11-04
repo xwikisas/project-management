@@ -39,7 +39,7 @@ public class OpenProjectConnection
 
     private String instanceId;
 
-    private boolean showPublicData;
+    private OpenProjectAccessMode accessMode = OpenProjectAccessMode.USER_ACCOUNTS;
 
     /**
      * Constructs a new {@link OpenProjectConnection} with the provided values.
@@ -164,25 +164,22 @@ public class OpenProjectConnection
     }
 
     /**
-     * @return {@code true} if the users who can't call the OpenProject instance with their own account (guests, or
-     *     users who haven't connected their OpenProject account) see the data that OpenProject shows to anonymous
-     *     users
+     * @return who can see the data of this connection, and how; never {@code null}
      * @since 1.4.0
      */
-    public boolean isShowPublicData()
+    public OpenProjectAccessMode getAccessMode()
     {
-        return showPublicData;
+        return accessMode;
     }
 
     /**
-     * Sets whether the users who can't call the OpenProject instance with their own account see the data that
-     * OpenProject shows to anonymous users.
+     * Sets who can see the data of this connection, and how.
      *
-     * @param showPublicData {@code true} to show the public data to these users
+     * @param accessMode the access mode, {@code null} for the default one ({@link OpenProjectAccessMode#USER_ACCOUNTS})
      * @since 1.4.0
      */
-    public void setShowPublicData(boolean showPublicData)
+    public void setAccessMode(OpenProjectAccessMode accessMode)
     {
-        this.showPublicData = showPublicData;
+        this.accessMode = accessMode != null ? accessMode : OpenProjectAccessMode.USER_ACCOUNTS;
     }
 }

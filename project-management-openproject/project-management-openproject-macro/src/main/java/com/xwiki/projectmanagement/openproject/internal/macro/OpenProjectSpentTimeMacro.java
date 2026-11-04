@@ -119,6 +119,12 @@ public class OpenProjectSpentTimeMacro
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve time entries from OpenProject.", e);
         }
+        if (entries.isEmpty()) {
+            List<Block> warning = getEmptyAnonymousResultWarning(instance, context);
+            if (!warning.isEmpty()) {
+                return warning;
+            }
+        }
 
         String serverUrl = getOpenProjectConfiguration().getConnection(instance).getServerURL();
         String linkUrl = hasProject

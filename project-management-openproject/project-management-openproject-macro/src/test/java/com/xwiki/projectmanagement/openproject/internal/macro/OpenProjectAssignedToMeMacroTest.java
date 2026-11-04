@@ -19,9 +19,13 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.annotation.ComponentList;
@@ -44,7 +48,9 @@ import com.xwiki.projectmanagement.presets.PresetsManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -142,6 +148,20 @@ class OpenProjectAssignedToMeMacroTest
     }
 
     @Test
+    void executeRequiresTheOpenProjectAccountOfTheUser() throws Exception
+    {
+        OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
+        parameters.setInstance("main");
+        MacroTransformationContext context = new MacroTransformationContext();
+        List<Block> warning = List.of(new WordBlock("warning"));
+        // The work packages assigned to the user can't be replaced by the public data.
+        when(this.userTokenChecker.getWarningBlock("main", true, context)).thenReturn(warning);
+
+        assertSame(warning, this.macro.execute(parameters, "", context));
+        verifyNoInteractions(this.asyncExecutor);
+    }
+
+    @Test
     void asyncProcessParametersDoesNotResolveSavedQueries() throws Exception
     {
         OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
@@ -152,7 +172,7 @@ class OpenProjectAssignedToMeMacroTest
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
-        this.macro.asyncProcessParameters(parameters);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(parameters, new MacroTransformationContext()));
 
         assertNull(parameters.getSourceParameters());
     }
