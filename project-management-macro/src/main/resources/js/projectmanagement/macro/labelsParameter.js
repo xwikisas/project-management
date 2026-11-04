@@ -22,11 +22,14 @@ require(['jquery'], function ($) {
     let vals = $('.proj-manag-chart-label input').map(function () { return $(this).val(); }).get();
     $('#proj-manag-chart-parameter-labels').val(JSON.stringify(vals));
   };
-  let createNewLabel = function (title, value) {
+  // The label and the placeholder of the name of each series are translated templates, holding its number.
+  let createNewLabel = function (number, value) {
     var template = document.getElementById("proj-manag-chart-label-template").content;
     var clone = $(template).clone();
-    clone.find("label").text(title);
-    clone.find("input").val(value).on('change', updateInput);
+    let labels = $(".proj-manag-chart-labels");
+    clone.find("label").text((labels.attr('data-label') || '').replace('__N__', number));
+    clone.find("input").attr('placeholder', (labels.attr('data-placeholder') || '').replace('__N__', number))
+      .val(value).on('change', updateInput);
     clone.find(".proj-manag-chart-label-remove").on('click', (e) => {
       $(e.target).closest('.proj-manag-chart-label').remove();
       updateInput();
@@ -41,13 +44,13 @@ require(['jquery'], function ($) {
     }
     let labels = labelsInput.val() ? JSON.parse(labelsInput.val()) : [];
     labels.forEach((element, i) => {
-      createNewLabel("Dataset #" + (i + 1) + " label", element);
+      createNewLabel(i + 1, element);
     });
   };
   init();
   $(document).on('click', '.proj-manag-chart-label-new', function (e) {
     e.preventDefault();
-    createNewLabel("Dataset #" + ($('.proj-manag-chart-label').length + 1) + " label", "");
+    createNewLabel($('.proj-manag-chart-label').length + 1, "");
   });
   $(document).on('shown.bs.modal', '.modal', function () {
     let modal = $(this);

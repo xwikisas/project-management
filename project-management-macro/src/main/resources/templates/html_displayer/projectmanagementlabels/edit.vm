@@ -18,18 +18,22 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/labelsParameter.js', {'minify': true}))
-<div class="proj-manag-chart-labels">
+## The label and the placeholder of the name of each series, the JavaScript code replacing __N__ by its number.
+<div class="proj-manag-chart-labels"
+  data-label="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.seriesName', ['__N__']))"
+  data-placeholder="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.series', ['__N__']))">
   <template id="proj-manag-chart-label-template">
     <div class="proj-manag-chart-label proj-manag-macro-param">
       <div class="proj-manag-header">
-        <label>Dataset #n Label..</label>
+        <label></label>
         <a class="proj-manag-chart-label-remove">$services.icon.renderHTML('trash')</a>
       </div>
-      <input type="text" placeholder="Dataset #1">
+      <input type="text">
     </div>
   </template>
 </div>
-<button class="btn btn-link proj-manag-chart-label-new">Add new label</button>
+<button class="btn btn-link proj-manag-add-link proj-manag-chart-label-new">$escapetool.xml(
+  $services.localization.render('projectmanagement.macro.chart.addSeriesName'))</button>
 <textarea id="proj-manag-chart-parameter-labels" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"

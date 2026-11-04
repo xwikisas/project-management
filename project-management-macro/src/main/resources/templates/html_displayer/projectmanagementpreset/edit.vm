@@ -32,7 +32,14 @@
     'class': 'op-preset-select'
   })
   #set ($discard = $parameters.putAll($displayer.parameters))
-  #staticSelectPicker($parameters)
+  #if ($options.isEmpty() && "$!displayer.value" == '')
+    ## An empty picker would open no list: say why there's nothing to choose.
+    <select class="form-control op-preset-select" disabled="disabled">
+      <option>$escapetool.xml($services.localization.render('projectmanagement.macro.filter.preset.none'))</option>
+    </select>
+  #else
+    #staticSelectPicker($parameters)
+  #end
 #end
 #if ("$!client" != '')
   #displayPresetPicker($client, $chart)

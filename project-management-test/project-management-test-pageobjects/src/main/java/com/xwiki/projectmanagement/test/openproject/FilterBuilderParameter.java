@@ -72,7 +72,7 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
-     * @return the title of the builder, e.g. {@code Dataset #1}, or an empty string if it has no title
+     * @return the title of the builder, e.g. {@code Series 1}, or an empty string if it has no title
      * @since 1.3.0-rc-2
      */
     public String getTitle()
@@ -97,7 +97,7 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
-     * Select from the "Add Filter" list a work package property that should be filtered.
+     * Select from the "+ Add filter" list a work package property that should be filtered.
      *
      * @param filterProperty the technical work package property name that should be filtered.
      * @return the model of a filter.

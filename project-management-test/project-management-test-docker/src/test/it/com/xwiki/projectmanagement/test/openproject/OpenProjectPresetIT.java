@@ -171,8 +171,8 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         assertTrue(viewPage.isChartPreset());
         builders = viewPage.getFilterBuilders();
         assertEquals(2, builders.size());
-        assertEquals("Dataset #1", builders.get(0).getTitle());
-        assertEquals("Dataset #2", builders.get(1).getTitle());
+        assertEquals("Series 1", builders.get(0).getTitle());
+        assertEquals("Series 2", builders.get(1).getTitle());
         assertTrue(builders.stream().allMatch(FilterBuilderParameter::isReadOnly));
 
         // The chart macro proposes only the chart presets and displays one dataset per preset filter.

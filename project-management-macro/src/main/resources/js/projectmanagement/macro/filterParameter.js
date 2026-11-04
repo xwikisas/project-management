@@ -30,6 +30,13 @@ setTimeout(function () {
   require(['filterBuilder'], function () {
     require(['jquery', 'project-management-filter-builder'], function ($, builder) {
       let livedataCfgs = new Map();
+      // The filter builders of a chart are its series, titled from the translated template of their container.
+      let setSeriesTitle = function (builder, number) {
+        let titleTemplate = $('.project-management-filters').attr('data-series-title');
+        if (titleTemplate) {
+          builder.setTitle(titleTemplate.replace('__N__', number));
+        }
+      };
       let updateFilterInput = function (e, constraints) {
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
@@ -68,7 +75,7 @@ setTimeout(function () {
         builder.instances.forEach(bld => {
           let filterCfg = filterCfgs[i];
           i++;
-          bld.setTitle("Dataset #" + i);
+          setSeriesTitle(bld, i);
           let filters = (filterCfg.query && filterCfg.query.filters) || [];
           filters.forEach((filter) => {
             filter.constraints.forEach((constraint) => {
@@ -91,7 +98,7 @@ setTimeout(function () {
         builder.instances.forEach(builder => {
           builder.clean();
           builder.init();
-          builder.setTitle("Dataset #" + i);
+          setSeriesTitle(builder, i);
           i++;
         });
         initBuilder();
@@ -116,7 +123,7 @@ setTimeout(function () {
         setTimeout(() => {
           let i = 1;
           builder.instances.forEach(bld => {
-            bld.setTitle("Dataset #" + (i++));
+            setSeriesTitle(bld, i++);
           })
         }, 0);
       });

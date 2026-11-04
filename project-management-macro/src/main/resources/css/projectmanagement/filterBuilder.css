@@ -57,10 +57,30 @@
   min-height: 1em;
 }
 
+/* The actions adding a filter, a constraint, a series or a series name are displayed the same way, as links. */
+.proj-manag-add-link.btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* The filter to add is chosen from a select, displayed as a link. */
+select.proj-manag-add-filter {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: auto;
+  background: none;
+  border: none;
+  box-shadow: none;
+  text-align: left;
+}
+
+select.proj-manag-add-filter option {
+  color: initial;
+}
+
 .proj-manag-add-constraint {
   display: inline-block;
-  margin-top: 3px;
-  font-style: italic;
 }
 
 .proj-manag-date-picker {

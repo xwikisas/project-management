@@ -64,7 +64,7 @@
       </div>
       #if (!$parameters.readonly)
         <div>
-          <select class="btn btn-default proj-manag-add-filter">
+          <select class="btn btn-link proj-manag-add-link proj-manag-add-filter">
             <option disabled selected value="">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addFilter'))</option>
             #foreach ($prop in $filterableProperties)
               <option value="$!escapetool.xml($prop.id)">#if($prop.name)$escapetool.xml($prop.name)#else$!escapetool.xml($prop.id)#end</option>
@@ -94,7 +94,7 @@
             </div>
           #end
         </div>
-        <a class="proj-manag-add-constraint #if($parameters.readonly)hidden#end" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
+        <a class="btn btn-link proj-manag-add-link proj-manag-add-constraint #if($parameters.readonly)hidden#end" href="#">$!escapetool.xml($services.localization.render('projectmanagement.macro.filter.addConstraint'))</a>
       </div>
     </div>
   #end
