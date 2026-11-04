@@ -31,6 +31,8 @@ import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 import org.xwiki.script.ScriptContextManager;
 import org.xwiki.template.TemplateManager;
+import org.xwiki.template.script.TemplateScriptService;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.page.PageTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -40,24 +42,27 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * @version $Id$
  */
+// Includes the templates with #template.
+@ComponentList(TemplateScriptService.class)
 class ProjectDetailsPropertiesPickerPageTest extends PageTest
 {
     private static final String TEMPLATE = "html_displayer/openprojectprojectdetailsproperty/edit.vm";
 
     @Test
-    void checksTheSelectedProperties() throws Exception
+    void proposesTheProjectPropertiesInThePropertyPicker() throws Exception
     {
         Document result = render(List.of(OpenProjectProjectDetailsProperty.NAME,
             OpenProjectProjectDetailsProperty.STATUS));
 
-        assertEquals("NAME,STATUS", result.selectFirst("input[type=hidden][name=properties]").val(), result.html());
+        // The same picker as the one of the work package properties of the other macros.
+        Element picker = result.selectFirst("select.proj-manag-property-picker[name=properties][multiple]");
         assertEquals(List.of("ID", "NAME", "IDENTIFIER", "DESCRIPTION", "STATUS", "CREATED"),
-            result.select("input[type=checkbox]").stream().map(Element::val).collect(Collectors.toList()));
+            picker.select("option").stream().map(Element::val).collect(Collectors.toList()), result.html());
         assertEquals(List.of("NAME", "STATUS"),
-            result.select("input[type=checkbox][checked]").stream().map(Element::val).collect(Collectors.toList()));
+            picker.select("option[selected]").stream().map(Element::val).collect(Collectors.toList()));
         // The labels are the ones displayed by the macro.
         assertEquals("openproject.openproject-project-details.labels.identifier",
-            result.select("label").get(2).text());
+            picker.select("option").get(2).text());
     }
 
     private Document render(List<OpenProjectProjectDetailsProperty> value) throws Exception

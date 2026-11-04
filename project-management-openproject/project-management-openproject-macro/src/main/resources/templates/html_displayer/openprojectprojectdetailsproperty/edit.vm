@@ -17,48 +17,27 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+## Same picker as the one of the work package properties (see property_picker.vm), proposing the project properties.
+#template('pickers_macros.vm')
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js', {'minify': false}))
 #set ($selectedProperties = [])
 #foreach ($property in $displayer.value)
   #set ($discard = $selectedProperties.add("$property"))
 #end
-## The macro editor may not give an id to the parameter, so the field is found by a generated one.
-#set ($containerId = "openproject-project-details-properties-$util.generateRandomString(8)")
-<div class="openproject-project-details-properties" id="$escapetool.xml($containerId)">
-  <input type="hidden" name="$escapetool.xml($displayer.parameters.name)"
-    value="$escapetool.xml($stringtool.join($selectedProperties, ','))"/>
-  #foreach ($property in ['ID', 'NAME', 'IDENTIFIER', 'DESCRIPTION', 'STATUS', 'CREATED'])
-    <label style="display:block;">
-      <input type="checkbox" value="$property"#if ($selectedProperties.contains($property)) checked="checked"#end/>
-      $escapetool.xml($services.localization.render(
-        "openproject.openproject-project-details.labels.$property.toLowerCase()"))
-    </label>
-  #end
-</div>
-<script>
-  (function() {
-    var container = document.getElementById($jsontool.serialize($containerId));
-    if (!container) {
-      return;
-    }
-    var hiddenInput = container.querySelector('input[type=hidden]');
-    var checkboxes = container.querySelectorAll('input[type=checkbox]');
-    // Check the properties of the parameter value, which the macro editor may set after displaying the parameter.
-    function syncCheckboxes() {
-      var selected = (hiddenInput.value || '').split(',').map(function(value) { return value.trim(); });
-      checkboxes.forEach(function(checkbox) {
-        checkbox.checked = selected.indexOf(checkbox.value) !== -1;
-      });
-    }
-    syncCheckboxes();
-    new MutationObserver(syncCheckboxes).observe(hiddenInput, {attributes: true, attributeFilter: ['value']});
-    checkboxes.forEach(function(checkbox) {
-      checkbox.addEventListener('change', function() {
-        var selected = [];
-        container.querySelectorAll('input[type=checkbox]:checked').forEach(function(checked) {
-          selected.push(checked.value);
-        });
-        hiddenInput.value = selected.join(',');
-      });
-    });
-  })();
-</script>
+#set ($options = [])
+#foreach ($property in ['ID', 'NAME', 'IDENTIFIER', 'DESCRIPTION', 'STATUS', 'CREATED'])
+  #set ($discard = $options.add({
+    'name': $services.localization.render("openproject.openproject-project-details.labels.$property.toLowerCase()"),
+    'value': $property
+  }))
+#end
+#set ($parameters = {
+  'class': 'proj-manag-property-picker',
+  'data-remove-title': $services.localization.render('projectmanagement.macro.properties.removebutton.title'),
+  'multiple': 'multiple',
+  'options': $options,
+  'prefix': ' '
+})
+#set ($discard = $parameters.putAll($displayer.parameters))
+#set ($discard = $parameters.put('value', $selectedProperties))
+#suggestInput($parameters, 'staticPickerDisplayOptions')
