@@ -81,8 +81,10 @@
     #set ($selectedProject = '')
     #set ($selectedProjectLabel = '')
   #end
+  ## The current user can read the data of the connection, with their own OpenProject account or anonymously when
+  ## the connection shows its public data.
   #set ($tokenValid = false)
-  #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.isUserAuthorized($effectiveConnection))
+  #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.canReadData($effectiveConnection))
     #set ($tokenValid = true)
   #end
   {{html clean="false"}}
@@ -105,7 +107,7 @@
           &lt;input type="hidden" name="connection" value="$!escapetool.xml($effectiveConnection)"/&gt;
           #end
         &lt;/div&gt;
-        ## The project picker is only useful once the connection is authorized.
+        ## The project picker is only useful once the current user can read the data of the connection.
         #if ($tokenValid)
         &lt;div class="form-group"&gt;
           &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
@@ -125,7 +127,7 @@
     #end
     ## Carries the effective connection to the JS for users without pickers (no connection select).
     &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
-    ## The current user has no token for this connection: show the (per-user) authorize warning.
+    ## The current user can't read the data of this connection: show the (per-user) authorize warning.
     #if (!$tokenValid)
       #set ($notAuthorized = $services.openproject.getNotAuthorizedMessage($effectiveConnection, 'html/5.0'))
       #if ("$!notAuthorized" != '')
@@ -141,7 +143,7 @@
     &lt;/div&gt;
   #end
   {{/html}}
-  ## Render the macros (hidden) only when the current user is authorized for the connection; the project
+  ## Render the macros (hidden) only when the current user can read the data of the connection; the project
   ## is defaulted transiently by the listener. The JS reveals them once it confirms the connection works.
   #if ("$!effectiveConnection" != '' &amp;&amp; $tokenValid)
   (% id="openproject-dashboard-gadgets" class="hidden" %)(((

@@ -180,11 +180,14 @@ public class OpenProjectClient implements ProjectManagementClient
             return workItems;
         } catch (WorkItemRetrievalException e) {
             // Report authentication and rights failures, so that the caller can tell the user what to do.
-            if (isAuthenticationOrRightsFailure(e)) {
-                throw e;
+            if (!isAuthenticationOrRightsFailure(e) && isLiveDataRequest()) {
+                return handleWorkPackageRetrievalException(e);
             }
-            return handleWorkPackageRetrievalException(e);
+            throw e;
         } catch (ProjectManagementException e) {
+            if (isLiveDataRequest()) {
+                return handleWorkPackageRetrievalException(e);
+            }
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -196,6 +199,17 @@ public class OpenProjectClient implements ProjectManagementClient
     private static int getOpenProjectPage(int offset, int pageSize)
     {
         return offset / pageSize + 1;
+    }
+
+    /**
+     * Live Data can't display the failure of a request (it only notifies that it failed) and the failures of the
+     * requests that its viewers make by filtering and sorting it (e.g. an unsupported combination of filters, which no
+     * work package matches) shouldn't be reported as errors: the request then returns no work package. The other
+     * callers, e.g. the charts, display the failure, so that it isn't mistaken for an empty result.
+     */
+    private boolean isLiveDataRequest()
+    {
+        return Boolean.TRUE.equals(executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA));
     }
 
     private static boolean isAuthenticationOrRightsFailure(WorkItemRetrievalException e)
@@ -309,19 +323,15 @@ public class OpenProjectClient implements ProjectManagementClient
         String filters = extractFiltersFromQuery(filtersEntries, filtersNode);
         String sortBy = extractSortByString(sortEntries, sortNode);
 
-        try {
-            if (project != null) {
-                return OpenProjectConverters.convertPaginatedResult(
-                    openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sortBy),
-                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
-            }
-
+        if (project != null) {
             return OpenProjectConverters.convertPaginatedResult(
-                openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sortBy),
+                openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sortBy),
                 workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
-        } catch (WorkPackageRetrievalBadRequestException e) {
-            return handleWorkPackageRetrievalException(e);
         }
+
+        return OpenProjectConverters.convertPaginatedResult(
+            openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sortBy),
+            workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
     }
 
     /**
@@ -345,26 +355,22 @@ public class OpenProjectClient implements ProjectManagementClient
         String filters =
             OpenProjectFilterHandler.mergeFilters(filtersEntries, objectMapper.valueToTree(List.of(idFiltersAsJson)));
 
-        try {
-            if (!sortEntries.isEmpty()) {
-                return OpenProjectConverters.convertPaginatedResult(
-                    openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters,
-                        OpenProjectSortingHandler.convertSorting(sortEntries)),
-                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
-            }
-
-            List<WorkPackage> workPackages =
-                new ArrayList<>(openProjectApiClient.getWorkPackages(1, ids.size(), filters, "").getItems());
-            workPackages.sort(Comparator.comparingInt(workPackage -> ids.indexOf(String.valueOf(workPackage.getId()))));
-            List<WorkPackage> pageItems = workPackages.subList(Math.min(offset, workPackages.size()),
-                Math.min(offset + pageSize, workPackages.size()));
-
+        if (!sortEntries.isEmpty()) {
             return OpenProjectConverters.convertPaginatedResult(
-                new PaginatedResult<>(pageItems, openProjectPage, pageSize, workPackages.size()),
+                openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters,
+                    OpenProjectSortingHandler.convertSorting(sortEntries)),
                 workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
-        } catch (WorkPackageRetrievalBadRequestException e) {
-            return handleWorkPackageRetrievalException(e);
         }
+
+        List<WorkPackage> workPackages =
+            new ArrayList<>(openProjectApiClient.getWorkPackages(1, ids.size(), filters, "").getItems());
+        workPackages.sort(Comparator.comparingInt(workPackage -> ids.indexOf(String.valueOf(workPackage.getId()))));
+        List<WorkPackage> pageItems = workPackages.subList(Math.min(offset, workPackages.size()),
+            Math.min(offset + pageSize, workPackages.size()));
+
+        return OpenProjectConverters.convertPaginatedResult(
+            new PaginatedResult<>(pageItems, openProjectPage, pageSize, workPackages.size()),
+            workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
     }
 
     /**
@@ -518,37 +524,33 @@ public class OpenProjectClient implements ProjectManagementClient
     {
         String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
 
-        try {
-            if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
-                return OpenProjectConverters.convertPaginatedResult(
-                    openProjectApiClient.getQueryWorkPackages(queryId, openProjectPage, pageSize, sortBy),
-                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
-                );
-            }
-
-            String resultsUrl = (String) executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL);
-            if (StringUtils.isEmpty(resultsUrl)) {
-                resultsUrl = identifierResolver.getSavedQueryResultsUrl(openProjectApiClient, queryId);
-            }
-            String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
-                identifierResolver.getSavedQueryFilters(resultsUrl));
-            String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
-            String project = identifierResolver.getSavedQueryProject(resultsUrl);
-
-            if (project != null) {
-                return OpenProjectConverters.convertPaginatedResult(
-                    openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sorting),
-                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
-                );
-            }
-
+        if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
             return OpenProjectConverters.convertPaginatedResult(
-                openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sorting),
+                openProjectApiClient.getQueryWorkPackages(queryId, openProjectPage, pageSize, sortBy),
                 workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
             );
-        } catch (WorkPackageRetrievalBadRequestException e) {
-            return handleWorkPackageRetrievalException(e);
         }
+
+        String resultsUrl = (String) executionContext.get(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL);
+        if (StringUtils.isEmpty(resultsUrl)) {
+            resultsUrl = identifierResolver.getSavedQueryResultsUrl(openProjectApiClient, queryId);
+        }
+        String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
+            identifierResolver.getSavedQueryFilters(resultsUrl));
+        String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
+        String project = identifierResolver.getSavedQueryProject(resultsUrl);
+
+        if (project != null) {
+            return OpenProjectConverters.convertPaginatedResult(
+                openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sorting),
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
+            );
+        }
+
+        return OpenProjectConverters.convertPaginatedResult(
+            openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sorting),
+            workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
+        );
     }
 
     private String extractSortByString(List<LiveDataQuery.SortEntry> sortEntries, JsonNode sortByNode)

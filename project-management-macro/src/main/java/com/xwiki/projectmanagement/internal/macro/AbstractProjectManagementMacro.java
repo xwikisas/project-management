@@ -23,7 +23,7 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 
@@ -138,9 +138,12 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      *
      * @param parameters the parameters of the currently executing macro. Updating this will affect how the macro is
      *     rendered.
+     * @param context the macro transformation context of the macro
+     * @return the blocks to display instead of the work items, e.g. a message explaining why they can't be retrieved,
+     *     or an empty list to display the work items
      * @since 1.3.0
      */
-    public abstract void asyncProcessParameters(T parameters);
+    public abstract List<Block> asyncProcessParameters(T parameters, MacroTransformationContext context);
 
     /**
      * Denotes whether this macro, given it's parameters (mainly the displayer), should be rendered asynchronously or
@@ -158,11 +161,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             && !WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer());
     }
 
-    protected Consumer<ProjectManagementAsyncMacroParams> getAsyncParametersProcessor()
+    protected BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>>
+        getAsyncParametersProcessor()
     {
-        return (params -> {
-            asyncProcessParameters((T) params);
-        });
+        return (params, context) -> asyncProcessParameters((T) params, context);
     }
 
     protected void addToSourceParams(T parameters, String key, String value)

@@ -51,8 +51,13 @@ import com.xpn.xwiki.web.XWikiRequest;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 
@@ -61,6 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -84,6 +90,12 @@ class OpenProjectCalendarMacroTest
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
+
+    @MockComponent
+    private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @MockComponent
+    private OpenProjectAccess openProjectAccess;
 
     @MockComponent
     private ObservationManager observationManager;
@@ -132,13 +144,21 @@ class OpenProjectCalendarMacroTest
         when(this.request.getContextPath()).thenReturn("/xwiki");
         this.parameters.setInstance("main");
         when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
+        when(this.openProjectAccess.resolve("main"))
+            .thenReturn(OpenProjectAccessResult.authenticated(mock(OpenProjectApiClient.class)));
     }
 
     private MacroBlock getCalendarMacro(List<Block> result)
     {
+        return getCalendarMacro(result, "true");
+    }
+
+    private MacroBlock getCalendarMacro(List<Block> result, String canEdit)
+    {
         assertEquals(1, result.size());
         GroupBlock group = (GroupBlock) result.get(0);
-        assertEquals(Map.of("class", "openproject-calendar-macro", "data-instance", "main"), group.getParameters());
+        assertEquals(Map.of("class", "openproject-calendar-macro", "data-instance", "main", "data-can-edit", canEdit),
+            group.getParameters());
         assertEquals(1, group.getChildren().size());
         return (MacroBlock) group.getChildren().get(0);
     }
@@ -196,10 +216,39 @@ class OpenProjectCalendarMacroTest
     void returnsTheUserTokenWarning() throws Exception
     {
         List<Block> warningBlock = List.of(new WordBlock("warning"));
-        when(this.userTokenChecker.getWarningBlock("main", this.context)).thenReturn(warningBlock);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.NOT_CONNECTED, false, this.context))
+            .thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
 
         verifyNoInteractions(this.stylingSetupManager, this.jsrx, this.jsx);
+    }
+
+    @Test
+    void anonymousUsersCantEditTheWorkPackages() throws Exception
+    {
+        when(this.openProjectAccess.resolve("main"))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.ANONYMOUS, false, this.context))
+            .thenReturn(List.of());
+
+        MacroBlock calendar = getCalendarMacro(this.macro.execute(this.parameters, "", this.context), "false");
+
+        assertEquals("calendar", calendar.getId());
+    }
+
+    @Test
+    void requiresAnAccountWhenTheFiltersUseTheCurrentUser() throws Exception
+    {
+        this.parameters.setFilters("filters");
+        when(this.currentUserFilterDetector.hasCurrentUserFilter(null, "filters")).thenReturn(true);
+        when(this.openProjectAccess.resolve("main"))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.ANONYMOUS, true, this.context))
+            .thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
     }
 }

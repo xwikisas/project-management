@@ -40,18 +40,21 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
 /**
- * Builds the messages telling the current user that they need to connect their OpenProject account, either to see any
- * data of an OpenProject instance, or to see more than its public data.
+ * Builds the warnings displayed instead of the OpenProject data that the current user can't see: either they can't call
+ * an OpenProject instance at all, or they can only call it anonymously while the data depends on their own account.
  *
  * @version $Id$
  * @since 1.2.0-rc-1
@@ -62,10 +65,15 @@ public class UserTokenChecker
 {
     private static final String CLASS = "class";
 
+    private static final String ACCOUNT_REQUIRED = "openproject.oauth.accountrequired";
+
     private static final List<String> OPEN_PROJECT_CODE_SPACE = Arrays.asList("OpenProject", "Code");
 
     @Inject
     private OpenProjectAccess openProjectAccess;
+
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @Inject
     private CSRFToken csrfToken;
@@ -80,70 +88,103 @@ public class UserTokenChecker
      * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
      * @param context the macro transformation context.
      * @return a warning block, to display instead of the OpenProject data, if the current user can't call the given
-     *     OpenProject instance (see {@link #getWarningBlock(String, OpenProjectAccessStatus, MacroTransformationContext)})
+     *     OpenProject instance, neither with their own account nor anonymously (see
+     *     {@link #getWarningBlock(String, OpenProjectAccessStatus, boolean, MacroTransformationContext)})
      */
     public List<Block> getWarningBlock(String instance, MacroTransformationContext context)
     {
-        return getWarningBlock(instance, openProjectAccess.resolve(instance).getStatus(), context);
+        return getWarningBlock(instance, false, context);
+    }
+
+    /**
+     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param requiresUserAccount {@code true} when the data to display depends on the OpenProject account of the
+     *     current user
+     * @param context the macro transformation context.
+     * @return a warning block, to display instead of the OpenProject data (see
+     *     {@link #getWarningBlock(String, OpenProjectAccessStatus, boolean, MacroTransformationContext)})
+     * @since 1.4.0
+     */
+    public List<Block> getWarningBlock(String instance, boolean requiresUserAccount,
+        MacroTransformationContext context)
+    {
+        return getWarningBlock(instance, openProjectAccess.resolve(instance).getStatus(), requiresUserAccount,
+            context);
     }
 
     /**
      * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
      * @param status how the current user reaches the given instance, when the caller has already resolved it.
+     * @param requiresUserAccount {@code true} when the data to display depends on the OpenProject account of the
+     *     current user (e.g. the work packages assigned to them), so that the public data of the instance can't
+     *     replace it
      * @param context the macro transformation context.
      * @return a warning block, to display instead of the OpenProject data, if the current user can't call the given
-     *     OpenProject instance, neither with their own account nor anonymously.
+     *     OpenProject instance, or can only call it anonymously while the data requires their own account; the
+     *     warning invites the user to connect their OpenProject account, unless they are a guest or the access mode of
+     *     the connection doesn't let users connect their account.
      * @since 1.4.0
      */
-    public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status,
+    public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status, boolean requiresUserAccount,
         MacroTransformationContext context)
     {
-        if (status == OpenProjectAccessStatus.AUTHENTICATED || status == OpenProjectAccessStatus.ANONYMOUS) {
+        if (status == OpenProjectAccessStatus.AUTHENTICATED
+            || (status == OpenProjectAccessStatus.ANONYMOUS && !requiresUserAccount))
+        {
             return Collections.emptyList();
         }
-        return getMessageBlock(instance, "openproject.oauth.notauthorized", "box warningmessage", context);
+        OpenProjectConnection connection = this.openProjectConfiguration.getConnection(instance);
+        // A link to connect an OpenProject account only works for a configured connection that allows it.
+        boolean userAccounts = connection != null && connection.getAccessMode().allowsUserAccounts();
+        if (status == OpenProjectAccessStatus.ANONYMOUS) {
+            return userAccounts ? getMessageBlock(instance, ACCOUNT_REQUIRED, true, context)
+                : getMessageBlock(instance, "openproject.oauth.accountunavailable", false, context);
+        }
+        if (connection != null && !userAccounts) {
+            // The connection only shows public data, but OpenProject didn't accept the anonymous requests.
+            return getMessageBlock(instance, "openproject.oauth.publicdataunavailable", false, context);
+        }
+        return getMessageBlock(instance, "openproject.oauth.notauthorized", userAccounts, context);
     }
 
     /**
-     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
-     * @param context the macro transformation context.
-     * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
-     *     OpenProject account when they only see the public data of the given instance (see
-     *     {@link #getConnectHintBlock(String, OpenProjectAccessStatus, MacroTransformationContext)})
+     * Display a warning about the OpenProject data that can't be displayed, e.g. because OpenProject didn't find it.
+     * When the current user calls OpenProject anonymously through a connection that lets users connect their
+     * OpenProject account, the warning is followed by a link to connect the account, since the data might be visible
+     * to it.
+     *
+     * @param instance the name of the OpenProject connection
+     * @param hint the warning to display
+     * @param inline {@code true} if the warning is displayed inline
+     * @return the warning
      * @since 1.4.0
      */
-    public List<Block> getConnectHintBlock(String instance, MacroTransformationContext context)
+    public List<Block> getWarningBlock(String instance, Block hint, boolean inline)
     {
-        return getConnectHintBlock(instance, openProjectAccess.resolve(instance).getStatus(), context);
+        OpenProjectConnection connection = this.openProjectConfiguration.getConnection(instance);
+        boolean connectLink = connection != null && connection.getAccessMode().allowsUserAccounts()
+            && openProjectAccess.resolve(instance).getStatus() == OpenProjectAccessStatus.ANONYMOUS;
+        return getMessageBlock(instance, hint, connectLink ? ACCOUNT_REQUIRED : null, inline);
     }
 
-    /**
-     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
-     * @param status how the current user reaches the given instance.
-     * @param context the macro transformation context.
-     * @return a message block, to display along with the OpenProject data, inviting the current user to connect their
-     *     OpenProject account when they only see the public data of the given instance; empty for guests, who can't
-     *     connect an OpenProject account.
-     * @since 1.4.0
-     */
-    public List<Block> getConnectHintBlock(String instance, OpenProjectAccessStatus status,
+    private List<Block> getMessageBlock(String connectionName, String translationPrefix, boolean connectLink,
         MacroTransformationContext context)
     {
-        if (status != OpenProjectAccessStatus.ANONYMOUS || contextProvider.get().getUserReference() == null) {
-            return Collections.emptyList();
-        }
-        return getMessageBlock(instance, "openproject.oauth.publicdata", "box infomessage", context);
+        return getMessageBlock(connectionName, l10n.getTranslation(translationPrefix + ".hint").render(),
+            connectLink ? translationPrefix : null, context.isInline());
     }
 
-    private List<Block> getMessageBlock(String connectionName, String translationPrefix, String cssClass,
-        MacroTransformationContext context)
+    private List<Block> getMessageBlock(String connectionName, Block hint, String linkTranslationPrefix,
+        boolean inline)
     {
         XWikiContext xContext = contextProvider.get();
         String viewAction = "view";
 
         List<Block> message = new ArrayList<>();
-        message.add(l10n.getTranslation(translationPrefix + ".hint").render());
-        if (xContext.getUserReference() != null) {
+        message.add(hint);
+        // Guests have no user to attach an OpenProject account to.
+        if (linkTranslationPrefix != null && xContext.getUserReference() != null) {
+            message.add(new SpaceBlock());
             String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
             LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
                 OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
@@ -157,7 +198,7 @@ public class UserTokenChecker
                     + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
 
             List<Block> linkContentBlocks =
-                Collections.singletonList(l10n.getTranslation(translationPrefix + ".link").render());
+                Collections.singletonList(l10n.getTranslation(linkTranslationPrefix + ".link").render());
 
             LinkBlock link = new LinkBlock(
                 linkContentBlocks,
@@ -166,8 +207,8 @@ public class UserTokenChecker
             );
             message.add(link);
         }
-        Map<String, String> params = Collections.singletonMap(CLASS, cssClass);
+        Map<String, String> params = Collections.singletonMap(CLASS, "box warningmessage");
         return Collections.singletonList(
-            context.isInline() ? new FormatBlock(message, Format.NONE, params) : new GroupBlock(message, params));
+            inline ? new FormatBlock(message, Format.NONE, params) : new GroupBlock(message, params));
     }
 }

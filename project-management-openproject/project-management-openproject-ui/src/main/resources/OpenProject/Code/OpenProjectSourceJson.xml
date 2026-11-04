@@ -89,7 +89,13 @@
     #set ($connectionName = "$!result.getValue('connectionName')")
     #set ($serverURL = "$!result.getValue('serverURL')")
     #set ($clientId = "$!result.getValue('clientId')")
-    #set ($showPublicData = "$!result.getValue('showPublicData')" == '1')
+    #set ($accessMode = "$!result.getValue('accessMode')")
+    #set ($publicDataModes = ['PUBLIC_DATA_AND_USER_ACCOUNTS', 'PUBLIC_DATA'])
+    #if (!$publicDataModes.contains($accessMode))
+      #set ($accessMode = 'USER_ACCOUNTS')
+    #end
+    ## The users can't connect their OpenProject account when the connection only shows public data.
+    #set ($userAccounts = $accessMode != 'PUBLIC_DATA')
     #set ($connectionNameHtml = "&lt;span class='text-muted'&gt;$escapetool.xml($connectionName)&lt;/span&gt;")
     ## Only link to web addresses.
     #set ($lowerCaseServerURL = $serverURL.toLowerCase())
@@ -98,9 +104,20 @@
     #else
       #set ($serverURLHtml = "&lt;span&gt;$escapetool.xml($serverURL)&lt;/span&gt;")
     #end
-    #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$escapetool.xml($clientId)&lt;/span&gt;")
-    #set ($clientSecretHtml = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
-    #set ($isAuthorizedToOP = $services.openproject.isUserAuthorized($connectionName))
+    #set ($accessModeHtml = $escapetool.xml($services.localization.render("openproject.config.accessMode.$accessMode")))
+    #if ($userAccounts)
+      #set ($clientIdHtml = "&lt;span class='text-primary'&gt;$escapetool.xml($clientId)&lt;/span&gt;")
+      #set ($clientSecretHtml = "&lt;span class='text-primary h1'&gt;••••••••&lt;/span&gt;")
+      #set ($isAuthorizedToOP = $services.openproject.isUserAuthorized($connectionName))
+      #set ($isAuthorizedLabel = $services.localization.render("openproject.config.isAuthorized.${isAuthorizedToOP}"))
+    #else
+      #set ($notApplicable = $escapetool.xml($services.localization.render('openproject.config.notApplicable')))
+      #set ($clientIdHtml = "&lt;span class='text-muted'&gt;$notApplicable&lt;/span&gt;")
+      #set ($clientSecretHtml = $clientIdHtml)
+      ## Nothing to authorize: everybody calls OpenProject anonymously.
+      #set ($isAuthorizedToOP = true)
+      #set ($isAuthorizedLabel = $services.localization.render('openproject.config.notApplicable'))
+    #end
     #set ($authLink = $xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $escapetool.url({
         'connectionName': $connectionName,
         'redirectUrl': $xwiki.getURL('XWiki.XWikiPreferences', 'admin', 'editor=globaladmin&amp;section=OpenProject'),
@@ -112,7 +129,7 @@
       data-connection-name='$escapetool.xml($connectionName)'
       data-server-url='$escapetool.xml($serverURL)'
       data-client-id='$escapetool.xml($clientId)'
-      data-show-public-data='$showPublicData'
+      data-access-mode='$escapetool.xml($accessMode)'
       data-edit-document-reference='$escapetool.xml($documentReference)'
     &gt;$services.icon.renderHTML('pencil')&lt;/a&gt;&lt;a
       class='delete-button action'
@@ -132,9 +149,10 @@
     #set($discard = $json.rows.add({
       "connectionName" : $connectionNameHtml,
       "serverURL" : $serverURLHtml,
+      "accessMode" : $accessModeHtml,
       "clientId" : $clientIdHtml,
       "clientSecret" : $clientSecretHtml,
-      "isAuthorized": $services.localization.render("openproject.config.isAuthorized.${isAuthorizedToOP}"),
+      "isAuthorized": $isAuthorizedLabel,
       "actions" : $actionsHTML
         }))
   #end

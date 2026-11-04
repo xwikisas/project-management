@@ -116,19 +116,17 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
     {
         PaginatedResult<Sprint> sprints = new PaginatedResult<>();
         int limit = NumberUtils.toInt((String) this.executionContext.get("limit"), DEFAULT_LIMIT);
-        if (projectId != -1) {
-            try {
-                sprints = apiClient.getProjectSprints(1, limit, "", projectId);
-            } catch (WorkItemRetrievalException e) {
-                // If the project doesn't have backlogs enabled, it will return a 403 error message.
-                if (Integer.valueOf(403).equals(e.getStatusCode())) {
-                    this.logger.debug("Sprints are not available for the project with ID {}.", projectId);
-                } else {
-                    throw e;
-                }
+        try {
+            sprints = projectId != -1 ? apiClient.getProjectSprints(1, limit, "", projectId)
+                : apiClient.getSprints(1, limit, "");
+        } catch (WorkItemRetrievalException e) {
+            // OpenProject answers 403 when the backlogs module is disabled, or when the user (e.g. anonymous) isn't
+            // allowed to view the sprints: the calendar then displays the other events.
+            if (Integer.valueOf(403).equals(e.getStatusCode())) {
+                this.logger.debug("Sprints are not available for the project with ID {}.", projectId);
+            } else {
+                throw e;
             }
-        } else {
-            sprints = apiClient.getSprints(1, limit, "");
         }
         return convertSprintsToCalendarEvents(sprints);
     }

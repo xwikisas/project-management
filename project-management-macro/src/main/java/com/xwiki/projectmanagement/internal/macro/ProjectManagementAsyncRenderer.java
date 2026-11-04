@@ -22,7 +22,7 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -90,7 +90,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private boolean inline;
 
-    private Consumer<ProjectManagementAsyncMacroParams> paramsConsumer;
+    private BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>> paramsConsumer;
 
     /**
      * Initialize the async renderer with the required parameters for a project management displayer to function
@@ -101,12 +101,14 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
      * @param parameters the parameters passed to the displayer macro.
      * @param content the content passed to the displayer macro.
      * @param context the macro transformation context that will be taken in consideration by the executed macro.
-     * @param paramsConsumer a consumer for the parameters that will be passed to the executing displayer macro.
-     *     This can modify the parameters in order to change the bahaviour of the displayers.
+     * @param paramsConsumer processes the parameters that will be passed to the executing displayer macro. It can
+     *     modify the parameters in order to change the behaviour of the displayers, and returns the blocks to display
+     *     instead of the displayer (e.g. a message explaining why the work items can't be displayed), or an empty
+     *     list to execute the displayer.
      */
     public void initialize(Macro<ProjectManagementAsyncMacroParams> displayer,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
-        Consumer<ProjectManagementAsyncMacroParams> paramsConsumer)
+        BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>> paramsConsumer)
     {
         workItemsDisplayer = displayer;
         this.parameters = parameters;
@@ -125,10 +127,11 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     protected Block execute(boolean async, boolean cached) throws RenderingException
     {
         try {
-            if (this.paramsConsumer != null) {
-                this.paramsConsumer.accept(this.parameters);
+            List<Block> result = this.paramsConsumer != null
+                ? this.paramsConsumer.apply(this.parameters, this.transformationContext) : List.of();
+            if (result.isEmpty()) {
+                result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             }
-            List<Block> result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
             }
@@ -139,7 +142,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             }
             // Display the failure like the macro transformation does for a synchronous macro: the message contains
             // the root cause and the details (the stack trace) are displayed when clicking on it.
-            this.logger.error(ERROR_MESSAGE, e);
+            // The failure is displayed with its details, so it's not logged above debug: logging it each time the page
+            // is viewed would be costly, like for the failures of the synchronous macros, which aren't logged.
+            this.logger.debug(ERROR_MESSAGE, e);
             List<Block> errorBlocks =
                 this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
             // The script makes the error expandable once the asynchronous result is inserted in the page.

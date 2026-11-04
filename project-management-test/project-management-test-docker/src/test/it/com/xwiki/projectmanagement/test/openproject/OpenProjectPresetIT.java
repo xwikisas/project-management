@@ -236,7 +236,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         setup.setRights(presetReference, "", "XWiki.XWikiGuest,XWiki." + userName, "view", false);
         setup.createPage(adminPage, macro);
 
-        OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, true);
+        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
         try {
             // Guests see the result of the preset used on a page saved by someone who can view it.
             setup.forceGuestUser();
@@ -259,7 +259,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
         } finally {
             setup.loginAsSuperAdmin();
-            OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, false);
+            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
         }
     }
 

@@ -56,6 +56,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.auth.NoOpAuthenticator;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -211,7 +212,7 @@ class HandleConnectionsServiceTest
     void handleConnectionSavesConfigAndOidcObjects() throws Exception
     {
         stubInstanceId(SERVER_URL);
-        this.openProjectConnection.setShowPublicData(true);
+        this.openProjectConnection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
 
         this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
 
@@ -229,7 +230,7 @@ class HandleConnectionsServiceTest
         assertEquals("clientId", config.getStringValue("clientId"));
         assertEquals(CLIENT_SECRET, config.getStringValue(CLIENT_SECRET));
         assertEquals("instanceId", config.getStringValue("instanceId"));
-        assertEquals(1, config.getIntValue("showPublicData"));
+        assertEquals("PUBLIC_DATA_AND_USER_ACCOUNTS", config.getStringValue("accessMode"));
 
         BaseObject oidc = page.getXObject(OIDC_CLASS);
         assertEquals(CONNECTION_NAME, oidc.getStringValue("configurationName"));
@@ -408,8 +409,59 @@ class HandleConnectionsServiceTest
         ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
 
-        assertEquals("The client secret is required.", exception.getMessage());
+        assertEquals("The client secret is required to let the users connect their OpenProject account.",
+            exception.getMessage());
         assertFalse(exception.isConflict());
         assertNotSaved();
+    }
+
+    @Test
+    void handleConnectionRequiresClientIdWhenTheUsersCanConnectTheirAccount() throws Exception
+    {
+        this.openProjectConnection.setClientId("");
+        this.openProjectConnection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertEquals("The client id is required to let the users connect their OpenProject account.",
+            exception.getMessage());
+        assertNotSaved();
+    }
+
+    @Test
+    void handleConnectionWithoutOAuthApplicationWhenOnlyShowingPublicData() throws Exception
+    {
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setClientId("");
+        this.openProjectConnection.setClientSecret("");
+        this.openProjectConnection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA);
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        XWikiDocument page = getConnectionPage();
+        BaseObject config = page.getXObject(CONNECTION_CLASS);
+        assertEquals(CONNECTION_NAME, config.getStringValue(CONNECTION_NAME));
+        assertEquals("PUBLIC_DATA", config.getStringValue("accessMode"));
+        assertEquals("", config.getStringValue(CLIENT_SECRET));
+        assertNull(page.getXObject(OIDC_CLASS));
+    }
+
+    @Test
+    void handleConnectionRemovesTheOAuthClientWhenSwitchingToPublicDataOnly() throws Exception
+    {
+        XWikiDocument existingPage = saveConnectionPage(CONNECTION, ADMIN, CONNECTION_NAME);
+        existingPage.newXObject(OIDC_CLASS, this.oldcore.getXWikiContext());
+        this.oldcore.getSpyXWiki().saveDocument(existingPage, this.oldcore.getXWikiContext());
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setClientSecret("");
+        this.openProjectConnection.setAccessMode(OpenProjectAccessMode.PUBLIC_DATA);
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        XWikiDocument page = getConnectionPage();
+        assertNull(page.getXObject(OIDC_CLASS));
+        // The client secret is kept, to switch back to a mode where the users connect their account.
+        assertEquals("currentSecret", page.getXObject(CONNECTION_CLASS).getStringValue(CLIENT_SECRET));
     }
 }

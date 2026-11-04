@@ -35,12 +35,14 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectMembersMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.User;
 
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.links;
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -108,6 +110,28 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
 
         assertEquals("No members found.\n View all members", text(result));
         assertEquals(List.of(VIEW_ALL), links(result));
+    }
+
+    @Test
+    void asksAnonymousUsersToConnectTheirAccountWhenNoMemberIsVisible() throws Exception
+    {
+        // OpenProject usually hides the members of the projects from anonymous users, without failing.
+        List<Block> warning = useAnonymousAccess(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        assertSame(warning, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void displaysNoMemberToAnonymousUsersWhenTheyCantConnectTheirAccount() throws Exception
+    {
+        useAnonymousAccess(OpenProjectAccessMode.PUBLIC_DATA);
+        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        assertEquals("No members found.\n View all members",
+            text(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test

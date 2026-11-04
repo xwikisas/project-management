@@ -65,7 +65,7 @@
                   $escapetool.xml($services.localization.render('openproject.config.connectionName'))
                 &lt;/strong&gt;
               &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionNameDescription'))&lt;/p&gt;
+              &lt;p class="xHint"&gt;$escapetool.xml($services.localization.render('openproject.config.connectionNameDescription'))&lt;/p&gt;
               &lt;input id="connection-name" class="form-control" name="connection-name" type="text"&gt;
             &lt;/div&gt;
             &lt;div class="form-group"&gt;
@@ -74,40 +74,46 @@
                   $escapetool.xml($services.localization.render('openproject.config.serverURL'))
                 &lt;/strong&gt;
               &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.serverURLDescription'))&lt;/p&gt;
+              &lt;p class="xHint"&gt;$escapetool.xml($services.localization.render('openproject.config.serverURLDescription'))&lt;/p&gt;
               &lt;input id="server-url" class="form-control" name="server-url" type="text"&gt;
             &lt;/div&gt;
-            &lt;div class="form-group"&gt;
+            &lt;fieldset class="form-group" id="access-mode"&gt;
+              &lt;legend class="h5"&gt;
+                &lt;strong&gt;
+                  $escapetool.xml($services.localization.render('openproject.config.accessMode'))
+                &lt;/strong&gt;
+              &lt;/legend&gt;
+              &lt;p class="xHint"&gt;$escapetool.xml($services.localization.render('openproject.config.accessModeDescription'))&lt;/p&gt;
+              #foreach ($accessMode in ['USER_ACCOUNTS', 'PUBLIC_DATA_AND_USER_ACCOUNTS', 'PUBLIC_DATA'])
+                &lt;div class="radio"&gt;
+                  &lt;label&gt;
+                    &lt;input type="radio" name="access-mode" value="$accessMode"#if ($foreach.first) checked#end&gt;
+                    $escapetool.xml($services.localization.render("openproject.config.accessMode.$accessMode"))
+                    &lt;span class="xHint"&gt;$escapetool.xml($services.localization.render("openproject.config.accessMode.${accessMode}.description"))&lt;/span&gt;
+                  &lt;/label&gt;
+                &lt;/div&gt;
+              #end
+            &lt;/fieldset&gt;
+            &lt;div class="form-group oauth-application-field"&gt;
               &lt;label class="h5" for="client-id"&gt;
                 &lt;strong&gt;
                   $escapetool.xml($services.localization.render('openproject.config.clientId'))
                 &lt;/strong&gt;
               &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt;
-                &lt;span class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdDescription.first'))&lt;/span&gt;
-              &lt;/p&gt;
+              &lt;p class="xHint"&gt;$escapetool.xml($services.localization.render('openproject.config.clientIdDescription.first'))&lt;/p&gt;
               &lt;input id="client-id" class="form-control" name="client-id" type="text"&gt;
             &lt;/div&gt;
-            &lt;div class="form-group"&gt;
+            &lt;div class="form-group oauth-application-field"&gt;
               &lt;label class="h5" for="client-secret"&gt;
                 &lt;strong&gt;
                   $escapetool.xml($services.localization.render('openproject.config.clientSecret'))
                 &lt;/strong&gt;
               &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt; $escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))
+              &lt;p class="xHint" id="client-secret-hint"&gt;$escapetool.xml($services.localization.render('openproject.config.clientSecretDescription'))
                 &lt;span id="client-secret-keep-hint" hidden&gt;$escapetool.xml($services.localization.render('openproject.config.clientSecretKeepHint'))&lt;/span&gt;
               &lt;/p&gt;
               &lt;input id="client-secret" class="form-control" name="client-secret" type="password" autocomplete="new-password"
-                data-keep-placeholder="$escapetool.xml($services.localization.render('openproject.config.clientSecretKeep'))"&gt;
-            &lt;/div&gt;
-            &lt;div class="form-group"&gt;
-              &lt;label class="h5" for="show-public-data"&gt;
-                &lt;input id="show-public-data" name="show-public-data" type="checkbox"&gt;
-                &lt;strong&gt;
-                  $escapetool.xml($services.localization.render('openproject.config.showPublicData'))
-                &lt;/strong&gt;
-              &lt;/label&gt;
-              &lt;p class="form-text text-muted"&gt;$escapetool.xml($services.localization.render('openproject.config.showPublicDataDescription'))&lt;/p&gt;
+                aria-describedby="client-secret-hint"&gt;
             &lt;/div&gt;
           &lt;/div&gt;
           &lt;div class="modal-footer"&gt;
@@ -176,7 +182,7 @@
 
     {{liveData
     id="openproject_connections"
-    properties="connectionName,serverURL,clientId,clientSecret,isAuthorized,actions"
+    properties="connectionName,serverURL,accessMode,clientId,clientSecret,isAuthorized,actions"
     source="liveTable"
     sourceParameters="translationPrefix=openproject.livedatalabels.&amp;resultPage=OpenProject.Code.OpenProjectSourceJson"
     }}
@@ -203,6 +209,12 @@
             "displayer": "html",
             "sortable": false,
             "filterable": true
+          },
+          {
+            "id": "accessMode",
+            "displayer": "html",
+            "sortable": false,
+            "filterable": false
           },
           {
             "id": "clientId",
@@ -369,7 +381,26 @@
 });
 
 require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
+  // The OAuth application (client id and secret) is only needed when the users can connect their OpenProject account.
+  function getAccessMode() {
+    return $("input[name='access-mode']:checked").val() || "USER_ACCOUNTS";
+  }
+
+  function updateOAuthApplicationFields() {
+    $(".oauth-application-field").prop("hidden", getAccessMode() == "PUBLIC_DATA");
+  }
+
+  function setAccessMode(accessMode) {
+    const radio = $("input[name='access-mode']").filter(function () {
+      return this.value == accessMode;
+    });
+    (radio.length ? radio : $("input[name='access-mode'][value='USER_ACCOUNTS']")).prop("checked", true);
+    updateOAuthApplicationFields();
+  }
+
   $(document).ready(function () {
+    $(document).on("change", "input[name='access-mode']", updateOAuthApplicationFields);
+
     $(document).on("click", ".edit-button", function () {
       $("#handleConnectionModal").modal("show");
       $("#handleConnectionModal-label").text(l10n.get("updateConnection"));
@@ -382,12 +413,9 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       // The current client secret is not sent to the browser: leaving the field empty keeps it.
-      $("#client-secret").val("").attr({
-        "placeholder": $("#client-secret").data("keep-placeholder"),
-        "aria-describedby": "client-secret-keep-hint"
-      });
+      $("#client-secret").val("");
       $("#client-secret-keep-hint").prop("hidden", false);
-      $("#show-public-data").prop("checked", $(this).data("show-public-data") === true);
+      setAccessMode($(this).attr("data-access-mode"));
       $("#document-reference").val(documentReference);
       $("#connection-action").val("edit");
     });
@@ -398,9 +426,9 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#connection-name").val("");
       $("#server-url").val("");
       $("#client-id").val("");
-      $("#client-secret").val("").removeAttr("placeholder aria-describedby");
+      $("#client-secret").val("");
       $("#client-secret-keep-hint").prop("hidden", true);
-      $("#show-public-data").prop("checked", false);
+      setAccessMode("USER_ACCOUNTS");
 
       const connectionsSpace = XWiki.Model.resolve(
         "OpenProject.Code.OpenProjectConfigurations",
@@ -473,11 +501,13 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $("#server-url").val().trim();
       const clientId = $("#client-id").val().trim();
       const clientSecret = $("#client-secret").val().trim();
-      const showPublicData = $("#show-public-data").prop("checked");
+      const accessMode = getAccessMode();
+      const userAccounts = accessMode != "PUBLIC_DATA";
       const documentReference = $("#document-reference").val();
       const connectionAction = $("#connection-action").val();
 
-      if (!connectionName || !serverURL || !clientId || (!clientSecret &amp;&amp; connectionAction == "create")) {
+      if (!connectionName || !serverURL
+          || (userAccounts &amp;&amp; (!clientId || (!clientSecret &amp;&amp; connectionAction == "create")))) {
         return new XWiki.widgets.Notification(
           l10n.get("fillInAllFields"),
           "error"
@@ -505,7 +535,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
             serverURL: serverURL,
             clientId: clientId,
             clientSecret: clientSecret,
-            showPublicData: showPublicData,
+            accessMode: accessMode,
           }),
         });
 

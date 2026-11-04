@@ -27,9 +27,13 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.model.WikiPageLink;
@@ -40,7 +44,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,6 +64,9 @@ class OpenProjectScriptServiceTest
 
     @MockComponent
     private OpenProjectAccess openProjectAccess;
+
+    @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @Mock
     private OpenProjectApiClient apiClient;
@@ -133,5 +142,54 @@ class OpenProjectScriptServiceTest
 
         assertSame(exception, assertThrows(WorkItemRetrievalException.class,
             () -> this.scriptService.getMentioningWorkPackages(CONNECTION_NAME, 1, 10, "filters")));
+    }
+
+    @Test
+    void canReadData()
+    {
+        when(this.openProjectAccess.resolve(CONNECTION_NAME))
+            .thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.openProjectAccess.resolve("public")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
+        when(this.openProjectAccess.resolve("private")).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.openProjectAccess.resolve("unknown")).thenReturn(OpenProjectAccessResult.notConfigured());
+
+        assertTrue(this.scriptService.canReadData(CONNECTION_NAME));
+        assertTrue(this.scriptService.canReadData("public"));
+        assertFalse(this.scriptService.canReadData("private"));
+        assertFalse(this.scriptService.canReadData("unknown"));
+    }
+
+    @Test
+    void getUserAccountConnections()
+    {
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of(
+            connection("users", OpenProjectAccessMode.USER_ACCOUNTS),
+            connection("both", OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS),
+            connection("public", OpenProjectAccessMode.PUBLIC_DATA)));
+
+        assertEquals(List.of("users", "both"), this.scriptService.getUserAccountConnections());
+    }
+
+    private static OpenProjectConnection connection(String name, OpenProjectAccessMode accessMode)
+    {
+        OpenProjectConnection connection = new OpenProjectConnection(name, "https://op.example.org", null, null, null);
+        connection.setAccessMode(accessMode);
+        return connection;
+    }
+
+    @Test
+    void disconnect() throws Exception
+    {
+        assertTrue(this.scriptService.disconnect(CONNECTION_NAME));
+
+        verify(this.openProjectAccess).disconnect(CONNECTION_NAME);
+    }
+
+    @Test
+    void disconnectWhenItFails() throws Exception
+    {
+        doThrow(new ProjectManagementException("error")).when(this.openProjectAccess).disconnect(CONNECTION_NAME);
+
+        assertFalse(this.scriptService.disconnect(CONNECTION_NAME));
     }
 }

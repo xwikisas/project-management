@@ -1512,10 +1512,12 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
     <property>
       <content>{{velocity}}
 ## Without a valid license, the licensing module doesn't serve the skin extensions that style and drive this UI,
-## so it would be displayed broken.
+## so it would be displayed broken. Creating a work package requires a connection to which the users can connect
+## their OpenProject account.
 #if ($xcontext.action.equals('view') &amp;&amp; !$xcontext.user.equals('XWiki.XWikiGuest')
     &amp;&amp; $services.licensing.licensor.hasLicensureForEntity(
-      $services.model.createDocumentReference('', ['OpenProject', 'Code'], 'OpenProjectConnectionClass')))
+      $services.model.createDocumentReference('', ['OpenProject', 'Code'], 'OpenProjectConnectionClass'))
+    &amp;&amp; !$services.openproject.userAccountConnections.isEmpty())
   $xwiki.parseTemplate("create_work_package_helper_macros.vm")
   #set ($discard = $xwiki.jsfx.use('uicomponents/suggest/xwiki.selectize.js', true))
   #set ($discard = $xwiki.jsx.use('OpenProject.Code.CreateWorkPackagesExtensionPoint'))
@@ -1546,7 +1548,7 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
         &lt;form id="create-single-work-package-form" class="withLock xform hidden" novalidate&gt;
           &lt;div class="modal-body"&gt;
             &lt;p class="text-muted"&gt; $escapetool.xml($services.localization.render('openproject.createworkpackage.modal.single.description'))&lt;/p&gt;
-            #set ($connectionOptions = $services.openproject.getConnectionOptions())
+            #setUserAccountConnectionOptions()
             #connectionInput('connection-select-single-work-package' $connectionOptions)
             #incorrectToken('incorrect-token-single-work-package')
             #projectInput('project-select-single-work-package' $connectionOptions)

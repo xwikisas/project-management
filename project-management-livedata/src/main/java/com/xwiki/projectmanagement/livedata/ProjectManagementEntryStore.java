@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.livedata;
  */
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -98,8 +99,9 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
 
         // Set the context for the client implementation.
         if (clientContext instanceof DefaultProjectManagementClientExecutionContext) {
-            ((DefaultProjectManagementClientExecutionContext) clientContext).setContext(
-                query.getSource().getParameters());
+            Map<String, Object> context = new HashMap<>(query.getSource().getParameters());
+            context.put(ProjectManagementClientExecutionContext.LIVE_DATA, Boolean.TRUE);
+            ((DefaultProjectManagementClientExecutionContext) clientContext).setContext(context);
         }
 
         // GET ENTRIES FROM ACTUAL SOURCE ---------------

@@ -41,9 +41,12 @@ import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManage
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
 
@@ -63,6 +66,12 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
 
     @Inject
     private UserTokenChecker userTokenChecker;
+
+    @Inject
+    private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @Inject
+    private OpenProjectAccess openProjectAccess;
 
     @Inject
     @Named("jsrx")
@@ -98,7 +107,11 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
             return licenseBlock;
         }
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
-        List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), context);
+        OpenProjectAccessStatus accessStatus = this.openProjectAccess.resolve(parameters.getInstance()).getStatus();
+        // Filtering on the current user requires the OpenProject account of the user.
+        List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), accessStatus,
+            this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters()),
+            context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
@@ -112,10 +125,11 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         }
         this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
-        List<Block> result =
-            new ArrayList<>(this.userTokenChecker.getConnectHintBlock(parameters.getInstance(), context));
+        List<Block> result = new ArrayList<>();
         result.add(new GroupBlock(super.execute(parameters, content, context),
-            Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance())));
+            Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance(),
+                // Editing a work package requires the user's own OpenProject account.
+                "data-can-edit", String.valueOf(accessStatus == OpenProjectAccessStatus.AUTHENTICATED))));
         return result;
     }
 

@@ -31,9 +31,13 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.contrib.oidc.OAuth2ClientScriptService;
 import org.xwiki.contrib.oidc.OAuth2Exception;
+import org.xwiki.contrib.oidc.OAuth2TokenStore;
+import org.xwiki.contrib.oidc.auth.store.OIDCClientConfiguration;
+import org.xwiki.contrib.oidc.auth.store.OIDCClientConfigurationStore;
 import org.xwiki.script.service.ScriptService;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
@@ -67,6 +71,12 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
     private ComponentManager componentManager;
 
     @Inject
+    private OIDCClientConfigurationStore oidcClientConfigurationStore;
+
+    @Inject
+    private OAuth2TokenStore tokenStore;
+
+    @Inject
     private Provider<XWikiContext> contextProvider;
 
     @Inject
@@ -81,9 +91,10 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
             return OpenProjectAccessResult.notConfigured();
         }
 
-        // Guests have no user to attach an OAuth token to.
-        String accessToken =
-            this.contextProvider.get().getUserReference() != null ? getAccessToken(connectionName) : null;
+        // Guests have no user to attach an OAuth token to, and the users can't connect their OpenProject account to a
+        // connection that only shows public data (a token obtained before its access mode changed is ignored).
+        String accessToken = this.contextProvider.get().getUserReference() != null
+            && connection.getAccessMode().allowsUserAccounts() ? getAccessToken(connectionName) : null;
         if (StringUtils.isNotBlank(accessToken)) {
             return OpenProjectAccessResult.authenticated(this.openProjectApiClientFactory.builder()
                 .serverUrl(connection.getServerURL())
@@ -108,7 +119,7 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
 
     private OpenProjectAccessResult resolveWithoutAccount(OpenProjectConnection connection)
     {
-        if (connection.isShowPublicData()) {
+        if (connection.getAccessMode().showsPublicData()) {
             OpenProjectApiClient client = this.publicDataClientProvider.getClient(connection);
             if (client != null) {
                 return OpenProjectAccessResult.anonymous(client);
@@ -127,6 +138,25 @@ public class DefaultOpenProjectAccess implements OpenProjectAccess
             this.logger.warn("Failed to retrieve the access token for the OpenProject connection [{}]. Cause: [{}].",
                 connectionName, ExceptionUtils.getRootCauseMessage(e));
             return null;
+        }
+    }
+
+    @Override
+    public void disconnect(String connectionName) throws ProjectManagementException
+    {
+        if (this.contextProvider.get().getUserReference() == null) {
+            return;
+        }
+        try {
+            OIDCClientConfiguration configuration =
+                this.oidcClientConfigurationStore.getOIDCClientConfiguration(connectionName);
+            // The connections that only show public data have no OAuth client configuration, hence no token.
+            if (configuration != null) {
+                this.tokenStore.deleteToken(configuration);
+            }
+        } catch (Exception e) {
+            throw new ProjectManagementException(
+                String.format("Failed to disconnect from the OpenProject connection [%s].", connectionName), e);
         }
     }
 }

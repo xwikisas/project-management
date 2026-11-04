@@ -221,7 +221,7 @@ class PublicDataClientProviderTest
         assertEquals(1, this.logCapture.size());
         assertEquals("The OpenProject connection [main] is configured to show its public data, but "
             + "[https://openproject.example.org] doesn't accept anonymous requests. Allow them in the OpenProject "
-            + "administration (e.g. by disabling \"Login required\") or disable the option of the connection.",
+            + "administration (e.g. by disabling \"Login required\") or change the access mode of the connection.",
             this.logCapture.getMessage(0));
     }
 

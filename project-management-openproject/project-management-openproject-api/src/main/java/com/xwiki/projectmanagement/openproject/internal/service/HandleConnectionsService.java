@@ -75,6 +75,8 @@ public class HandleConnectionsService
 
     private static final String INSTANCE_ID = "instanceId";
 
+    private static final String USER_ACCOUNTS_REQUIREMENT = " to let the users connect their OpenProject account.";
+
     private static final String OPEN_PROJECT = "OpenProject";
 
     private static final String CODE = "Code";
@@ -119,16 +121,19 @@ public class HandleConnectionsService
      * must be in the {@code OpenProject.Code.OpenProjectConfigurations} space, whose pages only the administrators
      * can view. Only the connections stored on pages whose author has administration right on the wiki are taken into
      * account when checking if the connection name is already used, and an existing page can be updated only if its
-     * author has administration right on the wiki. When updating an existing connection, an empty client secret keeps
-     * the current one, so that the client secret doesn't need to be sent back to the browser. The server URL must be
+     * author has administration right on the wiki. The client id and the client secret are required only when the
+     * access mode of the connection lets the users connect their OpenProject account, and the OAuth client
+     * configuration is saved only in this case (it is removed otherwise). When updating an existing connection, an
+     * empty client secret keeps the current one, so that the client secret doesn't need to be sent back to the
+     * browser. The server URL must be
      * an absolute HTTP or HTTPS URL. The current user becomes the author of the saved connection objects, while the
      * creator and the content author of an existing page are kept, since its content isn't modified.
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ConnectionSaveException if the document is not in the connections space, if no client secret is
-     *     provided for a new connection, if the server URL is not valid, if a configuration with the same name
-     *     already exists or if the existing page can't be updated
+     * @throws ConnectionSaveException if the document is not in the connections space, if the client id or the client
+     *     secret is missing while the access mode lets the users connect their account, if the server URL is not
+     *     valid, if a configuration with the same name already exists or if the existing page can't be updated
      * @throws ProjectManagementException if the query failed or the document retrieval/creation fails
      */
     public void handleConnection(OpenProjectConnection openProjectConnection,
@@ -220,16 +225,20 @@ public class HandleConnectionsService
     private String getClientSecret(OpenProjectConnection openProjectConnection, XWikiDocument doc)
         throws ProjectManagementException
     {
+        boolean userAccounts = openProjectConnection.getAccessMode().allowsUserAccounts();
+        if (userAccounts && StringUtils.isBlank(openProjectConnection.getClientId())) {
+            throw ConnectionSaveException.invalid("The client id is required" + USER_ACCOUNTS_REQUIREMENT);
+        }
         String clientSecret = openProjectConnection.getClientSecret();
         if (StringUtils.isBlank(clientSecret)) {
             // Keep the client secret currently stored on the page, if any.
             BaseObject currentObject = doc.getXObject(getConnectionClassReference(doc));
             clientSecret = currentObject != null ? currentObject.getStringValue(CLIENT_SECRET) : null;
-            if (StringUtils.isEmpty(clientSecret)) {
-                throw ConnectionSaveException.invalid("The client secret is required.");
+            if (userAccounts && StringUtils.isEmpty(clientSecret)) {
+                throw ConnectionSaveException.invalid("The client secret is required" + USER_ACCOUNTS_REQUIREMENT);
             }
         }
-        return clientSecret;
+        return StringUtils.defaultString(clientSecret);
     }
 
     private DocumentReference getConnectionClassReference(XWikiDocument doc)
@@ -259,12 +268,23 @@ public class HandleConnectionsService
         configObj.setStringValue(CLIENT_ID, openProjectConnection.getClientId());
         configObj.setStringValue(CLIENT_SECRET, clientSecret);
         configObj.setStringValue(INSTANCE_ID, retrieveInstanceId(openProjectConnection.getServerURL()));
-        configObj.setIntValue("showPublicData", openProjectConnection.isShowPublicData() ? 1 : 0);
+        configObj.setStringValue("accessMode", openProjectConnection.getAccessMode().name());
 
         DocumentReference oidcClassRef =
             new DocumentReference(wikiName, Arrays.asList("XWiki", "OIDC"), "ClientConfigurationClass");
 
-        BaseObject oidcObj = doc.getXObject(oidcClassRef, true, context);
+        if (openProjectConnection.getAccessMode().allowsUserAccounts()) {
+            setOIDCObject(openProjectConnection, clientSecret, doc.getXObject(oidcClassRef, true, context));
+        } else {
+            // The users can't connect their OpenProject account: no OAuth client is needed.
+            doc.removeXObjects(oidcClassRef);
+        }
+
+        context.getWiki().saveDocument(doc, "Saved OpenProject and OIDC config via REST", context);
+    }
+
+    private void setOIDCObject(OpenProjectConnection openProjectConnection, String clientSecret, BaseObject oidcObj)
+    {
         oidcObj.setStringValue("configurationName", openProjectConnection.getConnectionName());
         oidcObj.setStringValue("authorizationEndpoint", openProjectConnection.getServerURL() + "/oauth/authorize");
         oidcObj.setStringValue("tokenEndpoint", openProjectConnection.getServerURL() + "/oauth/token");
@@ -276,8 +296,6 @@ public class HandleConnectionsService
         oidcObj.setStringValue("responseType", "code");
         oidcObj.setIntValue("enableUser", 1);
         oidcObj.setStringValue("tokenStorageScope", "USER");
-
-        context.getWiki().saveDocument(doc, "Saved OpenProject and OIDC config via REST", context);
     }
 
     private String retrieveInstanceId(String serverURL)

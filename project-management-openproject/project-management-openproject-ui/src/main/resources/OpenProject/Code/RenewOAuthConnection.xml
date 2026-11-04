@@ -51,7 +51,13 @@
     #set ($isLocalRedirect = true)
   #end
   #if ("$!redirectUrl" != "" &amp;&amp; "$!connectionName" != "" &amp;&amp; $isLocalRedirect)
-    $services.oauth2client.authorize($connectionName, $redirectUrl)
+    ## The connections that only show public data have no OAuth client to authorize.
+    #if ($services.openproject.userAccountConnections.contains($connectionName))
+      $services.oauth2client.authorize($connectionName, $redirectUrl)
+    #else
+      #set ($message = $services.localization.render('openproject.config.authorize.notAllowed', [$connectionName]))
+      {{error}}$services.rendering.escape($message, 'xwiki/2.1'){{/error}}
+    #end
   #end
 #end
 {{/velocity}}

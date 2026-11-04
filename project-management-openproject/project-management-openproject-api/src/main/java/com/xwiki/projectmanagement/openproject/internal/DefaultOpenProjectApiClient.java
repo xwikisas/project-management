@@ -1127,13 +1127,34 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         if (statusCode >= 400 && statusCode <= 499) {
             throw new WorkItemRetrievalException(
                 String.format("The request to the OpenProject API was invalid. [%s]",
-                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH)), statusCode
-            );
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH)),
+                getOpenProjectError(response.body(), "OpenProject rejected the request: %s"), statusCode);
         } else if (statusCode >= 500) {
             throw new ProjectManagementException(
                 String.format("Failed to retrieve the OpenProject entities. [%s].",
-                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH))
-            );
+                    StringUtils.abbreviate(response.body(), MAX_ERROR_MESSAGE_LENGTH)),
+                getOpenProjectError(response.body(), "OpenProject failed to answer the request: %s"));
+        }
+    }
+
+    /**
+     * The errors displayed to the users show the message of the root cause of the failure: the message of the error
+     * returned by OpenProject is made the root cause, while the message of the failure keeps the whole response, for
+     * the technical details.
+     *
+     * @param body the body of an error response of OpenProject
+     * @param format the format of the message of the cause, holding the message of the OpenProject error
+     * @return the message of the OpenProject error, as a cause, or {@code null} if the body is not an OpenProject
+     *     error
+     */
+    private ProjectManagementException getOpenProjectError(String body, String format)
+    {
+        try {
+            String message = objectMapper.readTree(StringUtils.defaultString(body)).path("message").asText("");
+            return message.isBlank() ? null
+                : new ProjectManagementException(String.format(format, message));
+        } catch (JsonProcessingException e) {
+            return null;
         }
     }
 }

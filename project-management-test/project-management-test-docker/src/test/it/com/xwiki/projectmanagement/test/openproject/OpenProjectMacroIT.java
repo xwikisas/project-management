@@ -332,7 +332,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertTrue(new ViewPageWithOpenProjectMacro().isConnectWarningDisplayed());
 
         setup.loginAsSuperAdmin();
-        OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, true);
+        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
         try {
             setup.forceGuestUser();
             setup.gotoPage(testReference);
@@ -343,7 +343,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
         } finally {
             setup.loginAsSuperAdmin();
-            OpenProjectAdminPage.gotoPage().setShowPublicData(CONNECTION_ID, false);
+            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
         }
     }
 

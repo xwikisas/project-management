@@ -280,4 +280,17 @@ class OpenProjectCalendarEventProviderTest
             .collect(Collectors.toList()));
         assertEquals(date("2026-01-30"), events.get(1).getEnd());
     }
+
+    @Test
+    void displaysTheVersionsWhenTheSprintsOfAllProjectsAreForbidden() throws Exception
+    {
+        // E.g. anonymous users, who aren't allowed to view the sprints.
+        requestTypes(true, true);
+        when(this.apiClient.getSprints(1, 10, "")).thenThrow(new WorkItemRetrievalException("Forbidden", 403));
+        when(this.apiClient.getVersions()).thenReturn(
+            new PaginatedResult<>(List.of(version(7, "1.0", "2026-01-05", "2026-01-30")), 1, 10, 1));
+
+        assertEquals(List.of("version-7"), this.provider.getMoreEvents(List.of()).stream()
+            .map(CalendarEvent::getId).collect(Collectors.toList()));
+    }
 }

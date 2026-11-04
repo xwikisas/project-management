@@ -31,6 +31,8 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
 
     $('.openproject-calendar-macro').each(function () {
         let instance = $(this).data('instance');
+        // Only the users connected to OpenProject with their own account can edit the work packages.
+        let canEdit = $(this).data('canEdit') === true;
         if (!instance) {
             console.warn('The OpenProject calendar is missing an instance. Click events wont be registered.');
             return;
@@ -67,6 +69,9 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
                         connection: instance,
                         resolve: function() {
                             $('#openproject-item-view-modal-edit-button').remove();
+                            if (!canEdit) {
+                                return;
+                            }
                             let editButton = $('<button></button>')
                                 .addClass('btn btn-default')
                                 .attr('id', 'openproject-item-view-modal-edit-button')

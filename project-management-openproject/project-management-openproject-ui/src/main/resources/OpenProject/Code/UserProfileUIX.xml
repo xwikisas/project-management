@@ -1,0 +1,255 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.5" reference="OpenProject.Code.UserProfileUIX" locale="">
+  <web>OpenProject.Code</web>
+  <name>UserProfileUIX</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content/>
+  <object>
+    <name>OpenProject.Code.UserProfileUIX</name>
+    <number>0</number>
+    <className>XWiki.UIExtensionClass</className>
+    <guid>1236174b-503e-452c-b939-6672bffc9cb8</guid>
+    <class>
+      <name>XWiki.UIExtensionClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <async_cached>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_cached</name>
+        <number>3</number>
+        <prettyName>Cached</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_cached>
+      <async_context>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>1</multiSelect>
+        <name>async_context</name>
+        <number>4</number>
+        <prettyName>Context elements</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator>, </separator>
+        <separators>|, </separators>
+        <size>5</size>
+        <unmodifiable>0</unmodifiable>
+        <values>action=Action|doc.reference=Document|doc.revision|icon.theme=Icon theme|locale=Language|rendering.defaultsyntax=Default syntax|rendering.restricted=Restricted|rendering.targetsyntax=Target syntax|request.base=Request base URL|request.cookies|request.headers|request.parameters=Request parameters|request.remoteAddr|request.session|request.url=Request URL|request.wiki=Request wiki|sheet|user=User|wiki=Wiki</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </async_context>
+      <async_enabled>
+        <defaultValue>0</defaultValue>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType/>
+        <name>async_enabled</name>
+        <number>2</number>
+        <prettyName>Asynchronous rendering</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </async_enabled>
+      <content>
+        <disabled>0</disabled>
+        <editor>Text</editor>
+        <name>content</name>
+        <number>1</number>
+        <prettyName>Executed Content</prettyName>
+        <restricted>0</restricted>
+        <rows>25</rows>
+        <size>120</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </content>
+      <extensionPointId>
+        <disabled>0</disabled>
+        <name>extensionPointId</name>
+        <number>5</number>
+        <prettyName>Extension Point ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </extensionPointId>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>6</number>
+        <prettyName>Extension ID</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parameters>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>parameters</name>
+        <number>7</number>
+        <prettyName>Extension Parameters</prettyName>
+        <restricted>0</restricted>
+        <rows>10</rows>
+        <size>40</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </parameters>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>8</number>
+        <prettyName>Extension Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>wiki=Current Wiki|user=Current User|global=Global</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <async_cached>0</async_cached>
+    </property>
+    <property>
+      <async_context/>
+    </property>
+    <property>
+      <async_enabled>0</async_enabled>
+    </property>
+    <property>
+      <content>{{velocity}}
+#set ($isOwnProfile = $xcontext.userReference == $doc.documentReference)
+#if ($isOwnProfile &amp;&amp; $request.method == 'POST' &amp;&amp; "$!request.openprojectDisconnect" != '' &amp;&amp; $services.csrf.isTokenValid($request.form_token))
+  #if ($services.openproject.disconnect($request.openprojectDisconnect))
+    #set ($message = $services.localization.render('openproject.userprofile.disconnected', [$request.openprojectDisconnect]))
+    {{success}}$services.rendering.escape($message, 'xwiki/2.1'){{/success}}
+  #else
+    #set ($message = $services.localization.render('openproject.userprofile.disconnectFailed', [$request.openprojectDisconnect]))
+    {{error}}$services.rendering.escape($message, 'xwiki/2.1'){{/error}}
+  #end
+#end
+(% id="HOpenProject" %)
+== $services.localization.render('openproject.userprofile.title') ==
+
+$services.localization.render('openproject.userprofile.description')
+
+## Only the connections to which the users can connect their OpenProject account (the tab is hidden when there are
+## none, see the isActive parameter).
+#set ($connections = $services.openproject.userAccountConnections)
+#if (!$isOwnProfile)
+  ## The statuses and the actions are those of the current user, not of the user whose profile is displayed.
+#elseif ($connections.isEmpty())
+  {{info}}$services.localization.render('openproject.userprofile.noConnections'){{/info}}
+#else
+  #set ($profileURL = $doc.getURL('view', 'category=openproject'))
+  {{html clean="false"}}
+  &lt;table class="table openproject-user-connections"&gt;
+    &lt;thead&gt;&lt;tr&gt;
+      &lt;th scope="col"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.connection'))&lt;/th&gt;
+      &lt;th scope="col"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.server'))&lt;/th&gt;
+      &lt;th scope="col"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.status'))&lt;/th&gt;
+      &lt;th scope="col"&gt;&lt;span class="sr-only"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.actions'))&lt;/span&gt;&lt;/th&gt;
+    &lt;/tr&gt;&lt;/thead&gt;
+    &lt;tbody&gt;
+    #foreach ($connection in $connections)
+      #set ($connectionName = $connection)
+      #set ($serverURL = $services.openproject.getConnectionUrl($connectionName))
+      #set ($connected = $services.openproject.isUserAuthorized($connectionName))
+      &lt;tr&gt;
+        &lt;td&gt;$escapetool.xml($connectionName)&lt;/td&gt;
+        &lt;td&gt;&lt;a href="$escapetool.xml($serverURL)"&gt;$escapetool.xml($serverURL)&lt;/a&gt;&lt;/td&gt;
+        &lt;td&gt;
+        #if ($connected)
+          &lt;span class="label label-success"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.connected'))&lt;/span&gt;
+        #else
+          &lt;span class="label label-default"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.notConnected'))&lt;/span&gt;
+        #end
+        &lt;/td&gt;
+        &lt;td class="text-right"&gt;
+        #if ($connected)
+          &lt;form method="post" action="$escapetool.xml($profileURL)"&gt;
+            &lt;input type="hidden" name="form_token" value="$!escapetool.xml($services.csrf.token)" /&gt;
+            &lt;input type="hidden" name="openprojectDisconnect" value="$escapetool.xml($connectionName)" /&gt;
+            &lt;button type="submit" class="btn btn-default btn-sm"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.disconnect'))&lt;/button&gt;
+          &lt;/form&gt;
+        #else
+          #set ($connectURL = $xwiki.getURL('OpenProject.Code.RenewOAuthConnection', 'view', $escapetool.url({
+            'connectionName': $connectionName,
+            'redirectUrl': $profileURL,
+            'token': $services.csrf.token
+          })))
+          &lt;a class="btn btn-primary btn-sm" href="$escapetool.xml($connectURL)"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.connect'))&lt;/a&gt;
+        #end
+        &lt;/td&gt;
+      &lt;/tr&gt;
+    #end
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+  {{/html}}
+#end
+{{/velocity}}</content>
+    </property>
+    <property>
+      <extensionPointId>org.xwiki.plaftorm.user.profile.menu</extensionPointId>
+    </property>
+    <property>
+      <name>com.xwiki.projectmanagement.openproject.userProfileMenu</name>
+    </property>
+    <property>
+      <parameters>id=openproject
+icon=link
+name=$services.localization.render('openproject.userprofile.menu')
+isActive=#if ($xcontext.userReference == $doc.documentReference &amp;&amp; !$services.openproject.userAccountConnections.isEmpty())true#{else}false#end
+priority=900</parameters>
+    </property>
+    <property>
+      <scope>wiki</scope>
+    </property>
+  </object>
+</xwikidoc>

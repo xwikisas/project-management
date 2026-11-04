@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,8 +28,12 @@ import javax.inject.Named;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.Translation;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -47,9 +50,11 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
@@ -91,6 +96,15 @@ class OpenProjectMacroTest
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
+
+    @MockComponent
+    private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @MockComponent
+    private ContextualLocalizationManager l10n;
+
+    @Mock
+    private Translation translation;
 
     @MockComponent
     private StylingSetupManager stylingSetupManager;
@@ -165,19 +179,6 @@ class OpenProjectMacroTest
     }
 
     @Test
-    void displaysTheConnectHintBeforeTheWorkItems() throws Exception
-    {
-        Block hint = new WordBlock("hint");
-        when(this.userTokenChecker.getConnectHintBlock("main", this.context)).thenReturn(List.of(hint));
-
-        List<Block> result = this.macro.execute(this.parameters, "", this.context);
-
-        List<Block> expected = new ArrayList<>(List.of(hint));
-        expected.addAll(this.displayed);
-        assertEquals(List.of(new GroupBlock(expected, Map.of("class", "open-project-macro"))), result);
-    }
-
-    @Test
     void displaysTheWorkItemsInlineInAFormatBlock() throws Exception
     {
         this.context.setInline(true);
@@ -192,7 +193,7 @@ class OpenProjectMacroTest
     void returnsTheUserTokenWarning() throws Exception
     {
         List<Block> warningBlock = List.of(new WordBlock("warning"));
-        when(this.userTokenChecker.getWarningBlock("main", this.context)).thenReturn(warningBlock);
+        when(this.userTokenChecker.getWarningBlock("main", false, this.context)).thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
 
@@ -208,7 +209,7 @@ class OpenProjectMacroTest
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
-        this.macro.asyncProcessParameters(this.parameters);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
         assertEquals("savedQueryResultsUrl=results", this.parameters.getSourceParameters());
     }
@@ -218,7 +219,7 @@ class OpenProjectMacroTest
     {
         this.parameters.setIdentifier("12");
 
-        this.macro.asyncProcessParameters(this.parameters);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
         assertNull(this.parameters.getSourceParameters());
         verifyNoInteractions(this.openProjectAccess);
@@ -231,7 +232,7 @@ class OpenProjectMacroTest
         this.parameters.setIdentifier("saved");
         when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
 
-        this.macro.asyncProcessParameters(this.parameters);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
         assertNull(this.parameters.getSourceParameters());
         verify(this.identifierResolver, never()).getSavedQueryResultsUrl(any(), any());
@@ -246,10 +247,66 @@ class OpenProjectMacroTest
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
             .thenThrow(new ProjectManagementException("forbidden"));
 
-        this.macro.asyncProcessParameters(this.parameters);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
         assertNull(this.parameters.getSourceParameters());
         assertEquals("Failed to retrieve the saved query [5] of the instance [main]. "
             + "Cause: [ProjectManagementException: forbidden].", this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 403, 404 })
+    void asyncProcessParametersWarnsWhenTheSavedQueryIsNotFound(int statusCode) throws Exception
+    {
+        // OpenProject answers 404 for the saved queries that the user isn't allowed to see too.
+        this.parameters.setIdentifier("saved");
+        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
+            .thenThrow(new WorkItemRetrievalException("Not found", statusCode));
+        Block message = new WordBlock("message");
+        when(this.l10n.getTranslation("openproject.savedQuery.unavailable")).thenReturn(this.translation);
+        when(this.translation.render("5")).thenReturn(message);
+        List<Block> warning = List.of(new WordBlock("warning"));
+        when(this.userTokenChecker.getWarningBlock("main", message, false)).thenReturn(warning);
+
+        assertSame(warning, this.macro.asyncProcessParameters(this.parameters, this.context));
+    }
+
+    @Test
+    void asyncProcessParametersDisplaysTheWorkItemsWhenTheSavedQueryFailsOtherwise() throws Exception
+    {
+        this.parameters.setIdentifier("saved");
+        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
+            .thenThrow(new WorkItemRetrievalException("Server error", 500));
+
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
+        assertEquals("Failed to retrieve the saved query [5] of the instance [main]. "
+            + "Cause: [WorkItemRetrievalException: Server error].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheFiltersUseTheCurrentUser() throws Exception
+    {
+        this.parameters.setPresetId("3");
+        this.parameters.setFilters("filters");
+        when(this.currentUserFilterDetector.hasCurrentUserFilter("3", "filters")).thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheIdentifierUsesTheCurrentUser() throws Exception
+    {
+        this.parameters.setIdentifier("url");
+        when(this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier("url")).thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
     }
 }

@@ -23,7 +23,7 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -65,8 +65,8 @@ public class ProjectManagementAsyncExecutor
      * @param parameters the parameters of the macro.
      * @param content the content of the macro.
      * @param context the macro transformation context.
-     * @param paramsConsumer consumes the async renderer and can modify the parameters and content of the macro
-     *     before execution. i.e. make another api call in the async context.
+     * @param paramsConsumer processes the parameters of the macro before execution, i.e. make another api call in
+     *     the async context, and returns the blocks to display instead of the macro, or an empty list to execute it.
      * @param forcePlaceholder denotes whether to force the placeholder or nah.
      * @return the placeholder blocks that will be asynchronously populated.
      * @throws RenderingException if some exception was thrown during the rendering of the placeholder.
@@ -75,7 +75,8 @@ public class ProjectManagementAsyncExecutor
      */
     public List<Block> execute(Macro<ProjectManagementAsyncMacroParams> displayerMacro,
         ProjectManagementAsyncMacroParams parameters, String content, MacroTransformationContext context,
-        Consumer<ProjectManagementAsyncMacroParams> paramsConsumer, boolean forcePlaceholder)
+        BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>> paramsConsumer,
+        boolean forcePlaceholder)
         throws RenderingException, JobException
     {
 

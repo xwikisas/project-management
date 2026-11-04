@@ -29,6 +29,7 @@ import org.xwiki.livedata.LiveData;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.renderer.PrintRenderer;
+import org.xwiki.test.annotation.BeforeComponent;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -39,6 +40,7 @@ import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -73,8 +75,14 @@ class ProjectManagementEntryStoreTest
     @InjectComponentManager
     private MockitoComponentManager componentManager;
 
-    @MockComponent
-    private ProjectManagementClientExecutionContext clientContext;
+    private final DefaultProjectManagementClientExecutionContext clientContext =
+        new DefaultProjectManagementClientExecutionContext();
+
+    @BeforeComponent
+    void registerClientContext() throws Exception
+    {
+        this.componentManager.registerComponent(ProjectManagementClientExecutionContext.class, this.clientContext);
+    }
 
     @Test
     void getQuery() throws WorkItemException, LiveDataException
@@ -105,6 +113,9 @@ class ProjectManagementEntryStoreTest
         // Work Item was flattened.
         assertEquals("1", result.getEntries().get(0).get("identifier.value"));
         assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
+        // The client is told that the work items are requested by Live Data, whose viewers can filter them.
+        assertEquals(Boolean.TRUE, this.clientContext.get(ProjectManagementClientExecutionContext.LIVE_DATA));
+        assertEquals(clientId, this.clientContext.get("client"));
     }
 
     @Test
