@@ -221,12 +221,12 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // Create a filter.
         modal.clickMore();
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
-        filterBuilderParameter.addFilter("assignees").setSuggestValue(1, "OpenProject Admin");
-        filterBuilderParameter.addFilter("summary").setValue(1, "sp");
-        filterBuilderParameter.addFilter("status")
-            .addConstraint()
-            .setSuggestValue(1, "In progress")
-            .setSuggestValue(2, "New");
+        filterBuilderParameter.addFilter("assignees").setSuggestValue("OpenProject Admin");
+        filterBuilderParameter.addFilter("summary").setValue("sp");
+        // The values of a filter are combined with OR.
+        filterBuilderParameter.addFilter("status").setSuggestValue("In progress").setSuggestValue("New");
+        assertEquals("Selects the work items where Assignee is one of OpenProject Admin, and Subject contains \"sp\", "
+            + "and Status is one of In progress or New.", filterBuilderParameter.getSummary());
         // Submit modal and view page.
         modal.clickSubmit();
         editPage.clickSaveAndView();
@@ -241,6 +241,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         filterBuilderParameter = modal.getFilterBuilder();
         List<FilterBuilderFilter> filters = filterBuilderParameter.getFilters();
         assertEquals(3, filters.size());
+        // The values of a filter are reloaded in the same row.
+        assertEquals(List.of("In progress", "New"), filters.get(2).getSuggestValues());
         // Clear the filters and expect the macro to display all the entries.
         filterBuilderParameter.clearFilters();
         modal.clickSubmit();

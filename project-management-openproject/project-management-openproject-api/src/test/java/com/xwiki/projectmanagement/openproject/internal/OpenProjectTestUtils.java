@@ -42,6 +42,11 @@ public class OpenProjectTestUtils
         return getJsonFromResource("openProjectQueryFormResponse.json");
     }
 
+    public static String getWorkPackageSchemasResponse() throws IOException
+    {
+        return getJsonFromResource("openProjectWorkPackageSchemasApiResponse.json");
+    }
+
     public static String getUsersValidResponse() throws IOException
     {
         return getJsonFromResource("openProjectUsersApiResponse.json");

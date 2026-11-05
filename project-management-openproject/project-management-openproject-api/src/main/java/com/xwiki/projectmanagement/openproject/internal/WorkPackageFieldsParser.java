@@ -65,6 +65,10 @@ public final class WorkPackageFieldsParser
 
     private static final String VALUES = "values";
 
+    private static final String LIST_TYPE_PREFIX = "[]";
+
+    private static final String TYPE = "type";
+
     private static final String PROPERTY_COLUMN_TYPE = "QueryColumn::Property";
 
     /**
@@ -115,6 +119,28 @@ public final class WorkPackageFieldsParser
             fields.add(field);
         }
         return fields;
+    }
+
+    /**
+     * Reads which fields hold several values in a work package, from work package schemas: a field typed as a list,
+     * e.g. {@code []CustomOption} or {@code []Version}, as opposed to e.g. {@code CustomOption} or {@code Category}.
+     *
+     * @param schemaNodes the schemas, as listed by {@code GET /api/v3/work_packages/schemas}
+     * @param keys the keys of the fields to look for
+     * @return whether each of the given fields is multi-value, keyed by field, for the fields found in a schema
+     */
+    public static Map<String, Boolean> parseMultiValueFields(JsonNode schemaNodes, Set<String> keys)
+    {
+        Map<String, Boolean> multiValueFields = new HashMap<>();
+        for (JsonNode schemaNode : schemaNodes) {
+            for (String key : keys) {
+                JsonNode type = schemaNode.path(key).path(TYPE);
+                if (type.isTextual()) {
+                    multiValueFields.putIfAbsent(key, type.asText().startsWith(LIST_TYPE_PREFIX));
+                }
+            }
+        }
+        return multiValueFields;
     }
 
     /**
@@ -194,7 +220,7 @@ public final class WorkPackageFieldsParser
                 Map.Entry<String, JsonNode> operatorDependency = operatorDependencies.next();
                 operators.add(
                     URLDecoder.decode(getLastPathSegment(operatorDependency.getKey()), StandardCharsets.UTF_8));
-                JsonNode valueType = operatorDependency.getValue().path(VALUES).path("type");
+                JsonNode valueType = operatorDependency.getValue().path(VALUES).path(TYPE);
                 if (field.getFilterValueType() == null && valueType.isTextual()) {
                     field.setFilterValueType(valueType.asText());
                 }

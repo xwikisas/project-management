@@ -41,9 +41,13 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 
 import com.sun.net.httpserver.HttpServer;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -90,6 +94,9 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("unchecked")
 class DefaultOpenProjectApiClientTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     private DefaultOpenProjectApiClient openProjectApiClient;
 
     private HttpClient client;
@@ -129,14 +136,20 @@ class DefaultOpenProjectApiClientTest
     @Test
     void getWorkPackageFields() throws Exception
     {
-        when(this.response.body()).thenReturn(OpenProjectTestUtils.getQueryFormResponse());
+        mockWorkPackageFieldsResponses();
 
         List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
 
         ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(this.client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
-        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/form", requestCaptor.getValue().uri().toString());
-        assertEquals("POST", requestCaptor.getValue().method());
+        verify(this.client, times(4)).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest formRequest = requestCaptor.getAllValues().get(0);
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/form", formRequest.uri().toString());
+        assertEquals("POST", formRequest.method());
+        // The schemas of all the types of work packages of the projects, to find out which fields are multi-value.
+        HttpRequest schemasRequest = requestCaptor.getAllValues().get(3);
+        assertEquals("/api/v3/work_packages/schemas", schemasRequest.uri().getPath());
+        assertThat(schemasRequest.uri().getQuery(),
+            containsString("\"values\":[\"1-1\",\"1-2\",\"2-1\",\"2-2\",\"3-1\",\"3-2\"]"));
 
         // Only the columns holding a property are fields, not the relation columns.
         assertEquals(List.of("id", "subject", "responsible", "category", "targetVersions", "observedInVersions",
@@ -164,6 +177,50 @@ class DefaultOpenProjectApiClientTest
         assertTrue(labels.isCustomField());
 
         assertEquals("[1]String", fields.get(8).getFilterValueType());
+
+        // Multi-value, according to the schemas.
+        assertTrue(targetVersions.isMultiValue());
+        assertTrue(labels.isMultiValue());
+        // Single-value: a list custom field typed as one option, a field filtered on a single value, and a field
+        // missing from the schemas.
+        assertFalse(fields.get(7).isMultiValue());
+        assertFalse(fields.get(8).isMultiValue());
+        assertFalse(fields.get(5).isMultiValue());
+    }
+
+    @Test
+    void getWorkPackageFieldsWhenTheSchemasCantBeRetrieved() throws Exception
+    {
+        Map<String, HttpResponse<String>> responses = mockWorkPackageFieldsResponses();
+        when(responses.get("/api/v3/work_packages/schemas").statusCode()).thenReturn(500);
+
+        List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
+
+        // The fields are still returned, as single-value fields.
+        assertEquals(10, fields.size());
+        assertFalse(fields.get(4).isMultiValue());
+        assertFalse(fields.get(9).isMultiValue());
+        assertThat(this.logCapture.getMessage(0), startsWith("Failed to find out which work package fields are "
+            + "multi-value: ProjectManagementException: Failed to retrieve the OpenProject entities."));
+    }
+
+    private Map<String, HttpResponse<String>> mockWorkPackageFieldsResponses() throws Exception
+    {
+        Map<String, HttpResponse<String>> responses = Map.of(
+            "/api/v3/queries/form", mockResponse(OpenProjectTestUtils.getQueryFormResponse()),
+            "/api/v3/types", mockResponse(OpenProjectTestUtils.getTypesValidResponse()),
+            "/api/v3/projects", mockResponse(OpenProjectTestUtils.getProjectsValidResponse()),
+            "/api/v3/work_packages/schemas", mockResponse(OpenProjectTestUtils.getWorkPackageSchemasResponse()));
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenAnswer(invocation -> responses.get(invocation.<HttpRequest>getArgument(0).uri().getPath()));
+        return responses;
+    }
+
+    private HttpResponse<String> mockResponse(String body)
+    {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.body()).thenReturn(body);
+        return mockResponse;
     }
 
     @Test

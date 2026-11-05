@@ -32,7 +32,19 @@
     'class': 'op-preset-select'
   })
   #set ($discard = $parameters.putAll($displayer.parameters))
-  #staticSelectPicker($parameters)
+  #if ($options.isEmpty() && "$!displayer.value" == '')
+    ## An empty picker would open no list: say why there's nothing to choose. The macros only list the presets of
+    ## their kind (chart or not), so say which kind is missing: the other kind may exist.
+    #set ($noneKey = 'projectmanagement.macro.filter.preset.none')
+    #if ($chart)
+      #set ($noneKey = "${noneKey}.chart")
+    #end
+    <select class="form-control op-preset-select" disabled="disabled">
+      <option>$escapetool.xml($services.localization.render($noneKey))</option>
+    </select>
+  #else
+    #staticSelectPicker($parameters)
+  #end
 #end
 #if ("$!client" != '')
   #displayPresetPicker($client, $chart)

@@ -61,16 +61,16 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
           if (!daterangepicker) {
             return;
           }
-          if (this.operator === "between") {
+          if (operator === "between") {
             // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
             // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
             valToSet = `${daterangepicker.startDate.format()}/${daterangepicker.endDate.add(59, "seconds").format()}`;
-          } else if (this.operator === "before" || this.operator === "after") {
+          } else if (operator === "before" || operator === "after") {
             // Use the ISO 8601 representation, without fractional seconds.
             valToSet = daterangepicker.startDate.format();
           } else {
             // Use the formatted date.
-            valToSet = daterangepicker.startDate.format(this.format);
+            valToSet = daterangepicker.startDate.format(dateFormat);
           }
           inputElem.val(valToSet);
           inputElem.trigger('change');
@@ -103,17 +103,18 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         let options = params.options || [];
         let selectizeCfg = {
           create: true,
-          maxItems: 1
+          // A list filter can match several values (the value of the input holding them separated by commas).
+          maxItems: params.multiple ? null : 1
         };
         if (options.size() > 0) {
           selectizeCfg.options = options;
         }
         if (params.searchURL) {
-          selectizeCfg.load = function (text, callback) {
+          let search = function (text, selectedItem, callback) {
             let searchURL = params.searchURL.replace("{encodedQuery}", encodeURIComponent(text));
-            if (inputElem.val() != '') {
-              let selectedItem = 'selectedItem=' + encodeURIComponent(inputElem.val());
-              searchURL += searchURL.indexOf('?') >= 0 ? '&' + selectedItem : '?' + selectedItem;
+            if (selectedItem) {
+              let selectedItemParam = 'selectedItem=' + encodeURIComponent(selectedItem);
+              searchURL += searchURL.indexOf('?') >= 0 ? '&' + selectedItemParam : '?' + selectedItemParam;
             }
             $.getJSON(searchURL)
               .then(function (results) {
@@ -127,6 +128,13 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
               console.log(`error trying to retrieve selectize searchUrl ${searchURL} elements.` + e);
               callback([]);
             });
+          };
+          selectizeCfg.load = function (text, callback) {
+            search(text, params.multiple ? '' : inputElem.val(), callback);
+          };
+          // Each selected value is loaded on its own, to get its label.
+          selectizeCfg.loadSelected = function (value, callback) {
+            search('', value, callback);
           };
         }
         inputElem.xwikiSelectize(selectizeCfg);

@@ -32,8 +32,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -44,6 +46,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.joda.time.LocalDate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -156,6 +160,22 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String SEMICOLON = ";";
 
     private static final String API_URL_TYPES = "/api/v3/types";
+
+    private static final String API_URL_WORK_PACKAGE_SCHEMAS = "/api/v3/work_packages/schemas";
+
+    /**
+     * The number of projects whose work package schemas (one per type of work package) are requested at once, to
+     * find out which fields are multi-value.
+     */
+    private static final int SCHEMA_PROJECTS_PER_REQUEST = 10;
+
+    /**
+     * The maximum number of requests for work package schemas: the fields not found in the schemas of the first
+     * projects are considered single-value.
+     */
+    private static final int SCHEMA_MAX_REQUESTS = 5;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultOpenProjectApiClient.class);
 
     private static final String API_URL_STATUSES = "/api/v3/statuses";
 
@@ -434,7 +454,87 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         // custom fields included.
         List<WorkPackageField> fields =
             WorkPackageFieldsParser.parseQueryForm(getFormResponse(API_URL_FORM_QUERIES, "{}"));
+        try {
+            setMultiValueFields(fields);
+        } catch (ProjectManagementException e) {
+            // The fields can still be displayed and filtered, as single-value ones.
+            LOGGER.warn("Failed to find out which work package fields are multi-value: {}",
+                ExceptionUtils.getRootCauseMessage(e));
+        }
         return new PaginatedResult<>(fields, 0, fields.size(), fields.size());
+    }
+
+    /**
+     * Finds out which of the fields filtered on a list of values are multi-value, from the work package schemas:
+     * the query form types the values of every list filter as a list. There is one schema per project and type of
+     * work package, and a field is in the schemas of the projects and types it's enabled for, so the schemas are
+     * requested a few projects at a time, until all the fields are found.
+     */
+    private void setMultiValueFields(List<WorkPackageField> fields) throws ProjectManagementException
+    {
+        Set<String> unresolved = new HashSet<>();
+        for (WorkPackageField field : fields) {
+            if (StringUtils.startsWith(field.getFilterValueType(), "[]")) {
+                unresolved.add(field.getKey());
+            }
+        }
+        if (unresolved.isEmpty()) {
+            return;
+        }
+        List<String> typeIds = getIds(getOpenProjectResponseEntities(API_URL_TYPES, null, null, "", "", ""));
+        boolean morePages = true;
+        for (int page = 1; morePages && page <= SCHEMA_MAX_REQUESTS && !unresolved.isEmpty(); page++) {
+            List<String> projectIds = getIds(
+                getOpenProjectResponseEntities(API_URL_PROJECTS, page, SCHEMA_PROJECTS_PER_REQUEST, "", "", ""));
+            setMultiValueFields(fields, unresolved, projectIds, typeIds);
+            morePages = projectIds.size() == SCHEMA_PROJECTS_PER_REQUEST;
+        }
+    }
+
+    /**
+     * Sets which of the unresolved fields are multi-value according to the schemas of the given projects, removing
+     * the fields found in these schemas from the unresolved ones.
+     */
+    private void setMultiValueFields(List<WorkPackageField> fields, Set<String> unresolved, List<String> projectIds,
+        List<String> typeIds) throws ProjectManagementException
+    {
+        List<String> schemaIds = new ArrayList<>();
+        for (String projectId : projectIds) {
+            for (String typeId : typeIds) {
+                schemaIds.add(projectId + '-' + typeId);
+            }
+        }
+        if (schemaIds.isEmpty()) {
+            return;
+        }
+        String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of("operator", "=", "values", schemaIds))));
+        Map<String, Boolean> multiValueFields = WorkPackageFieldsParser.parseMultiValueFields(
+            getOpenProjectResponseEntities(API_URL_WORK_PACKAGE_SCHEMAS, null, null, filters, "", ""), unresolved);
+        for (WorkPackageField field : fields) {
+            Boolean multiValue = multiValueFields.get(field.getKey());
+            if (multiValue != null) {
+                field.setMultiValue(multiValue);
+            }
+        }
+        unresolved.removeAll(multiValueFields.keySet());
+    }
+
+    private String toJson(Object value) throws ProjectManagementException
+    {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException("Failed to serialize the OpenProject request parameters.", e);
+        }
+    }
+
+    private static List<String> getIds(JsonNode elements)
+    {
+        List<String> ids = new ArrayList<>();
+        for (JsonNode element : elements) {
+            ids.add(element.path(OP_RESPONSE_ID).asText());
+        }
+        return ids;
     }
 
     private JsonNode getFormResponse(String urlPart, String jsonBody) throws ProjectManagementException

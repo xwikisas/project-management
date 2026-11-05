@@ -19,13 +19,17 @@
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
 #template("filter_builder.vm")
-<div class="project-management-filters">
-#filterBuilder({"client": "$!clientId", "title": "Dataset 1", "removable": true})
+## The title of each series, the JavaScript code replacing __N__ by its number.
+<div class="project-management-filters"
+  data-series-title="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.series', ['__N__']))">
+#set ($firstSeriesTitle = $services.localization.render('projectmanagement.macro.chart.series', [1]))
+#filterBuilder({"client": "$!clientId", "title": $firstSeriesTitle, "removable": true})
 </div>
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })
-<button class="btn btn-link project-management-new-dataset">Add new dataset</button>
+<button class="btn btn-link proj-manag-add-link project-management-new-dataset">$escapetool.xml(
+  $services.localization.render('projectmanagement.macro.chart.addSeries'))</button>
 <textarea class="proj-manag-filter hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"

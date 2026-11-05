@@ -20,6 +20,8 @@ package com.xwiki.projectmanagement.livedata.script;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Map;
+
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
@@ -59,10 +61,26 @@ public class ProjectManagementLivedataScriptService implements ScriptService
      */
     public LiveDataConfiguration getLivedataConfiguration(String hint)
     {
+        return getLivedataConfiguration(hint, Map.of());
+    }
+
+    /**
+     * @param hint the hint of the client, e.g. {@code openproject}
+     * @param sourceParameters the parameters of the livedata source, besides the client, which the configuration of
+     *     the client can depend on, e.g. the {@code instance} of the client from which the work items are retrieved,
+     *     whose own properties (such as custom fields) are added to the configuration
+     * @return the livedata configuration of the client, or {@code null} if it couldn't be resolved
+     * @since 1.4.0
+     */
+    public LiveDataConfiguration getLivedataConfiguration(String hint, Map<String, Object> sourceParameters)
+    {
         LiveDataConfiguration liveDataConfiguration = new LiveDataConfiguration();
         LiveDataQuery liveDataQuery = new LiveDataQuery();
         LiveDataQuery.Source source = new LiveDataQuery.Source();
         source.setId("projectmanagement");
+        if (sourceParameters != null) {
+            sourceParameters.forEach(source::setParameter);
+        }
         source.setParameter("client", hint);
         liveDataQuery.setSource(source);
         liveDataConfiguration.setQuery(liveDataQuery);

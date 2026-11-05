@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.livedata.script;
 
+import java.util.Map;
+
 import javax.inject.Named;
 
 import org.junit.jupiter.api.Test;
@@ -70,6 +72,22 @@ class ProjectManagementLivedataScriptServiceTest
                 && query.getSource() != null
                 && "projectmanagement".equals(query.getSource().getId())
                 && "testClient".equals(query.getSource().getParameters().get("client"));
+        }));
+    }
+
+    @Test
+    void getLivedataConfigurationForTheInstanceOfTheClient() throws Exception
+    {
+        LiveDataConfiguration expectedConfig = new LiveDataConfiguration();
+        when(resolver.resolve(any(LiveDataConfiguration.class))).thenReturn(expectedConfig);
+
+        // The client given as hint can't be overridden by the source parameters.
+        assertSame(expectedConfig, service.getLivedataConfiguration("testClient",
+            Map.of("instance", "op.xwiki.org", "client", "otherClient")));
+
+        verify(resolver).resolve(argThat(config -> {
+            Map<String, Object> parameters = config.getQuery().getSource().getParameters();
+            return "testClient".equals(parameters.get("client")) && "op.xwiki.org".equals(parameters.get("instance"));
         }));
     }
 

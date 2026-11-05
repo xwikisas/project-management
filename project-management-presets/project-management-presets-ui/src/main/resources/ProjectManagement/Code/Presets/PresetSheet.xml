@@ -115,20 +115,26 @@
 #else
   #set ($discard = $opts.put('readonly', false))
 #end
+## The filter of a chart preset holds several series, titled from a translated template.
+#set ($seriesTitleAttribute = '')
 #if ("$!isMultiple" == '1')
-  #set ($discard = $opts.put('title', 'Dataset 1'))
+  #set ($discard = $opts.put('title', $services.localization.render('projectmanagement.macro.chart.series', [1])))
   #set ($discard = $opts.put('removable', true))
+  #set ($seriesTitle = $services.localization.render('projectmanagement.macro.chart.series', ['__N__']))
+  #set ($seriesTitleAttribute = " data-series-title='$escapetool.xml($seriesTitle)'")
 #end
 &lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.filter'))&lt;/dt&gt;
 &lt;dd&gt;
-  &lt;div class="project-management-filters"&gt;
+  &lt;div class="project-management-filters"$seriesTitleAttribute&gt;
   #filterBuilder($opts)
   &lt;/div&gt;
   #set ($deps = {
     'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
   })
   #if (!$opts.readonly &amp;&amp; "$!isMultiple" == '1')
-    &lt;button class="btn btn-link project-management-new-dataset"&gt;Add new dataset&lt;/button&gt;
+    &lt;button class="btn btn-link proj-manag-add-link project-management-new-dataset"&gt;
+      $escapetool.xml($services.localization.render('projectmanagement.macro.chart.addSeries'))
+    &lt;/button&gt;
   #end
   &lt;textarea id="ProjectManagement.Code.Presets.PresetClass_0_filter"
     class="proj-manag-filter hidden" name="ProjectManagement.Code.Presets.PresetClass_0_filter"

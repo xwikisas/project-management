@@ -28,48 +28,117 @@
 .proj-manag-header {
   display: flex;
   justify-content: space-between;
-  padding: 5px;
+  /* No right padding, so that the trash icon of the series is aligned with the trash icons of its filters. */
+  padding: 5px 0 5px 5px;
 }
 .proj-manag-chart-type-param-description {
   color: #555555;
   font-size: smaller;
 }
-.proj-manag-constraint-title {
-  display: inline-block;
-  margin-right: 0.5rem;
-  padding: 5px;
-  font-weight: bold;
-}
-.proj-manag-filter-container {
+/* One row per filter: the property, the operator, the value(s) and the remove action. */
+.proj-manag-constraints {
   display: flex;
-  flex-direction: row;
-  justify-content: flex-start;
-  align-items: center;
-  width: 100%;
+  flex-direction: column;
+  gap: .5em;
   margin-bottom: .5em;
-  gap: 0.5em;
+}
+
+.proj-manag-constraint {
+  display: grid;
+  grid-template-columns: 8em 10em minmax(8em, 1fr) auto;
+  gap: .5em;
+  align-items: start;
+}
+
+.proj-manag-constraint-title {
+  padding-top: 6px;
+  font-weight: bold;
+  overflow-wrap: anywhere;
 }
 
 .proj-manag-container,.proj-manag-container>.proj-manag-constraint-value {
   display: flex;
   width: 100% !important;
-  height: 100% !important;
   min-height: 1em;
 }
 
-.proj-manag-add-constraint {
-  display: inline-block;
-  margin-top: 3px;
-  font-style: italic;
+.proj-manag-constraint-value-container {
+  gap: .5em;
+  min-width: 0;
+}
+
+/* The values excluded by their filter, e.g. "is not one of" (Selectize before XWiki 16, Tom Select after). */
+.proj-manag-constraint-excluding .selectize-input .item,
+.proj-manag-constraint-excluding .ts-control .item,
+.proj-manag-constraint-excluding .item .xwiki-selectize-option-label {
+  background-color: #f9e1dd;
+  color: #8f2b1d;
+}
+
+.proj-manag-add-filter-container label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5em;
+  font-weight: normal;
+}
+
+/* The select always displays its placeholder (it goes back to it once a property is chosen), so it's sized to it,
+   whatever its translation, rather than to its longest option, which only matters in the list of options. The
+   browsers not supporting field-sizing size it to its longest option. */
+select.proj-manag-add-filter {
+  field-sizing: content;
+  width: auto;
+  max-width: 100%;
+}
+
+.proj-manag-filter-summary {
+  margin: .5em 0 0;
+}
+
+/* The actions adding a series or a series name are displayed as links. */
+.proj-manag-add-link.btn {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .proj-manag-date-picker {
   z-index: 99999;
 }
 
+/* The trash icons of a series and of its filters are centered in boxes of the same width, at the right. */
+.proj-manag-remove-filter,
 .proj-manag-delete-filter {
   display: flex;
-  padding: 6px 10px;
+  justify-content: center;
+  width: 2em;
+  padding: 6px 0;
   border-radius: 5px;
+}
+
+.proj-manag-remove-filter {
+  cursor: pointer;
+}
+
+.proj-manag-delete-filter {
   color: currentColor;
+}
+
+/* The last column, even when the value of the filter is hidden (an operator without value). */
+.proj-manag-constraint-remove-container {
+  grid-column: 4;
+}
+
+@media (max-width: 600px) {
+  .proj-manag-constraint {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .proj-manag-constraint-title, .proj-manag-constraint-operator-container,
+  .proj-manag-constraint-value-container {
+    grid-column: 1;
+  }
+  .proj-manag-constraint-remove-container {
+    grid-column: 2;
+    grid-row: 1;
+  }
 }

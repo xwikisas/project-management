@@ -40,6 +40,8 @@ public class WorkPackageField extends BaseOpenProjectObject
 
     private static final String SORTABLE = "sortable";
 
+    private static final String MULTI_VALUE = "multiValue";
+
     private static final String CUSTOM_FIELD_PREFIX = "customField";
 
     /**
@@ -126,6 +128,24 @@ public class WorkPackageField extends BaseOpenProjectObject
     public void setSortable(boolean sortable)
     {
         put(SORTABLE, sortable);
+    }
+
+    /**
+     * @return {@code true} if a work package can have several values for this field, e.g. the target versions or a
+     *     multi-value list custom field, as opposed to e.g. the category or a single-value list custom field (a filter
+     *     on either takes several values, so the type of the values of the filter can't tell them apart)
+     */
+    public boolean isMultiValue()
+    {
+        return Boolean.TRUE.equals(get(MULTI_VALUE));
+    }
+
+    /**
+     * @param multiValue see {@link #isMultiValue()}
+     */
+    public void setMultiValue(boolean multiValue)
+    {
+        put(MULTI_VALUE, multiValue);
     }
 
     /**
