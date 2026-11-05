@@ -21,6 +21,10 @@
  * The platform inserts the result of an asynchronous rendering in the page without notifying the page scripts, so the
  * errors it displays don't get the click listener that shows their details. Notify them for the errors displayed by
  * the project management macros, unless the page scripts already did it.
+ *
+ * This works around XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous rendering targets the removed
+ * placeholder instead of the rendered content, https://jira.xwiki.org/browse/XWIKI-25675): remove this script once the
+ * minimal supported XWiki version includes its fix.
  */
 require(['jquery'], function($) {
   'use strict';
