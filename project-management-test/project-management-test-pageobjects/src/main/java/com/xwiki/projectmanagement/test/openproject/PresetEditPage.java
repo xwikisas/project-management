@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.test.openproject;
 import java.util.List;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.InlinePage;
 
@@ -101,5 +102,18 @@ public class PresetEditPage extends InlinePage
         });
         clickSaveAndView(true);
         return new PresetViewPage();
+    }
+
+    /**
+     * Press Enter in the value of a text filter, as a user would when done typing it.
+     *
+     * @param filter a filter of the preset whose value is typed in a text field
+     * @return this page
+     * @since 1.4.0
+     */
+    public PresetEditPage pressEnter(FilterBuilderFilter filter)
+    {
+        filter.getValueElement().sendKeys(Keys.ENTER);
+        return this;
     }
 }

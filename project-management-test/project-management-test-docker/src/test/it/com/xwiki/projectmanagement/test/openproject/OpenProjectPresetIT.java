@@ -167,7 +167,9 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         // The last series can't be removed, since a new series is a copy of an existing one.
         assertFalse(builders.get(0).isRemovable());
         builders.get(0).addFilter(SUMMARY).typeValue("speakers");
-        editPage.addDataset().addFilter(SUMMARY).typeValue("sp");
+        // Pressing Enter in a filter doesn't add a series.
+        editPage.pressEnter(editPage.addDataset().addFilter(SUMMARY).typeValue("sp"));
+        assertEquals(2, editPage.getFilterBuilders().size());
         assertTrue(editPage.getFilterBuilders().stream().allMatch(FilterBuilderParameter::isRemovable));
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 

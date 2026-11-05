@@ -132,7 +132,7 @@
     'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
   })
   #if (!$opts.readonly &amp;&amp; "$!isMultiple" == '1')
-    &lt;button class="btn btn-link proj-manag-add-link project-management-new-dataset"&gt;
+    &lt;button type="button" class="btn btn-link proj-manag-add-link project-management-new-dataset"&gt;
       $escapetool.xml($services.localization.render('projectmanagement.macro.chart.addSeries'))
     &lt;/button&gt;
   #end

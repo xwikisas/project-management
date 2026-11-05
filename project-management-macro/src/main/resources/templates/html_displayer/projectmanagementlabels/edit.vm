@@ -32,7 +32,7 @@
     </div>
   </template>
 </div>
-<button class="btn btn-link proj-manag-add-link proj-manag-chart-label-new">$escapetool.xml(
+<button type="button" class="btn btn-link proj-manag-add-link proj-manag-chart-label-new">$escapetool.xml(
   $services.localization.render('projectmanagement.macro.chart.addSeriesName'))</button>
 <textarea id="proj-manag-chart-parameter-labels" class="hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())

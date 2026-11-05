@@ -28,7 +28,7 @@
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })
-<button class="btn btn-link proj-manag-add-link project-management-new-dataset">$escapetool.xml(
+<button type="button" class="btn btn-link proj-manag-add-link project-management-new-dataset">$escapetool.xml(
   $services.localization.render('projectmanagement.macro.chart.addSeries'))</button>
 <textarea class="proj-manag-filter hidden" value="$!escapetool.xml($!displayer.value)"
   #foreach ($parameter in $displayer.parameters.entrySet())
