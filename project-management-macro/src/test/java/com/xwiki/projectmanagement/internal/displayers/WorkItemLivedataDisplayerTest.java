@@ -86,7 +86,7 @@ class WorkItemLivedataDisplayerTest
     void displaysTheCardsWithTheGivenNumberOfWorkItemsPerPage() throws Exception
     {
         this.parameters.setLimit(10);
-        this.parameters.setWorkItemsDisplayer(WorkItemsDisplayer.liveDataCards);
+        this.parameters.setDisplayer(WorkItemsDisplayer.CARDS);
         this.parameters.setFilters(FILTERS);
         // The filters are passed to Live Data as its content.
         when(this.liveDataMacro.execute(this.parameters, FILTERS, this.context)).thenReturn(this.liveData);

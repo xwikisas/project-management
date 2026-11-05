@@ -4,7 +4,7 @@
 .# Enum displayer test - display a filter that returns no work items, inline, with the message translated for the
 .# client.
 .#-----------------------------------------------------
-Fixed issues: {{test workItemsDisplayer="workItemsEnum" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
+Fixed issues: {{test displayer="enum" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

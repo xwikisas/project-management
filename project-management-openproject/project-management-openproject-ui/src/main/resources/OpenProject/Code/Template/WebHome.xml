@@ -59,7 +59,7 @@ This project aims to deliver a clear, well-documented solution with transparent 
 
 == 👤 Assigned to Me ==
 
-{{openproject filters="{~"query~":{~"filters~":[{~"property~":~"assignees~",~"constraints~":[{~"operator~":~"=~",~"value~":~"me~"}]}]~}~}" limit="9" workItemsDisplayer="liveDataCards"/}}
+{{openproject filters="{~"query~":{~"filters~":[{~"property~":~"assignees~",~"constraints~":[{~"operator~":~"=~",~"value~":~"me~"}]}]~}~}" limit="9" displayer="cards"/}}
 
 == 📊 Project Health Charts ==
 

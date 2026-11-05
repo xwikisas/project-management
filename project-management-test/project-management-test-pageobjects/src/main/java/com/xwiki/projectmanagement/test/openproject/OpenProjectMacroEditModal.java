@@ -64,7 +64,7 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
      */
     public OpenProjectMacroEditModal selectDisplayer(String displayerName)
     {
-        WebElement input = getDriver().findElement(By.xpath("//select[@name='workItemsDisplayer']"));
+        WebElement input = getDriver().findElement(By.xpath("//select[@name='displayer']"));
         Select select = new Select(input);
         input.click();
         select.selectByVisibleText(displayerName);

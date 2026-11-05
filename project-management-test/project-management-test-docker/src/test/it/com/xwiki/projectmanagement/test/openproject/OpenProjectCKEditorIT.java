@@ -85,7 +85,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         String content = new WikiEditPage().getContent();
         assertThat(content, startsWith("{{openproject "));
         assertThat(content, containsString(String.format("instance=\"%s\"", CONNECTION_ID)));
-        assertThat(content, containsString("workItemsDisplayer=\"workItemInline\""));
+        assertThat(content, containsString("displayer=\"inline\""));
         assertThat(content, not(containsString(marker)));
     }
 }

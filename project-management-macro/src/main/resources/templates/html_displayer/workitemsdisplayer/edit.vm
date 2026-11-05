@@ -18,4 +18,23 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/displayerParameter.js'))
-#template('html_displayer/enum/edit.vm')
+## Like the enum displayer of the platform, but with the value of the displayer parameter (the lower case name of the
+## constant, e.g. single) as option value instead of the name of the constant, so that the macro editor writes
+## displayer="single" rather than displayer="SINGLE".
+#set ($enumValues = $displayer.value.values())
+#if (!$enumValues)
+  #set ($enumValues = $displayer.type.getEnumConstants())
+#end
+<select
+  #foreach ($parameter in $displayer.parameters.entrySet())
+    $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
+  #end
+>
+  #foreach ($enumValue in $enumValues)
+    #set ($value = $enumValue.toString())
+    #set ($labelKey = "com.xwiki.projectmanagement.internal.WorkItemsDisplayer.$enumValue.name()")
+    <option value="$escapetool.xml($value)"#if ($value.equalsIgnoreCase("$!displayer.value")) selected#end>
+      $escapetool.xml($services.localization.render($labelKey))
+    </option>
+  #end
+</select>

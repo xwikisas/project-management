@@ -4,7 +4,7 @@
 .# List displayer test - display the work items as a bulleted list, by key when they have one, the closed ones being
 .# struck through.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsList"/}}
+{{test displayer="list"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

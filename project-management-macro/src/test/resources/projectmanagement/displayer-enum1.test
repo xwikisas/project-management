@@ -4,7 +4,7 @@
 .# Enum displayer test - display the keys or identifiers of the work items inline, the closed ones being struck
 .# through.
 .#-----------------------------------------------------
-Fixed issues: {{test workItemsDisplayer="workItemsEnum"/}}
+Fixed issues: {{test displayer="enum"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

@@ -20,6 +20,9 @@ package com.xwiki.projectmanagement.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
 import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
@@ -47,7 +50,9 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     private String url;
 
-    private WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.liveData;
+    private WorkItemsDisplayer displayer;
+
+    private WorkItemsDisplayer legacyDisplayer;
 
     private String presetId;
 
@@ -109,22 +114,57 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     }
 
     /**
-     * @return the displayer id that determines how the work items should be displayed.
+     * @return how the work items are displayed: the {@code displayer} parameter if set, otherwise the deprecated
+     *     {@code workItemsDisplayer} parameter if set, otherwise a Live Data table
+     * @since 1.4.0
      */
-    public WorkItemsDisplayer getWorkItemsDisplayer()
+    public WorkItemsDisplayer getDisplayer()
     {
-        return workItemsDisplayer;
+        if (this.displayer != null) {
+            return this.displayer;
+        }
+        return this.legacyDisplayer != null ? this.legacyDisplayer : WorkItemsDisplayer.TABLE;
     }
 
     /**
-     * @param workItemsDisplayer see {@link #getWorkItemsDisplayer()}.
+     * @param displayer see {@link #getDisplayer()}
+     * @since 1.4.0
      */
     @PropertyDisplayType(WorkItemsDisplayer.class)
     @PropertyGroup("display")
     @PropertyOrder(40)
-    public void setWorkItemsDisplayer(WorkItemsDisplayer workItemsDisplayer)
+    public void setDisplayer(WorkItemsDisplayer displayer)
     {
-        this.workItemsDisplayer = workItemsDisplayer;
+        this.displayer = displayer;
+    }
+
+    /**
+     * @return the value of the deprecated {@code workItemsDisplayer} parameter, i.e. the
+     *     {@link WorkItemsDisplayer#getLegacyName() legacy name} of a displayer, or {@code null} if it isn't set
+     * @deprecated since 1.4.0, use {@link #getDisplayer()} instead
+     */
+    @Deprecated(since = "1.4.0")
+    public String getWorkItemsDisplayer()
+    {
+        return this.legacyDisplayer != null ? this.legacyDisplayer.getLegacyName() : null;
+    }
+
+    /**
+     * @param workItemsDisplayer the legacy name of a displayer (e.g. {@code workItemsSingle}); the {@code displayer}
+     *     parameter takes precedence over it when both are set
+     * @deprecated since 1.4.0, use {@link #setDisplayer(WorkItemsDisplayer)} instead
+     */
+    @Deprecated(since = "1.4.0")
+    @PropertyDisplayHidden
+    public void setWorkItemsDisplayer(String workItemsDisplayer)
+    {
+        WorkItemsDisplayer value = WorkItemsDisplayer.fromString(workItemsDisplayer);
+        if (value == null) {
+            throw new IllegalArgumentException(String.format("Unknown displayer [%s]. Allowed values are %s.",
+                workItemsDisplayer, Arrays.stream(WorkItemsDisplayer.values()).map(WorkItemsDisplayer::getLegacyName)
+                    .collect(Collectors.joining(", "))));
+        }
+        this.legacyDisplayer = value;
     }
 
     @PropertyGroup("display")

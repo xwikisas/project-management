@@ -4,7 +4,7 @@
 .# Single displayer test - display a work item with all values present, the properties being labelled by the generic
 .# translations since the client doesn't translate them, and listed in a fixed order.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsSingle"/}}
+{{test displayer="single"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

@@ -95,7 +95,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     public List<Block> execute(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
-        WorkItemsDisplayer displayer = parameters.getWorkItemsDisplayer();
+        WorkItemsDisplayer displayer = parameters.getDisplayer();
         parameters.setSource("projectmanagement");
         processParameters(parameters);
         maybeUpdateFilterFromPreset(parameters);
@@ -110,10 +110,10 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             return asyncExecutor.execute(displayerMacro, parameters, content, context, getAsyncParametersProcessor(),
                 isAsync(parameters));
         } catch (ComponentLookupException e) {
-            throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer.name()), e);
+            throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer), e);
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException(
-                String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer.name()),
+                String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer),
                 e);
         }
     }
@@ -157,8 +157,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
      */
     public boolean isAsync(T parameters)
     {
-        return !WorkItemsDisplayer.liveData.equals(parameters.getWorkItemsDisplayer())
-            && !WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer());
+        return !parameters.getDisplayer().isLiveData();
     }
 
     protected BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>>

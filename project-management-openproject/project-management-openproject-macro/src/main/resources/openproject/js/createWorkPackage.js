@@ -143,7 +143,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       parameters: {
         instance: connection,
         identifier: workPackage.id,
-        workItemsDisplayer: "workItemInline"
+        displayer: "inline"
       }
     });
     createWpUtils.notify(l10n.get("notify.submit.success"), "done");

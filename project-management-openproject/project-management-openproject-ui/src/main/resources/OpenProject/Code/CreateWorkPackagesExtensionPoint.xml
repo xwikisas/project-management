@@ -1052,7 +1052,7 @@ require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function 
       macroParameters: {
         instance: opInstance,
         identifier: workPackage,
-        workItemsDisplayer: "workItemInline"
+        displayer: "inline"
 
       },
       selectedText: selectedText,

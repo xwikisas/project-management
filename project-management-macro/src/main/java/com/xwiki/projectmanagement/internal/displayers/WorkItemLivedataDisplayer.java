@@ -94,7 +94,7 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
             if (parameters.getLimit() == null) {
                 parameters.setLimit(DEFAULT_PAGE_SIZE);
             }
-            if (WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer())) {
+            if (WorkItemsDisplayer.CARDS.equals(parameters.getDisplayer())) {
                 parameters.setLayouts("cards,table");
             }
             return displayerMacro.execute(parameters, newContent, context);
