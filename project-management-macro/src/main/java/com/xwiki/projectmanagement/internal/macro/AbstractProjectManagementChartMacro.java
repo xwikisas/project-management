@@ -143,7 +143,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             }, parameters, content, context, null, true);
             // The chart is drawn by the Chart.js application, on page load and on the xwiki:dom:updated event. When
             // the chart is rendered asynchronously, the event sent by XWiki targets the placeholder replaced by the
-            // chart, not the chart, so the wrapper and the script make sure the chart is drawn.
+            // chart, not the chart, so the wrapper and the script make sure the chart is drawn. Remove them once the
+            // minimal supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after
+            // an asynchronous rendering targets the removed placeholder instead of the rendered content).
             this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
             return Collections.singletonList(
                 new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));

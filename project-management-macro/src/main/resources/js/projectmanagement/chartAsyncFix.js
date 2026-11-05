@@ -24,6 +24,10 @@
  * event can be sent again for the wrapper, once its placeholder is replaced. The wrappers can be added after the page
  * load, e.g. when saving the in-place editor. The event isn't sent again when XWiki sent it for the inserted chart,
  * which would draw it twice.
+ *
+ * This works around XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous rendering targets the removed
+ * placeholder instead of the rendered content, https://jira.xwiki.org/browse/XWIKI-25675): remove this script and the
+ * chart wrapper once the minimal supported XWiki version includes its fix.
  */
 require(['jquery'], function ($) {
   let observeWrapper = function (wrapper) {
