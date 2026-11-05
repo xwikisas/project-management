@@ -171,7 +171,7 @@ class OpenProjectMacrosOnTheDashboardTest
         when(this.barDisplayer.execute(List.of(workItems), WorkItem.KEY_STATUS, List.of(), this.context,
             new HashMap<>())).thenReturn(chart);
 
-        assertEquals(chart, this.chartMacro.execute(new OpenProjectChartMacroParameters(), "", this.context));
+        assertChart(chart, this.chartMacro.execute(new OpenProjectChartMacroParameters(), "", this.context));
         // The connection is passed to the OpenProject client through the execution context.
         assertEquals("dashboard", executionContext.get("instance"));
     }
@@ -188,5 +188,13 @@ class OpenProjectMacrosOnTheDashboardTest
 
         assertEquals("client=openproject&instance=dashboard&translationPrefix=openproject.",
             parameters.getSourceParameters());
+    }
+
+    private static void assertChart(List<Block> chart, List<Block> result)
+    {
+        // The chart macros wrap the chart, so that it can be drawn after an asynchronous rendering.
+        assertEquals(1, result.size());
+        assertEquals("proj-manag-chart-wrapper", result.get(0).getParameter("class"));
+        assertEquals(chart, result.get(0).getChildren());
     }
 }

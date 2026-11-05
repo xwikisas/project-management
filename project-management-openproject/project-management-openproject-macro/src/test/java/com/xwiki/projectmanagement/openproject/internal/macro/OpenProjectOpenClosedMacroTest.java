@@ -156,7 +156,7 @@ class OpenProjectOpenClosedMacroTest
         when(this.lineDisplayer.execute(List.of(open, closed), WorkItem.KEY_CREATION_DATE, List.of("Open", "Closed"),
             this.context, new HashMap<>(Map.of("period", "DAILY", "metric", "accumulate")))).thenReturn(chart);
 
-        assertEquals(chart, this.macro.execute(parameters, "", this.context));
+        assertChart(chart, this.macro.execute(parameters, "", this.context));
     }
 
     @Test
@@ -169,5 +169,13 @@ class OpenProjectOpenClosedMacroTest
             () -> this.macro.execute(parameters, "", this.context));
 
         assertEquals("Something went wrong", exception.getMessage());
+    }
+
+    private static void assertChart(List<Block> chart, List<Block> result)
+    {
+        // The chart macros wrap the chart, so that it can be drawn after an asynchronous rendering.
+        assertEquals(1, result.size());
+        assertEquals("proj-manag-chart-wrapper", result.get(0).getParameter("class"));
+        assertEquals(chart, result.get(0).getChildren());
     }
 }

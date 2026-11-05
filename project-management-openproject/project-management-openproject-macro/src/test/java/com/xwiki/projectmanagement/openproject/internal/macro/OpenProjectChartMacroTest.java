@@ -137,7 +137,7 @@ class OpenProjectChartMacroTest
     @Test
     void displaysTheWorkItemsOfTheInstance() throws Exception
     {
-        assertEquals(this.chart, this.macro.execute(this.parameters, "", this.context));
+        assertChart(this.chart, this.macro.execute(this.parameters, "", this.context));
 
         assertEquals("openproject", this.parameters.getClient());
         // The instance is made available to the OpenProject client through the execution context.
@@ -167,5 +167,13 @@ class OpenProjectChartMacroTest
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
 
         verifyNoInteractions(this.asyncExecutor, this.projectManagementManager);
+    }
+
+    private static void assertChart(List<Block> chart, List<Block> result)
+    {
+        // The chart macros wrap the chart, so that it can be drawn after an asynchronous rendering.
+        assertEquals(1, result.size());
+        assertEquals("proj-manag-chart-wrapper", result.get(0).getParameter("class"));
+        assertEquals(chart, result.get(0).getChildren());
     }
 }
