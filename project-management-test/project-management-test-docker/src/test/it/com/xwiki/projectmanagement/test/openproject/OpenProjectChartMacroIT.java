@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.xwiki.edit.test.po.InplaceEditablePage;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -62,6 +63,10 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     private static final String CLOSED = "Closed";
 
     private static final String PIE = "pie";
+
+    private static final String INPLACE_EDITOR = "InplaceChartEditor";
+
+    private static final String INPLACE_EDITOR_PASSWORD = "pass";
 
     @Test
     @Order(1)
@@ -151,6 +156,20 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         int newCount = this.openProject.getApiResource("/work_packages?pageSize=1&filters=" + URLEncoder.encode(
             "[{\"status\":{\"operator\":\"=\",\"values\":[\"1\"]}}]", StandardCharsets.UTF_8)).get("total").asInt();
         assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
+
+        // The chart is drawn again when the page is saved with the in-place editor, which renders the content again
+        // without reloading the page. The "Edit" button opens the in-place editor for the users preferring the WYSIWYG
+        // editor, who see the public work packages when they haven't connected their OpenProject account.
+        setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
+        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
+        try {
+            setup.loginAndGotoPage(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
+            new InplaceEditablePage().editInplace().saveAndView();
+            assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
+        } finally {
+            setup.loginAsSuperAdmin();
+            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
+        }
     }
 
     @Test

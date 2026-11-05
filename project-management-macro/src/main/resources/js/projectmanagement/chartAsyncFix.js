@@ -17,21 +17,46 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
+/*
+ * The charts are drawn by the Chart.js application on page load and on the xwiki:dom:updated event, in the updated
+ * elements. When a chart is rendered asynchronously, the event sent by XWiki targets the placeholder that the chart
+ * replaced, which isn't in the page anymore, so the chart isn't drawn. The chart macro wraps its output, so that the
+ * event can be sent again for the wrapper, once its placeholder is replaced. The wrappers can be added after the page
+ * load, e.g. when saving the in-place editor. The event isn't sent again when XWiki sent it for the inserted chart,
+ * which would draw it twice.
+ */
 require(['jquery'], function ($) {
-  jQuery('.proj-manag-chart-wrapper').each(function () {
-    let parent = $(this)[0];
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList" && mutation.addedNodes) {
-          $(document).trigger('xwiki:dom:updated', { elements: $(this).toArray() });
-          observer.disconnect();
-        }
+  let observeWrapper = function (wrapper) {
+    if ($(wrapper).data('projManagObserved')) {
+      return;
+    }
+    $(wrapper).data('projManagObserved', true);
+    const observer = new MutationObserver(() => {
+      observer.disconnect();
+      // XWiki sends its event right after replacing the placeholder, before the mutations are reported.
+      if (!$(wrapper).data('projManagUpdated')) {
+        $(document).trigger('xwiki:dom:updated', {elements: [wrapper]});
       }
     });
+    // Only the replacement of the placeholder, not the changes inside it (e.g. its loading animation).
+    observer.observe(wrapper, {childList: true});
+  };
 
-    observer.observe(parent, {
-      childList: true,
-      subtree: false
+  let observeWrappers = function (root) {
+    $(root).find('.proj-manag-chart-wrapper').addBack('.proj-manag-chart-wrapper').each(function () {
+      observeWrapper(this);
+    });
+  };
+
+  observeWrappers(document);
+  $(document).on('xwiki:dom:updated', function (event, data) {
+    $(data?.elements || document).each(function () {
+      observeWrappers(this);
+      // Only the elements inserted in a wrapper let the Chart.js application draw its chart, not the elements removed
+      // from the page, e.g. a replaced placeholder.
+      if (this.isConnected) {
+        $(this).parent().closest('.proj-manag-chart-wrapper').data('projManagUpdated', true);
+      }
     });
   });
 });

@@ -58,6 +58,13 @@
       <artifactId>xwiki-platform-wiki-template-default</artifactId>
       <version>${platform.version}</version>
     </dependency>
+    <!-- The in-place editor, to check that the charts are drawn again after saving it. -->
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-edit-ui</artifactId>
+      <version>${platform.version}</version>
+      <type>xar</type>
+    </dependency>
     <!-- Use a fake licensor script service while running the functional tests. -->
     <dependency>
       <groupId>com.xwiki.licensing</groupId>
@@ -82,6 +89,12 @@
       <artifactId>project-management-test-pageobjects</artifactId>
       <scope>test</scope>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-edit-test-pageobjects</artifactId>
+      <version>${platform.version}</version>
+      <scope>test</scope>
     </dependency>
     <!-- Provide an implementation for the HTMLDisplayer (needed by MacroDescriptorUIFactory to get the edit template for
       macro parameters). -->
