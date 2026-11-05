@@ -164,8 +164,11 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             .setChartPreset(true).create();
         List<FilterBuilderParameter> builders = editPage.getFilterBuilders();
         assertEquals(1, builders.size());
+        // The last series can't be removed, since a new series is a copy of an existing one.
+        assertFalse(builders.get(0).isRemovable());
         builders.get(0).addFilter(SUMMARY).typeValue("speakers");
         editPage.addDataset().addFilter(SUMMARY).typeValue("sp");
+        assertTrue(editPage.getFilterBuilders().stream().allMatch(FilterBuilderParameter::isRemovable));
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 
         assertTrue(viewPage.isChartPreset());

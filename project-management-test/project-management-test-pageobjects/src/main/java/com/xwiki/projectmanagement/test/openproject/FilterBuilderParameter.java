@@ -82,6 +82,17 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
+     * @return {@code true} if the builder, e.g. a series of a chart, can be removed
+     * @since 1.4.0
+     */
+    public boolean isRemovable()
+    {
+        // A builder that can't be removed has no (or a hidden) remove icon, so don't wait for one.
+        return getDriver().findElementsWithoutWaiting(getContainer(), By.className("proj-manag-remove-filter"))
+            .stream().anyMatch(WebElement::isDisplayed);
+    }
+
+    /**
      * @return {@code true} if the filters can't be changed: no filter can be added and the values are disabled
      * @since 1.3.0-rc-2
      */
