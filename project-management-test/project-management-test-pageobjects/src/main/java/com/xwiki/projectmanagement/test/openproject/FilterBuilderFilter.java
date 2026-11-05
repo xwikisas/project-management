@@ -51,7 +51,10 @@ public class FilterBuilderFilter extends BaseElement
     /**
      * @return the value element of this filter
      */
-    private WebElement getValueElement()
+    /**
+     * @return the field holding the value of the filter
+     */
+    WebElement getValueElement()
     {
         return this.container.findElement(By.cssSelector("input.proj-manag-constraint-value"));
     }
