@@ -56,11 +56,6 @@
   overflow-wrap: anywhere;
 }
 
-/* The value field takes the remaining width, the operator keeps the width of its longest option. */
-.proj-manag-constraint-operator-container {
-  flex-shrink: 0;
-}
-
 .proj-manag-container,.proj-manag-container>.proj-manag-constraint-value {
   display: flex;
   width: 100% !important;
