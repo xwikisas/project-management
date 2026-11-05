@@ -24,7 +24,6 @@ import org.xwiki.livedata.macro.LiveDataMacroParameters;
 import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
-import org.xwiki.properties.annotation.PropertyFeature;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.properties.annotation.PropertyOrder;
@@ -74,7 +73,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     /**
      * @param identifier see {@link #getIdentifier()}.
      */
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setIdentifier(String identifier)
     {
         this.identifier = identifier;
@@ -95,7 +94,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     }
 
     @PropertyDisplayType(ProjectManagementFilter.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     @Override
     public void setFilters(String filters)
     {
@@ -202,7 +201,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      * @since 1.3.0
      */
     @PropertyDisplayType(ProjectManagementPreset.class)
-    @PropertyFeature("filters")
+    @PropertyGroup("filters")
     public void setPresetId(String presetId)
     {
         this.presetId = presetId;
