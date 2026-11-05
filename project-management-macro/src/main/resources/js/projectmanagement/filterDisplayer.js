@@ -17,7 +17,18 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'daterangepicker'], function ($) {
+define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], function ($) {
+  /*
+   * The date picker is loaded when a date is displayed, from the path given by the filter field: in the macro editor,
+   * this script can be loaded before the field is added to the page.
+   */
+  let loadDatePicker = function () {
+    let deps = JSON.parse($('.proj-manag-filter[data-deps]').first().attr('data-deps') || '{}');
+    if (deps.daterangepicker) {
+      require.config({ paths: { daterangepicker: deps.daterangepicker } });
+    }
+    return new Promise((resolve, reject) => require(['daterangepicker'], resolve, reject));
+  };
   let clean = function (type, inputElem, operator) {
     let parent = inputElem.parent();
     switch (type) {
@@ -33,6 +44,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
         }
         break;
       case "date":
+        // A date picker still loading isn't displayed.
+        inputElem.removeData('dateDisplay');
         parent.find('.proj-manag-date-val').data("daterangepicker")?.remove();
       default:
         parent.children().remove();
@@ -54,50 +67,58 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize', 'date
           inputElem.attr('type', 'text');
           return;
         }
-        let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
-        let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val').on('change', function() {
-          let valToSet = '';
-          const daterangepicker = $(this).data("daterangepicker");
-          if (!daterangepicker) {
+        inputElem.attr('type', 'text').addClass('hidden');
+        let dateDisplay = {};
+        inputElem.data('dateDisplay', dateDisplay);
+        loadDatePicker().then(() => {
+          // The value may have been displayed again, or cleaned, while the date picker was loading.
+          if (inputElem.data('dateDisplay') !== dateDisplay) {
             return;
           }
-          if (operator === "between") {
-            // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
-            // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
-            valToSet = `${daterangepicker.startDate.format()}/${daterangepicker.endDate.add(59, "seconds").format()}`;
-          } else if (operator === "before" || operator === "after") {
-            // Use the ISO 8601 representation, without fractional seconds.
-            valToSet = daterangepicker.startDate.format();
-          } else {
-            // Use the formatted date.
-            valToSet = daterangepicker.startDate.format(dateFormat);
-          }
-          inputElem.val(valToSet);
-          inputElem.trigger('change');
-        }).appendTo(parent).daterangepicker({
-          drops: "down",
-          opens: "right",
-          timePicker: /[Hhkms]/.test(dateFormat),
-          singleDatePicker: 'between' != operator,
-          timePicker24Hour: true,
-          locale: {
-            format: dateFormat,
-            cancelLabel: "Clear",
-          },
-        }).on("hide.daterangepicker", function (e) {
-          // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
-          // This removes the 'hide' function only for the event target.
-          e.target.hide = undefined;
-          // Restore the 'hide' function after the event is handled (i.e. after all the listeners have been called).
-          setTimeout(function() {
-            // This deletes the local 'hide' key from the instance, making the 'hide' inherited from the prototype
-            // visible again (the next calls to 'hide' won't find the key on the instance and thus it will go up
-            // the prototype chain).
-            delete e.target["hide"];
-          }, 0);
-        });
-        dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
-        inputElem.attr('type', 'text').addClass('hidden');
+          let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
+          let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val').on('change', function() {
+            let valToSet = '';
+            const daterangepicker = $(this).data("daterangepicker");
+            if (!daterangepicker) {
+              return;
+            }
+            if (operator === "between") {
+              // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
+              // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
+              valToSet = `${daterangepicker.startDate.format()}/${daterangepicker.endDate.add(59, "seconds").format()}`;
+            } else if (operator === "before" || operator === "after") {
+              // Use the ISO 8601 representation, without fractional seconds.
+              valToSet = daterangepicker.startDate.format();
+            } else {
+              // Use the formatted date.
+              valToSet = daterangepicker.startDate.format(dateFormat);
+            }
+            inputElem.val(valToSet);
+            inputElem.trigger('change');
+          }).appendTo(parent).daterangepicker({
+            drops: "down",
+            opens: "right",
+            timePicker: /[Hhkms]/.test(dateFormat),
+            singleDatePicker: 'between' != operator,
+            timePicker24Hour: true,
+            locale: {
+              format: dateFormat,
+              cancelLabel: "Clear",
+            },
+          }).on("hide.daterangepicker", function (e) {
+            // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
+            // This removes the 'hide' function only for the event target.
+            e.target.hide = undefined;
+            // Restore the 'hide' function after the event is handled (i.e. after all the listeners have been called).
+            setTimeout(function() {
+              // This deletes the local 'hide' key from the instance, making the 'hide' inherited from the prototype
+              // visible again (the next calls to 'hide' won't find the key on the instance and thus it will go up
+              // the prototype chain).
+              delete e.target["hide"];
+            }, 0);
+          });
+          dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
+        }).catch(error => console.error('Failed to load the date picker.', error));
         break;
       case "list":
         let options = params.options || [];
