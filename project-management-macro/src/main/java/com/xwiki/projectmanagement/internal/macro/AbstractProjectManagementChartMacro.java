@@ -46,7 +46,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
-import com.xwiki.projectmanagement.internal.utility.XWikiVersionChecker;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -64,8 +63,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 {
     private static final String JSON_EMPTY_ARRAY = "[]";
 
-    private static final String CHART_FIX_VERSION = "18.6.0";
-
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
     @Inject
@@ -74,9 +71,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     @Inject
     @Named("jsrx")
     private SkinExtension jsrx;
-
-    @Inject
-    private XWikiVersionChecker xWikiVersionChecker;
 
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
@@ -147,15 +141,12 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     }
                 }
             }, parameters, content, context, null, true);
-            // TODO: Remove when parent is greater than 18.6.0-rc-1. When displaying multiple charts on the same
-            //  page, they get initialised on page load and on xwiki:dom:updated event. This event is sent, when
-            //  rendering things async, since 18.6.0-rc-1. We need some way around it until then.
-            if (xWikiVersionChecker.isLowerThan(CHART_FIX_VERSION)) {
-                this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
-                return Collections.singletonList(
-                    new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));
-            }
-            return result;
+            // The chart is drawn by the Chart.js application, on page load and on the xwiki:dom:updated event. When
+            // the chart is rendered asynchronously, the event sent by XWiki targets the placeholder replaced by the
+            // chart, not the chart, so the wrapper and the script make sure the chart is drawn.
+            this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
+            return Collections.singletonList(
+                new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (ComponentLookupException e) {
