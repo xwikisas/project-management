@@ -107,6 +107,7 @@ openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Create work package
 openproject.createworkpackage.highlight.multiple=Create work packages from table
 openproject.createworkpackage.modal.cancel=Cancel
+openproject.createworkpackage.modal.close=Close
 openproject.createworkpackage.modal.create.single=Create work package
 openproject.createworkpackage.modal.create.multiple=Create work packages
 openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.

@@ -34,7 +34,8 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view", "xwiki-l10n!op
     // The text of a notification is HTML on some XWiki versions: display the translations as text.
     let notifyError = function (text) {
         let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
-        notification.element.textContent = text;
+        // The notification element wraps the styled one, which holds the text.
+        notification.element.down('.xnotification').textContent = text;
         notification.show();
     };
     let addEventClass = function (element, obj) {

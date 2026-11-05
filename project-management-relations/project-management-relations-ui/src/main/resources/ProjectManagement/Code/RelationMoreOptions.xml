@@ -138,7 +138,8 @@ require(['jquery', 'xwiki-l10n!projectmanagement.relations.viewer', 'xwiki-prope
   // The text of a notification is HTML on some XWiki versions: display the translations as text.
   let notifyError = function (text) {
     let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
-    notification.element.textContent = text;
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
     notification.show();
   };
   $('.proj-manag-relation-client-params').each(function () {

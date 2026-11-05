@@ -978,7 +978,8 @@ require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function 
   // The text of a notification is HTML on some XWiki versions: display the translations as text.
   let createNotification = function (text, type) {
     let notification = new XWiki.widgets.Notification('', type, {inactive: true});
-    notification.element.textContent = text;
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
     return notification;
   };
   let shouldReload = false;
@@ -1551,7 +1552,8 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
     &lt;div class="modal-dialog" role="document"&gt;
       &lt;div class="modal-content"&gt;
         &lt;div class="modal-header"&gt;
-          &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+          &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal"
+                  aria-label="$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.close'))"&gt;
             &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
           &lt;/button&gt;
           &lt;div class="modal-title" id="wp-create-modal-title"&gt;

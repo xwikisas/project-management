@@ -26,7 +26,8 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
   // The text of a notification is HTML on some XWiki versions: display the translations as text.
   let createNotification = function (text, type) {
     let notification = new XWiki.widgets.Notification('', type, {inactive: true});
-    notification.element.textContent = text;
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
     return notification;
   };
   const SEPARATOR = ",";
