@@ -51,7 +51,10 @@ projectmanagement.relations.workItem.name=Linked Work Item
 
 projectmanagement.relations.viewer.title=Project Management Relation of {0}
 
-projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.</content>
+projectmanagement.relations.notowner=This relation is passed down from {0}. You can create a new relation by visiting the {1}relations section{2}.
+projectmanagement.relations.docextra.loadError=Failed to load the linked project or work item.
+projectmanagement.relations.viewer.menu=Project Management Relations
+projectmanagement.relations.viewer.clientParams.invalid=The parameters of the relation aren't valid JSON.</content>
   <object>
     <name>ProjectManagement.Code.Translations</name>
     <number>0</number>

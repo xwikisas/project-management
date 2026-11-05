@@ -125,7 +125,18 @@
       <cache>long</cache>
     </property>
     <property>
-      <code>require(['jquery'], function ($) {
+      <code>define('openproject.relations', {
+  prefix: 'openproject.relations.',
+  keys: ['clientParams.invalid']
+});
+
+require(['jquery', 'xwiki-l10n!openproject.relations'], function ($, l10n) {
+  // The text of a notification is HTML on some XWiki versions: display the translations as text.
+  let notifyError = function (text) {
+    let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
+    notification.element.textContent = text;
+    notification.show();
+  };
   $('.openproj-relation-client-params').each(function () {
     let root = $(this);
     let updateParamsInput = function () {
@@ -205,7 +216,7 @@
             });
             root.closest('.proj-manag-relation').data('params', clientParams);
           } catch (e) {
-            new XWiki.widgets.Notification('Client params are not a valid JSON.', 'error');
+            notifyError(l10n.get('clientParams.invalid'));
           }
           valueContainer.removeClass('loading');
           observer.observe(valueContainer[0], { childList: true });

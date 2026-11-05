@@ -67,9 +67,9 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
         dashboard.waitUntilGadgetsAreDisplayed();
         assertEquals(List.of(), dashboard.getWarnings());
         assertTrue(dashboard.hasProjectPicker());
-        assertThat(dashboard.getGadgetTitles(), containsInAnyOrder("Open VS Closed", "Project Details", "Ticket types",
-            "Project members", "Open vs Closed Per Type", "Spent time last 7 days", "Project News", "SubProjects",
-            "All Work Packages"));
+        assertThat(dashboard.getGadgetTitles(), containsInAnyOrder("Open vs Closed", "Project Details",
+            "Work Package Types", "Project Members", "Open vs Closed per Type", "Time Spent in the Last 7 Days",
+            "Project News", "Subprojects", "All Work Packages"));
 
         // Only the warning of the selected connection is displayed.
         dashboard = dashboard.selectConnection(unauthorized);

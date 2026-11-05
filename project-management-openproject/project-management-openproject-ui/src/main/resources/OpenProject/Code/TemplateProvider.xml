@@ -247,13 +247,13 @@
       <creationRestrictionsAreSuggestions>0</creationRestrictionsAreSuggestions>
     </property>
     <property>
-      <description>An OpenProject wiki space</description>
+      <description>openproject.template.provider.description</description>
     </property>
     <property>
       <icon>check</icon>
     </property>
     <property>
-      <name>OpenProject Space</name>
+      <name>openproject.template.provider.name</name>
     </property>
     <property>
       <spaces/>
