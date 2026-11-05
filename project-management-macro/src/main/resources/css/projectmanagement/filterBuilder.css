@@ -120,6 +120,11 @@ select.proj-manag-add-filter {
   cursor: pointer;
 }
 
+/* A new series is a copy of an existing one, so the last series can't be removed. Its header keeps its height. */
+.project-management-filters > .proj-manag-constraint-builder:only-child .proj-manag-remove-filter {
+  visibility: hidden;
+}
+
 .proj-manag-delete-filter {
   color: currentColor;
 }
