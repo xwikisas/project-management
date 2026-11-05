@@ -65,8 +65,13 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	  });
 	}
 
+	// The messages are plain text, e.g. the validation messages of OpenProject, but some XWiki versions display the text
+	// of a notification as HTML.
 	let notify = function notify(message, type) {
-	  new XWiki.widgets.Notification(message, type);
+	  let notification = new XWiki.widgets.Notification('', type, {inactive: true});
+	  // The notification element wraps the styled one, which holds the text.
+	  notification.element.down('.xnotification').textContent = message;
+	  notification.show();
 	}
 
 	let createInput = function createInput(id, name, fieldClass, fieldData) {
