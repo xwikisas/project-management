@@ -102,13 +102,13 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(4, macros.size());
 
-        // The work packages are displayed in the order of the identifier.
+        // The work packages are displayed in the order of the identifier, and the ID column shows their keys.
         TableLayoutElement table = macros.get(0).waitForTableLayout();
         assertEquals(4, table.countRows());
-        assertEquals(other.get("id").asText(), table.getCell("ID", 1).getText());
-        assertEquals(first.get("id").asText(), table.getCell("ID", 2).getText());
-        assertEquals(second.get("id").asText(), table.getCell("ID", 3).getText());
-        assertEquals(closed.get("id").asText(), table.getCell("ID", 4).getText());
+        assertEquals(getKey(other), table.getCell("ID", 1).getText());
+        assertEquals(getKey(first), table.getCell("ID", 2).getText());
+        assertEquals(getKey(second), table.getCell("ID", 3).getText());
+        assertEquals(getKey(closed), table.getCell("ID", 4).getText());
 
         OpenProjectSingleDisplayer single = macros.get(1).getSingleWorkItem().waitUntilReady();
         assertThat(single.getHeaderText(), containsString(second.get("subject").asText()));
