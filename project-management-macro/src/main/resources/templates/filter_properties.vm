@@ -1,0 +1,37 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+## The properties a filter builder proposes, as JSON, for the client and the livedata source parameters of the request
+## (e.g. the instance of the client chosen in a macro editor): ?xpage=filter_properties&client=...&sourceParameters=...
+#template('filter_builder.vm')
+#set ($sourceParameters = {})
+#if ("$!request.sourceParameters" != '')
+  #set ($parsedSourceParameters = $jsontool.fromString($request.sourceParameters))
+  #if ($parsedSourceParameters && $parsedSourceParameters.entrySet())
+    #foreach ($entry in $parsedSourceParameters.entrySet())
+      #set ($discard = $sourceParameters.put($entry.key, "$!entry.value"))
+    #end
+  #end
+#end
+#getFilterableProperties("$!request.client" $sourceParameters $filterableProperties)
+#if ("$!filterableProperties" == '')
+  #set ($filterableProperties = [])
+#end
+#set ($discard = $response.setContentType('application/json'))
+$jsontool.serialize($filterableProperties)

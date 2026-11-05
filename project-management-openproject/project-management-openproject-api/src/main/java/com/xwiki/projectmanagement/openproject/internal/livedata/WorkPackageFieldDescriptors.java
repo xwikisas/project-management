@@ -52,6 +52,8 @@ public final class WorkPackageFieldDescriptors
 
     private static final String OPERATOR_NOT_EMPTY = "*";
 
+    private static final String OPERATOR_ALL_OF = "&=";
+
     private static final String OPERATOR_EMPTY = "!*";
 
     private static final String NAME_EQUALS = "Equals";
@@ -78,8 +80,8 @@ public final class WorkPackageFieldDescriptors
      * The names of the supported operators, by filter.
      */
     private static final Map<String, Map<String, String>> OPERATORS = Map.of(
-        FILTER_LIST, orderedMap(OPERATOR_EQUALS, NAME_EQUALS, "&=", "All of", OPERATOR_NOT_EQUALS, NAME_NOT_EQUALS,
-            OPERATOR_NOT_EMPTY, NAME_NOT_EMPTY, OPERATOR_EMPTY, NAME_NOT_SET),
+        FILTER_LIST, orderedMap(OPERATOR_EQUALS, NAME_EQUALS, OPERATOR_ALL_OF, "All of", OPERATOR_NOT_EQUALS,
+            NAME_NOT_EQUALS, OPERATOR_NOT_EMPTY, NAME_NOT_EMPTY, OPERATOR_EMPTY, NAME_NOT_SET),
         FILTER_TEXT, orderedMap("~", "Contains", "!~", "Does not contain", OPERATOR_EQUALS, NAME_EQUALS,
             OPERATOR_NOT_EQUALS, NAME_NOT_EQUALS, OPERATOR_NOT_EMPTY, NAME_NOT_EMPTY, OPERATOR_EMPTY, NAME_NOT_SET),
         FILTER_NUMBER, orderedMap(OPERATOR_EQUALS, NAME_EQUALS, OPERATOR_NOT_EQUALS, NAME_NOT_EQUALS,
@@ -134,20 +136,34 @@ public final class WorkPackageFieldDescriptors
         }
 
         LiveDataPropertyDescriptor.FilterDescriptor filter = new LiveDataPropertyDescriptor.FilterDescriptor(filterId);
-        for (Map.Entry<String, String> operator : OPERATORS.get(filterId).entrySet()) {
-            if (field.getFilterOperators().contains(operator.getKey())) {
-                filter.addOperator(operator.getKey(), operator.getValue());
-            }
-        }
+        addOperators(filter, field);
         if (filter.getOperators() == null || filter.getOperators().isEmpty()) {
             return null;
         }
         filter.setDefaultOperator(filter.getOperators().get(0).getId());
+        if (field.isMultiValue()) {
+            // Tells the filter builder that the field can be filtered on with several operators at once, e.g. the
+            // work packages having one value and not another one.
+            filter.getParameters().put("multiValue", true);
+        }
         String suggestion = SUGGESTIONS.get(valueType);
         if (suggestion != null) {
             filter.getParameters().put("searchURL", String.format(SUGGEST_URL_FORMAT, suggestion));
         }
         return filter;
+    }
+
+    private static void addOperators(LiveDataPropertyDescriptor.FilterDescriptor filter, WorkPackageField field)
+    {
+        for (Map.Entry<String, String> operator : OPERATORS.get(filter.getId()).entrySet()) {
+            // OpenProject proposes "All of" on every list filter, but only a work package having several values for
+            // the field can match more than one value.
+            if (field.getFilterOperators().contains(operator.getKey())
+                && (field.isMultiValue() || !OPERATOR_ALL_OF.equals(operator.getKey())))
+            {
+                filter.addOperator(operator.getKey(), operator.getValue());
+            }
+        }
     }
 
     private static String getFilterId(String valueType)

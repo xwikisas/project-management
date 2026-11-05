@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
-import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
@@ -113,13 +112,13 @@ public class FilterBuilderParameter extends BaseElement
             // If no such element, we let the code execute, maybe it finds an already added filter and returns it.
         }
 
-        List<WebElement> presentFilters =
-            builder.findElements(By.xpath(".//*[contains(@class, 'proj-manag-constraint-name')]"));
+        // The last row of the property, a property being able to have several rows.
         WebElement createdFilter = null;
-        for (WebElement presentFilter : presentFilters) {
-            if (presentFilter.getAttribute("value").equals(filterProperty)) {
-                createdFilter = presentFilter.findElement(By.xpath("ancestor::div[@class='proj-manag-constraint']"));
-                break;
+        for (WebElement row : builder.findElements(By.cssSelector(".proj-manag-constraints .proj-manag-constraint"))) {
+            if (filterProperty.equals(
+                row.findElement(By.className("proj-manag-constraint-name")).getAttribute("value")))
+            {
+                createdFilter = row;
             }
         }
         if (createdFilter == null) {
@@ -127,6 +126,15 @@ public class FilterBuilderParameter extends BaseElement
         }
 
         return new FilterBuilderFilter(createdFilter);
+    }
+
+    /**
+     * @return what the filters select, in plain words
+     * @since 1.4.0
+     */
+    public String getSummary()
+    {
+        return getContainer().findElement(By.className("proj-manag-filter-summary")).getText();
     }
 
     /**
@@ -150,10 +158,14 @@ public class FilterBuilderParameter extends BaseElement
         getDriver().executeJavascript("if (document.activeElement) { document.activeElement.blur(); }");
         getDriver().waitUntilCondition(driver -> driver.findElements(By.className("selectize-dropdown")).stream()
             .noneMatch(WebElement::isDisplayed));
-        try {
-            getContainer().findElements(By.className("proj-manag-delete-filter")).forEach(WebElement::click);
-        } catch (StaleElementReferenceException ignored) {
-            // No problem if the elements were deleted faster than necessary. But it shouldn't happen.
+        // Only the filters, not the hidden template of a filter. Each removal changes the filters, so they're looked up
+        // again after each one.
+        By deleteFilter = By.cssSelector(".proj-manag-constraints .proj-manag-delete-filter");
+        int count = getContainer().findElements(deleteFilter).size();
+        for (int i = 0; i < count; i++) {
+            getContainer().findElement(deleteFilter).click();
+            int remaining = count - i - 1;
+            getDriver().waitUntilCondition(driver -> getContainer().findElements(deleteFilter).size() == remaining);
         }
     }
 }

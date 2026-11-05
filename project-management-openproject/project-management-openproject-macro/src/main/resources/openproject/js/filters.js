@@ -18,17 +18,37 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
  require(['jquery'], function ($) {
+   let getInstance = function () {
+     return $('.macro-editor-modal :input[name="instance"]').val();
+   };
+   // The properties of the chosen instance, e.g. its custom fields, can be filtered on.
+   let loadInstanceProperties = function (builderElement) {
+     let instance = getInstance();
+     let builder = instance && window.FilterBuilder && window.FilterBuilder.instances.get(builderElement[0]);
+     if (builder && builder.setSourceParameters && builderElement.data('instance') !== instance) {
+       builderElement.data('instance', instance);
+       builder.setSourceParameters({instance: instance});
+     }
+   };
    let init = function (event, builderElement) {
-     let element = builderElement || (window.FilterBuilder && window.FilterBuilder.instances.values().next().value.element);
+     let element = builderElement || (window.FilterBuilder && window.FilterBuilder.instances.size > 0
+       && window.FilterBuilder.instances.values().next().value.element);
      if (element) {
        element.on('displayingFilter', function (e, a, b, c, d) {
-         let instance = $('.macro-editor-modal :input[name="instance"]').val();
+         let instance = getInstance();
          if (d.searchURL && instance) {
            d.searchURL = d.searchURL.replace('{instance}', instance);
          }
        });
+       // The builder is registered right after it's initialized.
+       setTimeout(() => loadInstanceProperties(element), 0);
      }
    };
    init();
    $(document).on('filterBuilderInitialized', init);
+   $(document).on('change', '.macro-editor-modal :input[name="instance"]', function () {
+     if (window.FilterBuilder) {
+       window.FilterBuilder.instances.forEach(builder => loadInstanceProperties(builder.element));
+     }
+   });
  });

@@ -77,7 +77,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         PresetEditPage editPage = createModal.setName(presetName).setChartPreset(false).create();
         assertEquals(presetName, editPage.getName());
         String presetId = editPage.getPresetId();
-        editPage.getFilterBuilders().get(0).addFilter(SUMMARY).typeValue(1, "speakers");
+        editPage.getFilterBuilders().get(0).addFilter(SUMMARY).typeValue("speakers");
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 
         // The saved filters are displayed, but they can't be changed.
@@ -117,7 +117,7 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         // The macro uses the updated preset filters.
         setup.gotoPage(presetReference, "edit");
         editPage = new PresetEditPage();
-        editPage.getFilterBuilders().get(0).getFilters().get(0).typeValue(1, "sp");
+        editPage.getFilterBuilders().get(0).getFilters().get(0).typeValue("sp");
         editPage.clickSaveAndViewPreset();
         setup.gotoPage(testReference);
         OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
@@ -164,8 +164,8 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             .setChartPreset(true).create();
         List<FilterBuilderParameter> builders = editPage.getFilterBuilders();
         assertEquals(1, builders.size());
-        builders.get(0).addFilter(SUMMARY).typeValue(1, "speakers");
-        editPage.addDataset().addFilter(SUMMARY).typeValue(1, "sp");
+        builders.get(0).addFilter(SUMMARY).typeValue("speakers");
+        editPage.addDataset().addFilter(SUMMARY).typeValue("sp");
         PresetViewPage viewPage = editPage.clickSaveAndViewPreset();
 
         assertTrue(viewPage.isChartPreset());

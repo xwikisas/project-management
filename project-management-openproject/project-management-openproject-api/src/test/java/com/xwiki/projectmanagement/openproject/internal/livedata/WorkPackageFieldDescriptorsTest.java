@@ -47,7 +47,7 @@ class WorkPackageFieldDescriptorsTest
     {
         List<LiveDataPropertyDescriptor> descriptors = WorkPackageFieldDescriptors.getDescriptors(
             new OpenProjectWorkItemFields(List.of(
-                field("targetVersions", "Target versions", "[]Version", ALL_OPERATORS),
+                multiValue(field("targetVersions", "Target versions", "[]Version", ALL_OPERATORS)),
                 field("category", "Category", null, List.of()),
                 field("responsible", "Accountable", "[]User", List.of("=", "!")),
                 field("customField5", "Labels", "[]CustomOption", ALL_OPERATORS),
@@ -71,6 +71,7 @@ class WorkPackageFieldDescriptorsTest
         assertEquals("=", version.getFilter().getDefaultOperator());
         assertEquals("/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/versions?search={encodedQuery}",
             version.getFilter().getParameters().get("searchURL"));
+        assertEquals(true, version.getFilter().getParameters().get("multiValue"));
 
         LiveDataPropertyDescriptor category = descriptors.get(1);
         assertFalse(category.isFilterable());
@@ -83,6 +84,9 @@ class WorkPackageFieldDescriptorsTest
         LiveDataPropertyDescriptor labels = descriptors.get(4);
         assertEquals("list", labels.getFilter().getId());
         assertNull(labels.getFilter().getParameters().get("searchURL"));
+        // A single-value list can't match all of several values.
+        assertEquals(List.of("=", "!", "*", "!*"), getOperators(labels));
+        assertNull(labels.getFilter().getParameters().get("multiValue"));
 
         // The values that aren't links are displayed as text.
         LiveDataPropertyDescriptor notes = descriptors.get(5);
@@ -102,6 +106,12 @@ class WorkPackageFieldDescriptorsTest
     {
         return descriptor.getFilter().getOperators().stream().map(LiveDataPropertyDescriptor.OperatorDescriptor::getId)
             .collect(Collectors.toList());
+    }
+
+    private static WorkPackageField multiValue(WorkPackageField field)
+    {
+        field.setMultiValue(true);
+        return field;
     }
 
     private static WorkPackageField field(String key, String name, String filterValueType, List<String> operators)

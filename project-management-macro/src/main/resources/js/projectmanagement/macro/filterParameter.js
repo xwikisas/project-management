@@ -77,13 +77,8 @@ setTimeout(function () {
           i++;
           setSeriesTitle(bld, i);
           let filters = (filterCfg.query && filterCfg.query.filters) || [];
-          filters.forEach((filter) => {
-            filter.constraints.forEach((constraint) => {
-              let filterCopy = { ...filter };
-              filterCopy.constraints = [constraint];
-              bld.addFilter(filterCopy);
-            });
-          });
+          // The builder groups the values of a filter into rows.
+          filters.forEach(filter => bld.addFilter(filter));
         });
 
       };

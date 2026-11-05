@@ -1,0 +1,23 @@
+{
+  "_type": "Collection",
+  "total": 2,
+  "count": 2,
+  "_embedded": {
+    "elements": [
+      {
+        "_type": "Schema",
+        "subject": { "type": "String", "name": "Subject" },
+        "targetVersions": { "type": "[]Version", "name": "Target versions" },
+        "customField20": { "type": "CustomOption", "name": "Difficulty" },
+        "_links": { "self": { "href": "/api/v3/work_packages/schemas/1-1" } }
+      },
+      {
+        "_type": "Schema",
+        "subject": { "type": "String", "name": "Subject" },
+        "targetVersions": { "type": "[]Version", "name": "Target versions" },
+        "customField5": { "type": "[]CustomOption", "name": "Labels" },
+        "_links": { "self": { "href": "/api/v3/work_packages/schemas/2-1" } }
+      }
+    ]
+  }
+}

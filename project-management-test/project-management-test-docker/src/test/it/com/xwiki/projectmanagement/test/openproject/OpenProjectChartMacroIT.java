@@ -142,7 +142,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         OpenProjectChartMacroEditModal modal = new OpenProjectChartMacroEditModal(setup, testReference);
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
-        modal.getFilterBuilder().addFilter("status").setSuggestValue(1, NEW);
+        modal.getFilterBuilder().addFilter("status").setSuggestValue(NEW);
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 

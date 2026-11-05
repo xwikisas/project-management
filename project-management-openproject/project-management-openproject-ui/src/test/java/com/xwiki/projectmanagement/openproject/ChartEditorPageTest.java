@@ -49,7 +49,7 @@ import com.xwiki.projectmanagement.script.ProjectManagementScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -94,8 +94,8 @@ class ChartEditorPageTest extends PageTest
         // $services.projectmanagement.livedata and $services.projectmanagement.presets
         when(projectManagement.get("livedata")).thenReturn(this.liveDataScriptService);
         when(projectManagement.get("presets")).thenReturn(this.presetsScriptService);
-        when(((ProjectManagementLivedataScriptService) this.liveDataScriptService).getLivedataConfiguration(CLIENT))
-            .thenReturn(configuration);
+        when(((ProjectManagementLivedataScriptService) this.liveDataScriptService).getLivedataConfiguration(CLIENT,
+            Map.of())).thenReturn(configuration);
 
         setDisplayer(null);
         this.templateManager = this.componentManager.getInstance(TemplateManager.class);
@@ -113,10 +113,62 @@ class ChartEditorPageTest extends PageTest
             filters.selectFirst(".proj-manag-header-title").text());
         assertEquals("projectmanagement.macro.chart.addSeries",
             result.selectFirst("button.project-management-new-dataset.proj-manag-add-link").text());
-        // Adding a filter, a constraint or a series are displayed the same way.
-        assertEquals("projectmanagement.macro.filter.addFilter",
-            result.selectFirst("select.proj-manag-add-filter.proj-manag-add-link option").text());
-        assertNotNull(result.selectFirst("a.proj-manag-add-constraint.proj-manag-add-link"));
+    }
+
+    @Test
+    void filtersEditorProposesTheFilterableProperties() throws Exception
+    {
+        Document result = render("html_displayer/openprojectfilters/edit.vm");
+
+        // A filter is added by choosing its property in a select, which goes back to its placeholder.
+        Element addFilter = result.selectFirst(".proj-manag-add-filter-container label");
+        assertEquals("projectmanagement.macro.filter.addFilterOn", addFilter.ownText(), result.html());
+        assertEquals(List.of("", "type"), addFilter.select("select.proj-manag-add-filter option").eachAttr("value"));
+        assertEquals(List.of("projectmanagement.macro.filter.chooseProperty", "Type"),
+            addFilter.select("select.proj-manag-add-filter option").eachText());
+        // One row per filter, without the old "Add constraint" action.
+        assertNull(result.selectFirst(".proj-manag-add-constraint"));
+
+        // The labels of the operators, by type of filter and operator id, and the words of the summary.
+        String l10n = result.selectFirst(".proj-manag-constraint-builder").attr("data-l10n");
+        assertTrue(l10n.contains("\"list.=\":\"projectmanagement.macro.filter.operator.list.isOneOf\""), l10n);
+        assertTrue(l10n.contains("\"date.between\":\"projectmanagement.macro.filter.operator.date.isBetween\""),
+            l10n);
+        assertTrue(l10n.contains("\"summary\":\"projectmanagement.macro.filter.summary\""), l10n);
+    }
+
+    @Test
+    void filterPropertiesOfTheInstance() throws Exception
+    {
+        LiveDataPropertyDescriptor labels = new LiveDataPropertyDescriptor();
+        labels.setId("Labels");
+        labels.setFilter(new LiveDataPropertyDescriptor.FilterDescriptor("list"));
+        labels.getFilter().getParameters().put("multiValue", true);
+        // Not filterable.
+        LiveDataPropertyDescriptor category = new LiveDataPropertyDescriptor();
+        category.setId("category");
+        LiveDataConfiguration configuration = new LiveDataConfiguration();
+        configuration.setMeta(new LiveDataMeta());
+        configuration.getMeta().setPropertyDescriptors(List.of(labels, category));
+        when(((ProjectManagementLivedataScriptService) this.liveDataScriptService).getLivedataConfiguration(CLIENT,
+            Map.of("instance", "op.xwiki.org"))).thenReturn(configuration);
+        this.request.put("client", CLIENT);
+        this.request.put("sourceParameters", "{\"instance\":\"op.xwiki.org\"}");
+
+        String result = this.templateManager.render("filter_properties.vm").trim();
+
+        // The filterable properties of the instance, for the filter builder to propose them.
+        assertTrue(result.startsWith("[{\"id\":\"Labels\""), result);
+        assertTrue(result.contains("\"multiValue\":true"), result);
+        assertFalse(result.contains("category"), result);
+    }
+
+    @Test
+    void filterPropertiesOfAnUnknownClient() throws Exception
+    {
+        this.request.put("client", "unknown");
+
+        assertEquals("[]", this.templateManager.render("filter_properties.vm").trim());
     }
 
     @Test
