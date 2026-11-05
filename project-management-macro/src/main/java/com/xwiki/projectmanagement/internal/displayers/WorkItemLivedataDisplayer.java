@@ -57,6 +57,11 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
      */
     public static final String ROLE_HINT = "proj-manag-liveData";
 
+    /**
+     * The number of work items per page when the macro isn't given a limit.
+     */
+    private static final int DEFAULT_PAGE_SIZE = 25;
+
     @Inject
     private ComponentManager componentManager;
 
@@ -85,6 +90,9 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
             if (parameters.getFilters() != null && !parameters.getFilters().isEmpty()) {
                 newContent = parameters.getFilters();
                 parameters.setFilters("");
+            }
+            if (parameters.getLimit() == null) {
+                parameters.setLimit(DEFAULT_PAGE_SIZE);
             }
             if (WorkItemsDisplayer.liveDataCards.equals(parameters.getWorkItemsDisplayer())) {
                 parameters.setLayouts("cards,table");

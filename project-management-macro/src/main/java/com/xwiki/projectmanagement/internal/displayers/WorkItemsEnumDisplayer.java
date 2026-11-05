@@ -63,7 +63,14 @@ public class WorkItemsEnumDisplayer extends AbstractWorkItemsListDisplayer
     }
 
     @Override
-    protected List<Block> display(List<WorkItem> workItems, MacroTransformationContext context)
+    protected String getMoreTranslationKey()
+    {
+        return "displayer.enum.more";
+    }
+
+    @Override
+    protected List<Block> display(List<WorkItem> workItems, List<Block> moreBlocks,
+        MacroTransformationContext context)
     {
         List<Block> blocks = new ArrayList<>();
         for (WorkItem workItem : workItems) {
@@ -76,6 +83,13 @@ public class WorkItemsEnumDisplayer extends AbstractWorkItemsListDisplayer
                 blocks.add(new SpaceBlock());
             }
             blocks.addAll(strikeThroughIfClosed(identifier, workItem));
+        }
+        if (!moreBlocks.isEmpty()) {
+            if (!blocks.isEmpty()) {
+                blocks.add(new SpecialSymbolBlock(','));
+                blocks.add(new SpaceBlock());
+            }
+            blocks.addAll(moreBlocks);
         }
         return context.isInline() ? blocks : Collections.singletonList(new ParagraphBlock(blocks));
     }

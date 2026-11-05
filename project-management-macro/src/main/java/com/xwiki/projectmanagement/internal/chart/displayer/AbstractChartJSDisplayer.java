@@ -35,7 +35,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -115,7 +114,18 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     public List<Block> execute(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
         MacroTransformationContext context, Object typeDisplayerParams) throws MacroExecutionException
     {
-        String chartMacro = getChartMacro(workItems, property, labels, typeDisplayerParams);
+        return parse(getChartMacro(workItems, property, labels, typeDisplayerParams), context);
+    }
+
+    @Override
+    public List<Block> executeCounts(List<Map<String, Long>> counts, String property, List<String> labels,
+        MacroTransformationContext context, Object typeDisplayerParams) throws MacroExecutionException
+    {
+        return parse(getChartMacroFromCounts(counts, labels, typeDisplayerParams), context);
+    }
+
+    private List<Block> parse(String chartMacro, MacroTransformationContext context) throws MacroExecutionException
+    {
         XDOM xdom = contentParser.parse(chartMacro, context, true, false);
         return Collections.singletonList(new GroupBlock(xdom.getChildren()));
     }
@@ -133,17 +143,48 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     String getChartMacro(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
         Object typeDisplayerParams) throws MacroExecutionException
     {
-        Set<String> chartJSLabels = new TreeSet<>();
+        List<Map<String, Long>> counts = new ArrayList<>();
+        for (PaginatedResult<WorkItem> dataset : workItems) {
+            Map<String, Long> datasetCounts = new HashMap<>();
+            for (WorkItem item : dataset.getItems()) {
+                List<String> propValues = getChartJSLabels(item, property, getParams(typeDisplayerParams));
+                if (propValues.isEmpty()) {
+                    datasetCounts.merge(null, 1L, Long::sum);
+                } else {
+                    // A work item having several values (e.g. assignees) is counted for each of them.
+                    propValues.forEach(propValue -> datasetCounts.merge(propValue, 1L, Long::sum));
+                }
+            }
+            counts.add(datasetCounts);
+        }
+        return getChartMacroFromCounts(counts, labels, typeDisplayerParams);
+    }
 
+    /**
+     * Write the number of work items of each dataset by label as a chartjs macro.
+     *
+     * @param counts for each dataset, the number of work items by label, the {@code null} key counting the work
+     *     items without a value
+     * @param labels the labels of the datasets
+     * @param typeDisplayerParams the parameters of the chart type (metric, period)
+     * @return the chartjs macro call, in XWiki 2.1 syntax
+     * @throws MacroExecutionException if the data of the chart can't be serialized
+     */
+    String getChartMacroFromCounts(List<Map<String, Long>> counts, List<String> labels, Object typeDisplayerParams)
+        throws MacroExecutionException
+    {
         String metric = PARAM_METRIC_COUNT;
         if (typeDisplayerParams instanceof Map && ((Map<?, ?>) typeDisplayerParams).containsKey(PARAM_METRIC)) {
             metric = (String) ((Map<?, ?>) typeDisplayerParams).get(PARAM_METRIC);
         }
-        ChartJSData chartJSData =
-            initModel(workItems, property, (Map<String, String>) typeDisplayerParams, chartJSLabels);
+        ChartJSData chartJSData = new ChartJSData();
+        chartJSData.setDatasets(new ArrayList<>());
+        // Create the set of all possible labels across all datasets.
+        Set<String> chartJSLabels = new TreeSet<>();
+        counts.forEach(datasetCounts -> datasetCounts.keySet().stream().filter(Objects::nonNull)
+            .forEach(chartJSLabels::add));
 
-        populateModel(workItems, property, labels, (Map<String, String>) typeDisplayerParams, chartJSData,
-            chartJSLabels, metric);
+        populateModel(counts, labels, chartJSData, chartJSLabels, metric);
 
         try {
             String data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
@@ -157,52 +198,44 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         }
     }
 
-    private void populateModel(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
-        Map<String, String> typeDisplayerParams, ChartJSData chartJSData, Set<String> chartJSLabels, String metric)
+    @SuppressWarnings("unchecked")
+    private static Map<String, String> getParams(Object typeDisplayerParams)
     {
-        boolean anyUnset = false;
-        Map<Integer, Integer> unsetValuesCount = new HashMap<>();
-        for (int i = 0; i < workItems.size(); i++) {
+        return typeDisplayerParams instanceof Map ? (Map<String, String>) typeDisplayerParams : Map.of();
+    }
+
+    private void populateModel(List<Map<String, Long>> counts, List<String> labels, ChartJSData chartJSData,
+        Set<String> chartJSLabels, String metric)
+    {
+        // The counts can't be asked for the null key, which some maps (e.g. the immutable ones) reject.
+        List<Long> unsetCounts = new ArrayList<>();
+        for (int i = 0; i < counts.size(); i++) {
             ChartJSDataset dataset = new ChartJSDataset();
             chartJSData.getDatasets().add(dataset);
-            Map<String, Integer> dataSet = new TreeMap<>();
-            chartJSLabels.forEach(label -> dataSet.put(label, 0));
-            for (WorkItem item : workItems.get(i).getItems()) {
-                List<String> propValues = getChartJSLabels(item, property, typeDisplayerParams);
-                if (propValues.isEmpty()) {
-                    unsetValuesCount.put(i, unsetValuesCount.getOrDefault(i, 0) + 1);
-                    anyUnset = true;
+            Map<String, Long> dataSet = new TreeMap<>();
+            chartJSLabels.forEach(label -> dataSet.put(label, 0L));
+            Long[] unset = new Long[1];
+            counts.get(i).forEach((label, count) -> {
+                if (label == null) {
+                    unset[0] = count;
                 } else {
-                    // A work item having several values (e.g. assignees) is counted for each of them.
-                    propValues.forEach(propValue -> dataSet.put(propValue, dataSet.getOrDefault(propValue, 0) + 1));
+                    dataSet.put(label, count);
                 }
-            }
-            chartJSData.getDatasets().get(i).setLabel(labels.size() > i ? labels.get(i) : "Unlabeled");
+            });
+            unsetCounts.add(unset[0]);
+            dataset.setLabel(labels.size() > i ? labels.get(i) : "Unlabeled");
             applyMetric(metric, chartJSData, i, dataSet);
         }
 
         chartJSData.setLabels(new ArrayList<>(chartJSLabels));
-        if (anyUnset) {
+        if (unsetCounts.stream().anyMatch(Objects::nonNull)) {
             chartJSData.getLabels().add(UNSET);
-            for (Integer i : unsetValuesCount.keySet()) {
-                chartJSData.getDatasets().get(i).getData().add(Long.valueOf(unsetValuesCount.get(i)));
+            for (int i = 0; i < unsetCounts.size(); i++) {
+                if (unsetCounts.get(i) != null) {
+                    chartJSData.getDatasets().get(i).getData().add(unsetCounts.get(i));
+                }
             }
         }
-    }
-
-    @Nonnull
-    private ChartJSData initModel(List<PaginatedResult<WorkItem>> workItems, String property,
-        Map<String, String> typeDisplayerParams, Set<String> chartJSLabels)
-    {
-        ChartJSData chartJSData = new ChartJSData();
-        chartJSData.setDatasets(new ArrayList<>());
-        // Create the set of all possible labels across all datasets.
-        for (int i = 0; i < workItems.size(); i++) {
-            for (WorkItem item : workItems.get(i).getItems()) {
-                chartJSLabels.addAll(getChartJSLabels(item, property, typeDisplayerParams));
-            }
-        }
-        return chartJSData;
     }
 
     /**
@@ -262,18 +295,17 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         return workItem.getStringValue(property);
     }
 
-    private static void applyMetric(String metric, ChartJSData chartJSData, int i, Map<String, Integer> dataSet)
+    private static void applyMetric(String metric, ChartJSData chartJSData, int i, Map<String, Long> dataSet)
     {
         if (metric.equals(PARAM_METRIC_ACCUMULATE)) {
             chartJSData.getDatasets().get(i).setData(new ArrayList<>());
-            int currentVal = 0;
-            for (Integer value : dataSet.values()) {
+            long currentVal = 0;
+            for (Long value : dataSet.values()) {
                 currentVal += value;
-                chartJSData.getDatasets().get(i).getData().add((long) currentVal);
+                chartJSData.getDatasets().get(i).getData().add(currentVal);
             }
         } else {
-            chartJSData.getDatasets().get(i)
-                .setData(dataSet.values().stream().map(Integer::longValue).collect(Collectors.toList()));
+            chartJSData.getDatasets().get(i).setData(new ArrayList<>(dataSet.values()));
         }
     }
 

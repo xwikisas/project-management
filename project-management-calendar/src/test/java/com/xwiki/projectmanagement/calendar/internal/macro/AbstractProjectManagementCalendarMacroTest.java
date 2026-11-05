@@ -136,7 +136,7 @@ class AbstractProjectManagementCalendarMacroTest
             "firstDay", "0"), calendarParameters);
         URIBuilder url = new URIBuilder(calendarParameters.get(JSON));
         assertEquals(REST_PATH, url.getPath());
-        assertEquals(List.of("limit=25", EXTRA_PARAMETER), getQueryParameters(url));
+        assertEquals(List.of(EXTRA_PARAMETER), getQueryParameters(url));
         verify(this.presetsManager, never()).getPreset(any());
     }
 
@@ -168,7 +168,7 @@ class AbstractProjectManagementCalendarMacroTest
 
         URIBuilder url = new URIBuilder(execute().getParameter(JSON));
 
-        assertEquals(List.of("limit=25", EXTRA_PARAMETER), getQueryParameters(url));
+        assertEquals(List.of(EXTRA_PARAMETER), getQueryParameters(url));
     }
 
     @Test
@@ -178,7 +178,7 @@ class AbstractProjectManagementCalendarMacroTest
 
         URIBuilder url = new URIBuilder(execute().getParameter(JSON));
 
-        assertEquals(List.of("limit=25", EXTRA_PARAMETER, "excludeWorkItems=true"), getQueryParameters(url));
+        assertEquals(List.of(EXTRA_PARAMETER, "excludeWorkItems=true"), getQueryParameters(url));
     }
 
     @Test
@@ -238,7 +238,7 @@ class AbstractProjectManagementCalendarMacroTest
 
         // The preset filters are combined with the filters parameter in the REST URL.
         assertEquals(List.of("filters={\"query\":{\"filters\":[{\"property\":\"status\"},{\"property\":\"type\"}]}}",
-            "limit=25", EXTRA_PARAMETER), getQueryParameters(url));
+            EXTRA_PARAMETER), getQueryParameters(url));
     }
 
     @Test

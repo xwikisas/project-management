@@ -45,6 +45,16 @@ public interface ProjectManagementClientExecutionContext
     String LIVE_DATA = "liveData";
 
     /**
+     * The key of the context value listing the ids of the work item properties that the caller uses (a
+     * {@link java.util.Collection} of {@link String}s), e.g. the identifier and the summary for a list of work items. A
+     * client can then retrieve only these properties, which is faster, and leave the other properties of the returned
+     * work items empty. When the value is missing, the client retrieves all the properties.
+     *
+     * @since 1.4.0
+     */
+    String PROPERTIES = "properties";
+
+    /**
      * @return a map containing various information that can be used by the client. Returns an empty map if the context
      *     was not set.
      */

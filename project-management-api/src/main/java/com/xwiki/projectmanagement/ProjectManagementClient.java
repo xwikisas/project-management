@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement;
  */
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.xwiki.component.annotation.Role;
@@ -98,6 +100,37 @@ public interface ProjectManagementClient
      *     existing.
      */
     boolean deleteWorkItem(String workItemId) throws WorkItemDeletionException;
+
+    /**
+     * Counts the work items matching the filters by value of a property, without retrieving them, which is much faster
+     * than retrieving and counting them when there are many (e.g. to draw a chart).
+     *
+     * @param filters the filters that the counted work items need to match
+     * @param property the id of the property whose values group the work items (e.g. {@link WorkItem#KEY_STATUS})
+     * @return the number of work items by value of the property, the {@code null} key counting the work items
+     *     without a value; empty when the client can't count the work items by this property (e.g. a date), in which
+     *     case the caller has to retrieve and count them itself
+     * @throws WorkItemRetrievalException if the work items can't be counted
+     * @since 1.4.0
+     */
+    default Optional<Map<String, Long>> countWorkItems(List<LiveDataQuery.Filter> filters, String property)
+        throws WorkItemRetrievalException
+    {
+        return Optional.empty();
+    }
+
+    /**
+     * @param filters the filters that the work items need to match
+     * @param sortEntries how the work items are sorted
+     * @return the URL of the page of the project management platform listing the work items matching the filters,
+     *     e.g. to view the ones left out of a list limited to its first work items; empty when the client can't tell
+     * @since 1.4.0
+     */
+    default Optional<String> getWorkItemsLocation(List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
+    {
+        return Optional.empty();
+    }
 
     /**
      * @return the implementation of the api that allows performing actions on the project management projects.

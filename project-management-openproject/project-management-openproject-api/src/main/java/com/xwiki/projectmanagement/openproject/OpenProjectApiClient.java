@@ -20,6 +20,8 @@
 
 package com.xwiki.projectmanagement.openproject;
 
+import java.util.Map;
+
 import org.xwiki.component.annotation.Role;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,6 +50,16 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 public interface OpenProjectApiClient
 {
     /**
+     * The {@code select} parameter of the OpenProject API returning the total number of work packages and the main
+     * properties of each one: id, key (display id), subject, type, status, project, author, assignee, responsible,
+     * start and due dates. The other properties (e.g. the description, the priority, the version or the custom fields)
+     * are missing, but a work package then weighs about 10 times less and is returned about 10 times faster.
+     *
+     * @since 1.4.0
+     */
+    String SELECT_MAIN_PROPERTIES = "total,count,elements/*";
+
+    /**
      * Retrieves a list of available work packages from the current OpenProject configuration.
      *
      * @param offset the offset index from which to start retrieving work packages.
@@ -74,6 +86,63 @@ public interface OpenProjectApiClient
     PaginatedResult<WorkPackage> getProjectWorkPackages(String project, Integer offset, Integer pageSize,
         String filters, String sortBy)
         throws ProjectManagementException;
+
+    /**
+     * Retrieves a list of available work packages, with only some of their properties, which is much faster when there
+     * are many work packages.
+     *
+     * @param project the project (identifier or id) whose work packages are retrieved, {@code null} to retrieve the
+     *     work packages of all the projects
+     * @param offset the number, starting at 1, of the page of work packages to retrieve
+     * @param pageSize the maximum number of work packages to return
+     * @param filters optional filters to apply (e.g. query parameters encoded as a string)
+     * @param sortBy optional sorting criteria to apply (e.g. field name and sort direction)
+     * @param select the properties of the response to return, as the {@code select} parameter of the OpenProject API
+     *     (e.g. {@link #SELECT_MAIN_PROPERTIES}), empty to return all of them
+     * @return a {@link PaginatedResult} containing the list of {@link WorkPackage} and pagination metadata
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the work packages
+     * @since 1.4.0
+     */
+    default PaginatedResult<WorkPackage> getWorkPackages(String project, Integer offset, Integer pageSize,
+        String filters, String sortBy, String select) throws ProjectManagementException
+    {
+        return project == null ? getWorkPackages(offset, pageSize, filters, sortBy)
+            : getProjectWorkPackages(project, offset, pageSize, filters, sortBy);
+    }
+
+    /**
+     * Counts the work packages matching the filters by value of a property, using the grouping of the OpenProject API,
+     * without retrieving them.
+     *
+     * @param project the project (identifier or id) whose work packages are counted, {@code null} to count the work
+     *     packages of all the projects
+     * @param filters optional filters to apply (e.g. query parameters encoded as a string)
+     * @param groupBy the OpenProject name of the property grouping the work packages (e.g. {@code assignee})
+     * @return the number of work packages by value of the property, the {@code null} key counting the work packages
+     *     without a value
+     * @throws ProjectManagementException if the work packages can't be counted, e.g. when OpenProject can't group them
+     *     by the property
+     * @since 1.4.0
+     */
+    default Map<String, Long> countWorkPackages(String project, String filters, String groupBy)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException("Counting the work packages is not supported by this client.");
+    }
+
+    /**
+     * @param project the project (identifier or id) whose work packages are listed, {@code null} to list the work
+     *     packages of all the projects
+     * @param filters optional filters to apply, in the format of the OpenProject API
+     * @param sortBy optional sorting criteria to apply, in the format of the OpenProject API
+     * @return the URL of the page of the OpenProject instance listing the work packages matching the filters,
+     *     {@code null} when the client can't tell
+     * @since 1.4.0
+     */
+    default String getWorkPackagesLocation(String project, String filters, String sortBy)
+    {
+        return null;
+    }
 
     /**
      * Retrieves the work packages matching a saved query.

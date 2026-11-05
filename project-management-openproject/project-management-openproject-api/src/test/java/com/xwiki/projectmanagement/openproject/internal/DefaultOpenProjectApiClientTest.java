@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URLDecoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
@@ -55,6 +57,7 @@ import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.auth.BearerTokenAuthenticator;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
@@ -678,6 +681,104 @@ class DefaultOpenProjectApiClientTest
         assertThat(generatedUri, containsString("pageSize=" + PAGE_SIZE));
         assertThat(generatedUri, containsString("filters=" + FILTERS_STRING));
         assertThat(generatedUri, containsString("sortBy=" + SORT_BY_STRING));
+    }
+
+    @Test
+    void getWorkPackagesWithOnlyTheMainProperties() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\":1500,\"count\":1,\"_embedded\":{\"elements\":[{\"id\":7,"
+            + "\"subject\":\"Fix it\",\"displayId\":\"PROJ-7\",\"_links\":{\"status\":{\"href\":"
+            + "\"/api/v3/statuses/12\",\"title\":\"Closed\"}}}]}}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        PaginatedResult<WorkPackage> workPackages = this.openProjectApiClient.getWorkPackages(PROJECT_NAME, OFFSET,
+            PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING, OpenProjectApiClient.SELECT_MAIN_PROPERTIES);
+
+        verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        URI uri = captor.getValue().uri();
+        assertEquals("/api/v3/projects/projectName/work_packages", uri.getPath());
+        assertThat(uri.getQuery(), containsString("select=total,count,elements/*"));
+        assertThat(uri.getQuery(), containsString("filters=" + FILTERS_STRING));
+        // The work packages missing most of their properties are read like the complete ones.
+        assertEquals(1500, workPackages.getTotalItems());
+        WorkPackage workPackage = workPackages.getItems().get(0);
+        assertEquals(7, workPackage.getId());
+        assertEquals("Fix it", workPackage.getSubject());
+        assertEquals("PROJ-7", workPackage.getDisplayId());
+        assertEquals("Closed", workPackage.getStatus().getValue());
+    }
+
+    @Test
+    void countWorkPackagesGroupsThemByTheProperty() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\":6,\"count\":0,\"groups\":["
+            + "{\"value\":\"New\",\"count\":4},{\"value\":null,\"count\":2}]}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        Map<String, Long> counts = this.openProjectApiClient.countWorkPackages(null, FILTERS_STRING, "status");
+
+        Map<String, Long> expected = new HashMap<>();
+        expected.put("New", 4L);
+        expected.put(null, 2L);
+        assertEquals(expected, counts);
+        verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        URI uri = captor.getValue().uri();
+        assertEquals("/api/v3/work_packages", uri.getPath());
+        // No work package is returned: only the groups are needed.
+        assertThat(uri.getQuery(), containsString("groupBy=status"));
+        assertThat(uri.getQuery(), containsString("pageSize=0"));
+        assertThat(uri.getQuery(), containsString("filters=" + FILTERS_STRING));
+    }
+
+    @Test
+    void countWorkPackagesFailsWhenOpenProjectDoesntGroupThem()
+    {
+        // E.g. an OpenProject version ignoring the groupBy parameter: the work packages mustn't be counted as none.
+        when(this.response.body()).thenReturn("{\"total\":6,\"count\":0}");
+
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> this.openProjectApiClient.countWorkPackages(PROJECT_NAME, "", "status"));
+
+        assertEquals("OpenProject didn't group the work packages by [status].", exception.getMessage());
+    }
+
+    @Test
+    void countWorkPackagesRejectedByOpenProject()
+    {
+        when(this.response.statusCode()).thenReturn(400);
+        when(this.response.body()).thenReturn("{\"_type\":\"Error\",\"message\":\"Can't group by: created_at\"}");
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectApiClient.countWorkPackages(null, "", "createdAt"));
+
+        assertEquals(400, exception.getStatusCode());
+    }
+
+    @Test
+    void getWorkPackagesLocation() throws Exception
+    {
+        String location = this.openProjectApiClient.getWorkPackagesLocation(PROJECT_NAME,
+            "[{\"status\":{\"operator\":\"o\",\"values\":[]}},{\"type\":{\"operator\":\"=\",\"values\":[\"1\"]}}]",
+            "[[\"id\",\"desc\"]]");
+
+        // The list of the instance takes the filters and the sorting in the format of its query_props parameter.
+        String prefix = OPEN_PROJECT_CONNECTION_URL + "/projects/projectName/work_packages?query_props=";
+        assertThat(location, startsWith(prefix));
+        assertEquals("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]},{\"n\":\"type\",\"o\":\"=\",\"v\":[\"1\"]}],"
+            + "\"t\":\"id:desc\"}", URLDecoder.decode(location.substring(prefix.length()), StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void getWorkPackagesLocationWithoutFiltersNorProject()
+    {
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/work_packages?query_props=%7B%22f%22%3A%5B%5D%7D",
+            this.openProjectApiClient.getWorkPackagesLocation(null, "", ""));
+        assertNull(this.openProjectApiClient.getWorkPackagesLocation(null, "{invalid", ""));
+        // The URL of the instance can end with a slash.
+        DefaultOpenProjectApiClient slashClient = new DefaultOpenProjectApiClient(OPEN_PROJECT_CONNECTION_URL + '/',
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/work_packages?query_props=%7B%22f%22%3A%5B%5D%7D",
+            slashClient.getWorkPackagesLocation(null, "", ""));
     }
 
     @Test

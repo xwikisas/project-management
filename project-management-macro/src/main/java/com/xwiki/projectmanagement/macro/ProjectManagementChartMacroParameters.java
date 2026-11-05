@@ -51,7 +51,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
 
     private String datasetsLabels;
 
-    private Integer limit = 10;
+    private Integer limit;
 
     private Long offset = 0L;
 
@@ -133,7 +133,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     }
 
     /**
-     * @return the limit applied of the work items resulting list.
+     * @return the maximum number of work items charted, {@code null} (the default) to chart all the matching work
+     *     items
      */
     public Integer getLimit()
     {

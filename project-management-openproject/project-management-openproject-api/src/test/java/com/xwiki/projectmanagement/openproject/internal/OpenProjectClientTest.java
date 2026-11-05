@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -74,9 +75,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -122,7 +125,7 @@ class OpenProjectClientTest
      * The requests that the tests must stub explicitly: they return the work items, or tell where they come from.
      */
     private static final Set<String> CHECKED_REQUESTS = Set.of("getWorkPackages", "getProjectWorkPackages",
-        "getQueryWorkPackages", "getQueryResultsUrl", "getProjects");
+        "getQueryWorkPackages", "getQueryResultsUrl", "getProjects", "countWorkPackages", "getWorkPackagesLocation");
 
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
@@ -203,6 +206,126 @@ class OpenProjectClientTest
             List.of(new LiveDataQuery.SortEntry("summary", false)));
 
         assertEquals(List.of("5"), getIds(result));
+    }
+
+    @Test
+    void getWorkItemsWithOnlyTheMainPropertiesWhenTheCallerNeedsNoOther() throws ProjectManagementException
+    {
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.PROPERTIES))
+            .thenReturn(List.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_KEY, WorkItem.KEY_SUMMARY, WorkItem.KEY_STATUS));
+        doReturn(workPackages(6)).when(this.openProjectApiClient).getWorkPackages(null, 1, 1000, NO_FILTERS,
+            NO_SORTING, OpenProjectApiClient.SELECT_MAIN_PROPERTIES);
+        doReturn(workPackages(7)).when(this.openProjectApiClient).getWorkPackages("first-project", 1, 1000,
+            NO_FILTERS, NO_SORTING, OpenProjectApiClient.SELECT_MAIN_PROPERTIES);
+
+        assertEquals(List.of("6"), getIds(this.openProjectClient.getWorkItems(0, 1000, List.of(), List.of())));
+        when(this.executionContext.get(IDENTIFIER))
+            .thenReturn("http://open-project-instance/projects/first-project/work_packages");
+        assertEquals(List.of("7"), getIds(this.openProjectClient.getWorkItems(0, 1000, List.of(), List.of())));
+    }
+
+    @Test
+    void getWorkItemsWithAllThePropertiesWhenTheCallerNeedsAnotherOne() throws ProjectManagementException
+    {
+        // The description isn't part of the main properties.
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.PROPERTIES))
+            .thenReturn(List.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_DESCRIPTION));
+        doReturn(workPackages(8)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        assertEquals(List.of("8"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
+    }
+
+    @Test
+    void countWorkItemsGroupsTheWorkPackagesByTheProperty() throws ProjectManagementException
+    {
+        Map<String, Long> counts = Map.of("Alice", 3L);
+        doReturn(counts).when(this.openProjectApiClient).countWorkPackages(isNull(),
+            argThat(jsonFilters("[{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]")), eq("assignee"));
+
+        assertEquals(Optional.of(counts),
+            this.openProjectClient.countWorkItems(List.of(getSummaryFilter()), WorkItem.KEY_ASSIGNEES));
+    }
+
+    @Test
+    void countWorkItemsOfTheProjectAndFiltersOfTheIdentifier() throws ProjectManagementException
+    {
+        String queryProps = "{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}]}";
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/projects/first-project/"
+            + "work_packages?query_props=" + URLEncoder.encode(queryProps, StandardCharsets.UTF_8));
+        Map<String, Long> counts = Map.of("New", 3L);
+        doReturn(counts).when(this.openProjectApiClient).countWorkPackages(eq("first-project"),
+            argThat(jsonFilters(MERGED_FILTERS)), eq("status"));
+
+        assertEquals(Optional.of(counts),
+            this.openProjectClient.countWorkItems(List.of(getSummaryFilter()), WorkItem.KEY_STATUS));
+    }
+
+    @Test
+    void countWorkItemsByAPropertyThatOpenProjectCantGroupBy() throws ProjectManagementException
+    {
+        // OpenProject can't group by date, and names the progress groups differently from the work item values.
+        assertEquals(Optional.empty(), this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_CREATION_DATE));
+        assertEquals(Optional.empty(), this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_PROGRESS));
+        // A list of work packages is retrieved, and the filters of a saved query can't be counted.
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("12, 13");
+        assertEquals(Optional.empty(), this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_STATUS));
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        assertEquals(Optional.empty(), this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_STATUS));
+
+        verify(this.openProjectApiClient, never()).countWorkPackages(any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 400, 500 })
+    void countWorkItemsWhenOpenProjectCantCountThem(int statusCode) throws ProjectManagementException
+    {
+        doThrow(new WorkItemRetrievalException("Can't group", statusCode)).when(this.openProjectApiClient)
+            .countWorkPackages(null, NO_FILTERS, "type");
+
+        // The caller then retrieves and counts the work packages.
+        assertEquals(Optional.empty(), this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_TYPE));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 401, 403 })
+    void countWorkItemsReportsTheRejectionOfTheUser(int statusCode) throws ProjectManagementException
+    {
+        WorkItemRetrievalException failure = new WorkItemRetrievalException("Rejected", statusCode);
+        doThrow(failure).when(this.openProjectApiClient).countWorkPackages(null, NO_FILTERS, "type");
+
+        assertSame(failure, assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_TYPE)));
+    }
+
+    @Test
+    void getWorkItemsLocation() throws ProjectManagementException
+    {
+        doReturn("http://op/work_packages").when(this.openProjectApiClient).getWorkPackagesLocation(isNull(),
+            argThat(jsonFilters("[{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]")),
+            eq("[[\"subject\",\"desc\"]]"));
+
+        assertEquals(Optional.of("http://op/work_packages"), this.openProjectClient.getWorkItemsLocation(
+            List.of(getSummaryFilter()), List.of(new LiveDataQuery.SortEntry("summary", true))));
+    }
+
+    @Test
+    void getWorkItemsLocationOfTheProjectOfTheIdentifier() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER))
+            .thenReturn("http://open-project-instance/projects/first-project/work_packages");
+        doReturn("http://op/projects/first-project/work_packages").when(this.openProjectApiClient)
+            .getWorkPackagesLocation("first-project", NO_FILTERS, NO_SORTING);
+
+        assertEquals(Optional.of("http://op/projects/first-project/work_packages"),
+            this.openProjectClient.getWorkItemsLocation(List.of(), List.of()));
+    }
+
+    @Test
+    void getWorkItemsLocationOfAListOfWorkPackages()
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("12, 13");
+
+        assertEquals(Optional.empty(), this.openProjectClient.getWorkItemsLocation(List.of(), List.of()));
     }
 
     @Test

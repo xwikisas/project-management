@@ -152,8 +152,8 @@ class OpenProjectCalendarEventProviderTest
     {
         requestTypes(true, false);
         when(this.executionContext.get("limit")).thenReturn(null);
-        when(this.apiClient.getSprints(1, 25, "")).thenReturn(
-            new PaginatedResult<>(List.of(sprint(3, "Sprint 3", "2026-03-02", "2026-03-13")), 1, 25, 1));
+        when(this.apiClient.getSprints(1, 100, "")).thenReturn(
+            new PaginatedResult<>(List.of(sprint(3, "Sprint 3", "2026-03-02", "2026-03-13")), 1, 100, 1));
 
         assertEquals(List.of("sprint-3"), this.provider.getMoreEvents(List.of()).stream().map(CalendarEvent::getId)
             .collect(Collectors.toList()));

@@ -49,7 +49,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -83,6 +85,8 @@ class CachingOpenProjectApiClientTest
     private static final String OTHER_FILTERS = "otherFilters";
 
     private static final String PROJECT = "project";
+
+    private static final String SELECT = OpenProjectApiClient.SELECT_MAIN_PROPERTIES;
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
@@ -121,6 +125,15 @@ class CachingOpenProjectApiClientTest
                 c -> c.getProjectWorkPackages(PROJECT, OFFSET, 20, FILTERS_STRING, SORT_BY_STRING),
                 c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, OTHER_FILTERS, SORT_BY_STRING),
                 c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, "otherSortBy")),
+            cachedCall("getWorkPackagesWithSelect",
+                c -> c.getWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING, SELECT),
+                c -> c.getWorkPackages(null, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING, SELECT),
+                c -> c.getWorkPackages(PROJECT, 2, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING, SELECT),
+                c -> c.getWorkPackages(PROJECT, OFFSET, 20, FILTERS_STRING, SORT_BY_STRING, SELECT),
+                c -> c.getWorkPackages(PROJECT, OFFSET, PAGE_SIZE, OTHER_FILTERS, SORT_BY_STRING, SELECT),
+                c -> c.getWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, "otherSortBy", SELECT),
+                c -> c.getWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING, ""),
+                c -> c.getProjectWorkPackages(PROJECT, OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING)),
             cachedCall("getQueryWorkPackages", c -> c.getQueryWorkPackages("27", OFFSET, PAGE_SIZE, SORT_BY_STRING),
                 c -> c.getQueryWorkPackages("28", OFFSET, PAGE_SIZE, SORT_BY_STRING),
                 c -> c.getQueryWorkPackages("27", 2, PAGE_SIZE, SORT_BY_STRING),
@@ -202,6 +215,47 @@ class CachingOpenProjectApiClientTest
                 String.format("The other request at index [%d] shares the cache entry of the first one.", i));
         }
         assertEquals(1 + otherCalls.length, mockingDetails(backend).getInvocations().size());
+    }
+
+    @Test
+    void countsAreCachedPerRequest() throws ProjectManagementException
+    {
+        // OpenProject returns new counts for each request.
+        OpenProjectApiClient backend = mock(OpenProjectApiClient.class);
+        when(backend.countWorkPackages(any(), any(), any())).thenAnswer(invocation -> {
+            Map<String, Long> counts = new HashMap<>();
+            counts.put("New", 4L);
+            counts.put(null, 2L);
+            return counts;
+        });
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> mapBackedCache = mock(Cache.class);
+        useMapBackedCache(mapBackedCache);
+        CachingOpenProjectApiClient cachingClient = new CachingOpenProjectApiClient(backend, CLIENT_ID, mapBackedCache);
+
+        Map<String, Long> counts = cachingClient.countWorkPackages(PROJECT, FILTERS_STRING, "status");
+
+        // The counts of the work packages without value are kept.
+        Map<String, Long> expected = new HashMap<>();
+        expected.put("New", 4L);
+        expected.put(null, 2L);
+        assertEquals(expected, counts);
+        assertEquals(expected, cachingClient.countWorkPackages(PROJECT, FILTERS_STRING, "status"));
+        verify(backend, times(1)).countWorkPackages(any(), any(), any());
+        cachingClient.countWorkPackages(null, FILTERS_STRING, "status");
+        cachingClient.countWorkPackages(PROJECT, OTHER_FILTERS, "status");
+        cachingClient.countWorkPackages(PROJECT, FILTERS_STRING, "type");
+        verify(backend, times(4)).countWorkPackages(any(), any(), any());
+    }
+
+    @Test
+    void workPackagesLocationIsNotCached()
+    {
+        when(this.openProjectApiClient.getWorkPackagesLocation(PROJECT, FILTERS_STRING, SORT_BY_STRING))
+            .thenReturn("location");
+
+        assertEquals("location",
+            this.cachingOpenProjectApiClient.getWorkPackagesLocation(PROJECT, FILTERS_STRING, SORT_BY_STRING));
+        verifyNoInteractions(this.cache);
     }
 
     @Test

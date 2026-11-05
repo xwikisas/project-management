@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.displayers;
  */
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,6 +32,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BulletedListBlock;
 import org.xwiki.rendering.block.ListItemBlock;
+import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
@@ -63,7 +65,14 @@ public class WorkItemsListDisplayer extends AbstractWorkItemsListDisplayer
     }
 
     @Override
-    protected List<Block> display(List<WorkItem> workItems, MacroTransformationContext context)
+    protected String getMoreTranslationKey()
+    {
+        return "displayer.list.more";
+    }
+
+    @Override
+    protected List<Block> display(List<WorkItem> workItems, List<Block> moreBlocks,
+        MacroTransformationContext context)
     {
         List<Block> items = new ArrayList<>();
         for (WorkItem workItem : workItems) {
@@ -75,6 +84,9 @@ public class WorkItemsListDisplayer extends AbstractWorkItemsListDisplayer
             line.addAll(summary);
             items.add(new ListItemBlock(strikeThroughIfClosed(line, workItem)));
         }
-        return Collections.singletonList(new BulletedListBlock(items));
+        if (moreBlocks.isEmpty()) {
+            return Collections.singletonList(new BulletedListBlock(items));
+        }
+        return Arrays.asList(new BulletedListBlock(items), new ParagraphBlock(moreBlocks));
     }
 }

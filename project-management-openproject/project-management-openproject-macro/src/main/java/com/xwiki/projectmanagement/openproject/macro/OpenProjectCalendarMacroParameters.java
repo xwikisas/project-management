@@ -53,14 +53,6 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
     private String versionColor;
 
     /**
-     * Default constructor. Sets the default values for the parameters.
-     */
-    public OpenProjectCalendarMacroParameters()
-    {
-        setLimit(25);
-    }
-
-    /**
      * @return the OpenProject instance that should be used to retrieve work packages.
      */
     @Override

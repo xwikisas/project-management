@@ -138,7 +138,9 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         // Append client context parameters (e.g. "instance" for OpenProject).
         Map<String, Object> ctx = this.macroContext.getContext();
         ctx.forEach((key, value) -> uriBuilder.addParameter(key, value != null ? value.toString() : ""));
-        uriBuilder.addParameter("limit", parameters.getLimit().toString());
+        if (parameters.getLimit() != null) {
+            uriBuilder.addParameter("limit", parameters.getLimit().toString());
+        }
         return uriBuilder;
     }
 

@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.chart.displayer;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -155,6 +156,47 @@ class PieChartDisplayerTest
         assertEquals(List.of(chart), result.get(0).getChildren());
     }
 
+    @Test
+    void displaysTheCountsGivenByTheClientLikeTheWorkItemsTheyCount() throws Exception
+    {
+        // The client counted 2 new and 1 done work items in the first dataset, plus 1 without status, and 1 done work
+        // item in the second dataset: the chart is the one of these work items.
+        Map<String, Long> firstCounts = new HashMap<>();
+        firstCounts.put(NEW, 2L);
+        firstCounts.put(DONE, 1L);
+        firstCounts.put(null, 1L);
+        List<Map<String, Long>> counts = List.of(firstCounts, Map.of(DONE, 1L));
+        List<PaginatedResult<WorkItem>> datasets = List.of(
+            result(workItem(NEW), workItem(DONE), workItem(NEW), workItem(null)),
+            result(workItem(DONE)));
+        List<String> labels = List.of("Mine");
+        Map<String, String> parameters =
+            Map.of(AbstractChartJSDisplayer.PARAM_METRIC, AbstractChartJSDisplayer.PARAM_METRIC_ACCUMULATE);
+
+        assertEquals(getDisplayer().getChartMacro(datasets, WorkItem.KEY_STATUS, labels, parameters),
+            getDisplayer().getChartMacroFromCounts(counts, labels, parameters));
+        JsonNode data = getChartData(getDisplayer().getChartMacroFromCounts(counts, labels, Map.of()));
+        assertEquals(List.of(DONE, NEW, "UNSET"), texts(data.path("labels")));
+        assertEquals(List.of("1", "2", "1"), texts(data.path("datasets").path(0).path("data")));
+        assertEquals(List.of("1", "0"), texts(data.path("datasets").path(1).path("data")));
+    }
+
+    @Test
+    void executeCountsParsesTheChartMacro() throws Exception
+    {
+        List<Map<String, Long>> counts = List.of(Map.of(NEW, 3L));
+        MacroTransformationContext context = new MacroTransformationContext();
+        String chartMacro = getDisplayer().getChartMacroFromCounts(counts, List.of("Dataset"), Map.of());
+        WordBlock chart = new WordBlock("chart");
+        when(this.contentParser.parse(chartMacro, context, true, false)).thenReturn(new XDOM(List.of(chart)));
+
+        List<Block> result =
+            this.displayer.executeCounts(counts, WorkItem.KEY_STATUS, List.of("Dataset"), context, Map.of());
+
+        assertEquals(1, result.size());
+        assertEquals(List.of(chart), result.get(0).getChildren());
+    }
+
     private JsonNode getChartData(List<PaginatedResult<WorkItem>> datasets, List<String> labels,
         Map<String, String> parameters) throws Exception
     {
@@ -164,7 +206,11 @@ class PieChartDisplayerTest
     private JsonNode getChartData(List<PaginatedResult<WorkItem>> datasets, String property, List<String> labels,
         Map<String, String> parameters) throws Exception
     {
-        String chartMacro = getDisplayer().getChartMacro(datasets, property, labels, parameters);
+        return getChartData(getDisplayer().getChartMacro(datasets, property, labels, parameters));
+    }
+
+    private JsonNode getChartData(String chartMacro) throws Exception
+    {
         List<Block> macros = this.parser.parse(new StringReader(chartMacro))
             .getBlocks(new ClassBlockMatcher(MacroBlock.class), Block.Axes.DESCENDANT);
         assertEquals(1, macros.size());

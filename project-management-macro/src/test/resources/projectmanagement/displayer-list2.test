@@ -1,0 +1,11 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# List displayer test - the work items left out because of the limit are counted and linked to the list of all the
+.# matching work items, in the client, with the message translated for the client.
+.#-----------------------------------------------------
+{{test workItemsDisplayer="workItemsList" limit="2" sort="identifier:desc"/}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<ul><li>#WorkItem2 Do this thing!</li><li><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span> Do this thing!</del></li></ul><p><span class="wikiexternallink"><a href="http://xwiki.com/workitems?filters=0&amp;sort=identifier">... and 2 more test work items</a></span></p>

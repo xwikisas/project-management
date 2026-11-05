@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Named;
@@ -56,6 +58,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +72,8 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 class OpenProjectChartMacroTest
 {
+    private static final String OPENPROJECT = "openproject";
+
     @InjectComponentManager
     private MockitoComponentManager componentManager;
 
@@ -91,6 +98,7 @@ class OpenProjectChartMacroTest
     @MockComponent
     private ProjectManagementAsyncExecutor asyncExecutor;
 
+
     @MockComponent
     @Named("bar")
     private ChartTypeDisplayer barDisplayer;
@@ -103,6 +111,8 @@ class OpenProjectChartMacroTest
     private final OpenProjectChartMacroParameters parameters = new OpenProjectChartMacroParameters();
 
     private final PaginatedResult<WorkItem> workItems = new PaginatedResult<>(List.of(new WorkItem()), 0, 100, 1);
+
+    private final Map<String, Long> counts = Map.of("New", 3L);
 
     private final List<Block> chart = List.of(new WordBlock("chart"));
 
@@ -121,8 +131,10 @@ class OpenProjectChartMacroTest
         when(this.licenseChecker.getMissingLicenseBlock(this.context)).thenReturn(List.of());
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
         when(this.barDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
-        when(this.projectManagementManager.getWorkItems("openproject", 0, 100, List.of(), List.of()))
-            .thenReturn(this.workItems);
+        when(this.projectManagementManager.countWorkItems(OPENPROJECT, List.of(), WorkItem.KEY_STATUS))
+            .thenReturn(Optional.of(this.counts));
+        when(this.barDisplayer.executeCounts(List.of(this.counts), WorkItem.KEY_STATUS, List.of(), this.context,
+            new HashMap<>())).thenReturn(this.chart);
         when(this.barDisplayer.execute(List.of(this.workItems), WorkItem.KEY_STATUS, List.of(), this.context,
             new HashMap<>())).thenReturn(this.chart);
     }
@@ -142,6 +154,16 @@ class OpenProjectChartMacroTest
         assertEquals("openproject", this.parameters.getClient());
         // The instance is made available to the OpenProject client through the execution context.
         assertEquals("main", this.executionContext.get("instance"));
+    }
+
+    @Test
+    void chartsTheNumberOfWorkItemsCountedByTheClient() throws Exception
+    {
+        assertChart(this.chart, this.macro.execute(this.parameters, "", this.context));
+
+        // The work items aren't retrieved: OpenProject counts them by status.
+        verify(this.projectManagementManager, never()).getAllWorkItems(any(), any(), any(), anyInt());
+        verify(this.projectManagementManager, never()).getWorkItems(any(), anyInt(), anyInt(), any(), any());
     }
 
     @Test

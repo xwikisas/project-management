@@ -26,13 +26,16 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
@@ -44,6 +47,7 @@ import org.xwiki.livedata.LiveDataQuery;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.ProjectManagementClient;
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -75,6 +79,9 @@ public class TestClient implements ProjectManagementClient, Initializable
         .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
         .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
         .toFormatter();
+
+    @Inject
+    private ProjectManagementClientExecutionContext executionContext;
 
     private List<WorkItem> workItems;
 
@@ -120,9 +127,37 @@ public class TestClient implements ProjectManagementClient, Initializable
         result.setPageSize(pageSize);
         result.setTotalItems(matching.size());
         if (offset < matching.size()) {
-            result.getItems().addAll(matching.subList(offset, Math.min(matching.size(), offset + pageSize)));
+            result.getItems().addAll(matching.subList(offset, Math.min(matching.size(), offset + pageSize))
+                .stream().map(this::keepRequestedProperties).collect(Collectors.toList()));
         }
         return result;
+    }
+
+    @Override
+    public Optional<String> getWorkItemsLocation(List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
+    {
+        return Optional.of(String.format("http://xwiki.com/workitems?filters=%d&sort=%s", filters.size(),
+            sortEntries.stream().map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.joining(","))));
+    }
+
+    /**
+     * Like a client retrieving only the properties that the caller needs, so that the tests check that the displayers
+     * don't use the other ones.
+     */
+    private WorkItem keepRequestedProperties(WorkItem workItem)
+    {
+        Object properties = this.executionContext.get(ProjectManagementClientExecutionContext.PROPERTIES);
+        if (!(properties instanceof Collection)) {
+            return workItem;
+        }
+        WorkItem copy = new WorkItem();
+        workItem.forEach((property, value) -> {
+            if (((Collection<?>) properties).contains(property)) {
+                copy.put(property, value);
+            }
+        });
+        return copy;
     }
 
     @Override

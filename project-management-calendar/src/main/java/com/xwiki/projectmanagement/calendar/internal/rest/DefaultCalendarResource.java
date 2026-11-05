@@ -21,6 +21,7 @@
 package com.xwiki.projectmanagement.calendar.internal.rest;
 
 import com.xwiki.projectmanagement.ProjectManagementClient;
+import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
@@ -54,8 +55,18 @@ import java.util.List;
 @Named("com.xwiki.projectmanagement.calendar.internal.rest.DefaultCalendarResource")
 public class DefaultCalendarResource extends AbstractProjectManagementResource implements CalendarResource
 {
+    /**
+     * The maximum number of work items displayed in a calendar window when the calendar isn't given a limit. They are
+     * retrieved with all their properties (e.g. the description shown when hovering an event), which can take about 2
+     * seconds per 100 OpenProject work packages, so a few hundreds is already slow.
+     */
+    private static final int MAX_WORK_ITEMS = 1000;
+
     @Inject
     private CalendarEventConverter calendarEventConverter;
+
+    @Inject
+    private ProjectManagementManager projectManagementManager;
 
     @Override
     public Response getCalendarEvents(String wiki, String projectManagementHint, String filters, String start,
@@ -67,7 +78,6 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
                     this.componentManager.getInstance(ProjectManagementClient.class, projectManagementHint);
                 CalendarEventProvider calendarEventProvider =
                     this.componentManager.getInstance(CalendarEventProvider.class, projectManagementHint);
-                int pageSize = limit != 0 ? limit : 25;
                 List<LiveDataQuery.Filter> queryFilters = new ArrayList<>(getFilters(filters));
                 // Filter work items whose date range overlaps with the requested calendar window, including the ones
                 // having only a start date or only a due date.
@@ -75,8 +85,11 @@ public class DefaultCalendarResource extends AbstractProjectManagementResource i
                 List<CalendarEvent> calendarEvents = new ArrayList<>();
                 // Fetch standard work item events unless the caller explicitly requests only provider events.
                 if (!excludeWorkItems) {
-                    PaginatedResult<WorkItem> workItems =
-                        client.getWorkItems(0, pageSize, queryFilters, Collections.emptyList());
+                    // Without a limit, all the work items of the calendar window are displayed, up to a maximum.
+                    PaginatedResult<WorkItem> workItems = limit > 0
+                        ? client.getWorkItems(0, limit, queryFilters, Collections.emptyList())
+                        : this.projectManagementManager.getAllWorkItems(projectManagementHint, queryFilters,
+                            Collections.emptyList(), MAX_WORK_ITEMS);
                     calendarEvents.addAll(this.calendarEventConverter.convertAll(workItems.getItems()));
                 }
                 // Add additional events from the calendar event provider.
