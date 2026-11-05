@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.internal.listener;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Named;
 
@@ -163,12 +165,12 @@ class OpenProjectMacrosOnTheDashboardTest
     {
         DefaultProjectManagementClientExecutionContext executionContext =
             this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
-        PaginatedResult<WorkItem> workItems = new PaginatedResult<>(List.of(new WorkItem()), 0, 100, 1);
-        when(this.projectManagementManager.getWorkItems("openproject", 0, 100, List.of(), List.of()))
-            .thenReturn(workItems);
+        Map<String, Long> counts = Map.of("New", 1L);
+        when(this.projectManagementManager.countWorkItems("openproject", List.of(), WorkItem.KEY_STATUS))
+            .thenReturn(Optional.of(counts));
         when(this.barDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
         List<Block> chart = List.of(new WordBlock("chart"));
-        when(this.barDisplayer.execute(List.of(workItems), WorkItem.KEY_STATUS, List.of(), this.context,
+        when(this.barDisplayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of(), this.context,
             new HashMap<>())).thenReturn(chart);
 
         assertChart(chart, this.chartMacro.execute(new OpenProjectChartMacroParameters(), "", this.context));

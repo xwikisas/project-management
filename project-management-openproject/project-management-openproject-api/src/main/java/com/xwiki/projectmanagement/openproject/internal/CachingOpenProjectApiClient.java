@@ -21,7 +21,9 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.xwiki.cache.Cache;
 
@@ -97,6 +99,45 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public PaginatedResult<WorkPackage> getWorkPackages(String project, Integer offset, Integer pageSize,
+        String filters, String sortBy, String select) throws ProjectManagementException
+    {
+        String cacheKey = getCacheKey(String.format("project%sWorkItems/%s", project, select), offset, pageSize,
+            filters, sortBy);
+        PaginatedResult<WorkPackage> result = (PaginatedResult<WorkPackage>) cache.get(cacheKey);
+        if (result == null) {
+            result = client.getWorkPackages(project, offset, pageSize, filters, sortBy, select);
+            cache.set(cacheKey, result);
+        }
+        return result;
+    }
+
+    @Override
+    public Map<String, Long> countWorkPackages(String project, String filters, String groupBy)
+        throws ProjectManagementException
+    {
+        // The cache holds paginated results: the counts are kept as the entries of their single item.
+        String cacheKey = getCacheKey(String.format("project%sWorkItemCounts/%s", project, groupBy), null, null,
+            filters, "");
+        PaginatedResult<BaseOpenProjectObject> result = (PaginatedResult<BaseOpenProjectObject>) cache.get(cacheKey);
+        if (result == null) {
+            BaseOpenProjectObject counts = new BaseOpenProjectObject();
+            counts.putAll(client.countWorkPackages(project, filters, groupBy));
+            result = new PaginatedResult<>(List.of(counts), 1, 1, 1);
+            cache.set(cacheKey, result);
+        }
+        Map<String, Long> counts = new HashMap<>();
+        result.getItems().get(0).forEach((value, count) -> counts.put(value, (Long) count));
+        return counts;
+    }
+
+    @Override
+    public String getWorkPackagesLocation(String project, String filters, String sortBy)
+    {
+        return client.getWorkPackagesLocation(project, filters, sortBy);
     }
 
     @Override

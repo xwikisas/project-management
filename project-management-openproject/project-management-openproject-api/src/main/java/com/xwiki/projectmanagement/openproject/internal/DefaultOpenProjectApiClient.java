@@ -32,7 +32,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -96,6 +98,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String OP_SORT_BY = "sortBy";
 
     private static final String OP_SELECT = "select";
+
+    private static final String OP_GROUP_BY = "groupBy";
+
+    private static final String OP_OPERATOR = "operator";
+
+    private static final String OP_VALUES = "values";
 
     private static final String OP_RESPONSE_ID = "id";
 
@@ -301,10 +309,89 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String filters, String sortBy)
         throws ProjectManagementException
     {
-        String projectWorkPackagesUrl =
-            String.format("%s/projects/%s/work_packages", API_URL_PART, encodePathSegment(project));
-        JsonNode mainNode = getOpenProjectResponse(projectWorkPackagesUrl, offset, pageSize, filters, sortBy, "");
+        JsonNode mainNode = getOpenProjectResponse(getWorkPackagesUrlPart(project), offset, pageSize, filters, sortBy,
+            "");
         return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
+    }
+
+    @Override
+    public PaginatedResult<WorkPackage> getWorkPackages(String project, Integer offset, Integer pageSize,
+        String filters, String sortBy, String select) throws ProjectManagementException
+    {
+        JsonNode mainNode = getOpenProjectResponse(getWorkPackagesUrlPart(project), offset, pageSize,
+            StringUtils.defaultString(filters), StringUtils.defaultString(sortBy), StringUtils.defaultString(select));
+        return getWorkPackagePaginatedResult(mainNode, offset, pageSize);
+    }
+
+    @Override
+    public Map<String, Long> countWorkPackages(String project, String filters, String groupBy)
+        throws ProjectManagementException
+    {
+        Map<String, String> parameters = new LinkedHashMap<>();
+        if (StringUtils.isNotEmpty(filters)) {
+            parameters.put(OP_FILTERS, filters);
+        }
+        parameters.put(OP_GROUP_BY, groupBy);
+        // Only the number of work packages of each group is needed, not the work packages.
+        parameters.put(PAGE_SIZE, "0");
+        JsonNode groups = getOpenProjectResponse(getWorkPackagesUrlPart(project), parameters).path("groups");
+        if (!groups.isArray()) {
+            throw new ProjectManagementException(
+                String.format("OpenProject didn't group the work packages by [%s].", groupBy));
+        }
+        Map<String, Long> counts = new HashMap<>();
+        for (JsonNode group : groups) {
+            JsonNode value = group.path("value");
+            String key = value.isNull() || value.isMissingNode() ? null : value.asText();
+            counts.merge(key, group.path("count").asLong(), Long::sum);
+        }
+        return counts;
+    }
+
+    @Override
+    public String getWorkPackagesLocation(String project, String filters, String sortBy)
+    {
+        // The work package list of OpenProject takes its filters and sorting from the query_props parameter, whose
+        // filters are written {"n": name, "o": operator, "v": values} and whose sorting is "name:direction,...".
+        Map<String, Object> queryProps = new LinkedHashMap<>();
+        List<Map<String, Object>> queryFilters = new ArrayList<>();
+        try {
+            for (JsonNode filter : readJsonArray(filters)) {
+                filter.fields().forEachRemaining(entry -> {
+                    Map<String, Object> queryFilter = new LinkedHashMap<>();
+                    queryFilter.put("n", entry.getKey());
+                    queryFilter.put("o", entry.getValue().path(OP_OPERATOR).asText());
+                    queryFilter.put("v", entry.getValue().path(OP_VALUES));
+                    queryFilters.add(queryFilter);
+                });
+            }
+            queryProps.put("f", queryFilters);
+            List<String> sortEntries = new ArrayList<>();
+            for (JsonNode sortEntry : readJsonArray(sortBy)) {
+                sortEntries.add(sortEntry.path(0).asText() + ':' + sortEntry.path(1).asText());
+            }
+            if (!sortEntries.isEmpty()) {
+                queryProps.put("t", String.join(",", sortEntries));
+            }
+            String projectPath = project == null ? "" : "/projects/" + encodePathSegment(project);
+            return String.format("%s%s/work_packages?query_props=%s", StringUtils.removeEnd(connectionUrl, SLASH),
+                projectPath,
+                encodePathSegment(objectMapper.writeValueAsString(queryProps)));
+        } catch (JsonProcessingException e) {
+            LOGGER.debug("Failed to build the URL of the work packages matching the filters [{}].", filters, e);
+            return null;
+        }
+    }
+
+    private JsonNode readJsonArray(String json) throws JsonProcessingException
+    {
+        return StringUtils.isEmpty(json) ? objectMapper.createArrayNode() : objectMapper.readTree(json);
+    }
+
+    private static String getWorkPackagesUrlPart(String project)
+    {
+        return project == null ? API_URL_WORK_PACKAGES
+            : String.format("%s/projects/%s/work_packages", API_URL_PART, encodePathSegment(project));
     }
 
     @Override
@@ -507,7 +594,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         if (schemaIds.isEmpty()) {
             return;
         }
-        String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of("operator", "=", "values", schemaIds))));
+        String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of(OP_OPERATOR, "=", OP_VALUES, schemaIds))));
         Map<String, Boolean> multiValueFields = WorkPackageFieldsParser.parseMultiValueFields(
             getOpenProjectResponseEntities(API_URL_WORK_PACKAGE_SCHEMAS, null, null, filters, "", ""), unresolved);
         for (WorkPackageField field : fields) {
@@ -881,24 +968,32 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private JsonNode getOpenProjectResponse(String urlPart, Integer offset, Integer pageSize, String filtersString,
         String sortByString, String selectedElementsString) throws ProjectManagementException
     {
+        Map<String, String> parameters = new LinkedHashMap<>();
+        if (offset != null) {
+            parameters.put(OP_OFFSET, String.valueOf(offset));
+        }
+        if (!filtersString.isEmpty()) {
+            parameters.put(OP_FILTERS, filtersString);
+        }
+        if (!sortByString.isEmpty()) {
+            parameters.put(OP_SORT_BY, sortByString);
+        }
+        if (!selectedElementsString.isEmpty()) {
+            parameters.put(OP_SELECT, selectedElementsString);
+        }
+        if (pageSize != null) {
+            parameters.put(PAGE_SIZE, String.valueOf(pageSize));
+        }
+        return getOpenProjectResponse(urlPart, parameters);
+    }
+
+    private JsonNode getOpenProjectResponse(String urlPart, Map<String, String> parameters)
+        throws ProjectManagementException
+    {
         String uri = connectionUrl + urlPart;
         try {
             URIBuilder uriBuilder = new URIBuilder(createInstanceUri(urlPart));
-            if (offset != null) {
-                uriBuilder.setParameter(OP_OFFSET, String.valueOf(offset));
-            }
-            if (!filtersString.isEmpty()) {
-                uriBuilder.setParameter(OP_FILTERS, filtersString);
-            }
-            if (!sortByString.isEmpty()) {
-                uriBuilder.setParameter(OP_SORT_BY, sortByString);
-            }
-            if (!selectedElementsString.isEmpty()) {
-                uriBuilder.setParameter(OP_SELECT, selectedElementsString);
-            }
-            if (pageSize != null) {
-                uriBuilder.setParameter(PAGE_SIZE, String.valueOf(pageSize));
-            }
+            parameters.forEach(uriBuilder::setParameter);
 
             HttpRequest request =
                 createAuthorizedGetHttpRequest(uriBuilder.build());

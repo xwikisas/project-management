@@ -60,6 +60,11 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
 
     private static final String LIVE_DATA_SOURCE = "projectmanagement";
 
+    /**
+     * The number of work items retrieved when the macro isn't given a limit, by the displayers that don't decide it.
+     */
+    private static final int DEFAULT_LIMIT = 25;
+
     @Inject
     protected ProjectManagementManager projectManagementManager;
 
@@ -95,8 +100,8 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
         List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
     {
         long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
-        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset),
-            parameters.getLimit(), filters, sortEntries);
+        int limit = parameters.getLimit() == null ? DEFAULT_LIMIT : parameters.getLimit();
+        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset), limit, filters, sortEntries);
     }
 
     protected WorkItemPropertyDisplayerManager getPropertyDisplayerManager()

@@ -53,7 +53,6 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     {
         setProperty(WorkItem.KEY_STATUS);
         setType(BarChartDisplayer.TYPE);
-        setLimit(100);
     }
 
     /**

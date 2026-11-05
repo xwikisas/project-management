@@ -23,6 +23,8 @@ package com.xwiki.projectmanagement.internal.macro;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -32,9 +34,13 @@ import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.job.JobException;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.Translation;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
+import org.xwiki.rendering.block.ParagraphBlock;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -63,6 +69,17 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 {
     private static final String JSON_EMPTY_ARRAY = "[]";
 
+    private static final String CLASS_ATTRIBUTE = "class";
+
+    private static final String TRUNCATED_TRANSLATION_KEY = "projectmanagement.macro.chart.truncated";
+
+    /**
+     * The maximum number of work items of each dataset that a chart retrieves when it isn't given a limit and the
+     * client can't count them itself. A request returning 100 OpenProject work packages with all their properties can
+     * take about 2 seconds, so retrieving more would make the chart too slow to display.
+     */
+    private static final int MAX_WORK_ITEMS = 1000;
+
     protected final ObjectMapper objectMapper = new ObjectMapper();
 
     @Inject
@@ -74,6 +91,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
+
+    @Inject
+    private ContextualLocalizationManager localizationManager;
 
     /**
      * constructor.
@@ -134,8 +154,8 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 {
                     try {
                         prepareContext(parameters);
-                        return chartTypeDisplayer.execute(getDatasets(filters, parameters), parameters.getProperty(),
-                            labels, context, typeDisplayerParams);
+                        return displayChart(chartTypeDisplayer, filters, parameters, labels, context,
+                            typeDisplayerParams);
                     } catch (WorkItemException e) {
                         throw new MacroExecutionException("Failed to retrieve the work packages.", e);
                     }
@@ -148,7 +168,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             // an asynchronous rendering targets the removed placeholder instead of the rendered content).
             this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
             return Collections.singletonList(
-                new GroupBlock(result, Collections.singletonMap("class", "proj-manag-chart-wrapper")));
+                new GroupBlock(result, Collections.singletonMap(CLASS_ATTRIBUTE, "proj-manag-chart-wrapper")));
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (ComponentLookupException e) {
@@ -180,23 +200,99 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         return Collections.emptyList();
     }
 
+    private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
+        T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams)
+        throws WorkItemException, MacroExecutionException
+    {
+        Optional<List<Map<String, Long>>> counts = countDatasets(filters, parameters);
+        if (counts.isPresent()) {
+            return chartTypeDisplayer.executeCounts(counts.get(), parameters.getProperty(), labels, context,
+                typeDisplayerParams);
+        }
+        List<PaginatedResult<WorkItem>> datasets = getDatasets(filters, parameters);
+        List<Block> chart = new ArrayList<>(chartTypeDisplayer.execute(datasets, parameters.getProperty(), labels,
+            context, typeDisplayerParams));
+        chart.addAll(getTruncationWarning(datasets, parameters));
+        return chart;
+    }
+
+    /**
+     * Counting the work items by value of the charted property is a single fast request whatever their number, while
+     * retrieving them takes several requests when there are many. It's only possible when all the matching work items
+     * are charted (no limit nor offset), and when the client can count them by this property (e.g. not by a date,
+     * whose values are grouped by period).
+     *
+     * @return the number of work items of each dataset by value of the charted property, empty when the client can't
+     *     count them
+     */
+    private Optional<List<Map<String, Long>>> countDatasets(List<List<LiveDataQuery.Filter>> filters, T parameters)
+        throws WorkItemException
+    {
+        if (parameters.getLimit() != null || (parameters.getOffset() != null && parameters.getOffset() > 0)) {
+            return Optional.empty();
+        }
+        List<Map<String, Long>> counts = new ArrayList<>();
+        for (List<LiveDataQuery.Filter> filter : getDatasetsFilters(filters)) {
+            Optional<Map<String, Long>> datasetCounts =
+                projectManagementManager.countWorkItems(parameters.getClient(), filter, parameters.getProperty());
+            if (datasetCounts.isEmpty()) {
+                return Optional.empty();
+            }
+            counts.add(datasetCounts.get());
+        }
+        return Optional.of(counts);
+    }
+
     private List<PaginatedResult<WorkItem>> getDatasets(List<List<LiveDataQuery.Filter>> filters, T parameters)
         throws WorkItemException
     {
         List<PaginatedResult<WorkItem>> workItemsList = new ArrayList<>();
-
-        for (List<LiveDataQuery.Filter> filter : filters) {
-            workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
-                Math.toIntExact(parameters.getOffset()),
-                parameters.getLimit(), filter, getSortEntries(parameters)));
-        }
-
-        if (workItemsList.isEmpty()) {
-            workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
-                Math.toIntExact(parameters.getOffset()), parameters.getLimit(), Collections.emptyList(),
-                getSortEntries(parameters)));
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
+        for (List<LiveDataQuery.Filter> filter : getDatasetsFilters(filters)) {
+            if (parameters.getLimit() != null || offset > 0) {
+                int limit = parameters.getLimit() != null ? parameters.getLimit() : MAX_WORK_ITEMS;
+                workItemsList.add(projectManagementManager.getWorkItems(parameters.getClient(),
+                    Math.toIntExact(offset), limit, filter, getSortEntries(parameters)));
+            } else {
+                workItemsList.add(projectManagementManager.getAllWorkItems(parameters.getClient(), filter,
+                    getSortEntries(parameters), MAX_WORK_ITEMS));
+            }
         }
         return workItemsList;
+    }
+
+    private static List<List<LiveDataQuery.Filter>> getDatasetsFilters(List<List<LiveDataQuery.Filter>> filters)
+    {
+        // Without filters, the chart has a single dataset holding all the work items.
+        return filters.isEmpty() ? List.of(Collections.emptyList()) : filters;
+    }
+
+    /**
+     * @return a warning telling that the chart doesn't count all the matching work items, when it reached the maximum
+     *     number of work items that it can retrieve without being given a limit, so that it isn't mistaken for the
+     *     complete picture
+     */
+    private List<Block> getTruncationWarning(List<PaginatedResult<WorkItem>> datasets, T parameters)
+    {
+        if (parameters.getLimit() != null) {
+            return Collections.emptyList();
+        }
+        long total = 0;
+        boolean truncated = false;
+        for (PaginatedResult<WorkItem> dataset : datasets) {
+            int count = dataset.getItems() == null ? 0 : dataset.getItems().size();
+            int datasetTotal = dataset.getTotalItems() == null ? count : dataset.getTotalItems();
+            truncated |= datasetTotal > count;
+            total = Math.max(total, datasetTotal);
+        }
+        if (!truncated) {
+            return Collections.emptyList();
+        }
+        Translation translation = this.localizationManager.getTranslation(TRUNCATED_TRANSLATION_KEY);
+        Block message =
+            translation != null ? translation.render(MAX_WORK_ITEMS, total) : new WordBlock(TRUNCATED_TRANSLATION_KEY);
+        return Collections.singletonList(new GroupBlock(Collections.singletonList(new ParagraphBlock(
+            Collections.singletonList(message))), Collections.singletonMap(CLASS_ATTRIBUTE, "box warningmessage")));
     }
 
     private List<List<LiveDataQuery.Filter>> getFiltersList(String filters)

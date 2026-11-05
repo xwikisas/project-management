@@ -59,6 +59,7 @@ import com.xwiki.projectmanagement.calendar.CalendarEventProvider;
 import com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementManager;
 import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -80,7 +81,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(WikiRequestExecutor.class)
+@ComponentList({ WikiRequestExecutor.class, DefaultProjectManagementManager.class })
 class DefaultCalendarResourceTest
 {
     private static final String WIKI = "xwiki";
@@ -165,10 +166,10 @@ class DefaultCalendarResourceTest
     void getCalendarEvents() throws Exception
     {
         // The work items are filtered by the requested filters and by the calendar window: their date range must
-        // overlap it. The work items are read from the first one and a missing limit defaults to 25 work items.
+        // overlap it. Without a limit, all the matching work items are retrieved, page by page from the first one.
         List<String> expectedFilters = List.of("status equals open", "dateRange between " + START + '/' + END);
-        when(this.client.getWorkItems(eq(0), eq(25), filters(expectedFilters), eq(Collections.emptyList())))
-            .thenReturn(new PaginatedResult<>(this.workItems, 1, 25, 1));
+        when(this.client.getWorkItems(eq(0), eq(100), filters(expectedFilters), eq(Collections.emptyList())))
+            .thenReturn(new PaginatedResult<>(this.workItems, 1, 100, 1));
         // The provider of the additional events receives the same filters.
         when(this.calendarEventProvider.getMoreEvents(filters(expectedFilters)))
             .thenReturn(List.of(this.providerEvent));
@@ -357,9 +358,9 @@ class DefaultCalendarResourceTest
     {
         this.xcontext.setWikiId("xwiki");
         List<String> clientWikis = new ArrayList<>();
-        when(this.client.getWorkItems(eq(0), eq(25), any(), eq(Collections.emptyList()))).thenAnswer(invocation -> {
+        when(this.client.getWorkItems(eq(0), eq(100), any(), eq(Collections.emptyList()))).thenAnswer(invocation -> {
             clientWikis.add(this.xcontext.getWikiId());
-            return new PaginatedResult<>(this.workItems, 1, 25, 1);
+            return new PaginatedResult<>(this.workItems, 1, 100, 1);
         });
 
         Response response = this.resource.getCalendarEvents("subwiki", HINT, FILTERS, START, END, 0, false);

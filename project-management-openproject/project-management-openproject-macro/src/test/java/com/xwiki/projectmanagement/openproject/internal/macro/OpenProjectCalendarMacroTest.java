@@ -186,7 +186,7 @@ class OpenProjectCalendarMacroTest
         assertEquals("calendar", calendar.getId());
         assertEquals("false", calendar.getParameter("editable"));
         assertEquals(Map.of("instance", "main", "sprint", "false", "version", "false", "versionColor", "",
-            "sprintColor", "", "limit", "25"), getQueryParameters(calendar.getParameter("json")));
+            "sprintColor", ""), getQueryParameters(calendar.getParameter("json")));
         assertEquals("openproject", this.parameters.getClient());
         verify(this.observationManager).notify(any(), same(this.macro), same(this.parameters));
         verify(this.stylingSetupManager).setupInstanceStyles();

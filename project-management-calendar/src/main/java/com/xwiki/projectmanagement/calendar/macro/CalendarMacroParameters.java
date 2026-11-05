@@ -51,7 +51,7 @@ public class CalendarMacroParameters
 
     private String filters;
 
-    private int limit = 25;
+    private Integer limit;
 
     private String presetId;
 
@@ -147,7 +147,8 @@ public class CalendarMacroParameters
     }
 
     /**
-     * @return the limit applied of the work items resulting list.
+     * @return the maximum number of work items displayed in a calendar window, {@code null} (the default) to display
+     *     all of them
      */
     public Integer getLimit()
     {

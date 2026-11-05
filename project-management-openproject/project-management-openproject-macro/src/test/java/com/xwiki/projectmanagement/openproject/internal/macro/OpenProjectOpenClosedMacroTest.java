@@ -144,14 +144,15 @@ class OpenProjectOpenClosedMacroTest
         OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
         parameters.setInstance("main");
         parameters.setDays(10);
-        // The newest work packages are kept when there are more than the limit.
+        // OpenProject can't count the work packages by creation date: they are all retrieved, up to a maximum, the
+        // newest ones being kept when there are more.
         String period = "creationDate between 2026-03-20T00:00:00+01:00/2026-03-30T23:59:59.999999999+02:00";
-        PaginatedResult<WorkItem> open = new PaginatedResult<>(List.of(new WorkItem()), 0, 500, 1);
-        when(this.projectManagementManager.getWorkItems(eq("openproject"), eq(0), eq(500),
-            argThat(filters("status o , " + period)), argThat(newestFirst()))).thenReturn(open);
-        PaginatedResult<WorkItem> closed = new PaginatedResult<>(List.of(), 0, 500, 0);
-        when(this.projectManagementManager.getWorkItems(eq("openproject"), eq(0), eq(500),
-            argThat(filters("status c , " + period)), argThat(newestFirst()))).thenReturn(closed);
+        PaginatedResult<WorkItem> open = new PaginatedResult<>(List.of(new WorkItem()), 0, 1000, 1);
+        when(this.projectManagementManager.getAllWorkItems(eq("openproject"),
+            argThat(filters("status o , " + period)), argThat(newestFirst()), eq(1000))).thenReturn(open);
+        PaginatedResult<WorkItem> closed = new PaginatedResult<>(List.of(), 0, 1000, 0);
+        when(this.projectManagementManager.getAllWorkItems(eq("openproject"),
+            argThat(filters("status c , " + period)), argThat(newestFirst()), eq(1000))).thenReturn(closed);
         List<Block> chart = List.of(new WordBlock("chart"));
         when(this.lineDisplayer.execute(List.of(open, closed), WorkItem.KEY_CREATION_DATE, List.of("Open", "Closed"),
             this.context, new HashMap<>(Map.of("period", "DAILY", "metric", "accumulate")))).thenReturn(chart);

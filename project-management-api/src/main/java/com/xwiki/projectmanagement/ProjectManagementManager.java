@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement;
  */
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.xwiki.component.annotation.Role;
 import org.xwiki.livedata.LiveDataQuery;
@@ -94,4 +96,48 @@ public interface ProjectManagementManager
      * @throws WorkItemException if there was any exception during the deletion of the work item.
      */
     boolean deleteWorkItem(String client, String workItemId) throws WorkItemException;
+
+    /**
+     * Retrieves all the work items matching the filters, page by page, up to a maximum number of work items, e.g. to
+     * aggregate them in a chart.
+     *
+     * @param client the hint of the client implementation
+     * @param filters the filters that the returned work items must match
+     * @param sortEntries how the work items are sorted, which decides the ones left out when more than the maximum
+     *     number of work items match the filters
+     * @param max the maximum number of work items to retrieve
+     * @return the retrieved work items, at most {@code max}, with the total number of work items matching the filters
+     * @throws WorkItemException if the work items can't be retrieved
+     * @since 1.4.0
+     */
+    PaginatedResult<WorkItem> getAllWorkItems(String client, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries, int max) throws WorkItemException;
+
+    /**
+     * Counts the work items matching the filters by value of a property, without retrieving them.
+     *
+     * @param client the hint of the client implementation
+     * @param filters the filters that the counted work items must match
+     * @param property the id of the property whose values group the work items
+     * @return the number of work items by value of the property, the {@code null} key counting the work items
+     *     without a value; empty when the client can't count the work items by this property
+     * @throws WorkItemException if the work items can't be counted
+     * @see ProjectManagementClient#countWorkItems(List, String)
+     * @since 1.4.0
+     */
+    Optional<Map<String, Long>> countWorkItems(String client, List<LiveDataQuery.Filter> filters, String property)
+        throws WorkItemException;
+
+    /**
+     * @param client the hint of the client implementation
+     * @param filters the filters that the work items must match
+     * @param sortEntries how the work items are sorted
+     * @return the URL of the page of the project management platform listing the work items matching the filters;
+     *     empty when the client can't tell
+     * @throws WorkItemException if the client can't be found
+     * @see ProjectManagementClient#getWorkItemsLocation(List, List)
+     * @since 1.4.0
+     */
+    Optional<String> getWorkItemsLocation(String client, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException;
 }

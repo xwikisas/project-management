@@ -1,0 +1,11 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Enum displayer test - the work items left out because of the limit are counted after the displayed ones, and
+.# linked to the list of all the matching work items, in the client.
+.#-----------------------------------------------------
+Fixed issues: {{test workItemsDisplayer="workItemsEnum" limit="1" offset="1"/}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>Fixed issues: #WorkItem2, <span class="wikiexternallink"><a href="http://xwiki.com/workitems?filters=0&amp;sort=">and 2 more</a></span></p>

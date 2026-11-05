@@ -65,11 +65,11 @@ This project aims to deliver a clear, well-documented solution with transparent 
 
 {{container layoutStyle="columns"}}
 (((
-{{openprojectchart datasetsLabels="[~"Open Work Packages~",~"Closed Work Packages~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" limit="300" property="creationDate" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}
+{{openprojectchart datasetsLabels="[~"Open Work Packages~",~"Closed Work Packages~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" property="creationDate" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}
 )))
 
 (((
-{{openprojectchart limit="400" property="type" type="pie" typeParams="{~"period~":~"~",~"metric~":~"count~"}"/}}
+{{openprojectchart property="type" type="pie" typeParams="{~"period~":~"~",~"metric~":~"count~"}"/}}
 )))
 {{/container}}
 

@@ -56,6 +56,28 @@ public interface ChartTypeDisplayer
         MacroTransformationContext transformationContext, Object typeDisplayerParams) throws MacroExecutionException;
 
     /**
+     * Displays the chart from the number of work items of each dataset by value of the property, when the client
+     * counted them itself instead of returning them (see
+     * {@link com.xwiki.projectmanagement.ProjectManagementClient#countWorkItems(List, String)}).
+     *
+     * @param counts for each dataset, the number of work items by value of the property, the {@code null} key counting
+     *     the work items without a value
+     * @param property the main property that will be used to generate the chart on.
+     * @param labels the labels associated to each dataset.
+     * @param transformationContext the transformation context of the macro.
+     * @param typeDisplayerParams the configuration class for the implementing displayer. It should have the same
+     *     type as the {@link #getParameterTypeTemplate()} return value.
+     * @return a list of blocks ready for rendering.
+     * @throws MacroExecutionException in case of errors, e.g. when the displayer can't display counts.
+     * @since 1.4.0
+     */
+    default List<Block> executeCounts(List<Map<String, Long>> counts, String property, List<String> labels,
+        MacroTransformationContext transformationContext, Object typeDisplayerParams) throws MacroExecutionException
+    {
+        throw new MacroExecutionException("This chart type can't be displayed from the number of work items.");
+    }
+
+    /**
      * @return the class of the configuration used by the implementer.
      */
     Map<String, Object> getParameterTypeTemplate();

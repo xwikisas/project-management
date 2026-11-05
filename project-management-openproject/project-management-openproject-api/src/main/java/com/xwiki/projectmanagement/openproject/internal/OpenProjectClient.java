@@ -25,6 +25,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -114,6 +116,29 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
 
+    private static final String IDENTIFIER = "identifier";
+
+    private static final String GROUP_BY_AUTHOR = "author";
+
+    /**
+     * The work item properties held by the main properties of the work packages (see
+     * {@link OpenProjectApiClient#SELECT_MAIN_PROPERTIES}).
+     */
+    private static final Set<String> MAIN_PROPERTIES = Set.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_KEY,
+        WorkItem.KEY_SUMMARY, WorkItem.KEY_TYPE, WorkItem.KEY_STATUS, WorkItem.KEY_RESOLVED, WorkItem.KEY_PROJECT,
+        WorkItem.KEY_CREATOR, WorkItem.KEY_REPORTER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_START_DATE,
+        WorkItem.KEY_DUE_DATE);
+
+    /**
+     * The OpenProject names of the properties grouping the work packages when counting them, by work item property.
+     * Only the properties whose group names are the values of the work items are listed (e.g. OpenProject names the
+     * progress groups {@code 10%}), so that the counts match the work items, and OpenProject can't group by date.
+     */
+    private static final Map<String, String> GROUP_BY_PROPERTIES = Map.of(WorkItem.KEY_STATUS, "status",
+        WorkItem.KEY_TYPE, "type", WorkItem.KEY_PRIORITY, "priority", WorkItem.KEY_PROJECT, "project",
+        WorkItem.KEY_ASSIGNEES, "assignee", WorkItem.KEY_CREATOR, GROUP_BY_AUTHOR,
+        WorkItem.KEY_REPORTER, GROUP_BY_AUTHOR, OpenProjectWorkItemFields.PROPERTY_TARGET_VERSION, "version");
+
     private static final String INCORRECT_IDENTIFIER_FORMAT_MESSAGE =
         "The provided identifier value is not in a supported format.";
 
@@ -155,7 +180,7 @@ public class OpenProjectClient implements ProjectManagementClient
     {
         try {
             int openProjectPage = getOpenProjectPage(offset, pageSize);
-            String identifier = (String) executionContext.get("identifier");
+            String identifier = (String) executionContext.get(IDENTIFIER);
             OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
             OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
             List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
@@ -172,7 +197,8 @@ public class OpenProjectClient implements ProjectManagementClient
                 String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
                 String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
                 PaginatedResult<WorkPackage> workPackagesPaginatedResult =
-                    openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filtersString, sortByString);
+                    getWorkPackages(openProjectApiClient, null, openProjectPage, pageSize, filtersString,
+                        sortByString);
                 workItems = OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
                     workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
             }
@@ -301,7 +327,6 @@ public class OpenProjectClient implements ProjectManagementClient
             throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
         }
 
-        URL url = parseUrl(identifier);
         String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
 
         if (urlQueryId != null) {
@@ -309,8 +334,22 @@ public class OpenProjectClient implements ProjectManagementClient
                 filtersEntries, sortEntries);
         }
 
+        WorkPackagesQuery query = getWorkPackagesQuery(identifier, filtersEntries, sortEntries);
+        return OpenProjectConverters.convertPaginatedResult(
+            getWorkPackages(openProjectApiClient, query.project, openProjectPage, pageSize, query.filters,
+                query.sortBy),
+            workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+    }
+
+    /**
+     * @return the work packages listed by an OpenProject URL (of a project, or of all the projects), matching the
+     *     filters of the URL and the given ones
+     */
+    private WorkPackagesQuery getWorkPackagesQuery(String identifier, List<LiveDataQuery.Filter> filtersEntries,
+        List<LiveDataQuery.SortEntry> sortEntries) throws ProjectManagementException
+    {
+        URL url = parseUrl(identifier);
         JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
-        String project = extractProjectFromPath(url.getPath());
 
         JsonNode filtersNode = null;
         JsonNode sortNode = null;
@@ -320,18 +359,95 @@ public class OpenProjectClient implements ProjectManagementClient
             sortNode = parametersNode.path("t");
         }
 
-        String filters = extractFiltersFromQuery(filtersEntries, filtersNode);
-        String sortBy = extractSortByString(sortEntries, sortNode);
+        return new WorkPackagesQuery(extractProjectFromPath(url.getPath()),
+            extractFiltersFromQuery(filtersEntries, filtersNode), extractSortByString(sortEntries, sortNode));
+    }
 
-        if (project != null) {
-            return OpenProjectConverters.convertPaginatedResult(
-                openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sortBy),
-                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+    /**
+     * Retrieves the work packages, with only their main properties when the caller doesn't need the others (see
+     * {@link ProjectManagementClientExecutionContext#PROPERTIES}), since they are then returned much faster.
+     */
+    private PaginatedResult<WorkPackage> getWorkPackages(OpenProjectApiClient openProjectApiClient, String project,
+        int openProjectPage, int pageSize, String filters, String sortBy) throws ProjectManagementException
+    {
+        if (isMainPropertiesRequest()) {
+            return openProjectApiClient.getWorkPackages(project, openProjectPage, pageSize, filters, sortBy,
+                OpenProjectApiClient.SELECT_MAIN_PROPERTIES);
+        } else if (project != null) {
+            return openProjectApiClient.getProjectWorkPackages(project, openProjectPage, pageSize, filters, sortBy);
         }
+        return openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sortBy);
+    }
 
-        return OpenProjectConverters.convertPaginatedResult(
-            openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sortBy),
-            workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+    private boolean isIdsOrSavedQuery(String identifier)
+    {
+        return StringUtils.isNotEmpty(identifier) && (IDS_PATTERN.matcher(identifier).matches()
+            || identifierResolver.getStandaloneQueryId(identifier) != null);
+    }
+
+    private boolean isMainPropertiesRequest()
+    {
+        Object properties = executionContext.get(ProjectManagementClientExecutionContext.PROPERTIES);
+        return properties instanceof Collection && !((Collection<?>) properties).isEmpty()
+            && MAIN_PROPERTIES.containsAll((Collection<?>) properties);
+    }
+
+    @Override
+    public Optional<Map<String, Long>> countWorkItems(List<LiveDataQuery.Filter> filters, String property)
+        throws WorkItemRetrievalException
+    {
+        String groupBy = GROUP_BY_PROPERTIES.get(property);
+        String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
+        // OpenProject can't count the work packages of a saved query, and a list of work packages is short enough to
+        // be retrieved.
+        if (groupBy == null || isIdsOrSavedQuery(identifier)) {
+            return Optional.empty();
+        }
+        try {
+            OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            WorkPackagesQuery query = StringUtils.isEmpty(identifier)
+                ? new WorkPackagesQuery(null, OpenProjectFilterHandler.convertFilters(mappedFilters), "")
+                : getWorkPackagesQuery(identifier, mappedFilters, Collections.emptyList());
+            return Optional.of(openProjectApiClient.countWorkPackages(query.project, query.filters, groupBy));
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            if (e instanceof WorkItemRetrievalException
+                && isAuthenticationOrRightsFailure((WorkItemRetrievalException) e))
+            {
+                throw (WorkItemRetrievalException) e;
+            }
+            // E.g. OpenProject can't group the work packages by this property: they are then retrieved and counted.
+            logger.debug("Failed to count the work packages by [{}]: {}", groupBy,
+                ExceptionUtils.getRootCauseMessage(e));
+            return Optional.empty();
+        }
+    }
+
+    @Override
+    public Optional<String> getWorkItemsLocation(List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries)
+    {
+        String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
+        try {
+            if (isIdsOrSavedQuery(identifier)) {
+                // A list of work packages is never truncated, and the filters can't be added to a saved query.
+                return Optional.empty();
+            }
+            OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
+            WorkPackagesQuery query = StringUtils.isEmpty(identifier)
+                ? new WorkPackagesQuery(null, OpenProjectFilterHandler.convertFilters(mappedFilters),
+                    OpenProjectSortingHandler.convertSorting(mappedSortEntries))
+                : getWorkPackagesQuery(identifier, mappedFilters, mappedSortEntries);
+            return Optional.ofNullable(
+                openProjectApiClient.getWorkPackagesLocation(query.project, query.filters, query.sortBy));
+        } catch (ProjectManagementException | RuntimeException e) {
+            logger.debug("Failed to build the URL of the work packages: {}", ExceptionUtils.getRootCauseMessage(e));
+            return Optional.empty();
+        }
     }
 
     /**
@@ -583,6 +699,25 @@ public class OpenProjectClient implements ProjectManagementClient
             return objectMapper.readTree(parameter);
         } catch (JsonProcessingException e) {
             throw new WorkItemRetrievalException("An error occurred while trying to get the query parameters", e);
+        }
+    }
+
+    /**
+     * The work packages of a project, or of all the projects, matching filters, in the format of the OpenProject API.
+     */
+    private static final class WorkPackagesQuery
+    {
+        private final String project;
+
+        private final String filters;
+
+        private final String sortBy;
+
+        WorkPackagesQuery(String project, String filters, String sortBy)
+        {
+            this.project = project;
+            this.filters = filters;
+            this.sortBy = sortBy;
         }
     }
 }

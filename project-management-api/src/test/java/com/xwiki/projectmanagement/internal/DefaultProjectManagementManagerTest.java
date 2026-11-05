@@ -19,8 +19,12 @@
  */
 package com.xwiki.projectmanagement.internal;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +46,12 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -96,6 +106,83 @@ class DefaultProjectManagementManagerTest
 
         assertSame(result, this.manager.getWorkItems(OTHER_CLIENT, 2, 15, filters, sortEntries));
         verifyNoInteractions(this.client);
+    }
+
+    @Test
+    void getAllWorkItemsRetrievesThemPageByPage() throws Exception
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "equals", "open"));
+        List<LiveDataQuery.SortEntry> sortEntries = List.of(new LiveDataQuery.SortEntry("dueDate", true));
+        when(this.client.getWorkItems(0, 100, filters, sortEntries)).thenReturn(page(100, 250));
+        when(this.client.getWorkItems(100, 100, filters, sortEntries)).thenReturn(page(100, 250));
+        when(this.client.getWorkItems(200, 100, filters, sortEntries)).thenReturn(page(50, 250));
+
+        PaginatedResult<WorkItem> result = this.manager.getAllWorkItems(CLIENT, filters, sortEntries, 1000);
+
+        assertEquals(250, result.getItems().size());
+        assertEquals(250, result.getTotalItems());
+        verify(this.client, times(3)).getWorkItems(anyInt(), anyInt(), anyList(), anyList());
+    }
+
+    @Test
+    void getAllWorkItemsStopsAtTheMaximum() throws Exception
+    {
+        when(this.client.getWorkItems(0, 100, List.of(), List.of())).thenReturn(page(100, 250));
+        when(this.client.getWorkItems(100, 100, List.of(), List.of())).thenReturn(page(100, 250));
+
+        PaginatedResult<WorkItem> result = this.manager.getAllWorkItems(CLIENT, List.of(), List.of(), 150);
+
+        // The total tells how many work items were left out.
+        assertEquals(150, result.getItems().size());
+        assertEquals(250, result.getTotalItems());
+        verify(this.client, times(2)).getWorkItems(anyInt(), anyInt(), anyList(), anyList());
+    }
+
+    @Test
+    void getAllWorkItemsWithoutTotal() throws Exception
+    {
+        PaginatedResult<WorkItem> lastPage = page(30, 0);
+        lastPage.setTotalItems(null);
+        when(this.client.getWorkItems(0, 100, List.of(), List.of())).thenReturn(lastPage);
+
+        PaginatedResult<WorkItem> result = this.manager.getAllWorkItems(CLIENT, List.of(), List.of(), 1000);
+
+        // A page smaller than requested is the last one.
+        assertEquals(30, result.getItems().size());
+        assertEquals(30, result.getTotalItems());
+    }
+
+    @Test
+    void countWorkItemsAndGetWorkItemsLocationUseTheClient() throws Exception
+    {
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "equals", "open"));
+        Map<String, Long> counts = new HashMap<>();
+        counts.put("New", 3L);
+        counts.put(null, 1L);
+        when(this.client.countWorkItems(filters, WorkItem.KEY_STATUS)).thenReturn(Optional.of(counts));
+        when(this.client.getWorkItemsLocation(filters, List.of())).thenReturn(Optional.of("https://op/wp"));
+
+        assertEquals(Optional.of(counts), this.manager.countWorkItems(CLIENT, filters, WorkItem.KEY_STATUS));
+        assertEquals(Optional.of("https://op/wp"), this.manager.getWorkItemsLocation(CLIENT, filters, List.of()));
+        verifyNoInteractions(this.otherClient);
+    }
+
+    @Test
+    void clientsCountNothingAndLocateNothingByDefault() throws Exception
+    {
+        ProjectManagementClient defaultClient = mock(ProjectManagementClient.class, CALLS_REAL_METHODS);
+
+        assertEquals(Optional.empty(), defaultClient.countWorkItems(List.of(), WorkItem.KEY_STATUS));
+        assertEquals(Optional.empty(), defaultClient.getWorkItemsLocation(List.of(), List.of()));
+    }
+
+    private static PaginatedResult<WorkItem> page(int size, int total)
+    {
+        List<WorkItem> items = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            items.add(new WorkItem());
+        }
+        return new PaginatedResult<>(items, 0, 100, total);
     }
 
     @Test

@@ -50,7 +50,6 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
                 + "e\":\"\"}]}]}}]");
         setTypeParams("{\"period\":\"DAILY\",\"metric\":\"accumulate\"}");
         setProperty(WorkItem.KEY_CREATION_DATE);
-        setLimit(500);
     }
 
     @PropertyDisplayHidden

@@ -22,15 +22,28 @@ package com.xwiki.projectmanagement.internal.displayers;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.apache.commons.lang3.StringUtils;
+import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
+import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.Format;
+import org.xwiki.rendering.listener.reference.ResourceReference;
+import org.xwiki.rendering.listener.reference.ResourceType;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -45,12 +58,43 @@ import com.xwiki.projectmanagement.model.WorkItem;
 public abstract class AbstractWorkItemsListDisplayer extends AbstractWorkItemsDisplayer
 {
     /**
+     * The maximum number of work items displayed, whatever the limit. A long list is still fast to display, since only
+     * the displayed properties are retrieved (e.g. OpenProject returns 1000 work packages with their main properties in
+     * less than half a second), but showing more than this is better left to a paginated table.
+     */
+    private static final int MAX_WORK_ITEMS = 1000;
+
+    private static final String KEY_CLIENT = "client";
+
+    /**
+     * The properties displayed for each work item: its identifier (or key), its summary, and its status, telling if
+     * it's closed.
+     */
+    private static final List<String> DISPLAYED_PROPERTIES = List.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_KEY,
+        WorkItem.KEY_SUMMARY, WorkItem.KEY_STATUS, WorkItem.KEY_RESOLVED);
+
+    /**
      * @param name the name of the displayer.
      * @param description the description of the displayer.
      */
     public AbstractWorkItemsListDisplayer(String name, String description)
     {
         super(name, description);
+    }
+
+    @Override
+    protected PaginatedResult<WorkItem> getWorkItems(String clientId, ProjectManagementMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
+    {
+        // Only the displayed properties are needed, which the client may retrieve much faster than all of them.
+        if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
+            Map<String, Object> context = new HashMap<>(macroContext.getContext());
+            context.put(ProjectManagementClientExecutionContext.PROPERTIES, DISPLAYED_PROPERTIES);
+            ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(context);
+        }
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
+        int limit = parameters.getLimit() == null ? MAX_WORK_ITEMS : Math.min(parameters.getLimit(), MAX_WORK_ITEMS);
+        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset), limit, filters, sortEntries);
     }
 
     @Override
@@ -61,15 +105,60 @@ public abstract class AbstractWorkItemsListDisplayer extends AbstractWorkItemsDi
             return Collections.singletonList(
                 new MacroBlock("warning", Collections.emptyMap(), getNoItemsMessage(), context.isInline()));
         }
-        return display(workItemList.getItems(), context);
+        return display(workItemList.getItems(), getMoreBlocks(workItemList, parameters), context);
     }
 
     /**
+     * The work items left out because of the limit are counted, rather than silently missing, and linked to the list
+     * of all the matching work items when the client can tell its location.
+     *
+     * @return the blocks telling how many matching work items aren't displayed, empty when they are all displayed
+     */
+    private List<Block> getMoreBlocks(PaginatedResult<WorkItem> workItemList,
+        ProjectManagementMacroParameters parameters)
+    {
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
+        long more = workItemList.getTotalItems() == null ? 0
+            : workItemList.getTotalItems() - offset - workItemList.getItems().size();
+        if (more <= 0) {
+            return new ArrayList<>();
+        }
+        Translation translation = getTranslation(getMoreTranslationKey());
+        List<Block> label = new ArrayList<>();
+        label.add(translation != null ? translation.render(more) : new WordBlock(String.valueOf(more)));
+        Optional<String> location = getWorkItemsLocation(parameters);
+        if (location.isEmpty()) {
+            return label;
+        }
+        return new ArrayList<>(Collections.singletonList(
+            new LinkBlock(label, new ResourceReference(location.get(), ResourceType.URL), false)));
+    }
+
+    private Optional<String> getWorkItemsLocation(ProjectManagementMacroParameters parameters)
+    {
+        try {
+            return projectManagementManager.getWorkItemsLocation((String) macroContext.get(KEY_CLIENT),
+                getFilters(parameters.getFilters()), getSortEntries(parameters.getSort()));
+        } catch (LiveDataException | WorkItemException e) {
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * @return the key, without the prefix of the client, of the translation telling how many matching work items
+     *     aren't displayed, whose parameter is their number
+     */
+    protected abstract String getMoreTranslationKey();
+
+    /**
      * @param workItems the work items to display, never empty
+     * @param moreBlocks the blocks telling how many matching work items aren't displayed (because of the limit), to
+     *     display after the work items; empty when they are all displayed
      * @param context the macro transformation context, telling if the macro is called inline
      * @return the blocks displaying the work items
      */
-    protected abstract List<Block> display(List<WorkItem> workItems, MacroTransformationContext context);
+    protected abstract List<Block> display(List<WorkItem> workItems, List<Block> moreBlocks,
+        MacroTransformationContext context);
 
     /**
      * @param workItem a work item

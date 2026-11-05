@@ -83,7 +83,7 @@ class CalendarMacroParametersTest
 
         assertEquals(CalendarViews.month, parameters.getDefaultView());
         assertEquals(WeekDays.SUNDAY, parameters.getFirstDay());
-        assertEquals(25, parameters.getLimit());
+        assertNull(parameters.getLimit());
         assertNull(parameters.getTimeInterval());
         assertNull(parameters.getFilters());
         assertNull(parameters.getPresetId());

@@ -70,7 +70,11 @@ public class OpenProjectCalendarEventProvider implements CalendarEventProvider
 
     private static final String VERSION = "version";
 
-    private static final int DEFAULT_LIMIT = 25;
+    /**
+     * The number of sprints displayed when the calendar isn't given a limit: the sprints of all the projects, which
+     * are few and light, are retrieved at once.
+     */
+    private static final int DEFAULT_LIMIT = 100;
 
     @Inject
     private OpenProjectAccess openProjectAccess;

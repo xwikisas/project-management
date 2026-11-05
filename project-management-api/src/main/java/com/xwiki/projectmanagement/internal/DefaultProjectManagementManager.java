@@ -20,7 +20,10 @@ package com.xwiki.projectmanagement.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -47,6 +50,13 @@ import com.xwiki.projectmanagement.model.WorkItem;
 @Singleton
 public class DefaultProjectManagementManager implements ProjectManagementManager
 {
+    /**
+     * The number of work items retrieved by each request when retrieving all of them. Retrieving a work item with all
+     * its properties can be slow (e.g. OpenProject takes about 2 seconds to return 100 work packages with long
+     * descriptions), so the pages are small enough for each request to be answered well before its timeout.
+     */
+    private static final int PAGE_SIZE = 100;
+
     @Inject
     private ComponentManager componentManager;
 
@@ -79,6 +89,43 @@ public class DefaultProjectManagementManager implements ProjectManagementManager
     public boolean deleteWorkItem(String client, String workItemId) throws WorkItemException
     {
         return getClient(client).deleteWorkItem(workItemId);
+    }
+
+    @Override
+    public PaginatedResult<WorkItem> getAllWorkItems(String client, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries, int max) throws WorkItemException
+    {
+        ProjectManagementClient projectManagementClient = getClient(client);
+        List<WorkItem> workItems = new ArrayList<>();
+        int total = 0;
+        while (workItems.size() < max) {
+            // The pages have a fixed size so that each one starts at a multiple of the page size, as the clients that
+            // paginate by page number (e.g. OpenProject) expect.
+            PaginatedResult<WorkItem> page = projectManagementClient.getWorkItems(workItems.size(),
+                PAGE_SIZE, filters, sortEntries);
+            List<WorkItem> pageItems = page.getItems() == null ? List.of() : page.getItems();
+            int pageTotal = page.getTotalItems() == null ? 0 : page.getTotalItems();
+            total = Math.max(pageTotal, workItems.size() + pageItems.size());
+            workItems.addAll(pageItems.subList(0, Math.min(pageItems.size(), max - workItems.size())));
+            if (pageItems.size() < PAGE_SIZE || workItems.size() >= total) {
+                break;
+            }
+        }
+        return new PaginatedResult<>(workItems, 0, max, total);
+    }
+
+    @Override
+    public Optional<Map<String, Long>> countWorkItems(String client, List<LiveDataQuery.Filter> filters,
+        String property) throws WorkItemException
+    {
+        return getClient(client).countWorkItems(filters, property);
+    }
+
+    @Override
+    public Optional<String> getWorkItemsLocation(String client, List<LiveDataQuery.Filter> filters,
+        List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
+    {
+        return getClient(client).getWorkItemsLocation(filters, sortEntries);
     }
 
     private ProjectManagementClient getClient(String hint) throws WorkItemException
