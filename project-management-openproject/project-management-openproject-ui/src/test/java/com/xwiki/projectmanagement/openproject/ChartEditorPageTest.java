@@ -191,6 +191,23 @@ class ChartEditorPageTest extends PageTest
         // An empty picker would open no list.
         Element picker = result.selectFirst("select.op-preset-select");
         assertTrue(picker.hasAttr("disabled"), result.html());
+        assertEquals("projectmanagement.macro.filter.preset.none.chart", picker.text());
+    }
+
+    @Test
+    void presetPickerWithoutPresetsForTheMacro() throws Exception
+    {
+        // Only a chart preset exists, which the work packages macros can't use.
+        Preset preset = mock(Preset.class);
+        when(preset.getId()).thenReturn(3);
+        when(preset.getName()).thenReturn("Bugs by status");
+        when(((PresetsScriptService) this.presetsScriptService).getPresetsForClient(CLIENT, true, 0, 25))
+            .thenReturn(List.of(preset));
+
+        Document result = render("html_displayer/openprojectpreset/edit.vm");
+
+        Element picker = result.selectFirst("select.op-preset-select");
+        assertTrue(picker.hasAttr("disabled"), result.html());
         assertEquals("projectmanagement.macro.filter.preset.none", picker.text());
     }
 
