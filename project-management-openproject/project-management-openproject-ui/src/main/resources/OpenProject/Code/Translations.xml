@@ -107,6 +107,7 @@ openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Create work package
 openproject.createworkpackage.highlight.multiple=Create work packages from table
 openproject.createworkpackage.modal.cancel=Cancel
+openproject.createworkpackage.modal.close=Close
 openproject.createworkpackage.modal.create.single=Create work package
 openproject.createworkpackage.modal.create.multiple=Create work packages
 openproject.createworkpackage.modal.single.description=This form allows you to create a new work package in OpenProject based on the selected text.
@@ -195,7 +196,23 @@ openproject.userprofile.connect=Connect
 openproject.userprofile.disconnect=Disconnect
 openproject.userprofile.disconnected=Your OpenProject account has been disconnected from {0}.
 openproject.userprofile.disconnectFailed=Failed to disconnect your OpenProject account from {0}.
-</content>
+openproject.createworkpackage.insert.inProgress=Inserting the work package in the page...
+openproject.createworkpackage.insert.done=Work package inserted in the page
+openproject.createworkpackage.insert.error=Failed to insert the work package in the page
+openproject.createworkpackage.insert.noElement=Failed to find where to insert the work package in the page
+openproject.createworkpackage.insert.lockedConfirm=Someone else is editing the page. Insert the work package anyway?
+openproject.relations.clientParams.invalid=The parameters of the relation aren't valid JSON.
+openproject.dashboard.gadget.openVsClosed=Open vs Closed
+openproject.dashboard.gadget.projectDetails=Project Details
+openproject.dashboard.gadget.workPackageTypes=Work Package Types
+openproject.dashboard.gadget.projectMembers=Project Members
+openproject.dashboard.gadget.openVsClosedPerType=Open vs Closed per Type
+openproject.dashboard.gadget.spentTime=Time Spent in the Last 7 Days
+openproject.dashboard.gadget.projectNews=Project News
+openproject.dashboard.gadget.subprojects=Subprojects
+openproject.dashboard.gadget.allWorkPackages=All Work Packages
+openproject.template.provider.name=OpenProject Space
+openproject.template.provider.description=A wiki space linked to an OpenProject project</content>
   <object>
     <name>OpenProject.Code.Translations</name>
     <number>0</number>

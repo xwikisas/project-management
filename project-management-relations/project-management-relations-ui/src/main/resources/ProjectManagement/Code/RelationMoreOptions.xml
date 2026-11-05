@@ -130,7 +130,18 @@
     'xwiki-propertize': "$services.webjars.url('com.xwiki.commons:xwiki-pro-commons-webjar', 'xwikiPropertize/xwikiPropertize.js')"
   }
 });
-require(['jquery', 'xwiki-propertize'], function ($) {
+define('projectmanagement.relations.viewer', {
+  prefix: 'projectmanagement.relations.viewer.',
+  keys: ['clientParams.invalid']
+});
+require(['jquery', 'xwiki-l10n!projectmanagement.relations.viewer', 'xwiki-propertize'], function ($, l10n) {
+  // The text of a notification is HTML on some XWiki versions: display the translations as text.
+  let notifyError = function (text) {
+    let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
+    notification.show();
+  };
   $('.proj-manag-relation-client-params').each(function () {
     let root = $(this);
     root.on('focus', ':input', function () {
@@ -165,7 +176,7 @@ require(['jquery', 'xwiki-propertize'], function ($) {
               valueContainer.append($('&lt;p/&gt;').text(`${param[0]} -&gt; ${param[1]}`));
             });
           } catch (e) {
-            new XWiki.widgets.Notification('Client params are not a valid JSON.', 'error');
+            notifyError(l10n.get('clientParams.invalid'));
           }
           valueContainer.toggleClass('loading');
           observer.observe(valueContainer[0], { childList: true });
@@ -321,7 +332,7 @@ require(['jquery', 'xwiki-propertize'], function ($) {
     <property>
       <content>{{velocity}}{{html clean="false"}} ## we need clean="false" because we want to display the raw content of #submenuitem()
  #template('menus_macros.vm')
- #submenuitem($doc.getURL('view', 'viewer=projectmanagementrelations'), 'Project Management Relations', 'proj-manag-relations-more-options', '', 'check')
+ #submenuitem($doc.getURL('view', 'viewer=projectmanagementrelations'), $services.localization.render('projectmanagement.relations.viewer.menu'), 'proj-manag-relations-more-options', '', 'check')
 {{/html}}{{/velocity}}</content>
     </property>
     <property>

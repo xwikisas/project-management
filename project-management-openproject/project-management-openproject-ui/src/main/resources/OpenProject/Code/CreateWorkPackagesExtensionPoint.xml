@@ -969,7 +969,19 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       <cache>long</cache>
     </property>
     <property>
-      <code>require(['jquery'], function ($) {
+      <code>define('openproject.createworkpackage.insert', {
+  prefix: 'openproject.createworkpackage.insert.',
+  keys: ['inProgress', 'done', 'error', 'noElement', 'lockedConfirm']
+});
+
+require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function ($, l10n) {
+  // The text of a notification is HTML on some XWiki versions: display the translations as text.
+  let createNotification = function (text, type) {
+    let notification = new XWiki.widgets.Notification('', type, {inactive: true});
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
+    return notification;
+  };
   let shouldReload = false;
   let makeRequest = function (url, data, notification, forceReload) {
     $.ajax({
@@ -983,16 +995,16 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
         if (forceReload) {
           window.location.reload();
         }
-        notification.replace(new XWiki.widgets.Notification("Macro inserted successfully.", "done"));
+        notification.replace(createNotification(l10n.get('done'), 'done'));
       })
       .fail(function (xhr) {
-        if (xhr.status == 423 &amp;&amp; confirm("The page is being edited by someone else. Insert the macro anyway?")) {
+        if (xhr.status == 423 &amp;&amp; confirm(l10n.get('lockedConfirm'))) {
           data.force = true;
           makeRequest(url, data, notification, forceReload);
           return;
         }
         shouldReload = false;
-        notification.replace(new XWiki.widgets.Notification("Failed to insert the macro in page.", "error"));
+        notification.replace(createNotification(l10n.get('error'), 'error'));
       });
   };
   $(document).on('hidden.bs.modal', '#create-work-packages-modal', function () {
@@ -1006,7 +1018,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     let opInstance = event.detail.connection;
     let element = event.detail.element;
     if (!element) {
-      new XWiki.widgets.Notification("Could not insert the OpenProject.");
+      createNotification(l10n.get('noElement'), 'error').show();
       return;
     }
     if (element.nodeName == 'TR') {
@@ -1047,7 +1059,8 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       offset: startOffset,
       fullLine: line
     };
-    let notification = new XWiki.widgets.Notification("Inserting macro in page.", "inprogress");
+    let notification = createNotification(l10n.get('inProgress'), 'inprogress');
+    notification.show();
     makeRequest(url, data, notification, !(event.detail.batch == true));
 
   });
@@ -1539,7 +1552,8 @@ require(['jquery', 'pageRelation'], function ($, pageRelation) {
     &lt;div class="modal-dialog" role="document"&gt;
       &lt;div class="modal-content"&gt;
         &lt;div class="modal-header"&gt;
-          &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal" aria-label="Close"&gt;
+          &lt;button id="close-modal-button" type="button" class="close" data-dismiss="modal"
+                  aria-label="$escapetool.xml($services.localization.render('openproject.createworkpackage.modal.close'))"&gt;
             &lt;span aria-hidden="true"&gt;&amp;times;&lt;/span&gt;
           &lt;/button&gt;
           &lt;div class="modal-title" id="wp-create-modal-title"&gt;

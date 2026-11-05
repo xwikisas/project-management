@@ -125,7 +125,19 @@
       <cache>long</cache>
     </property>
     <property>
-      <code>require(['jquery', 'xwiki-selectize'], function ($) {
+      <code>define('projectmanagement.relations.docextra', {
+  prefix: 'projectmanagement.relations.docextra.',
+  keys: ['loadError']
+});
+
+require(['jquery', 'xwiki-l10n!projectmanagement.relations.docextra', 'xwiki-selectize'], function ($, l10n) {
+  // The text of a notification is HTML on some XWiki versions: display the translations as text.
+  let notifyError = function (text) {
+    let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
+    notification.show();
+  };
   // Only link to web pages.
   let getSafeHref = function (href) {
     try {
@@ -189,7 +201,7 @@
               valueContainer.empty().append(link);
             })
             .fail(function (_jqxhr, textStatus, error) {
-              new XWiki.widgets.Notification('Failed to load the entity information.', 'error');
+              notifyError(l10n.get('loadError'));
             })
             .always(function () {
               valueContainer.removeClass('loading');

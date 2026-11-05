@@ -17,7 +17,19 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-require(['jquery', 'xwiki-selectize'], function ($) {
+define('projectmanagement.chart.typeParams', {
+  prefix: 'projectmanagement.macro.chart.typeParams.',
+  keys: ['loading', 'loaded', 'failed']
+});
+
+require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selectize'], function ($, l10n) {
+  // The text of a notification is HTML on some XWiki versions: display the translations as text.
+  let createNotification = function (text, type) {
+    let notification = new XWiki.widgets.Notification('', type, {inactive: true});
+    // The notification element wraps the styled one, which holds the text.
+    notification.element.down('.xnotification').textContent = text;
+    return notification;
+  };
   const SEPARATOR = ",";
   let updateInput = function () {
     let param = {};
@@ -42,7 +54,8 @@ require(['jquery', 'xwiki-selectize'], function ($) {
 
     let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val();
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
-    let notif = new XWiki.widgets.Notification('Loading chart type parameters', 'inprogress');
+    let notif = createNotification(l10n.get('loading'), 'inprogress');
+    notif.show();
     $.getJSON(getChartTypeParamsURL)
       .done(function (paramTemplates) {
         var htmlTemplate = document.getElementById("proj-manag-chart-type-param-template").content;
@@ -74,10 +87,10 @@ require(['jquery', 'xwiki-selectize'], function ($) {
             options: selectizeOptions
           });
         });
-        notif.replace(new XWiki.widgets.Notification('Chart type parameters loaded', 'done'));
+        notif.replace(createNotification(l10n.get('loaded'), 'done'));
       })
       .fail(function () {
-        notif.replace(new XWiki.widgets.Notification('Failed to load chart type parameters', 'error'));
+        notif.replace(createNotification(l10n.get('failed'), 'error'));
         console.error("Failed to retrieve the chart type parameter.");
         paramsInput.toggleClass('hidden');
       });

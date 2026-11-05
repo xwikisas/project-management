@@ -23,7 +23,21 @@ define("openproject.livedata.action.view", {
         "edit"
     ],
 });
-require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, l10n) {
+define("openproject.calendar", {
+    prefix: "openproject.calendar.",
+    keys: [
+        "event.missingId"
+    ],
+});
+require(['jquery', "xwiki-l10n!openproject.livedata.action.view", "xwiki-l10n!openproject.calendar"],
+    function ($, l10n, calendarL10n) {
+    // The text of a notification is HTML on some XWiki versions: display the translations as text.
+    let notifyError = function (text) {
+        let notification = new XWiki.widgets.Notification('', 'error', {inactive: true});
+        // The notification element wraps the styled one, which holds the text.
+        notification.element.down('.xnotification').textContent = text;
+        notification.show();
+    };
     let addEventClass = function (element, obj) {
         const type = obj.meta.type.replace(/\s+/g, '');
         $(element).addClass(`openproject-color-type-${type}`);
@@ -54,7 +68,7 @@ require(['jquery', "xwiki-l10n!openproject.livedata.action.view"], function ($, 
             let element = data.eventElement;
             let obj = data.eventObj;
             if (!obj.id) {
-                new XWiki.widgets.Notification('Event is missing an id.', 'error');
+                notifyError(calendarL10n.get('event.missingId'));
                 return;
             }
             if (obj.meta && obj.meta['entity-type'] !== 'workItem') {
