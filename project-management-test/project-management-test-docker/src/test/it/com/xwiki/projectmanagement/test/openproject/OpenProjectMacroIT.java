@@ -243,6 +243,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals(3, filters.size());
         // The values of a filter are reloaded in the same row.
         assertEquals(List.of("In progress", "New"), filters.get(2).getSuggestValues());
+        // The summary displays the labels of the reloaded values, not their ids.
+        assertEquals("Selects the work items where Assignee is one of OpenProject Admin, and Subject contains \"sp\", "
+            + "and Status is one of In progress or New.", filterBuilderParameter.getSummary());
         // Clear the filters and expect the macro to display all the entries.
         filterBuilderParameter.clearFilters();
         modal.clickSubmit();
