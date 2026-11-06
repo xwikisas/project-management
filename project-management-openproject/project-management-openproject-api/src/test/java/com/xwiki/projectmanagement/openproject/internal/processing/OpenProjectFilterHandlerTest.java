@@ -24,7 +24,10 @@ import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,6 +39,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class OpenProjectFilterHandlerTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     final ObjectMapper mapper = new ObjectMapper();
 
     @Test
@@ -337,6 +343,41 @@ class OpenProjectFilterHandlerTest
             + "]";
 
         assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
+    @Test
+    void convertGenericLiveDataOperators() throws JsonProcessingException, ProjectManagementException
+    {
+        // The Live Data offers its generic operators on every filter, whatever the operators of the property.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("identifier", "startsWith", "12"),
+            new LiveDataQuery.Filter("assignees", "empty", ""), new LiveDataQuery.Filter("summary", "equals", "a"),
+            new LiveDataQuery.Filter("description", "startsWith", "b"),
+            new LiveDataQuery.Filter("progress", "less", "50"),
+            new LiveDataQuery.Filter("startDate", "contains", "2026-01-01/2026-02-01"));
+
+        // OpenProject can't match the subject or the description exactly, nor their beginning: they contain the text.
+        String expected = "["
+            + "{\"id\":{\"operator\":\"=\",\"values\":[\"12\"]}},"
+            + "{\"assigned_to\":{\"operator\":\"!*\",\"values\":[\"\"]}},"
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\"a\"]}},"
+            + "{\"description\":{\"operator\":\"~\",\"values\":[\"b\"]}},"
+            + "{\"percentageDone\":{\"operator\":\"<=\",\"values\":[\"49\"]}},"
+            + "{\"startDate\":{\"operator\":\"<>d\",\"values\":[\"2026-01-01\",\"2026-02-01\"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
+    @Test
+    void convertFiltersDropsTheUnsupportedGenericOperators() throws JsonProcessingException, ProjectManagementException
+    {
+        LiveDataQuery.Filter summary = new LiveDataQuery.Filter("summary", "empty", "");
+        summary.getConstraints().add(new LiveDataQuery.Constraint("bug", "contains"));
+
+        assertEqualsStringFilters("[{\"subject\":{\"operator\":\"~\",\"values\":[\"bug\"]}}]",
+            OpenProjectFilterHandler.convertFilters(List.of(summary)));
+        assertEquals("Ignoring the [empty] constraint of the filter on [summary], since OpenProject supports no "
+            + "equivalent operator for this property.", this.logCapture.getMessage(0));
     }
 
     /**

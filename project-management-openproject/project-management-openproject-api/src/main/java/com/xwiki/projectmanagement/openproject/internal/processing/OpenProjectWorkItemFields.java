@@ -103,16 +103,18 @@ public final class OpenProjectWorkItemFields
 
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
 
-    private static final String OPERATOR_CONTAINS = "contains";
-
-    private static final String OPERATOR_EQUALS = "equals";
-
     private static final OpenProjectWorkItemFields EMPTY = new OpenProjectWorkItemFields(Collections.emptyList());
 
     /**
      * The fields, keyed by the id of the work item property exposing them.
      */
     private final Map<String, WorkPackageField> fields = new LinkedHashMap<>();
+
+    /**
+     * The fields already exposed through the generic work item properties, keyed by OpenProject filter, used to know
+     * which operators their filters support.
+     */
+    private final Map<String, WorkPackageField> mappedFields = new HashMap<>();
 
     /**
      * Creates the work item properties exposing the given fields.
@@ -129,6 +131,8 @@ public final class OpenProjectWorkItemFields
                 this.fields.putIfAbsent(PROPERTY_TARGET_VERSION, field);
             } else if (!MAPPED_FIELDS.contains(field.getKey())) {
                 this.fields.putIfAbsent(field.getKey(), field);
+            } else if (field.getFilterKey() != null) {
+                this.mappedFields.put(field.getFilterKey(), field);
             }
         }
         // The custom fields come last, so that a custom field named like another property can't hide it.
@@ -209,6 +213,28 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
+     * @param field a work package field
+     * @return the Live Data filter matching the values of the field (e.g. {@link OpenProjectMapper#FILTER_TEXT}), or
+     *     {@code null} if the field values can't be filtered on, e.g. the dates, which would need to be converted to
+     *     the format of OpenProject
+     */
+    public static String getFilterType(WorkPackageField field)
+    {
+        String valueType = StringUtils.defaultString(field.getFilterValueType());
+        String filterType = null;
+        if (valueType.startsWith(LIST_VALUE_TYPE_PREFIX)) {
+            filterType = OpenProjectMapper.FILTER_LIST;
+        } else if (valueType.endsWith("String")) {
+            filterType = OpenProjectMapper.FILTER_TEXT;
+        } else if (valueType.endsWith("Integer") || valueType.endsWith("Float")) {
+            filterType = OpenProjectMapper.FILTER_NUMBER;
+        } else if (valueType.endsWith("Boolean")) {
+            filterType = OpenProjectMapper.FILTER_BOOLEAN;
+        }
+        return filterType;
+    }
+
+    /**
      * Rewrites the filters on the properties exposing the fields of this instance into filters on the matching
      * OpenProject filters, the other filters being kept as they are. The versions can be referenced by name, e.g.
      * {@code 1.2.3}: a name is replaced by the ids of all the versions with this name, which the other filters (e.g.
@@ -227,7 +253,7 @@ public final class OpenProjectWorkItemFields
         for (LiveDataQuery.Filter filter : filters) {
             WorkPackageField field = this.fields.get(filter.getProperty());
             if (field == null) {
-                mappedFilters.add(filter);
+                mappedFilters.add(mapGenericPropertyFilter(filter));
             } else {
                 boolean isVersion = VERSION_FILTER_VALUE_TYPE.equals(field.getFilterValueType());
                 if (isVersion && versionIdsByName == null && hasVersionName(filter)) {
@@ -283,19 +309,47 @@ public final class OpenProjectWorkItemFields
         return String.valueOf(value);
     }
 
+    /**
+     * Replaces the generic Live Data operators of a filter on a generic work item property (e.g. the status) by the
+     * OpenProject operators that the matching OpenProject filter supports. The filters on dates are converted later
+     * on, their values depending on the generic operator, as the filters on the properties without matching field.
+     */
+    private LiveDataQuery.Filter mapGenericPropertyFilter(LiveDataQuery.Filter filter)
+    {
+        WorkPackageField field = this.mappedFields.get(OpenProjectMapper.mapLivedataProperty(filter.getProperty()));
+        String filterType = field == null ? null : getFilterType(field);
+        if (filterType == null) {
+            return filter;
+        }
+        LiveDataQuery.Filter mappedFilter = new LiveDataQuery.Filter();
+        mappedFilter.setProperty(filter.getProperty());
+        mappedFilter.setMatchAll(filter.isMatchAll());
+        for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
+            LiveDataQuery.Constraint mappedConstraint = OpenProjectMapper.mapConstraint(filterType, constraint,
+                field.getFilterOperators(), filter.getProperty());
+            if (mappedConstraint != null) {
+                mappedFilter.getConstraints().add(mappedConstraint);
+            }
+        }
+        return mappedFilter;
+    }
+
     private static LiveDataQuery.Filter mapFilter(LiveDataQuery.Filter filter, WorkPackageField field,
         Map<String, List<String>> versionIdsByName)
     {
-        boolean isList = StringUtils.startsWith(field.getFilterValueType(), LIST_VALUE_TYPE_PREFIX);
         LiveDataQuery.Filter mappedFilter = new LiveDataQuery.Filter();
         mappedFilter.setProperty(StringUtils.defaultIfEmpty(field.getFilterKey(), field.getKey()));
         mappedFilter.setMatchAll(filter.isMatchAll());
+        String filterType = getFilterType(field);
         for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
-            // A list filter matches any of its values.
-            String operator = isList && OPERATOR_CONTAINS.equals(constraint.getOperator())
-                ? OPERATOR_EQUALS : constraint.getOperator();
-            for (Object value : getValues(constraint.getValue(), versionIdsByName)) {
-                mappedFilter.getConstraints().add(new LiveDataQuery.Constraint(value, operator));
+            LiveDataQuery.Constraint mappedConstraint = OpenProjectMapper.mapConstraint(filterType, constraint,
+                field.getFilterOperators(), filter.getProperty());
+            if (mappedConstraint == null) {
+                continue;
+            }
+            for (Object value : getValues(mappedConstraint.getValue(), versionIdsByName)) {
+                mappedFilter.getConstraints()
+                    .add(new LiveDataQuery.Constraint(value, mappedConstraint.getOperator()));
             }
         }
         return mappedFilter;

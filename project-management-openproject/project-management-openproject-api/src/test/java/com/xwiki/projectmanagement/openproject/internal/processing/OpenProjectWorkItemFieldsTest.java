@@ -25,7 +25,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -49,6 +52,9 @@ import static org.mockito.Mockito.when;
  */
 class OpenProjectWorkItemFieldsTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     private static final String TARGET_VERSIONS = "targetVersions";
 
     private static final String LIST_OF_VERSIONS = "[]Version";
@@ -137,14 +143,16 @@ class OpenProjectWorkItemFieldsTest
         // The name of a version is replaced by the ids of all the versions with this name, an unknown name is kept so
         // that OpenProject reports it.
         assertEquals(List.of("10", "11", "12", "unknown"), getValues(mappedVersionFilter));
+        // A list filter matches the values picked in the list.
         assertTrue(mappedVersionFilter.getConstraints().stream()
-            .allMatch(constraint -> "equals".equals(constraint.getOperator())));
+            .allMatch(constraint -> "=".equals(constraint.getOperator())));
 
-        assertSame(statusFilter, mappedFilters.get(1));
+        // The OpenProject operators are kept.
+        assertEquals("status", mappedFilters.get(1).getProperty());
+        assertEquals(List.of("o:"), getConstraints(mappedFilters.get(1)));
 
-        // A text filter keeps its operator.
         assertEquals("customField6", mappedFilters.get(2).getProperty());
-        assertEquals("contains", mappedFilters.get(2).getConstraints().get(0).getOperator());
+        assertEquals("~", mappedFilters.get(2).getConstraints().get(0).getOperator());
 
         // A field without filter is sent as it is, so that OpenProject reports it.
         assertEquals("category", mappedFilters.get(3).getProperty());
@@ -159,6 +167,67 @@ class OpenProjectWorkItemFieldsTest
         assertEquals("customField3", mappedFilters.get(0).getProperty());
         assertEquals(List.of("10"), getValues(mappedFilters.get(0)));
         verify(this.client, never()).getVersions();
+    }
+
+    @Test
+    void mapFiltersWithGenericLiveDataOperators() throws Exception
+    {
+        // The Live Data offers its generic operators on every filter, whatever the operators of the field.
+        WorkPackageField subject = field("customField1", "Notes", "customField1", "[1]String", true);
+        subject.setFilterOperators(List.of("~", "!~"));
+        WorkPackageField labels = field("customField2", "Labels", "customField2", "[]CustomOption", true);
+        labels.setFilterOperators(List.of("=", "!"));
+        WorkPackageField effort = field("customField3", "Effort", "customField3", "[1]Integer", true);
+        effort.setFilterOperators(List.of("=", "!", ">=", "<="));
+        OpenProjectWorkItemFields customFields = new OpenProjectWorkItemFields(List.of(subject, labels, effort));
+
+        LiveDataQuery.Filter notes = new LiveDataQuery.Filter("Notes", "equals", "a");
+        notes.getConstraints().add(new LiveDataQuery.Constraint("b", "startsWith"));
+        LiveDataQuery.Filter labelsFilter = new LiveDataQuery.Filter("Labels", "startsWith", "1");
+        labelsFilter.getConstraints().add(new LiveDataQuery.Constraint("", "empty"));
+        LiveDataQuery.Filter effortFilter = new LiveDataQuery.Filter("Effort", "less", "5");
+        effortFilter.getConstraints().add(new LiveDataQuery.Constraint("1.5", "greater"));
+        effortFilter.getConstraints().add(new LiveDataQuery.Constraint("2", "equals"));
+
+        List<LiveDataQuery.Filter> mappedFilters =
+            customFields.mapFilters(List.of(notes, labelsFilter, effortFilter), this.client);
+
+        // A text field that can't match a text exactly, nor its beginning, matches the texts containing it.
+        assertEquals(List.of("~:a", "~:b"), getConstraints(mappedFilters.get(0)));
+        // The constraints using an operator that the field doesn't support are dropped.
+        assertEquals(List.of("=:1"), getConstraints(mappedFilters.get(1)));
+        assertEquals("Ignoring the [empty] constraint of the filter on [Labels], since OpenProject supports no "
+            + "equivalent operator for this property.", this.logCapture.getMessage(0));
+        // OpenProject compares the numbers inclusively.
+        assertEquals(List.of("<=:4", ">=:1.5", "=:2"), getConstraints(mappedFilters.get(2)));
+    }
+
+    @Test
+    void mapFiltersOnGenericPropertiesWithGenericLiveDataOperators() throws Exception
+    {
+        WorkPackageField subject = field("subject", "Subject", "subject", "[1]String", true);
+        subject.setFilterOperators(List.of("~", "!~"));
+        WorkPackageField status = field("status", "Status", "status", "[]Status", true);
+        status.setFilterOperators(List.of("o", "=", "c", "!", "*"));
+        WorkPackageField createdAt = field("createdAt", "Created on", "createdAt", "[1]DateTime", true);
+        OpenProjectWorkItemFields genericFields = new OpenProjectWorkItemFields(List.of(subject, status, createdAt));
+
+        LiveDataQuery.Filter statusFilter = new LiveDataQuery.Filter("status", "startsWith", "1");
+        statusFilter.getConstraints().add(new LiveDataQuery.Constraint("", "empty"));
+        LiveDataQuery.Filter creationDate = new LiveDataQuery.Filter("creationDate", "before", "2026-01-01");
+
+        List<LiveDataQuery.Filter> mappedFilters = genericFields.mapFilters(
+            List.of(new LiveDataQuery.Filter("summary", "equals", "a"), statusFilter, creationDate), this.client);
+
+        // The generic properties keep their id, only their operators are checked against the OpenProject filters.
+        assertEquals("summary", mappedFilters.get(0).getProperty());
+        assertEquals(List.of("~:a"), getConstraints(mappedFilters.get(0)));
+        // The status can't be empty in OpenProject.
+        assertEquals(List.of("=:1"), getConstraints(mappedFilters.get(1)));
+        assertEquals("Ignoring the [empty] constraint of the filter on [status], since OpenProject supports no "
+            + "equivalent operator for this property.", this.logCapture.getMessage(0));
+        // The dates are converted with the other filters, their values depending on the operator.
+        assertSame(creationDate, mappedFilters.get(2));
     }
 
     @Test
@@ -179,6 +248,12 @@ class OpenProjectWorkItemFieldsTest
     private static List<Object> getValues(LiveDataQuery.Filter filter)
     {
         return filter.getConstraints().stream().map(LiveDataQuery.Constraint::getValue).collect(Collectors.toList());
+    }
+
+    private static List<String> getConstraints(LiveDataQuery.Filter filter)
+    {
+        return filter.getConstraints().stream()
+            .map(constraint -> constraint.getOperator() + ':' + constraint.getValue()).collect(Collectors.toList());
     }
 
     private static Version version(int id, String name)
