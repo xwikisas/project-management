@@ -46,16 +46,33 @@ public class OpenProjectDashboardPage extends ViewPage
     private static final String CONNECTION_NAME_PARAMETER = "connectionName=";
 
     /**
+     * The gadgets are rendered by querying OpenProject, so the dashboard takes longer than the default timeout to be
+     * ready, especially when the caches are cold.
+     */
+    private static final int LOAD_TIMEOUT = 60;
+
+    /**
      * Go to the dashboard.
      *
      * @return the dashboard
      */
     public static OpenProjectDashboardPage gotoPage()
     {
-        getUtil().gotoPage("OpenProject", "WebHome");
-        OpenProjectDashboardPage dashboard = new OpenProjectDashboardPage();
-        dashboard.waitUntilPageIsReady();
-        return dashboard;
+        // Navigate without waiting, since the view page created by gotoPage(space, page) waits with the default timeout.
+        getUtil().gotoPage("OpenProject", "WebHome", "view", "");
+        return new OpenProjectDashboardPage();
+    }
+
+    @Override
+    public void waitUntilPageIsReady()
+    {
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            super.waitUntilPageIsReady();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
     }
 
     /**
@@ -78,9 +95,7 @@ public class OpenProjectDashboardPage extends ViewPage
         new Select(select).selectByValue(connection);
         // Selecting a connection saves it and reloads the dashboard.
         getDriver().waitUntilCondition(ExpectedConditions.stalenessOf(select));
-        OpenProjectDashboardPage dashboard = new OpenProjectDashboardPage();
-        dashboard.waitUntilPageIsReady();
-        return dashboard;
+        return new OpenProjectDashboardPage();
     }
 
     /**
@@ -113,9 +128,7 @@ public class OpenProjectDashboardPage extends ViewPage
         new SuggestInputElement(select).click().sendKeys(project).waitForSuggestions().selectByVisibleText(project);
         // Selecting a project saves it and reloads the dashboard.
         getDriver().waitUntilCondition(ExpectedConditions.stalenessOf(select));
-        OpenProjectDashboardPage dashboard = new OpenProjectDashboardPage();
-        dashboard.waitUntilPageIsReady();
-        return dashboard;
+        return new OpenProjectDashboardPage();
     }
 
     /**

@@ -153,9 +153,26 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
             .anyMatch(WebElement::isDisplayed);
     }
 
+    /**
+     * Display all the parameters: expand every collapsed "More" link of the modal, the one of the parameter list and
+     * those of the parameter groups, whose order depends on the XWiki version.
+     */
     public void clickMore()
     {
-        getDriver().findElement(By.cssSelector("li.more")).click();
+        // An open suggest dropdown (e.g. the one of the instance) or a notification can cover the links.
+        closeSuggestDropdowns();
+        getDriver().waitUntilElementDisappears(By.className("xnotification"));
+        By collapsedMore = By.xpath("//*[contains(@class, '-editor-modal')]//li[contains(@class, 'more')]"
+            + "[.//*[contains(@class, 'arrow-right')]]");
+        // Expanding a link can reveal other collapsed ones, inside the parameters it displays.
+        for (int i = 0; i < 10; i++) {
+            List<WebElement> links = getDriver().findElementsWithoutWaiting(collapsedMore).stream()
+                .filter(WebElement::isDisplayed).collect(Collectors.toList());
+            if (links.isEmpty()) {
+                break;
+            }
+            links.get(0).click();
+        }
         scrollToFooter();
     }
 
@@ -221,8 +238,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public List<String> getPresetOptions()
     {
-        selectParameterTab(PRESET_PARAMETER);
-        SuggestInputElement presetSuggest = getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions();
+        SuggestInputElement presetSuggest = openPresetSuggestions();
         List<String> options = presetSuggest.getSuggestions().stream()
             .map(suggestion -> suggestion.getLabel().trim()).collect(Collectors.toList());
         presetSuggest.hideSuggestions();
@@ -238,12 +254,21 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public AbstractOpenProjectMacroEditModal selectPreset(String presetName)
     {
-        selectParameterTab(PRESET_PARAMETER);
         // The option labels are prefixed, so they can't be matched exactly.
-        getSuggestInput(PRESET_PARAMETER).click().waitForSuggestions().getSuggestions().stream()
+        openPresetSuggestions().getSuggestions().stream()
             .filter(suggestion -> presetName.equals(suggestion.getLabel().trim())).findFirst()
             .orElseThrow(() -> new NoSuchElementException("No filter preset named " + presetName)).select();
         return this;
+    }
+
+    private SuggestInputElement openPresetSuggestions()
+    {
+        selectParameterTab(PRESET_PARAMETER);
+        closeSuggestDropdowns();
+        // The preset parameter can be at the bottom of the modal, where its dropdown can't open in view.
+        WebElement input = getMacroParameterInput(PRESET_PARAMETER);
+        getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
+        return new SuggestInputElement(input).click().waitForSuggestions();
     }
 
     /**
