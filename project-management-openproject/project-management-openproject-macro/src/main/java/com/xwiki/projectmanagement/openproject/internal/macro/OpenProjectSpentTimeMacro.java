@@ -115,7 +115,7 @@ public class OpenProjectSpentTimeMacro
 
         List<TimeEntry> entries;
         try {
-            entries = apiClient.getTimeEntries(null, parameters.getCount(), filters).getItems();
+            entries = apiClient.getTimeEntries(null, parameters.getLimit(), filters).getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve time entries from OpenProject.", e);
         }

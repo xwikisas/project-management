@@ -57,7 +57,7 @@ class OpenProjectSubprojectsMacroTest extends AbstractDirectMacroTest
     {
         this.parameters.setInstance("main");
         this.parameters.setProject("5");
-        this.parameters.setCount(10);
+        this.parameters.setLimit(10);
         when(this.apiClient.getProject(5)).thenReturn(project("Parent", "/projects/parent"));
     }
 

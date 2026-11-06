@@ -91,7 +91,7 @@ public class OpenProjectProjectMembersMacro
             .addFilter("project", FilterBuilder.Operator.EQUALS, Collections.singletonList(project)).build();
         List<User> members;
         try {
-            members = apiClient.getMemberships(null, parameters.getCount(), filters).getItems();
+            members = apiClient.getMemberships(null, parameters.getLimit(), filters).getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException(
                 String.format("Failed to retrieve members for project [%s].", project), e);

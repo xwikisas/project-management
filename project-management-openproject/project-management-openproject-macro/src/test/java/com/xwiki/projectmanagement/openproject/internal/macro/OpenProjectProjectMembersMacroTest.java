@@ -70,7 +70,7 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
     {
         this.parameters.setInstance("main");
         this.parameters.setProject("12");
-        this.parameters.setCount(20);
+        this.parameters.setLimit(20);
     }
 
     private static User user(String name, String... roles)

@@ -78,7 +78,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     void setUp() throws Exception
     {
         this.parameters.setInstance("main");
-        this.parameters.setCount(10);
+        this.parameters.setLimit(10);
         when(this.apiClient.getTimeEntries(any(), any(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 10, 0));
         // It's already 2026-03-10 in Paris.

@@ -85,7 +85,7 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        List<News> newsList = fetchNews(apiClient, parameters.getProject(), parameters.getCount());
+        List<News> newsList = fetchNews(apiClient, parameters.getProject(), parameters.getLimit());
         return Collections.singletonList(new GroupBlock(buildNewsBlocks(newsList), Collections.emptyMap()));
     }
 
