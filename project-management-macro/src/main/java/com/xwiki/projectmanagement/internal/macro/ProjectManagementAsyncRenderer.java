@@ -37,10 +37,13 @@ import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.MacroMarkerBlock;
+import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.syntax.Syntax;
+import org.xwiki.rendering.transformation.TransformationContext;
+import org.xwiki.rendering.transformation.TransformationException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.rendering.util.ErrorBlockGenerator;
 import org.xwiki.skinx.SkinExtension;
@@ -134,11 +137,14 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             if (result.isEmpty()) {
                 result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             }
+            if (async) {
+                result = transform(result);
+            }
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
             }
             return new CompositeBlock(result);
-        } catch (MacroExecutionException | RuntimeException e) {
+        } catch (MacroExecutionException | TransformationException | RuntimeException e) {
             if (!async) {
                 throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
             }
@@ -211,6 +217,23 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     public boolean isCacheAllowed()
     {
         return false;
+    }
+
+    /**
+     * Execute the macros returned by the displayer, e.g. the warning macro displaying the "no work items" message. The
+     * macro transformation of the page executes them when the displayer is rendered synchronously, but the
+     * asynchronous result is inserted in the page once the page is rendered.
+     */
+    private List<Block> transform(List<Block> blocks) throws TransformationException
+    {
+        TransformationContext pageContext = this.transformationContext.getTransformationContext();
+        XDOM xdom = new XDOM(blocks);
+        TransformationContext context =
+            new TransformationContext(xdom, pageContext.getSyntax(), pageContext.isRestricted());
+        context.setTargetSyntax(this.targetSyntax);
+        context.setId(pageContext.getId());
+        transform(xdom, context);
+        return xdom.getChildren();
     }
 
     private Block wrapInMacroMarker(MacroBlock macroBlockToWrap, List<Block> newBlocks)

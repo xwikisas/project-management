@@ -93,9 +93,9 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
     {
         this.ssrx.use("css/projectmanagement/displayer/inline.css", Collections.singletonMap("forceSkinAction", true));
         if (workItemList.getItems().isEmpty()) {
-
+            // Inline in a sentence, the message is displayed inside the sentence, like the work item would be.
             return Collections.singletonList(
-                new MacroBlock("warning", Collections.emptyMap(), getNoItemsMessage(), false));
+                new MacroBlock("warning", Collections.emptyMap(), getNoItemsMessage(), context.isInline()));
         }
 
         WorkItem workItem = workItemList.getItems().get(0);

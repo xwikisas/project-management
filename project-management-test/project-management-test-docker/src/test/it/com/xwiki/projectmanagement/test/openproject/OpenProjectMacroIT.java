@@ -497,6 +497,25 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         }
     }
 
+    @Test
+    @Order(11)
+    void displayNoWorkPackageMessage(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // The macros displayed when viewing the page are rendered asynchronously.
+        String macro = "{{openproject instance=\"%s\" workItemsDisplayer=\"%s\" filters=\"{~\"query~\":"
+            + "{~\"filters~\":[{~\"property~\":~\"summary~\",~\"constraints~\":[{~\"operator~\":"
+            + "~\"contains~\",~\"value~\":~\"zzqqxx~\"}]}]}}\"/}}";
+        setup.createPage(testReference, String.format(macro + "%n%n" + macro + "%n%n" + macro, CONNECTION_ID,
+            "workItemsList", CONNECTION_ID, "workItemsSingle", CONNECTION_ID, "workItemInline"));
+        setup.gotoPage(testReference);
+
+        List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+        assertEquals(3, macros.size());
+        for (OpenProjectMacroElement element : macros) {
+            assertEquals("There are no work items matching this filter.", element.waitForWarningMessage());
+        }
+    }
+
     /**
      * @return the first of the given ids that identifies an existing resource under the given path
      */
