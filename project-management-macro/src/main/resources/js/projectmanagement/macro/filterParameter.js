@@ -37,19 +37,29 @@ setTimeout(function () {
           builder.setTitle(titleTemplate.replace('__N__', number));
         }
       };
+      // Several filter builders are the series of a chart: their configurations are kept even without constraints,
+      // since each one is a series. A single builder without constraints means no filter, i.e. an empty value, so that
+      // the macro editor doesn't add the parameter.
+      let serializeFilters = function () {
+        let cfgs = Array.from(livedataCfgs.values());
+        if (cfgs.length > 1) {
+          return JSON.stringify(cfgs);
+        }
+        return cfgs.length === 1 && cfgs[0].query.filters.length > 0 ? JSON.stringify(cfgs[0]) : '';
+      };
       let updateFilterInput = function (e, constraints) {
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
         }
         livedataCfgs.set(e.target, livedataCfg);
-        $('.proj-manag-filter').val(livedataCfgs.size > 1 ? JSON.stringify(Array.from(livedataCfgs.values())) : JSON.stringify(livedataCfg));
+        $('.proj-manag-filter').val(serializeFilters());
       };
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
         builderElem.on('builderRemoved', function (e) {
           livedataCfgs.delete(e.target);
-          $('.proj-manag-filter').val(JSON.stringify(Array.from(livedataCfgs.values())));
+          $('.proj-manag-filter').val(serializeFilters());
         });
       });
       // builder.instances.values().next().value.element.on('constraintsUpdated', updateFilterInput);

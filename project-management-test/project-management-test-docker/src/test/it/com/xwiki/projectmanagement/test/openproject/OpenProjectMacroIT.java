@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -43,6 +44,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -107,7 +109,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
     @Test
     @Order(1)
-    void defaultOpenprojectMacro(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
+    void defaultOpenprojectMacro(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.deletePage(testReference);
         OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
@@ -117,6 +119,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         macroModal.clickSubmit();
 
         saveAndGetFirstOPMacro(wysiwygEditPage);
+        // Without filters, the macro editor doesn't add an empty filters parameter.
+        assertThat(getContent(setup, testReference), not(containsString("filters=")));
         OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
         assertTrue(macro.hasLinkInCell("ID", 1));
         assertTrue(macro.hasLinkInCell(SUBJECT_COLUMN, 1));
@@ -247,6 +251,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         filterBuilderParameter.clearFilters();
         modal.clickSubmit();
         editPage.clickSaveAndView();
+        assertThat(getContent(setup, testReference), not(containsString("filters=")));
         page = new ViewPageWithOpenProjectMacro();
         macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
@@ -506,6 +511,11 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             }
         }
         throw new IllegalStateException(String.format("None of %s exists under [%s].", List.of(ids), path));
+    }
+
+    private static String getContent(TestUtils setup, TestReference testReference) throws Exception
+    {
+        return setup.rest().<Page>get(testReference).getContent();
     }
 
     private static void useSuggestFilter(OpenProjectMacroElement macro, String filteredColumn, String selectedValue)
