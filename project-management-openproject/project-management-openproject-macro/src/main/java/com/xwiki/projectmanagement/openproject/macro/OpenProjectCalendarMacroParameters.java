@@ -26,7 +26,6 @@ import java.util.List;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
-import org.xwiki.properties.annotation.PropertyMandatory;
 import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
@@ -65,7 +64,6 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param instance see {@link #getInstance()}.
      */
     @Override
-    @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {

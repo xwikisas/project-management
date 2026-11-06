@@ -192,6 +192,51 @@ class OpenProjectMacroDisplayListenersTest
     }
 
     @Test
+    void usesTheDefaultConnectionWhenTheMacroDoesntSetOne()
+    {
+        when(this.document.getDocumentReference()).thenReturn(new DocumentReference("xwiki", "Sandbox", "WebHome"));
+        when(this.openProjectConfiguration.getDefaultConnection()).thenReturn(connection("default"));
+
+        fireEvent(this.parameters);
+        assertEquals("default", this.parameters.getInstance());
+
+        OpenProjectMacroParameters blankInstance = new OpenProjectMacroParameters();
+        blankInstance.setInstance(" ");
+        fireEvent(blankInstance);
+        assertEquals("default", blankInstance.getInstance());
+    }
+
+    @Test
+    void keepsTheConnectionSetByTheMacro()
+    {
+        when(this.document.getDocumentReference()).thenReturn(new DocumentReference("xwiki", "Sandbox", "WebHome"));
+        when(this.openProjectConfiguration.getDefaultConnection()).thenReturn(connection("default"));
+        this.parameters.setInstance("other");
+
+        fireEvent(this.parameters);
+
+        assertEquals("other", this.parameters.getInstance());
+    }
+
+    @Test
+    void theDashboardConnectionTakesPrecedenceOverTheDefaultConnection()
+    {
+        configuredConnections("default", "dashboard");
+        selectedConnection("dashboard");
+        when(this.openProjectConfiguration.getDefaultConnection()).thenReturn(connection("default"));
+        OpenProjectMacroParameters macroParameters = new OpenProjectMacroParameters();
+
+        fireEvent(macroParameters);
+
+        assertEquals("dashboard", macroParameters.getInstance());
+    }
+
+    private static OpenProjectConnection connection(String name)
+    {
+        return new OpenProjectConnection(name, "https://" + name + ".example.com", "id", "secret", name);
+    }
+
+    @Test
     void ignoresDataThatIsNotMacroParameters()
     {
         selectedConnection("dashboard");

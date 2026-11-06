@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -212,12 +213,57 @@ class UserTokenCheckerTest
     }
 
     @Test
-    void warningWithoutConnectLinkWhenTheConnectionIsNotConfigured()
+    void unknownConnectionWarningListsTheConnections()
     {
+        mockConnections(CONNECTION_NAME, "other");
+        Block unknownHint = new WordBlock("unknown connection");
+        Translation translation = mock(Translation.class);
+        when(translation.render("unknown", "main, other")).thenReturn(unknownHint);
+        when(this.l10n.getTranslation("openproject.connection.unknown.hint")).thenReturn(translation);
+
         List<Block> result =
             this.checker.getWarningBlock("unknown", OpenProjectAccessStatus.NOT_CONFIGURED, false, this.macroContext);
 
-        assertEquals(List.of(this.hint), result.get(0).getChildren());
+        // No link to connect an OpenProject account, since there's no such connection.
+        assertEquals(List.of(unknownHint), result.get(0).getChildren());
+    }
+
+    @Test
+    void missingConnectionWarningListsTheConnections()
+    {
+        // Several connections and no default one.
+        mockConnections(CONNECTION_NAME, "other");
+        Block missingHint = new WordBlock("missing connection");
+        Translation translation = mock(Translation.class);
+        when(translation.render("main, other")).thenReturn(missingHint);
+        when(this.l10n.getTranslation("openproject.connection.missing.hint")).thenReturn(translation);
+
+        List<Block> result =
+            this.checker.getWarningBlock(null, OpenProjectAccessStatus.NOT_CONFIGURED, false, this.macroContext);
+
+        assertEquals(List.of(missingHint), result.get(0).getChildren());
+    }
+
+    @Test
+    void noConnectionWarning()
+    {
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of());
+        Block noConnectionHint = new WordBlock("no connection");
+        mockTranslation("openproject.connection.none.hint", noConnectionHint);
+
+        List<Block> result =
+            this.checker.getWarningBlock("", OpenProjectAccessStatus.NOT_CONFIGURED, false, this.macroContext);
+
+        assertEquals(List.of(noConnectionHint), result.get(0).getChildren());
+    }
+
+    private void mockConnections(String... names)
+    {
+        List<OpenProjectConnection> connections = new ArrayList<>();
+        for (String name : names) {
+            connections.add(new OpenProjectConnection(name, "https://op.example.org", null, null, null));
+        }
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(connections);
     }
 
     @Test

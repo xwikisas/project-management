@@ -273,6 +273,19 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     }
 
     /**
+     * Choose and save the connection used by the OpenProject macros that don't set their {@code instance} parameter.
+     *
+     * @param name the name of the default connection
+     * @since 1.4.0
+     */
+    public void setDefaultConnection(String name)
+    {
+        getFormContainerElement(SECTION_ID.toLowerCase() + "_OpenProject.Code.OpenProjectConfiguration")
+            .setFieldValue(getDriver().findElement(By.name(CONFIGURATION_CLASS + "_0_defaultConnection")), name);
+        clickSave(true);
+    }
+
+    /**
      * @return the validation message displayed for the work package search trigger, or an empty string if the value
      *     is valid
      */

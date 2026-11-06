@@ -30,6 +30,7 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -191,6 +192,10 @@ public class StylingSetupManager
      */
     public void useInstanceStyle(String instance)
     {
+        // E.g. a macro without connection, which displays a warning instead of the work packages.
+        if (StringUtils.isBlank(instance)) {
+            return;
+        }
         DocumentReference stylesDocRef = documentReferenceResolver.resolve(
             new EntityReference(instance, EntityType.DOCUMENT, OPEN_PROJECT_SSX_EXTENSIONS.getParent()));
         ssx.use(serializer.serialize(stylesDocRef));

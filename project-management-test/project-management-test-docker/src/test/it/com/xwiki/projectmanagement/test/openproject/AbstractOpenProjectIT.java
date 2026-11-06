@@ -27,11 +27,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
-import org.xwiki.test.ui.po.SuggestInputElement;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base class of the OpenProject functional tests. All the test classes share the same OpenProject instance, see
@@ -108,11 +106,7 @@ public abstract class AbstractOpenProjectIT
 
     protected static void selectInstanceFromModal(OpenProjectMacroEditModal macroModal, String connection)
     {
-        SuggestInputElement instanceSuggest = macroModal.getSuggestInput("instance").waitForSuggestions();
-        assertTrue(instanceSuggest.getSuggestions().stream()
-            .anyMatch(suggestion -> connection.equals(suggestion.getLabel())));
-
-        instanceSuggest.selectByValue(connection);
+        macroModal.selectInstance(connection);
         // The Live Data page object needs the macro to have an id.
         macroModal.setRandomId();
     }

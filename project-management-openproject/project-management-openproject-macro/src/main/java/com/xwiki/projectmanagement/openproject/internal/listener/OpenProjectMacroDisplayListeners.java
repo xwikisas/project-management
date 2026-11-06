@@ -118,6 +118,22 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
 
     private void handleBeforeOpenProjectMacroExecution(Object parameters)
     {
+        handleDashboardMacroExecution(parameters);
+
+        // The macros that don't specify their connection use the default one (e.g. the only one configured).
+        if (parameters instanceof OpenProjectInstanceHolder) {
+            OpenProjectInstanceHolder instanceHolder = (OpenProjectInstanceHolder) parameters;
+            if (StringUtils.isBlank(instanceHolder.getInstance())) {
+                OpenProjectConnection defaultConnection = openProjectConfiguration.getDefaultConnection();
+                if (defaultConnection != null) {
+                    instanceHolder.setInstance(defaultConnection.getConnectionName());
+                }
+            }
+        }
+    }
+
+    private void handleDashboardMacroExecution(Object parameters)
+    {
         XWikiContext xContext = xContextProvider.get();
         XWikiDocument currentDoc = xContext.getDoc();
 

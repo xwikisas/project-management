@@ -193,7 +193,11 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public SuggestInputElement selectInstance(String connectionId)
     {
-        SuggestInputElement instanceSuggest = getSuggestInput(INSTANCE_PARAMETER).click().waitForSuggestions();
+        closeSuggestDropdowns();
+        // The instance parameter is optional, so it can be displayed after the groups of parameters, out of view.
+        WebElement input = getMacroParameterInput(INSTANCE_PARAMETER);
+        getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
+        SuggestInputElement instanceSuggest = new SuggestInputElement(input).click().waitForSuggestions();
         instanceSuggest.selectByValue(connectionId);
         return instanceSuggest;
     }

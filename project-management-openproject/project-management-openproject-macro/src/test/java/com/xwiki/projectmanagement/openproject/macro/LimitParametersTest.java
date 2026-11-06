@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.function.ToIntFunction;
@@ -128,10 +127,7 @@ class LimitParametersTest
     private <T> T populate(Supplier<T> parameters, Map<String, String> values) throws Exception
     {
         T bean = parameters.get();
-        Map<String, String> allValues = new HashMap<>(values);
-        // Mandatory.
-        allValues.put("instance", "main");
-        this.beanManager.populate(bean, allValues);
+        this.beanManager.populate(bean, values);
         return bean;
     }
 }

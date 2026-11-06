@@ -22,7 +22,6 @@ package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
-import org.xwiki.properties.annotation.PropertyMandatory;
 import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
@@ -61,7 +60,6 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     /**
      * @param instance see {@link #getInstance()}.
      */
-    @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
