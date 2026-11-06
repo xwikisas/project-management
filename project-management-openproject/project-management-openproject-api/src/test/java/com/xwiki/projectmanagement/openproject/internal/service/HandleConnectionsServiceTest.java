@@ -354,7 +354,7 @@ class HandleConnectionsServiceTest
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = { "serverUrl", "openproject.example.com", "file:///etc/passwd",
-        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/", "http://", "https:///path",
+        "ftp://openproject.example.com", "jar:http://openproject.example.com/a.jar!/a", "http://", "https:///path",
         "http://open project", " https://openproject.example.com" })
     void handleConnectionRefusesInvalidServerURL(String serverURL) throws Exception
     {
@@ -373,7 +373,7 @@ class HandleConnectionsServiceTest
 
     @ParameterizedTest
     @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject",
-        "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com/" })
+        "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com" })
     void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
     {
         stubInstanceId(serverURL);
@@ -385,6 +385,18 @@ class HandleConnectionsServiceTest
         assertEquals(serverURL, config.getStringValue("serverURL"));
         // The instance id is retrieved from the given server.
         assertEquals("instanceId", config.getStringValue("instanceId"));
+    }
+
+    @Test
+    void handleConnectionSavesServerURLWithoutTrailingSlash() throws Exception
+    {
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setServerURL(SERVER_URL + "//");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        // The links built from the server URL, by appending a path to it, don't contain a double slash.
+        assertEquals(SERVER_URL, getConnectionPage().getXObject(CONNECTION_CLASS).getStringValue("serverURL"));
     }
 
     @Test

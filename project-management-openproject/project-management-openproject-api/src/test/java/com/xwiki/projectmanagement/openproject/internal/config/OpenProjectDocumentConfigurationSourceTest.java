@@ -155,7 +155,7 @@ class OpenProjectDocumentConfigurationSourceTest
 
         BaseObject baseObject2 = new BaseObject();
         baseObject2.setStringValue("connectionName", "connection2");
-        baseObject2.setStringValue("serverURL", "serverURL2");
+        baseObject2.setStringValue("serverURL", "https://openproject.example.org/");
         baseObject2.setStringValue("clientId", "clientId2");
         baseObject2.setStringValue("clientSecret", "clientSecret2");
         baseObject2.setStringValue("accessMode", "PUBLIC_DATA");
@@ -184,7 +184,8 @@ class OpenProjectDocumentConfigurationSourceTest
         connection = connections.get(1);
 
         assertEquals("connection2", connection.getConnectionName());
-        assertEquals("serverURL2", connection.getServerURL());
+        // The trailing slash is removed, so that the links built from the server URL don't contain a double slash.
+        assertEquals("https://openproject.example.org", connection.getServerURL());
         assertEquals("clientId2", connection.getClientId());
         assertEquals("clientSecret2", connection.getClientSecret());
         assertEquals(OpenProjectAccessMode.PUBLIC_DATA, connection.getAccessMode());
