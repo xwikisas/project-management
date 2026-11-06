@@ -117,6 +117,36 @@
   </build>
   <profiles>
     <profile>
+      <id>macos</id>
+      <!-- When XWiki runs outside Docker (the default Jetty standalone engine), it reaches the OpenProject container
+           through the Docker bridge (172.17.0.1), which only exists on Linux. On macOS, run XWiki in a container
+           instead, so that it shares the network of the browser and of OpenProject. The default Tomcat image uses a
+           JDK that XWiki 15.10 doesn't support, hence the explicit tag. Both can still be overridden with -D. -->
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <xwiki.test.ui.servletEngine>tomcat</xwiki.test.ui.servletEngine>
+        <xwiki.test.ui.servletEngineTag>9-jdk17</xwiki.test.ui.servletEngineTag>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <systemPropertyVariables>
+                <xwiki.test.ui.servletEngine>${xwiki.test.ui.servletEngine}</xwiki.test.ui.servletEngine>
+                <xwiki.test.ui.servletEngineTag>${xwiki.test.ui.servletEngineTag}</xwiki.test.ui.servletEngineTag>
+              </systemPropertyVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>clover</id>
       <!-- Add the Clover JAR to the WAR so that it's available at runtime when XWiki executes.
            It's needed because instrumented jars in the WAR will call Clover APIs at runtime when they execute. -->
