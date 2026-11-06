@@ -57,11 +57,19 @@ public final class OpenProjectFilterHandler
         Set.of("startDate", "dueDate", "creationDate", "updateDate", WorkItem.KEY_DATE_RANGE);
 
     private static final Set<String> OPERATORS_EMPTY_VALS =
-        Set.of("t", "w", "*", "!*", String.valueOf('o'), "c");
+        Set.of("t", "w", "*", "!*", String.valueOf('o'), "c", "empty");
 
     private static final Set<String> LIST_FILTERS =
         Set.of(WorkItem.KEY_STATUS, WorkItem.KEY_IDENTIFIER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_CREATOR,
             WorkItem.KEY_PRIORITY, WorkItem.KEY_TYPE, WorkItem.KEY_REPORTER, WorkItem.KEY_PROJECT);
+
+    private static final Set<String> TEXT_FILTERS = Set.of(WorkItem.KEY_SUMMARY, WorkItem.KEY_DESCRIPTION);
+
+    /**
+     * The OpenProject operators of the filters on the subject and on the description, which can't match a text
+     * exactly.
+     */
+    private static final Set<String> TEXT_FILTER_OPERATORS = Set.of("~", "!~");
 
     private OpenProjectFilterHandler()
     {
@@ -269,13 +277,18 @@ public final class OpenProjectFilterHandler
         List<LiveDataQuery.Constraint> filterConstraints)
     {
         Map<String, List<String>> result = new HashMap<>();
+        String filterType = getFilterType(propertyName);
+        Set<String> supportedOperators = TEXT_FILTERS.contains(propertyName) ? TEXT_FILTER_OPERATORS : null;
         for (LiveDataQuery.Constraint constraint : filterConstraints) {
-            String operatorValue = OpenProjectMapper.mapLivedataOperator(constraint.getOperator());
-            if (LIST_FILTERS.contains(propertyName) && "contains".equals(constraint.getOperator())) {
-                operatorValue = OpenProjectMapper.mapLivedataOperator("equals");
+            LiveDataQuery.Constraint mappedConstraint =
+                OpenProjectMapper.mapConstraint(filterType, constraint, supportedOperators, propertyName);
+            if (mappedConstraint == null) {
+                continue;
             }
+            String operatorValue = mappedConstraint.getOperator();
             List<String> values =
-                convertToOpenProjectValue(propertyName, (String) constraint.getValue(), constraint.getOperator());
+                convertToOpenProjectValue(propertyName, (String) mappedConstraint.getValue(),
+                    constraint.getOperator());
             if (result.containsKey(operatorValue)) {
                 List<String> currentValues = result.get(operatorValue);
                 currentValues.addAll(values);
@@ -284,6 +297,26 @@ public final class OpenProjectFilterHandler
             }
         }
         return result;
+    }
+
+    /**
+     * @return the Live Data filter of a generic work item property, as configured in the OpenProject Live Data
+     *     configuration, or {@code null} for the other properties, e.g. the OpenProject filters on the work package
+     *     fields, whose constraints already use OpenProject operators
+     */
+    private static String getFilterType(String propertyName)
+    {
+        String filterType = null;
+        if (LIST_FILTERS.contains(propertyName)) {
+            filterType = OpenProjectMapper.FILTER_LIST;
+        } else if (PROPERTIES_DATE.contains(propertyName)) {
+            filterType = OpenProjectMapper.FILTER_DATE;
+        } else if (TEXT_FILTERS.contains(propertyName)) {
+            filterType = OpenProjectMapper.FILTER_TEXT;
+        } else if (WorkItem.KEY_PROGRESS.equals(propertyName)) {
+            filterType = OpenProjectMapper.FILTER_NUMBER;
+        }
+        return filterType;
     }
 
     private static String convertMapOfFiltersToString(Map<String, Object> filters) throws ProjectManagementException

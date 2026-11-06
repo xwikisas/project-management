@@ -30,6 +30,11 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
+import static com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectMapper.FILTER_BOOLEAN;
+import static com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectMapper.FILTER_LIST;
+import static com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectMapper.FILTER_NUMBER;
+import static com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectMapper.FILTER_TEXT;
+
 /**
  * Creates the Live Data property descriptors of the work package fields exposed by
  * {@link OpenProjectWorkItemFields}.
@@ -39,14 +44,6 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  */
 public final class WorkPackageFieldDescriptors
 {
-    private static final String FILTER_LIST = "list";
-
-    private static final String FILTER_TEXT = "text";
-
-    private static final String FILTER_NUMBER = "number";
-
-    private static final String FILTER_BOOLEAN = "boolean";
-
     private static final String OPERATOR_EQUALS = "=";
 
     private static final String OPERATOR_NOT_EQUALS = "!";
@@ -135,7 +132,7 @@ public final class WorkPackageFieldDescriptors
         if (field.getFilterKey() == null || valueType == null) {
             return null;
         }
-        String filterId = getFilterId(valueType);
+        String filterId = OpenProjectWorkItemFields.getFilterType(field);
         if (filterId == null) {
             return null;
         }
@@ -170,22 +167,6 @@ public final class WorkPackageFieldDescriptors
                 filter.addOperator(operator.getKey(), operator.getValue());
             }
         }
-    }
-
-    private static String getFilterId(String valueType)
-    {
-        String filterId = null;
-        if (valueType.startsWith("[]")) {
-            filterId = FILTER_LIST;
-        } else if (valueType.endsWith("String")) {
-            filterId = FILTER_TEXT;
-        } else if (valueType.endsWith("Integer") || valueType.endsWith("Float")) {
-            filterId = FILTER_NUMBER;
-        } else if (valueType.endsWith("Boolean")) {
-            filterId = FILTER_BOOLEAN;
-        }
-        // The dates and the other types of values would need to be converted to the format of OpenProject.
-        return filterId;
     }
 
     private static Map<String, String> orderedMap(String... keysAndValues)

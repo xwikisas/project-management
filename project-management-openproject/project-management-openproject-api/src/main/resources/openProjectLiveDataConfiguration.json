@@ -386,95 +386,25 @@
     "filters": [
       {
         "id": "text",
-        "operators": [
-          {
-            "id": "~",
-            "name": "Contains words"
-          },
-          {
-            "id": "!~",
-            "name": "Does not contain words"
-          },
-          {
-            "id": "**",
-            "name": "Search string"
-          },
-          {
-            "id": "*",
-            "name": "Not empty"
-          },
-          {
-            "id": "!*",
-            "name": "Not set"
-          }
-        ],
         "defaultOperator": "~"
       },
       {
         "id": "number",
-        "operators": [
-          {
-            "id": ">=",
-            "name": "Greater of equal"
-          },
-          {
-            "id": "<=",
-            "name": "Lower or equal"
-          },
-          {
-            "id": "=",
-            "name": "Equals"
-          },
-          {
-            "id": "!",
-            "name": "Not equal"
-          }
-        ],
         "defaultOperator": "="
       },
       {
         "id": "boolean",
-        "operators": [
-          {
-            "id": "=",
-            "name": "Equals"
-          },
-          {
-            "id": "!",
-            "name": "Not equal"
-          }
-        ],
         "trueValue": "true",
         "falseValue": "false",
         "defaultOperator": "="
       },
       {
         "id": "date",
-        "operators": [
-          {
-            "id": "=",
-            "name": "Equals"
-          },
-          {
-            "id": "!",
-            "name": "Not equal"
-          }
-        ],
         "dateFormat": "yyyy-MM-dd HH:mm",
         "defaultOperator": "between"
       },
       {
         "id": "list",
-        "operators": [
-          {
-            "id": "=",
-            "name": "Equals"
-          },
-          {
-            "id": "!",
-            "name": "Not equal"
-          }
-        ],
         "defaultOperator": "="
       }
     ]
