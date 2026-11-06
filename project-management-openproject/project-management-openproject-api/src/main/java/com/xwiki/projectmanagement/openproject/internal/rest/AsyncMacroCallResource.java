@@ -32,7 +32,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.apache.commons.lang3.EnumUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
@@ -83,8 +82,9 @@ public class AsyncMacroCallResource extends XWikiResource
 
     /**
      * @param wiki the wiki that contains the OpenProject instance.
-     * @param displayer the displayer that should be used for the macro call. The value must be one of the
-     *     {@link WorkItemsDisplayer}.
+     * @param displayer the displayer that should be used for the macro call: a value of the {@code displayer} macro
+     *     parameter (e.g. {@code single}) or a legacy name (e.g. {@code workItemsSingle}), see
+     *     {@link WorkItemsDisplayer#fromString(String)}
      * @param instance the name of the OpenProject connection configuration.
      * @param workPackageId the id of the work package that should be displayed.
      * @return the async placeholder that will be replaced with the rendered macro; 400 if the displayer or the work
@@ -100,7 +100,7 @@ public class AsyncMacroCallResource extends XWikiResource
         @PathParam("identifier") String workPackageId
     )
     {
-        WorkItemsDisplayer workItemsDisplayer = EnumUtils.getEnum(WorkItemsDisplayer.class, displayer);
+        WorkItemsDisplayer workItemsDisplayer = WorkItemsDisplayer.fromString(displayer);
         if (workItemsDisplayer == null || StringUtils.isEmpty(instance) || workPackageId == null
             || !WORK_PACKAGE_ID_PATTERN.matcher(workPackageId).matches())
         {

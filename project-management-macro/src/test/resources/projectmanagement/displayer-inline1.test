@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Inline displayer test - display a work item inline, its identifier linked to its location.
 .#-----------------------------------------------------
-See {{test workItemsDisplayer="workItemInline"/}}.
+See {{test displayer="inline"/}}.
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

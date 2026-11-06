@@ -42,9 +42,9 @@ class WorkPackageDisplayerParametersTest
     void create() throws Exception
     {
         ProjectManagementMacroParameters parameters =
-            WorkPackageDisplayerParameters.create(WorkItemsDisplayer.workItemsSingle, "instance", "123");
+            WorkPackageDisplayerParameters.create(WorkItemsDisplayer.SINGLE, "instance", "123");
 
-        assertEquals(WorkItemsDisplayer.workItemsSingle, parameters.getWorkItemsDisplayer());
+        assertEquals(WorkItemsDisplayer.SINGLE, parameters.getDisplayer());
         // The Live Data displayers get the work items from the project management source, with OpenProject properties.
         assertEquals("projectmanagement", parameters.getSource());
         assertEquals("identifier,type,summary,description,startDate,assignees", parameters.getProperties());
@@ -64,9 +64,9 @@ class WorkPackageDisplayerParametersTest
     void createKeepsTheConnectionNameASingleSourceParameter() throws Exception
     {
         ProjectManagementMacroParameters parameters =
-            WorkPackageDisplayerParameters.create(WorkItemsDisplayer.liveData, "My&instance=x y", "1");
+            WorkPackageDisplayerParameters.create(WorkItemsDisplayer.TABLE, "My&instance=x y", "1");
 
-        assertEquals(WorkItemsDisplayer.liveData, parameters.getWorkItemsDisplayer());
+        assertEquals(WorkItemsDisplayer.TABLE, parameters.getDisplayer());
         assertEquals("instance=My%26instance%3Dx+y&client=openproject&translationPrefix=openproject.",
             parameters.getSourceParameters());
     }

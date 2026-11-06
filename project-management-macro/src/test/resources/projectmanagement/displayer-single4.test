@@ -5,7 +5,7 @@
 .# the first one of the client), which has a key, shown in the header instead of #<identifier>, and a property named
 .# by the Live Data configuration of its client, since it has no translation.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsSingle" sort="identifier:asc"/}}
+{{test displayer="single" sort="identifier:asc"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

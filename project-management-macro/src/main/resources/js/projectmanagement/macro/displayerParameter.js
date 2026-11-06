@@ -18,15 +18,39 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 require(['jquery'], function ($) {
+  // The keys are the values of the displayer parameter.
   const unneededParams = {
-    liveData: [],
-    liveDataCards: [],
-    workItemsSingle: ["sort", "offset", "limit", "properties"],
-    workItemsList: ["properties"],
-    workItemsEnum: ["properties"]
+    single: ["sort", "offset", "limit", "properties"],
+    list: ["properties"],
+    enum: ["properties"]
+  };
+  // The values of the deprecated workItemsDisplayer parameter, and the matching values of the displayer parameter.
+  const legacyDisplayers = {
+    liveData: 'table',
+    liveDataCards: 'cards',
+    workItemsSingle: 'single',
+    workItemInline: 'inline',
+    workItemsList: 'list',
+    workItemsEnum: 'enum'
+  };
+  // Edit a macro using the deprecated parameter with the displayer one, so that the displayer chosen in the editor,
+  // the default one included, isn't overridden by the deprecated parameter left in the macro.
+  let migrateLegacyDisplayer = function () {
+    let legacyInput = $('.macro-editor :input[name="workItemsDisplayer"]');
+    let displayerSelect = $('.macro-editor select[name="displayer"]');
+    let legacyValue = Object.keys(legacyDisplayers).find(key => key.toLowerCase() ===
+      (legacyInput.val() || '').toLowerCase());
+    if (legacyValue && displayerSelect.length > 0) {
+      displayerSelect.val(legacyDisplayers[legacyValue]);
+      legacyInput.val('');
+    }
+  };
+  let initParams = function () {
+    migrateLegacyDisplayer();
+    hideShowParams();
   };
   let hideShowParams = function () {
-    let displayerVal = $('.macro-editor select[name="workItemsDisplayer"]').val();
+    let displayerVal = ($('.macro-editor select[name="displayer"]').val() || '').toLowerCase();
     $('.macro-editor').find('.macro-parameter').each(function () {
       let element = $(this);
       let foundInput = element.find('.macro-parameter-field :input');
@@ -37,7 +61,7 @@ require(['jquery'], function ($) {
       }
     });
   };
-  $(document).on('change', '.macro-editor select[name="workItemsDisplayer"]', hideShowParams);
+  $(document).on('change', '.macro-editor select[name="displayer"]', hideShowParams);
   $(document).on('show.bs.modal', '.modal', function () {
     let modal = $(this);
     setTimeout(function () {
@@ -47,13 +71,13 @@ require(['jquery'], function ($) {
         return;
       }
       if (!content[0].classList.contains('loading')) {
-        hideShowParams();
+        initParams();
         return;
       }
       const observer = new MutationObserver(() => {
         if (!content[0].classList.contains('loading')) {
           observer.disconnect();
-          hideShowParams();
+          initParams();
         }
       });
 
@@ -63,7 +87,8 @@ require(['jquery'], function ($) {
         subtree: true
       });
     });
-    setTimeout(hideShowParams);
+    setTimeout(initParams);
   });
-  hideShowParams();
+  // The script is loaded by the displayer field, i.e. once the macro editor is already displayed.
+  initParams();
 });

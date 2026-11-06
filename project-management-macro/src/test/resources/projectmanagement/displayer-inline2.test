@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Inline displayer test - display a work item whose identifier has no location, so it is not linked.
 .#-----------------------------------------------------
-See {{test workItemsDisplayer="workItemInline" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}.
+See {{test displayer="INLINE" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}.
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

@@ -95,9 +95,9 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         String macro = "{{openproject instance=\"" + CONNECTION_ID + "\" identifier=\"%1$s\"%2$s/}}";
         setup.createPage(testReference, String.join("\n\n",
             String.format(macro, identifier, " id=\"keys\""),
-            String.format(macro, getKey(second), " workItemsDisplayer=\"workItemsSingle\""),
-            String.format(macro, identifier, " workItemsDisplayer=\"workItemsList\""),
-            "Fixed issues: " + String.format(macro, identifier, " workItemsDisplayer=\"workItemsEnum\"")));
+            String.format(macro, getKey(second), " displayer=\"single\""),
+            String.format(macro, identifier, " displayer=\"list\""),
+            "Fixed issues: " + String.format(macro, identifier, " displayer=\"enum\"")));
 
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(4, macros.size());

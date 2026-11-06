@@ -4,7 +4,7 @@
 .# Single displayer test - display a work item with incomplete values: its identifier has no location, so it isn't
 .# linked.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsSingle" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}
+{{test displayer="single" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"WorkItem2~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

@@ -156,7 +156,7 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
                   parameters: {
                     instance: instance,
                     identifier: wp.identifier.value,
-                    workItemsDisplayer: 'workItemInline'
+                    displayer: 'inline'
                   }
                 }
               }

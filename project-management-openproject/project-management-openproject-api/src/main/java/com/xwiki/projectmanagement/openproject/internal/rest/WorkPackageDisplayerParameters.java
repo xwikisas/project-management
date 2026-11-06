@@ -61,7 +61,7 @@ public final class WorkPackageDisplayerParameters
         String workPackageId) throws JsonProcessingException
     {
         ProjectManagementMacroParameters parameters = new ProjectManagementMacroParameters();
-        parameters.setWorkItemsDisplayer(displayer);
+        parameters.setDisplayer(displayer);
         // The Live Data displayers get the work items from the project management Live Data source, and need
         // properties known to OpenProject, unlike the generic default ones.
         parameters.setSource(LIVE_DATA_SOURCE);

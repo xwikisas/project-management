@@ -73,7 +73,7 @@ class AsyncMacroCallResourceTest
 
     private static final String CURRENT_WIKI = "xwiki";
 
-    private static final String SINGLE = WorkItemsDisplayer.workItemsSingle.name();
+    private static final String SINGLE = "single";
 
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
@@ -127,7 +127,8 @@ class AsyncMacroCallResourceTest
         when(this.authorizationManager.hasAccess(Right.VIEW, new WikiReference(WIKI))).thenReturn(true);
         when(this.wikiDescriptorManager.exists(WIKI)).thenReturn(true);
         when(this.componentManager.getInstance(ProjectManagementAsyncRenderer.class)).thenReturn(this.asyncRenderer);
-        when(this.componentManager.getInstance(Macro.class, SINGLE)).thenReturn(this.displayerMacro);
+        when(this.componentManager.getInstance(Macro.class, WorkItemsDisplayer.SINGLE.getMacroHint()))
+            .thenReturn(this.displayerMacro);
         when(this.rendererResponse.getStatus()).thenReturn(mock(AsyncRendererJobStatus.class));
         when(this.rendererResponse.getJobIdHTTPPath()).thenReturn("job/id");
         when(this.rendererResponse.getAsyncClientId()).thenReturn("42");
@@ -148,7 +149,7 @@ class AsyncMacroCallResourceTest
         // The work package is rendered with the parameters of the work package displayer.
         ProjectManagementMacroParameters parameters =
             (ProjectManagementMacroParameters) this.asyncRenderer.getParameters();
-        assertEquals(WorkItemsDisplayer.workItemsSingle, parameters.getWorkItemsDisplayer());
+        assertEquals(WorkItemsDisplayer.SINGLE, parameters.getDisplayer());
         assertEquals("instance=My%26instance%3Dx&client=openproject&translationPrefix=openproject.",
             parameters.getSourceParameters());
         // The rendering job takes the wiki of the request as context wiki, and the context wiki is restored after.
@@ -163,11 +164,12 @@ class AsyncMacroCallResourceTest
         when(this.componentManager.getInstance(Macro.class, WorkItemLivedataDisplayer.ROLE_HINT))
             .thenReturn(this.displayerMacro);
 
+        // The legacy name of a displayer (the value of the deprecated workItemsDisplayer parameter) is accepted too.
         Response response = this.resource.getAsyncCall(WIKI, "liveData", "instance", "123");
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(WorkItemsDisplayer.liveData,
-            ((ProjectManagementMacroParameters) this.asyncRenderer.getParameters()).getWorkItemsDisplayer());
+        assertEquals(WorkItemsDisplayer.TABLE,
+            ((ProjectManagementMacroParameters) this.asyncRenderer.getParameters()).getDisplayer());
     }
 
     @Test

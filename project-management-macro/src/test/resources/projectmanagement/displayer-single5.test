@@ -4,7 +4,7 @@
 .# Single displayer test - display a work item whose values hold wiki syntax, HTML and javascript: locations: they
 .# are displayed as text, never interpreted.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsSingle" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"Hostile<b>~"}]}]}}"/}}
+{{test displayer="single" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"Hostile<b>~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

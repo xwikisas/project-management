@@ -95,8 +95,8 @@ class AbstractProjectManagementMacroTest
     void executeWithSingleDisplayer() throws Exception
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
-        params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
-        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name())).thenReturn(
+        params.setDisplayer(WorkItemsDisplayer.SINGLE);
+        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.SINGLE.getMacroHint())).thenReturn(
             displayerMacro);
         List<Block> expected = List.of(new WordBlock("rendered"));
         when(asyncExecutor.execute(eq(displayerMacro), eq(params), eq("content"), eq(macroTransformationContext),
@@ -113,8 +113,8 @@ class AbstractProjectManagementMacroTest
     void executeStandaloneDisplayerInline() throws Exception
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
-        params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
-        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name())).thenReturn(
+        params.setDisplayer(WorkItemsDisplayer.SINGLE);
+        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.SINGLE.getMacroHint())).thenReturn(
             displayerMacro);
         when(displayerMacro.supportsInlineMode()).thenReturn(false);
         when(macroTransformationContext.isInline()).thenReturn(true);
@@ -131,14 +131,14 @@ class AbstractProjectManagementMacroTest
     void executeWithMissingDisplayer() throws Exception
     {
         ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
-        params.setWorkItemsDisplayer(WorkItemsDisplayer.workItemsSingle);
-        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.workItemsSingle.name()))
+        params.setDisplayer(WorkItemsDisplayer.SINGLE);
+        when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.SINGLE.getMacroHint()))
             .thenThrow(new ComponentLookupException("missing"));
 
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> abstractMacro.execute(params, "", macroTransformationContext));
 
-        assertEquals("Could not find the displayer [workItemsSingle].", exception.getMessage());
+        assertEquals("Could not find the displayer [single].", exception.getMessage());
     }
 
     @Test

@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Enum displayer test - display the identifiers of the work items in a standalone paragraph.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsEnum"/}}
+{{test displayer="enum"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

@@ -4,7 +4,7 @@
 .# Enum displayer test - the work items left out because of the limit are counted after the displayed ones, and
 .# linked to the list of all the matching work items, in the client.
 .#-----------------------------------------------------
-Fixed issues: {{test workItemsDisplayer="workItemsEnum" limit="1" offset="1"/}}
+Fixed issues: {{test displayer="enum" limit="1" offset="1"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

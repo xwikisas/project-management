@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Enum displayer test - display the work items in the descending order of their identifiers.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsEnum" sort="identifier:desc"/}}
+{{test displayer="enum" sort="identifier:desc"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

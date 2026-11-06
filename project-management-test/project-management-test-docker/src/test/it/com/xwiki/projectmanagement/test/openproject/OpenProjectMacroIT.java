@@ -178,7 +178,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     @Order(3)
     void checkLivedataSuggesters(TestUtils setup, TestReference testReference) throws OperationNotSupportedException
     {
-        // Start from a macro that uses the single item displayer.
+        // Start from a macro that uses the single item displayer, with the deprecated parameter: the editor shows it
+        // as the displayer parameter, and choosing the default displayer replaces it.
         setup.createPage(testReference, String.format(
             "{{openproject instance=\"%s\" id=\"checkLivedataSuggesters\" workItemsDisplayer=\"workItemsSingle\"/}}",
             CONNECTION_ID));
@@ -471,7 +472,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
                 + "* first%n* second%n%n- [x] done item%n- [ ] open item%n", reference, quickInfoId));
         try {
             setup.createPage(testReference, String.format("{{openproject instance=\"%1$s\" identifier=\"%2$s\" "
-                + "workItemsDisplayer=\"workItemsSingle\"/}}%n%n{{openproject instance=\"%1$s\" id=\"description\" "
+                + "displayer=\"single\"/}}%n%n{{openproject instance=\"%1$s\" id=\"description\" "
                 + "identifier=\"%2$s\" properties=\"identifier,description\"/}}", CONNECTION_ID, describedId));
 
             List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();

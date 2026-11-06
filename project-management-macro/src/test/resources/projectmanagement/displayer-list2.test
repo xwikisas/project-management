@@ -4,7 +4,7 @@
 .# List displayer test - the work items left out because of the limit are counted and linked to the list of all the
 .# matching work items, in the client, with the message translated for the client.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsList" limit="2" sort="identifier:desc"/}}
+{{test displayer="list" limit="2" sort="identifier:desc"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------

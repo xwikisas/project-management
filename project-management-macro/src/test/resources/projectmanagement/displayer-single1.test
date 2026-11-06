@@ -3,7 +3,7 @@
 .input|xwiki/2.0
 .# Single displayer test - display a filter that returns no work items, with the message translated for the client.
 .#-----------------------------------------------------
-{{test workItemsDisplayer="workItemsSingle" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
+{{test displayer="single" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
