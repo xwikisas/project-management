@@ -220,13 +220,29 @@ public final class WorkPackageFieldsParser
                 Map.Entry<String, JsonNode> operatorDependency = operatorDependencies.next();
                 operators.add(
                     URLDecoder.decode(getLastPathSegment(operatorDependency.getKey()), StandardCharsets.UTF_8));
-                JsonNode valueType = operatorDependency.getValue().path(VALUES).path(TYPE);
-                if (field.getFilterValueType() == null && valueType.isTextual()) {
-                    field.setFilterValueType(valueType.asText());
-                }
+                setFilterValueType(field, operatorDependency.getValue().path(VALUES).path(TYPE));
             }
         }
         field.setFilterOperators(operators);
+    }
+
+    /**
+     * Sets the type of the values of the filter of a field from the values taken by one of its operators. The date
+     * filters also have operators taking a number of days (e.g. "in less than N days"), listed first: they still
+     * filter dates.
+     */
+    private static void setFilterValueType(WorkPackageField field, JsonNode valueType)
+    {
+        if (valueType.isTextual() && (field.getFilterValueType() == null
+            || (isDateType(valueType.asText()) && !isDateType(field.getFilterValueType()))))
+        {
+            field.setFilterValueType(valueType.asText());
+        }
+    }
+
+    private static boolean isDateType(String valueType)
+    {
+        return valueType.endsWith("Date") || valueType.endsWith("DateTime");
     }
 
     private static String toText(String key, JsonNode value)

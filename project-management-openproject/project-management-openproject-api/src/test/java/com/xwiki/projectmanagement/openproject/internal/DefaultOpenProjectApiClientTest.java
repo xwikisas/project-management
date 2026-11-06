@@ -153,7 +153,7 @@ class DefaultOpenProjectApiClientTest
 
         // Only the columns holding a property are fields, not the relation columns.
         assertEquals(List.of("id", "subject", "responsible", "category", "targetVersions", "observedInVersions",
-            "estimatedTime", "customField20", "customField10", "customField5"),
+            "estimatedTime", "startDate", "customField20", "customField10", "customField5"),
             fields.stream().map(WorkPackageField::getKey).collect(Collectors.toList()));
 
         WorkPackageField targetVersions = fields.get(4);
@@ -170,13 +170,18 @@ class DefaultOpenProjectApiClientTest
         assertNull(category.getFilterValueType());
         assertEquals(List.of(), category.getFilterOperators());
 
-        WorkPackageField labels = fields.get(9);
+        WorkPackageField labels = fields.get(10);
         assertEquals("Labels", labels.getName());
         assertEquals("customField5", labels.getFilterKey());
         assertTrue(labels.getFilterOperators().contains("&="));
         assertTrue(labels.isCustomField());
 
-        assertEquals("[1]String", fields.get(8).getFilterValueType());
+        assertEquals("[1]String", fields.get(9).getFilterValueType());
+
+        // A date filter also has operators taking a number of days, e.g. "in less than N days": it takes dates.
+        WorkPackageField startDate = fields.get(7);
+        assertEquals("[1]Date", startDate.getFilterValueType());
+        assertTrue(startDate.getFilterOperators().containsAll(List.of("<t+", "=d", "<>d", "!*")));
     }
 
     @Test

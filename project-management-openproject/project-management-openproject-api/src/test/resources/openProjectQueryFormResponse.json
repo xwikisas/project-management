@@ -42,6 +42,11 @@
             },
             {
               "_type": "QueryColumn::Property",
+              "id": "startDate",
+              "name": "Start date"
+            },
+            {
+              "_type": "QueryColumn::Property",
               "id": "customField20",
               "name": "Difficulty"
             },
@@ -467,6 +472,48 @@
                 "_links": {
                   "self": {
                     "href": "/api/v3/queries/filter_instance_schemas/observedInVersion"
+                  }
+                }
+              },
+              {
+                "_dependencies": [
+                  {
+                    "dependencies": {
+                      "/api/v3/queries/operators/%3Ct%2B": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/%3Et%2B": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/t%2B": {
+                        "values": {
+                          "type": "[1]Integer"
+                        }
+                      },
+                      "/api/v3/queries/operators/t": {},
+                      "/api/v3/queries/operators/w": {},
+                      "/api/v3/queries/operators/%3Dd": {
+                        "values": {
+                          "type": "[1]Date"
+                        }
+                      },
+                      "/api/v3/queries/operators/%3C%3Ed": {
+                        "values": {
+                          "type": "[2]Date"
+                        }
+                      },
+                      "/api/v3/queries/operators/%21%2A": {},
+                      "/api/v3/queries/operators/%2A": {}
+                    }
+                  }
+                ],
+                "_links": {
+                  "self": {
+                    "href": "/api/v3/queries/filter_instance_schemas/startDate"
                   }
                 }
               }
