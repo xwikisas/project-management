@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
+
 /**
  * Parameters for the OpenProject Project News macro.
  *
@@ -27,19 +29,51 @@ package com.xwiki.projectmanagement.openproject.macro;
  */
 public class OpenProjectNewsMacroParameters extends BaseDirectOpenProjectMacroParameters
 {
-    private int count = 5;
+    private static final int DEFAULT_LIMIT = 5;
+
+    private Integer limit;
+
+    private Integer count;
 
     /**
-     * @return the maximum number of news items to display.
+     * @return the maximum number of news items to display: the {@code limit} parameter if set, otherwise the
+     *     deprecated {@code count} parameter if set, otherwise 5
+     * @since 1.4.0
      */
-    public int getCount()
+    public int getLimit()
     {
-        return count;
+        if (this.limit != null) {
+            return this.limit;
+        }
+        return this.count != null ? this.count : DEFAULT_LIMIT;
     }
 
     /**
-     * @param count see {@link #getCount()}.
+     * @param limit see {@link #getLimit()}
+     * @since 1.4.0
      */
+    public void setLimit(int limit)
+    {
+        this.limit = limit;
+    }
+
+    /**
+     * @return see {@link #getLimit()}
+     * @deprecated since 1.4.0, use {@link #getLimit()} instead
+     */
+    @Deprecated(since = "1.4.0")
+    public int getCount()
+    {
+        return getLimit();
+    }
+
+    /**
+     * @param count the maximum number of news items to display; the {@code limit} parameter takes precedence over
+     *     it when both are set
+     * @deprecated since 1.4.0, use {@link #setLimit(int)} instead
+     */
+    @Deprecated(since = "1.4.0")
+    @PropertyDisplayHidden
     public void setCount(int count)
     {
         this.count = count;

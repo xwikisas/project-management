@@ -78,7 +78,7 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
     {
         List<Project> projects;
         try {
-            projects = apiClient.getProjects(null, parameters.getCount(), "").getItems();
+            projects = apiClient.getProjects(null, parameters.getLimit(), "").getItems();
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve projects from OpenProject.", e);
         }

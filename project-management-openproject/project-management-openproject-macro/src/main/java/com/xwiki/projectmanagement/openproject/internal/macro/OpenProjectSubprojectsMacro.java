@@ -85,7 +85,7 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
             String filters = new FilterBuilder()
                 .addFilter(ANCESTOR, FilterBuilder.Operator.EQUALS, projectId)
                 .build();
-            List<Project> subprojects = apiClient.getProjects(null, parameters.getCount(), filters).getItems();
+            List<Project> subprojects = apiClient.getProjects(null, parameters.getLimit(), filters).getItems();
 
             return Collections.singletonList(
                 new GroupBlock(buildSubprojectsBlocks(parentProject, subprojects),

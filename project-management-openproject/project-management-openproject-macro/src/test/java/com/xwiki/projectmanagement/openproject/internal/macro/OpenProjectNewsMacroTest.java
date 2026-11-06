@@ -57,7 +57,7 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
     void setUp()
     {
         this.parameters.setInstance("main");
-        this.parameters.setCount(2);
+        this.parameters.setLimit(2);
     }
 
     private static News news(int id, String title, Linkable project)

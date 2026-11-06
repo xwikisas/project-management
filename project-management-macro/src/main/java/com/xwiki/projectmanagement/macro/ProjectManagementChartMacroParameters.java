@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
@@ -162,6 +163,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
      * @param offset see {@link #getOffset()}.
      */
     @PropertyGroup("other")
+    @PropertyDisplayHidden
     public void setOffset(Long offset)
     {
         this.offset = offset;

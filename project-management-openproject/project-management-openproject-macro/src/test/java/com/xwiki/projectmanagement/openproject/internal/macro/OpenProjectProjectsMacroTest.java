@@ -57,7 +57,7 @@ class OpenProjectProjectsMacroTest extends AbstractDirectMacroTest
     void setUp()
     {
         this.parameters.setInstance("main");
-        this.parameters.setCount(3);
+        this.parameters.setLimit(3);
     }
 
     private static Project project(String name, Linkable self)
