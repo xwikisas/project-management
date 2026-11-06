@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.config;
 
+import org.apache.commons.lang3.StringUtils;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -45,7 +47,7 @@ public class OpenProjectConnection
      * Constructs a new {@link OpenProjectConnection} with the provided values.
      *
      * @param connectionName the name of the configuration
-     * @param serverURL the URL of the OpenProject server
+     * @param serverURL the URL of the OpenProject server, its trailing slashes being ignored
      * @param clientId the client ID used for authentication
      * @param clientSecret the client secret used for authentication
      * @param instanceId the identifier of the OpenProject instance
@@ -65,7 +67,7 @@ public class OpenProjectConnection
     )
     {
         this.connectionName = connectionName;
-        this.serverURL = serverURL;
+        this.serverURL = normalizeServerURL(serverURL);
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.instanceId = instanceId;
@@ -90,7 +92,7 @@ public class OpenProjectConnection
     }
 
     /**
-     * @return the URL of the OpenProject server
+     * @return the URL of the OpenProject server, without a trailing slash, so that paths can be appended to it
      */
     public String getServerURL()
     {
@@ -100,11 +102,11 @@ public class OpenProjectConnection
     /**
      * Sets the URL of the OpenProject server.
      *
-     * @param serverURL the new server URL
+     * @param serverURL the new server URL, its trailing slashes being ignored
      */
     public void setServerURL(String serverURL)
     {
-        this.serverURL = serverURL;
+        this.serverURL = normalizeServerURL(serverURL);
     }
 
     /**
@@ -181,5 +183,14 @@ public class OpenProjectConnection
     public void setAccessMode(OpenProjectAccessMode accessMode)
     {
         this.accessMode = accessMode != null ? accessMode : OpenProjectAccessMode.USER_ACCOUNTS;
+    }
+
+    private static String normalizeServerURL(String serverURL)
+    {
+        // The links to OpenProject are built by appending paths such as "/versions/21" to the server URL, which would
+        // otherwise contain a double slash when the configured URL ends with a slash.
+        String normalizedURL = StringUtils.stripEnd(serverURL, "/");
+        // A URL without host, e.g. "http://", is invalid anyway: keep it as entered, for the error message.
+        return StringUtils.endsWith(normalizedURL, ":") ? serverURL : normalizedURL;
     }
 }
