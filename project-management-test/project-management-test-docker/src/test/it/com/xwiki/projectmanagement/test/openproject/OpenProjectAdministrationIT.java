@@ -261,4 +261,36 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
             + "OpenProject.Code.TemplateProvider=false/true OpenProject.Code.StylingSetupJob=false/true "
             + "OpenProject.Code.StyleSheets.main=false/true Main.WebHome=true/true", result);
     }
+
+    @Test
+    @Order(8)
+    void defaultConnection(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // A macro that doesn't set its instance parameter uses the only connection.
+        setup.createPage(testReference, "{{openproject id=\"defaultConnection\"/}}");
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+        assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
+
+        // With several connections, it has to choose one.
+        String otherConnection = "other";
+        OpenProjectAdminPage.gotoPage()
+            .addNewConnection(otherConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
+        try {
+            setup.gotoPage(testReference);
+            page = new ViewPageWithOpenProjectMacro();
+            assertEquals(List.of(String.format("Choose the OpenProject connection to use with the instance parameter, "
+                + "among: %s, %s. An administrator can also choose the default connection in the OpenProject "
+                + "section of the administration.", CONNECTION_ID, otherConnection)), page.getWarnings());
+
+            // Unless a default connection is chosen in the administration.
+            OpenProjectAdminPage.gotoPage().setDefaultConnection(CONNECTION_ID);
+            setup.gotoPage(testReference);
+            page = new ViewPageWithOpenProjectMacro();
+            assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
+        } finally {
+            setup.updateObject("OpenProject.Code", "OpenProjectConfiguration",
+                "OpenProject.Code.OpenProjectConfigurationClass", 0, "defaultConnection", "");
+            OpenProjectAdminPage.gotoPage().deleteConnection(otherConnection);
+        }
+    }
 }

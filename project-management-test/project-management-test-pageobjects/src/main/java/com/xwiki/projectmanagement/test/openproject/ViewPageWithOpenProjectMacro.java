@@ -59,6 +59,17 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     }
 
     /**
+     * @return the warnings displayed by the OpenProject macros instead of their content, e.g. when they can't find
+     *     their connection
+     * @since 1.4.0
+     */
+    public List<String> getWarnings()
+    {
+        return getDriver().findElementsWithoutWaiting(By.cssSelector("#xwikicontent .box.warningmessage")).stream()
+            .map(WebElement::getText).collect(Collectors.toList());
+    }
+
+    /**
      * @return the number of "create work packages" menus that the page provides, from the selected text or tables
      * @since 1.4.0
      */

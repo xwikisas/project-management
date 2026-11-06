@@ -90,5 +90,34 @@
       <validationRegExp>/^(?!(@|\/|\[\[|\{\{|img::)$)\S{1,5}$/</validationRegExp>
       <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
     </workPackageSearchMarker>
+    <defaultConnection>
+      <customDisplay>{{velocity}}
+#if ($type == 'edit')
+  ## The names are escaped for HTML, and their curly brackets so that they can't end the HTML macro.
+  {{html clean="false"}}
+  &lt;select id="$escapetool.xml("${prefix}${name}")" name="$escapetool.xml("${prefix}${name}")"&gt;
+    &lt;option value=""&gt;$escapetool.xml($services.localization.render('openproject.config.defaultConnection.none'))&lt;/option&gt;
+    #foreach ($option in $services.openproject.getConnectionOptions())
+      #set ($optionValue = $escapetool.xml($option.value).replace('{', '&amp;#123;'))
+      &lt;option value="$optionValue"#if ($option.value == $value) selected="selected"#end&gt;$optionValue&lt;/option&gt;
+    #end
+  &lt;/select&gt;
+  {{/html}}
+#else
+  $!services.rendering.escape($value, $xwiki.currentContentSyntaxId)
+#end
+{{/velocity}}</customDisplay>
+      <disabled>0</disabled>
+      <hint/>
+      <name>defaultConnection</name>
+      <number>3</number>
+      <picker>0</picker>
+      <prettyName>Default connection</prettyName>
+      <size>30</size>
+      <unmodifiable>0</unmodifiable>
+      <validationMessage/>
+      <validationRegExp/>
+      <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+    </defaultConnection>
   </class>
 </xwikidoc>

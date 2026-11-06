@@ -46,4 +46,15 @@ public interface OpenProjectConfiguration
      * @return the server URL associated with the given connection
      */
     OpenProjectConnection getConnection(String connectionName);
+
+    /**
+     * @return the connection used by the macros that don't specify one: the only configured connection, or the default
+     *     connection chosen in the administration when several are configured, or {@code null} if there is none
+     * @since 1.4.0
+     */
+    default OpenProjectConnection getDefaultConnection()
+    {
+        List<OpenProjectConnection> connections = getOpenProjectConnections();
+        return connections != null && connections.size() == 1 ? connections.get(0) : null;
+    }
 }

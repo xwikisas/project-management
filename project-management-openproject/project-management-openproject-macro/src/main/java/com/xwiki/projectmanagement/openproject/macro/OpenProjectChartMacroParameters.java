@@ -23,7 +23,6 @@ package com.xwiki.projectmanagement.openproject.macro;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
-import org.xwiki.properties.annotation.PropertyMandatory;
 import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.internal.chart.displayer.BarChartDisplayer;
@@ -66,7 +65,6 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     /**
      * @param instance see {@link #getInstance()}.
      */
-    @PropertyMandatory
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {

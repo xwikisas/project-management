@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -134,13 +135,16 @@ public class UserTokenChecker
             return Collections.emptyList();
         }
         OpenProjectConnection connection = this.openProjectConfiguration.getConnection(instance);
-        // A link to connect an OpenProject account only works for a configured connection that allows it.
-        boolean userAccounts = connection != null && connection.getAccessMode().allowsUserAccounts();
+        if (connection == null) {
+            return getMissingConnectionBlock(instance, context);
+        }
+        // A link to connect an OpenProject account only works for a connection that allows it.
+        boolean userAccounts = connection.getAccessMode().allowsUserAccounts();
         if (status == OpenProjectAccessStatus.ANONYMOUS) {
             return userAccounts ? getMessageBlock(instance, ACCOUNT_REQUIRED, true, context)
                 : getMessageBlock(instance, "openproject.oauth.accountunavailable", false, context);
         }
-        if (connection != null && !userAccounts) {
+        if (!userAccounts) {
             // The connection only shows public data, but OpenProject didn't accept the anonymous requests.
             return getMessageBlock(instance, "openproject.oauth.publicdataunavailable", false, context);
         }
@@ -165,6 +169,26 @@ public class UserTokenChecker
         boolean connectLink = connection != null && connection.getAccessMode().allowsUserAccounts()
             && openProjectAccess.resolve(instance).getStatus() == OpenProjectAccessStatus.ANONYMOUS;
         return getMessageBlock(instance, hint, connectLink ? ACCOUNT_REQUIRED : null, inline);
+    }
+
+    /**
+     * @return a warning explaining which connections can be used, when the given one isn't configured or when none was
+     *     given and there's no default connection
+     */
+    private List<Block> getMissingConnectionBlock(String instance, MacroTransformationContext context)
+    {
+        List<OpenProjectConnection> connections = this.openProjectConfiguration.getOpenProjectConnections();
+        String connectionNames = connections == null ? ""
+            : connections.stream().map(OpenProjectConnection::getConnectionName).collect(Collectors.joining(", "));
+        Block hint;
+        if (StringUtils.isEmpty(connectionNames)) {
+            hint = this.l10n.getTranslation("openproject.connection.none.hint").render();
+        } else if (StringUtils.isBlank(instance)) {
+            hint = this.l10n.getTranslation("openproject.connection.missing.hint").render(connectionNames);
+        } else {
+            hint = this.l10n.getTranslation("openproject.connection.unknown.hint").render(instance, connectionNames);
+        }
+        return getMessageBlock(instance, hint, null, context.isInline());
     }
 
     private List<Block> getMessageBlock(String connectionName, String translationPrefix, boolean connectLink,

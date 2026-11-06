@@ -37,6 +37,7 @@ import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.model.reference.EntityReference;
+import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -109,6 +110,10 @@ class StylingSetupManagerTest
     @MockComponent
     private AdminAuthorChecker adminAuthorChecker;
 
+    @MockComponent
+    @Named("ssx")
+    private SkinExtension ssx;
+
     @Mock
     private XWikiContext xcontext;
 
@@ -157,6 +162,16 @@ class StylingSetupManagerTest
         type.setName("Bug");
         type.setColor("#00ff00");
         when(this.client.getTypes()).thenReturn(new PaginatedResult<>(Collections.singletonList(type), 1, 1, 1));
+    }
+
+    @Test
+    void useInstanceStyleWithoutInstance()
+    {
+        // A macro whose connection couldn't be determined displays a warning instead of the work packages.
+        this.stylingSetupManager.useInstanceStyle(null);
+        this.stylingSetupManager.useInstanceStyle("");
+
+        verifyNoInteractions(this.ssx);
     }
 
     @Test
