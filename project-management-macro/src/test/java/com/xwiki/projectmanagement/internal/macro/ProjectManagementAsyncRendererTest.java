@@ -40,6 +40,7 @@ import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.rendering.transformation.TransformationManager;
 import org.xwiki.rendering.util.ErrorBlockGenerator;
 import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.LogLevel;
@@ -58,6 +59,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -89,6 +91,9 @@ class ProjectManagementAsyncRendererTest
     @Named("jsrx")
     private SkinExtension jsrx;
 
+    @MockComponent
+    private TransformationManager transformationManager;
+
     @Mock
     private Macro<ProjectManagementAsyncMacroParams> displayer;
 
@@ -107,6 +112,33 @@ class ProjectManagementAsyncRendererTest
         when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
 
         assertEquals(List.of(block), this.renderer.execute(true, false).getChildren());
+    }
+
+    @Test
+    void executeAsynchronouslyExecutesTheMacrosOfTheDisplayer() throws Exception
+    {
+        // The displayers return macros, e.g. the warning macro displaying the "no work items" message, that the page
+        // doesn't execute when the result is inserted asynchronously.
+        Block warning = new MacroBlock("warning", Map.of(), "No work items", false);
+        Block message = new WordBlock("No work items");
+        when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(warning));
+        doAnswer(invocation -> {
+            invocation.<Block>getArgument(0).replaceChild(message, warning);
+            return null;
+        }).when(this.transformationManager).performTransformations(any(), any());
+
+        assertEquals(List.of(message), this.renderer.execute(true, false).getChildren());
+    }
+
+    @Test
+    void executeSynchronouslyLeavesTheMacrosOfTheDisplayerToThePage() throws Exception
+    {
+        // The macro transformation of the page executes the macros returned by a displayer rendered synchronously.
+        Block warning = new MacroBlock("warning", Map.of(), "No work items", false);
+        when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(warning));
+
+        assertEquals(List.of(warning), this.renderer.execute(false, false).getChildren());
+        verifyNoInteractions(this.transformationManager);
     }
 
     @Test

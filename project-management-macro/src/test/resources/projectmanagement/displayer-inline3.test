@@ -1,0 +1,11 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Inline displayer test - display a filter that returns no work items, inline, with the message translated for the
+.# client.
+.#-----------------------------------------------------
+The work item {{test workItemsDisplayer="workItemInline" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"NonExistentWorkItem~"}]}]}}"/}} is displayed inside the sentence.
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>The work item <span class="box warningmessage">No test work item matches this filter.</span> is displayed inside the sentence.</p>

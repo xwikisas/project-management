@@ -48,6 +48,8 @@ public class OpenProjectMacroElement extends BaseElement
 
     private static final By ERROR_DETAILS = By.className("xwikirenderingerrordescription");
 
+    private static final By WARNING_MESSAGE = By.cssSelector(".box.warningmessage");
+
     private final WebElement self;
 
     /**
@@ -311,6 +313,25 @@ public class OpenProjectMacroElement extends BaseElement
         try {
             getDriver().waitUntilElementIsVisible(self, ERROR_MESSAGE);
             return self.findElement(ERROR_MESSAGE).getText();
+        } finally {
+            getDriver().setTimeout(timeout);
+        }
+    }
+
+    /**
+     * Wait for the macro to display a warning, e.g. when no work item matches its filters, since it can be rendered
+     * asynchronously.
+     *
+     * @return the warning message
+     * @since 1.4.0
+     */
+    public String waitForWarningMessage()
+    {
+        int timeout = getDriver().getTimeout();
+        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
+        try {
+            getDriver().waitUntilElementIsVisible(self, WARNING_MESSAGE);
+            return self.findElement(WARNING_MESSAGE).getText();
         } finally {
             getDriver().setTimeout(timeout);
         }
