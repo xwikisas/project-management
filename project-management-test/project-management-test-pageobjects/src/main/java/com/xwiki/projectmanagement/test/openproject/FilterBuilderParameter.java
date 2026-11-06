@@ -140,11 +140,15 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
-     * @return what the filters select, in plain words
+     * @return what the filters select, in plain words, once the labels of the filter values are loaded
      * @since 1.4.0
      */
     public String getSummary()
     {
+        // The pickers of the filter values have the "loading" class while they load the labels of their values.
+        By loading = By.cssSelector(".proj-manag-constraint .loading");
+        getDriver().waitUntilCondition(
+            driver -> getDriver().findElementsWithoutWaiting(getContainer(), loading).isEmpty());
         return getContainer().findElement(By.className("proj-manag-filter-summary")).getText();
     }
 
