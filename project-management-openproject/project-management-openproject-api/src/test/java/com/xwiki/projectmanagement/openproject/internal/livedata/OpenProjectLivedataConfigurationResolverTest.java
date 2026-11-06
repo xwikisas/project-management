@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Provider;
@@ -50,11 +51,16 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -88,6 +94,9 @@ class OpenProjectLivedataConfigurationResolverTest
     @MockComponent
     private Environment environment;
 
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
     private final OpenProjectApiClient client = mock(OpenProjectApiClient.class);
 
     @BeforeEach
@@ -102,7 +111,10 @@ class OpenProjectLivedataConfigurationResolverTest
             configuration.getMeta().setPropertyDescriptors(new ArrayList<>());
             return configuration;
         });
-        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.authenticated(this.client));
+        OpenProjectAccessResult access = OpenProjectAccessResult.authenticated(this.client);
+        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(access);
+        when(this.workPackageFieldsCache.getFields(INSTANCE, access))
+            .thenAnswer(invocation -> OpenProjectWorkItemFields.of(this.client));
     }
 
     @Test
@@ -115,6 +127,8 @@ class OpenProjectLivedataConfigurationResolverTest
         field.setFilterValueType("[]Version");
         field.setFilterOperators(List.of("="));
         when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(field), 0, 1, 1));
+        when(this.workPackageFieldsCache.getMultiValueFields(eq(INSTANCE), eq(this.client), any()))
+            .thenReturn(Set.of("targetVersions"));
 
         LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
 
@@ -124,6 +138,31 @@ class OpenProjectLivedataConfigurationResolverTest
             descriptors.stream().map(LiveDataPropertyDescriptor::getId).collect(Collectors.toList()));
         assertEquals("/rest/wikis/wiki/openproject/instance/myInstance/suggest/versions?search={encodedQuery}",
             descriptors.get(0).getFilter().getParameters().get("searchURL"));
+        assertEquals(true, descriptors.get(0).getFilter().getParameters().get("multiValue"));
+    }
+
+    @Test
+    void resolveWhenTheMultiValueFieldsCantBeFound() throws Exception
+    {
+        WorkPackageField field = new WorkPackageField();
+        field.setKey("targetVersions");
+        field.setName("Target versions");
+        field.setFilterKey("targetVersion");
+        field.setFilterValueType("[]Version");
+        field.setFilterOperators(List.of("=", "&="));
+        when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(field), 0, 1, 1));
+        when(this.workPackageFieldsCache.getMultiValueFields(eq(INSTANCE), eq(this.client), any()))
+            .thenThrow(new ProjectManagementException("Forbidden"));
+
+        LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
+
+        // The field can still be filtered on, as a single-value one.
+        LiveDataPropertyDescriptor descriptor = configuration.getMeta().getPropertyDescriptors().iterator().next();
+        assertEquals(List.of("="), descriptor.getFilter().getOperators().stream()
+            .map(LiveDataPropertyDescriptor.OperatorDescriptor::getId).collect(Collectors.toList()));
+        assertNull(descriptor.getFilter().getParameters().get("multiValue"));
+        assertEquals("Failed to find out which work package fields of the OpenProject instance [myInstance] are "
+            + "multi-value. Root cause: [ProjectManagementException: Forbidden]", this.logCapture.getMessage(0));
     }
 
     @Test

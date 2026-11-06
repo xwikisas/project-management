@@ -59,6 +59,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.Version;
@@ -139,16 +141,21 @@ class OpenProjectClientTest
     @MockComponent
     private ProjectManagementClientExecutionContext executionContext;
 
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
     private OpenProjectApiClient openProjectApiClient;
 
     @BeforeEach
-    void setUp()
+    void setUp() throws Exception
     {
         this.openProjectApiClient =
             mock(OpenProjectApiClient.class, withSettings().defaultAnswer(OpenProjectClientTest::unexpectedRequest));
         when(this.executionContext.get("instance")).thenReturn("");
         when(this.openProjectAccess.resolve(any()))
             .thenReturn(OpenProjectAccessResult.authenticated(this.openProjectApiClient));
+        when(this.workPackageFieldsCache.getFields(any(), any())).thenAnswer(
+            invocation -> OpenProjectWorkItemFields.of(invocation.<OpenProjectAccessResult>getArgument(1).getClient()));
     }
 
     @Test

@@ -74,6 +74,7 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFi
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -146,6 +147,9 @@ public class OpenProjectClient implements ProjectManagementClient
     private OpenProjectAccess openProjectAccess;
 
     @Inject
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
+    @Inject
     private ProjectManagementClientExecutionContext executionContext;
 
     @Inject
@@ -181,8 +185,9 @@ public class OpenProjectClient implements ProjectManagementClient
         try {
             int openProjectPage = getOpenProjectPage(offset, pageSize);
             String identifier = (String) executionContext.get(IDENTIFIER);
-            OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
-            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            OpenProjectAccessResult access = resolveAccess();
+            OpenProjectApiClient openProjectApiClient = access.getClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(access);
             List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
             List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
 
@@ -303,7 +308,15 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private OpenProjectApiClient getOpenProjectApiClient() throws WorkItemRetrievalException
     {
-        String connectionName = (String) executionContext.get("instance");
+        return resolveAccess().getClient();
+    }
+
+    /**
+     * @return how the current user reaches the connection of the macro, when they can call it
+     */
+    private OpenProjectAccessResult resolveAccess() throws WorkItemRetrievalException
+    {
+        String connectionName = getConnectionName();
         OpenProjectAccessResult access = openProjectAccess.resolve(connectionName);
         OpenProjectApiClient openProjectApiClient = access.getClient();
 
@@ -315,7 +328,7 @@ public class OpenProjectClient implements ProjectManagementClient
             throw new WorkItemRetrievalException(
                 String.format("No configuration for instance [%s] was found.", connectionName), 407);
         }
-        return openProjectApiClient;
+        return access;
     }
 
     private PaginatedResult<WorkItem> handleIdentifier(OpenProjectApiClient openProjectApiClient,
@@ -404,8 +417,9 @@ public class OpenProjectClient implements ProjectManagementClient
             return Optional.empty();
         }
         try {
-            OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
-            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            OpenProjectAccessResult access = resolveAccess();
+            OpenProjectApiClient openProjectApiClient = access.getClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(access);
             List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
                 ? new WorkPackagesQuery(null, OpenProjectFilterHandler.convertFilters(mappedFilters), "")
@@ -434,8 +448,9 @@ public class OpenProjectClient implements ProjectManagementClient
                 // A list of work packages is never truncated, and the filters can't be added to a saved query.
                 return Optional.empty();
             }
-            OpenProjectApiClient openProjectApiClient = getOpenProjectApiClient();
-            OpenProjectWorkItemFields fields = getWorkItemFields(openProjectApiClient);
+            OpenProjectAccessResult access = resolveAccess();
+            OpenProjectApiClient openProjectApiClient = access.getClient();
+            OpenProjectWorkItemFields fields = getWorkItemFields(access);
             List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
             List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
@@ -583,10 +598,15 @@ public class OpenProjectClient implements ProjectManagementClient
         }
     }
 
-    private OpenProjectWorkItemFields getWorkItemFields(OpenProjectApiClient openProjectApiClient)
+    private String getConnectionName()
+    {
+        return (String) executionContext.get("instance");
+    }
+
+    private OpenProjectWorkItemFields getWorkItemFields(OpenProjectAccessResult access)
     {
         try {
-            return OpenProjectWorkItemFields.of(openProjectApiClient);
+            return workPackageFieldsCache.getFields(getConnectionName(), access);
         } catch (ProjectManagementException | UnsupportedOperationException e) {
             // The work items can still be displayed, without the fields that the generic properties don't cover.
             logger.warn("Failed to retrieve the work package fields: {}", ExceptionUtils.getRootCauseMessage(e));

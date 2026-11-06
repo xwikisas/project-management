@@ -21,6 +21,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.xwiki.component.annotation.Role;
 
@@ -332,6 +333,24 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Retrieving the work package fields is not supported by this client implementation.");
+    }
+
+    /**
+     * Finds out which of the given fields hold several values in a work package (e.g. a multi-select custom field),
+     * from the work package schemas. It requires several requests, so it's meant to be called only to configure the
+     * filters on the fields, and its result to be cached.
+     *
+     * @param fieldKeys the keys of the fields to look for, as returned by {@link #getWorkPackageFields()}
+     * @return whether each of the given fields is multi-value, keyed by field, for the fields found in the schemas of
+     *     the first projects of the instance (the fields not found can be considered single-value)
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the schemas
+     * @since 1.4.0
+     */
+    default Map<String, Boolean> getMultiValueWorkPackageFields(Set<String> fieldKeys)
+        throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Finding out the multi-value work package fields is not supported by this client implementation.");
     }
 
     /**

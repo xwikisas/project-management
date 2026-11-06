@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 
@@ -95,18 +96,21 @@ public final class WorkPackageFieldDescriptors
 
     /**
      * @param fields the work package fields of an OpenProject instance
+     * @param multiValueFields the keys of the fields holding several values in a work package
      * @return the descriptors of the work item properties exposing the fields, named after the fields
      */
-    public static List<LiveDataPropertyDescriptor> getDescriptors(OpenProjectWorkItemFields fields)
+    public static List<LiveDataPropertyDescriptor> getDescriptors(OpenProjectWorkItemFields fields,
+        Set<String> multiValueFields)
     {
         List<LiveDataPropertyDescriptor> descriptors = new ArrayList<>();
         for (Map.Entry<String, WorkPackageField> field : fields.getFields().entrySet()) {
-            descriptors.add(getDescriptor(field.getKey(), field.getValue()));
+            descriptors.add(getDescriptor(field.getKey(), field.getValue(),
+                multiValueFields.contains(field.getValue().getKey())));
         }
         return descriptors;
     }
 
-    private static LiveDataPropertyDescriptor getDescriptor(String id, WorkPackageField field)
+    private static LiveDataPropertyDescriptor getDescriptor(String id, WorkPackageField field, boolean multiValue)
     {
         LiveDataPropertyDescriptor descriptor = new LiveDataPropertyDescriptor();
         descriptor.setId(id);
@@ -118,13 +122,14 @@ public final class WorkPackageFieldDescriptors
             descriptor.setDisplayer(new LiveDataPropertyDescriptor.DisplayerDescriptor("html"));
         }
 
-        LiveDataPropertyDescriptor.FilterDescriptor filter = getFilter(field);
+        LiveDataPropertyDescriptor.FilterDescriptor filter = getFilter(field, multiValue);
         descriptor.setFilterable(filter != null);
         descriptor.setFilter(filter);
         return descriptor;
     }
 
-    private static LiveDataPropertyDescriptor.FilterDescriptor getFilter(WorkPackageField field)
+    private static LiveDataPropertyDescriptor.FilterDescriptor getFilter(WorkPackageField field,
+        boolean multiValue)
     {
         String valueType = field.getFilterValueType();
         if (field.getFilterKey() == null || valueType == null) {
@@ -136,12 +141,12 @@ public final class WorkPackageFieldDescriptors
         }
 
         LiveDataPropertyDescriptor.FilterDescriptor filter = new LiveDataPropertyDescriptor.FilterDescriptor(filterId);
-        addOperators(filter, field);
+        addOperators(filter, field, multiValue);
         if (filter.getOperators() == null || filter.getOperators().isEmpty()) {
             return null;
         }
         filter.setDefaultOperator(filter.getOperators().get(0).getId());
-        if (field.isMultiValue()) {
+        if (multiValue) {
             // Tells the filter builder that the field can be filtered on with several operators at once, e.g. the
             // work packages having one value and not another one.
             filter.getParameters().put("multiValue", true);
@@ -153,13 +158,14 @@ public final class WorkPackageFieldDescriptors
         return filter;
     }
 
-    private static void addOperators(LiveDataPropertyDescriptor.FilterDescriptor filter, WorkPackageField field)
+    private static void addOperators(LiveDataPropertyDescriptor.FilterDescriptor filter, WorkPackageField field,
+        boolean multiValue)
     {
         for (Map.Entry<String, String> operator : OPERATORS.get(filter.getId()).entrySet()) {
             // OpenProject proposes "All of" on every list filter, but only a work package having several values for
             // the field can match more than one value.
             if (field.getFilterOperators().contains(operator.getKey())
-                && (field.isMultiValue() || !OPERATOR_ALL_OF.equals(operator.getKey())))
+                && (multiValue || !OPERATOR_ALL_OF.equals(operator.getKey())))
             {
                 filter.addOperator(operator.getKey(), operator.getValue());
             }

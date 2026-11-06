@@ -22,6 +22,8 @@ package com.xwiki.projectmanagement.openproject.internal.livedata;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -44,7 +46,9 @@ import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 
 /**
  * Retrieves the OpenProject livedata configuration and resolves additional information based on the input
@@ -76,6 +80,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
 
     @Inject
     private OpenProjectAccess openProjectAccess;
+
+    @Inject
+    private WorkPackageFieldsCache workPackageFieldsCache;
 
     private String defaultConfigJSON;
 
@@ -115,16 +122,31 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         {
             return;
         }
-        OpenProjectApiClient client = this.openProjectAccess.resolve(instance).getClient();
+        OpenProjectAccessResult access = this.openProjectAccess.resolve(instance);
+        OpenProjectApiClient client = access.getClient();
         if (client == null) {
             return;
         }
         try {
-            configuration.getMeta().getPropertyDescriptors()
-                .addAll(WorkPackageFieldDescriptors.getDescriptors(OpenProjectWorkItemFields.of(client)));
+            OpenProjectWorkItemFields fields = this.workPackageFieldsCache.getFields(instance, access);
+            configuration.getMeta().getPropertyDescriptors().addAll(
+                WorkPackageFieldDescriptors.getDescriptors(fields, getMultiValueFields(instance, client, fields)));
         } catch (ProjectManagementException | UnsupportedOperationException e) {
             this.logger.warn("Failed to retrieve the work package fields of the OpenProject instance [{}]. "
                 + "Root cause: [{}]", instance, ExceptionUtils.getRootCauseMessage(e));
+        }
+    }
+
+    private Set<String> getMultiValueFields(String instance, OpenProjectApiClient client,
+        OpenProjectWorkItemFields fields)
+    {
+        try {
+            return this.workPackageFieldsCache.getMultiValueFields(instance, client, fields);
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            // The fields can still be displayed and filtered, as single-value ones.
+            this.logger.warn("Failed to find out which work package fields of the OpenProject instance [{}] are "
+                + "multi-value. Root cause: [{}]", instance, ExceptionUtils.getRootCauseMessage(e));
+            return Collections.emptySet();
         }
     }
 
