@@ -28,7 +28,7 @@ mvn clean install -Pintegration-tests,docker                 # all tests (AllIT)
 mvn clean install -Pdocker -Dit.test=OpenProjectChartMacroIT
 ```
 
-When XWiki runs outside Docker (the default Jetty standalone engine), it reaches the OpenProject container through the Docker bridge (`172.17.0.1`), which only works on Linux. On macOS, run XWiki in a container instead, so that it shares the network of the browser and OpenProject: `-Dxwiki.test.ui.servletEngine=tomcat -Dxwiki.test.ui.servletEngineTag=9-jdk17` (the default Tomcat image uses a JDK that XWiki 15.10 doesn't support).
+When XWiki runs outside Docker (the default Jetty standalone engine), it reaches the OpenProject container through the Docker bridge (`172.17.0.1`), which only works on Linux. On macOS, the `macos` profile of `project-management-test-docker` (activated automatically by the OS) runs XWiki in a container instead, so that it shares the network of the browser and OpenProject: it sets `xwiki.test.ui.servletEngine=tomcat` and `xwiki.test.ui.servletEngineTag=9-jdk17` (the default Tomcat image uses a JDK that XWiki 15.10 doesn't support), both overridable with `-D`.
 
 To reuse an existing OpenProject instance (see `ExternalOpenProjectInstance`), pass `-Dopenproject.url=http://172.17.0.1:8082`, `-Dopenproject.username` / `-Dopenproject.password` (default `Admin` / `admin`), and optionally `-Dopenproject.clientId` / `-Dopenproject.clientSecret` to reuse an OAuth application. The instance must not require users to log in ("Login required" off in its authentication settings, which the test container sets with `OPENPROJECT_LOGIN__REQUIRED=false`), since `OpenProjectMacroIT` checks that guests see the work packages of the public demo project.
 
