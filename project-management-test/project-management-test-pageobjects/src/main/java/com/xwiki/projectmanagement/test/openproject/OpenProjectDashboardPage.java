@@ -46,33 +46,15 @@ public class OpenProjectDashboardPage extends ViewPage
     private static final String CONNECTION_NAME_PARAMETER = "connectionName=";
 
     /**
-     * The gadgets are rendered by querying OpenProject, so the dashboard takes longer than the default timeout to be
-     * ready, especially when the caches are cold.
-     */
-    private static final int LOAD_TIMEOUT = 60;
-
-    /**
      * Go to the dashboard.
      *
      * @return the dashboard
      */
     public static OpenProjectDashboardPage gotoPage()
     {
-        // Navigate without waiting, since the view page created by gotoPage(space, page) waits with the default timeout.
+        // Navigate without creating a view page, which would wait for the page to be ready a second time.
         getUtil().gotoPage("OpenProject", "WebHome", "view", "");
         return new OpenProjectDashboardPage();
-    }
-
-    @Override
-    public void waitUntilPageIsReady()
-    {
-        int timeout = getDriver().getTimeout();
-        getDriver().setTimeout(Math.max(timeout, LOAD_TIMEOUT));
-        try {
-            super.waitUntilPageIsReady();
-        } finally {
-            getDriver().setTimeout(timeout);
-        }
     }
 
     /**

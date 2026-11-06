@@ -71,17 +71,12 @@ public abstract class AbstractOpenProjectIT
 
     protected static final String CONNECTION_ID = OpenProjectFixture.CONNECTION_ID;
 
-    private static final int TIMEOUT = 30;
-
     protected OpenProjectInstance openProject;
 
     @BeforeAll
     void setUpOpenProject(TestUtils setup, TestConfiguration testConfiguration) throws Exception
     {
         setup.loginAsSuperAdmin();
-        // The pages displaying OpenProject macros are ready once the macros have queried OpenProject, which can take
-        // longer than the default timeout (e.g. when saving them from the WYSIWYG editor).
-        setup.getDriver().setTimeout(Math.max(setup.getDriver().getTimeout(), TIMEOUT));
         this.openProject = OpenProjectFixture.ensureReady(setup, testConfiguration);
     }
 
