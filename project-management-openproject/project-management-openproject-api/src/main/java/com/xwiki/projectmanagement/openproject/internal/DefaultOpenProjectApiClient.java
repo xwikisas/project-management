@@ -541,48 +541,42 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         // custom fields included.
         List<WorkPackageField> fields =
             WorkPackageFieldsParser.parseQueryForm(getFormResponse(API_URL_FORM_QUERIES, "{}"));
-        try {
-            setMultiValueFields(fields);
-        } catch (ProjectManagementException e) {
-            // The fields can still be displayed and filtered, as single-value ones.
-            LOGGER.warn("Failed to find out which work package fields are multi-value: {}",
-                ExceptionUtils.getRootCauseMessage(e));
-        }
         return new PaginatedResult<>(fields, 0, fields.size(), fields.size());
     }
 
     /**
-     * Finds out which of the fields filtered on a list of values are multi-value, from the work package schemas:
-     * the query form types the values of every list filter as a list. There is one schema per project and type of
-     * work package, and a field is in the schemas of the projects and types it's enabled for, so the schemas are
-     * requested a few projects at a time, until all the fields are found.
+     * {@inheritDoc}
+     * <p>
+     * There is one schema per project and type of work package, and a field is in the schemas of the projects and
+     * types it's enabled for, so the schemas are requested a few projects at a time, until all the fields are found.
      */
-    private void setMultiValueFields(List<WorkPackageField> fields) throws ProjectManagementException
+    @Override
+    public Map<String, Boolean> getMultiValueWorkPackageFields(Set<String> fieldKeys)
+        throws ProjectManagementException
     {
-        Set<String> unresolved = new HashSet<>();
-        for (WorkPackageField field : fields) {
-            if (StringUtils.startsWith(field.getFilterValueType(), "[]")) {
-                unresolved.add(field.getKey());
-            }
+        Map<String, Boolean> multiValueFields = new HashMap<>();
+        if (fieldKeys.isEmpty()) {
+            return multiValueFields;
         }
-        if (unresolved.isEmpty()) {
-            return;
-        }
+        Set<String> unresolved = new HashSet<>(fieldKeys);
         List<String> typeIds = getIds(getOpenProjectResponseEntities(API_URL_TYPES, null, null, "", "", ""));
         boolean morePages = true;
         for (int page = 1; morePages && page <= SCHEMA_MAX_REQUESTS && !unresolved.isEmpty(); page++) {
             List<String> projectIds = getIds(
                 getOpenProjectResponseEntities(API_URL_PROJECTS, page, SCHEMA_PROJECTS_PER_REQUEST, "", "", ""));
-            setMultiValueFields(fields, unresolved, projectIds, typeIds);
+            Map<String, Boolean> found = getMultiValueFields(unresolved, projectIds, typeIds);
+            multiValueFields.putAll(found);
+            unresolved.removeAll(found.keySet());
             morePages = projectIds.size() == SCHEMA_PROJECTS_PER_REQUEST;
         }
+        return multiValueFields;
     }
 
     /**
-     * Sets which of the unresolved fields are multi-value according to the schemas of the given projects, removing
-     * the fields found in these schemas from the unresolved ones.
+     * @return whether each of the given fields is multi-value according to the schemas of the given projects, for
+     *     the fields found in these schemas
      */
-    private void setMultiValueFields(List<WorkPackageField> fields, Set<String> unresolved, List<String> projectIds,
+    private Map<String, Boolean> getMultiValueFields(Set<String> fieldKeys, List<String> projectIds,
         List<String> typeIds) throws ProjectManagementException
     {
         List<String> schemaIds = new ArrayList<>();
@@ -592,18 +586,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             }
         }
         if (schemaIds.isEmpty()) {
-            return;
+            return Map.of();
         }
         String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of(OP_OPERATOR, "=", OP_VALUES, schemaIds))));
-        Map<String, Boolean> multiValueFields = WorkPackageFieldsParser.parseMultiValueFields(
-            getOpenProjectResponseEntities(API_URL_WORK_PACKAGE_SCHEMAS, null, null, filters, "", ""), unresolved);
-        for (WorkPackageField field : fields) {
-            Boolean multiValue = multiValueFields.get(field.getKey());
-            if (multiValue != null) {
-                field.setMultiValue(multiValue);
-            }
-        }
-        unresolved.removeAll(multiValueFields.keySet());
+        return WorkPackageFieldsParser.parseMultiValueFields(
+            getOpenProjectResponseEntities(API_URL_WORK_PACKAGE_SCHEMAS, null, null, filters, "", ""), fieldKeys);
     }
 
     private String toJson(Object value) throws ProjectManagementException

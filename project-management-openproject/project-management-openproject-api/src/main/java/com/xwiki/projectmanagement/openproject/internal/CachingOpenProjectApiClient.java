@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.xwiki.cache.Cache;
 
@@ -323,6 +324,14 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
             cache.set(cacheKey, result);
         }
         return result;
+    }
+
+    @Override
+    public Map<String, Boolean> getMultiValueWorkPackageFields(Set<String> fieldKeys)
+        throws ProjectManagementException
+    {
+        // Cached by WorkPackageFieldsCache, for all the users of the instance.
+        return client.getMultiValueWorkPackageFields(fieldKeys);
     }
 
     @Override

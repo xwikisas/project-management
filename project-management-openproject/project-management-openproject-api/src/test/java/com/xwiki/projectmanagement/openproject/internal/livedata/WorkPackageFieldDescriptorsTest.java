@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.livedata;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,7 @@ class WorkPackageFieldDescriptorsTest
     {
         List<LiveDataPropertyDescriptor> descriptors = WorkPackageFieldDescriptors.getDescriptors(
             new OpenProjectWorkItemFields(List.of(
-                multiValue(field("targetVersions", "Target versions", "[]Version", ALL_OPERATORS)),
+                field("targetVersions", "Target versions", "[]Version", ALL_OPERATORS),
                 field("category", "Category", null, List.of()),
                 field("responsible", "Accountable", "[]User", List.of("=", "!")),
                 field("customField5", "Labels", "[]CustomOption", ALL_OPERATORS),
@@ -55,7 +56,7 @@ class WorkPackageFieldDescriptorsTest
                 field("estimatedTime", "Work", "[1]Integer", ALL_OPERATORS),
                 field("customField7", "Flag", "[1]Boolean", ALL_OPERATORS),
                 field("customField8", "Deadline", "[1]Date", ALL_OPERATORS),
-                field("customField9", "Odd", "[1]String", List.of("o")))));
+                field("customField9", "Odd", "[1]String", List.of("o")))), Set.of("targetVersions"));
 
         assertEquals(List.of("targetVersion", "category", "responsible", "estimatedTime", "Labels", "Notes", "Flag",
             "Deadline", "Odd"),
@@ -106,12 +107,6 @@ class WorkPackageFieldDescriptorsTest
     {
         return descriptor.getFilter().getOperators().stream().map(LiveDataPropertyDescriptor.OperatorDescriptor::getId)
             .collect(Collectors.toList());
-    }
-
-    private static WorkPackageField multiValue(WorkPackageField field)
-    {
-        field.setMultiValue(true);
-        return field;
     }
 
     private static WorkPackageField field(String key, String name, String filterValueType, List<String> operators)

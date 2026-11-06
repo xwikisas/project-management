@@ -34,6 +34,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.internal.event.XObjectDeletedEvent;
 import com.xpn.xwiki.internal.event.XObjectUpdatedEvent;
 import com.xpn.xwiki.objects.BaseObjectReference;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,6 +56,9 @@ class PublicDataCacheInvalidationListenerTest
     @MockComponent
     private PublicDataClientProvider publicDataClientProvider;
 
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
     @Test
     void events()
     {
@@ -74,7 +78,7 @@ class PublicDataCacheInvalidationListenerTest
     }
 
     @Test
-    void clearsTheCacheOfTheWikiOfTheDocument()
+    void clearsTheCachesWhenAConnectionChanges()
     {
         XWikiDocument document = mock(XWikiDocument.class);
         when(document.getDocumentReference())
@@ -83,5 +87,7 @@ class PublicDataCacheInvalidationListenerTest
         this.listener.onEvent(mock(Event.class), document, null);
 
         verify(this.publicDataClientProvider).clearCache("subwiki");
+        // E.g. the connection now points to another OpenProject instance, with other fields.
+        verify(this.workPackageFieldsCache).clear();
     }
 }

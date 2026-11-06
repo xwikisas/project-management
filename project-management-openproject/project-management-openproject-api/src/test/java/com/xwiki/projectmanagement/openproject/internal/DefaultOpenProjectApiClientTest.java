@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -143,16 +144,12 @@ class DefaultOpenProjectApiClientTest
 
         List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
 
+        // A single request: the fields are needed for each request on work packages.
         ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
-        verify(this.client, times(4)).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
-        HttpRequest formRequest = requestCaptor.getAllValues().get(0);
+        verify(this.client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest formRequest = requestCaptor.getValue();
         assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/form", formRequest.uri().toString());
         assertEquals("POST", formRequest.method());
-        // The schemas of all the types of work packages of the projects, to find out which fields are multi-value.
-        HttpRequest schemasRequest = requestCaptor.getAllValues().get(3);
-        assertEquals("/api/v3/work_packages/schemas", schemasRequest.uri().getPath());
-        assertThat(schemasRequest.uri().getQuery(),
-            containsString("\"values\":[\"1-1\",\"1-2\",\"2-1\",\"2-2\",\"3-1\",\"3-2\"]"));
 
         // Only the columns holding a property are fields, not the relation columns.
         assertEquals(List.of("id", "subject", "responsible", "category", "targetVersions", "observedInVersions",
@@ -180,31 +177,48 @@ class DefaultOpenProjectApiClientTest
         assertTrue(labels.isCustomField());
 
         assertEquals("[1]String", fields.get(8).getFilterValueType());
-
-        // Multi-value, according to the schemas.
-        assertTrue(targetVersions.isMultiValue());
-        assertTrue(labels.isMultiValue());
-        // Single-value: a list custom field typed as one option, a field filtered on a single value, and a field
-        // missing from the schemas.
-        assertFalse(fields.get(7).isMultiValue());
-        assertFalse(fields.get(8).isMultiValue());
-        assertFalse(fields.get(5).isMultiValue());
     }
 
     @Test
-    void getWorkPackageFieldsWhenTheSchemasCantBeRetrieved() throws Exception
+    void getMultiValueWorkPackageFields() throws Exception
+    {
+        mockWorkPackageFieldsResponses();
+
+        Map<String, Boolean> multiValueFields = openProjectApiClient.getMultiValueWorkPackageFields(
+            Set.of("targetVersions", "customField5", "customField20", "observedInVersions"));
+
+        // Multi-value: the target versions and a multi-value list custom field. Single-value: a list custom field
+        // typed as one option. The fields missing from the schemas aren't returned.
+        assertEquals(Map.of("targetVersions", true, "customField5", true, "customField20", false),
+            multiValueFields);
+
+        // The schemas of all the types of work packages of the projects.
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client, times(3)).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest schemasRequest = requestCaptor.getAllValues().get(2);
+        assertEquals("/api/v3/work_packages/schemas", schemasRequest.uri().getPath());
+        assertThat(schemasRequest.uri().getQuery(),
+            containsString("\"values\":[\"1-1\",\"1-2\",\"2-1\",\"2-2\",\"3-1\",\"3-2\"]"));
+    }
+
+    @Test
+    void getMultiValueWorkPackageFieldsWithoutFields() throws Exception
+    {
+        assertEquals(Map.of(), openProjectApiClient.getMultiValueWorkPackageFields(Set.of()));
+
+        verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void getMultiValueWorkPackageFieldsWhenTheSchemasCantBeRetrieved() throws Exception
     {
         Map<String, HttpResponse<String>> responses = mockWorkPackageFieldsResponses();
         when(responses.get("/api/v3/work_packages/schemas").statusCode()).thenReturn(500);
 
-        List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
+        ProjectManagementException exception = assertThrows(ProjectManagementException.class,
+            () -> openProjectApiClient.getMultiValueWorkPackageFields(Set.of("targetVersions")));
 
-        // The fields are still returned, as single-value fields.
-        assertEquals(10, fields.size());
-        assertFalse(fields.get(4).isMultiValue());
-        assertFalse(fields.get(9).isMultiValue());
-        assertThat(this.logCapture.getMessage(0), startsWith("Failed to find out which work package fields are "
-            + "multi-value: ProjectManagementException: Failed to retrieve the OpenProject entities."));
+        assertThat(exception.getMessage(), startsWith("Failed to retrieve the OpenProject entities."));
     }
 
     private Map<String, HttpResponse<String>> mockWorkPackageFieldsResponses() throws Exception

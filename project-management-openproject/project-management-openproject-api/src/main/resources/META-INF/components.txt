@@ -2,6 +2,7 @@ com.xwiki.projectmanagement.openproject.internal.displayer.OpenProjectDisplayerM
 com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager
 com.xwiki.projectmanagement.openproject.internal.OpenProjectClient
 com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver
+com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache
 com.xwiki.projectmanagement.openproject.internal.DefaultOpenProjectApiClientFactory
 com.xwiki.projectmanagement.openproject.internal.WorkPackageDescriptionCleaner
 com.xwiki.projectmanagement.openproject.internal.UserTokenChecker

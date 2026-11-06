@@ -35,10 +35,12 @@ import com.xpn.xwiki.internal.event.XObjectAddedEvent;
 import com.xpn.xwiki.internal.event.XObjectDeletedEvent;
 import com.xpn.xwiki.internal.event.XObjectUpdatedEvent;
 import com.xpn.xwiki.objects.BaseObjectReference;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 
 /**
  * Clears the cached public data of a wiki when its OpenProject connections or its OpenProject configuration (which
- * holds the duration of the cache) change, so that the change applies right away.
+ * holds the duration of the cache) change, so that the change applies right away. Also clears the cached work package
+ * fields, e.g. when a connection points to another instance.
  *
  * @version $Id$
  * @since 1.4.0
@@ -63,6 +65,9 @@ public class PublicDataCacheInvalidationListener extends AbstractEventListener
     @Inject
     private PublicDataClientProvider publicDataClientProvider;
 
+    @Inject
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
     /**
      * Default constructor.
      */
@@ -78,5 +83,6 @@ public class PublicDataCacheInvalidationListener extends AbstractEventListener
     {
         XWikiDocument document = (XWikiDocument) source;
         this.publicDataClientProvider.clearCache(document.getDocumentReference().getWikiReference().getName());
+        this.workPackageFieldsCache.clear();
     }
 }
