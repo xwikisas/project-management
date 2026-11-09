@@ -45,6 +45,7 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.PathSegmentEncoder;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
@@ -165,9 +166,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             if (searchURL == null || searchURL.isEmpty()) {
                 continue;
             }
-            searchURL = searchURL.replace("{wikiName}", wiki);
+            searchURL = searchURL.replace("{wikiName}", PathSegmentEncoder.encode(wiki));
             if (instance != null && !instance.isEmpty()) {
-                searchURL = searchURL.replace("{instance}", instance);
+                searchURL = searchURL.replace("{instance}", PathSegmentEncoder.encode(instance));
             }
             searchURL = getContextPath() + searchURL;
             propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);

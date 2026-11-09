@@ -142,6 +142,30 @@ class OpenProjectLivedataConfigurationResolverTest
     }
 
     @Test
+    void resolveEncodesTheConnectionNameInTheSuggestionURLs() throws Exception
+    {
+        String connection = "Local <b>\"OP\"</b> #2 & co/x";
+        OpenProjectAccessResult access = OpenProjectAccessResult.authenticated(this.client);
+        when(this.openProjectAccess.resolve(connection)).thenReturn(access);
+        when(this.workPackageFieldsCache.getFields(connection, access))
+            .thenAnswer(invocation -> OpenProjectWorkItemFields.of(this.client));
+        WorkPackageField field = new WorkPackageField();
+        field.setKey("targetVersions");
+        field.setName("Target versions");
+        field.setFilterKey("targetVersion");
+        field.setFilterValueType("[]Version");
+        field.setFilterOperators(List.of("="));
+        when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(field), 0, 1, 1));
+
+        LiveDataConfiguration configuration = this.resolver.resolve(getInput(connection));
+
+        assertEquals("/rest/wikis/wiki/openproject/instance/Local%20%3Cb%3E%22OP%22%3C%2Fb%3E%20%232%20%26%20co%2Fx"
+                + "/suggest/versions?search={encodedQuery}",
+            configuration.getMeta().getPropertyDescriptors().iterator().next().getFilter().getParameters()
+                .get("searchURL"));
+    }
+
+    @Test
     void resolveWhenTheMultiValueFieldsCantBeFound() throws Exception
     {
         WorkPackageField field = new WorkPackageField();

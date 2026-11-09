@@ -41,6 +41,7 @@ import org.xwiki.rendering.listener.reference.ResourceType;
 
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayer;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
+import com.xwiki.projectmanagement.openproject.internal.PathSegmentEncoder;
 import com.xwiki.projectmanagement.openproject.internal.displayer.OpenProjectDisplayerManager;
 
 import static org.xwiki.xml.html.HTMLConstants.ATTRIBUTE_CLASS;
@@ -103,8 +104,8 @@ public class UserPropertyDisplayer implements WorkItemPropertyDisplayer
             String userAvatarPath = userAvatarLink.substring(userAvatarLink.indexOf("/users/"));
             String xwikiUserAvatarLink = String.format("%s/rest/wikis/%s/openproject/instance/%s%s/avatar",
                 getContextPath(),
-                params.get(OpenProjectDisplayerManager.KEY_WIKI),
-                params.get(OpenProjectDisplayerManager.KEY_INSTANCE),
+                PathSegmentEncoder.encode(String.valueOf(params.get(OpenProjectDisplayerManager.KEY_WIKI))),
+                PathSegmentEncoder.encode(String.valueOf(params.get(OpenProjectDisplayerManager.KEY_INSTANCE))),
                 userAvatarPath);
             ImageBlock imageBlock = new ImageBlock(new ResourceReference(xwikiUserAvatarLink, ResourceType.URL), true,
                 Map.of("alt", "User avatar", ATTRIBUTE_CLASS, "user-avatar"));
