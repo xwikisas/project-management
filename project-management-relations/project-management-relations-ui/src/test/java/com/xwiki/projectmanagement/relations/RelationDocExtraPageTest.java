@@ -19,7 +19,9 @@
  */
 package com.xwiki.projectmanagement.relations;
 
+import java.io.StringReader;
 import java.util.List;
+import java.util.Properties;
 
 import javax.inject.Named;
 
@@ -75,6 +77,8 @@ import static org.mockito.Mockito.when;
 class RelationDocExtraPageTest extends PageTest
 {
     private static final String WIKI = "xwiki";
+
+    private static final LocalDocumentReference UIX_CLASS = new LocalDocumentReference("XWiki", "UIExtensionClass");
 
     private static final String CLIENT = "client\"{{/html}}<b class=\"injected\">client</b>";
 
@@ -146,12 +150,49 @@ class RelationDocExtraPageTest extends PageTest
         assertFalse(document.body().text().contains("{{/html}}"), document.html());
     }
 
+    @Test
+    void tabShowsTheRelationsCount() throws Exception
+    {
+        // The extension parameters are evaluated without programming rights, each one on its own, in any order.
+        XWikiDocument page = new XWikiDocument(new DocumentReference(WIKI, List.of("Space", "Child"), "WebHome"));
+        BaseObject relationObject = new BaseObject();
+        relationObject.setDocumentReference(page.getDocumentReference());
+        relationObject.setXClassReference(new LocalDocumentReference(List.of("ProjectManagement", "Code"),
+            "RelationClass"));
+        relationObject.setStringValue("client", "client");
+        relationObject.setLargeStringValue("clientParams", "{}");
+        when(((ProjectManagementRelationsScriptService) this.relationsScriptService)
+            .getRelations(page.getDocumentReference(), true))
+            .thenReturn(List.of(new ProjectManagementRelation(relationObject)));
+
+        assertEquals("true", evaluateParameter(page, "show"));
+        assertEquals("1", evaluateParameter(page, "itemnumber"));
+
+        // A page without relations has no tab.
+        XWikiDocument otherPage = new XWikiDocument(new DocumentReference(WIKI, "Space", "Other"));
+        assertEquals("false", evaluateParameter(otherPage, "show"));
+    }
+
+    private String evaluateParameter(XWikiDocument page, String name) throws Exception
+    {
+        XWikiDocument docExtra = loadDocExtra();
+        Properties parameters = new Properties();
+        parameters.load(new StringReader(docExtra.getXObject(UIX_CLASS).getLargeStringValue("parameters")));
+        this.context.setDoc(page);
+        String rendered = docExtra.getRenderedContent("{{velocity}}" + parameters.getProperty(name) + "{{/velocity}}",
+            Syntax.XWIKI_2_1, Syntax.HTML_5_0, false, docExtra, false, this.context);
+        return Jsoup.parse(rendered).text();
+    }
+
+    private XWikiDocument loadDocExtra() throws Exception
+    {
+        return loadPage(new DocumentReference(WIKI, List.of("ProjectManagement", "Code"), "RelationDocExtra"));
+    }
+
     private String renderDocExtra(XWikiDocument page) throws Exception
     {
-        XWikiDocument docExtra = loadPage(new DocumentReference(WIKI, List.of("ProjectManagement", "Code"),
-            "RelationDocExtra"));
-        String content = docExtra.getXObject(new LocalDocumentReference("XWiki", "UIExtensionClass"))
-            .getLargeStringValue("content");
+        XWikiDocument docExtra = loadDocExtra();
+        String content = docExtra.getXObject(UIX_CLASS).getLargeStringValue("content");
         this.context.setDoc(page);
         return docExtra.getRenderedContent(content, Syntax.XWIKI_2_1, Syntax.HTML_5_0, false, docExtra, false,
             this.context);

@@ -539,9 +539,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.relations.docextra', 'xwiki-sel
       <name>com.xwiki.projectmanagement.relations.docextra</name>
     </property>
     <property>
-      <parameters>show=#if($xcontext.get('proj-manag-relations').size() &gt; 0)true#else false#end
+      <parameters>show=#if($services.projectmanagement.relations.getRelations($doc.documentReference, true).isEmpty())false#{else}true#end
 title=$services.localization.render('projectmanagement.relations.docextra.title')
-itemnumber=#set($discard = $xcontext.put('proj-manag-relations', $services.projectmanagement.relations.getRelations($doc.documentReference, true)))$xcontext.get('proj-manag-relations').size()</parameters>
+itemnumber=$services.projectmanagement.relations.getRelations($doc.documentReference, true).size()</parameters>
     </property>
     <property>
       <scope>wiki</scope>
