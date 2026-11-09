@@ -188,6 +188,21 @@ class OpenProjectClientTest
         assertEquals(List.of("3"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "http://open-project-instance/work_packages/5",
+        "http://open-project-instance/projects/first-project/work_packages/5/activity",
+        "https://open-project-instance/wp/5/", "http://open-project-instance/work_packages/5?tab=relations" })
+    void getWorkItemsWithIdentifierAsWorkPackageLink(String link) throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(link);
+        doReturn(workPackages(5)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\"]}}]")), eq(""));
+
+        assertEquals(List.of("5"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
+        // A single work package is never truncated.
+        assertEquals(Optional.empty(), this.openProjectClient.getWorkItemsLocation(List.of(), List.of()));
+    }
+
     @Test
     void getWorkItemsWithIdentifierAndProject() throws ProjectManagementException
     {
