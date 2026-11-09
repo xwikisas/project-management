@@ -113,6 +113,13 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final String NO_FILTERS = "[]";
 
+    /**
+     * The path of the page of a single work package, e.g. {@code /work_packages/5},
+     * {@code /projects/demo/work_packages/5/activity} or {@code /wp/5}.
+     */
+    private static final Pattern WORK_PACKAGE_PATH_PATTERN =
+        Pattern.compile("/(?:work_packages|wp)/(\\d+)(?:/[^/]+)?/?$");
+
     private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
 
     private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
@@ -184,7 +191,7 @@ public class OpenProjectClient implements ProjectManagementClient
     {
         try {
             int openProjectPage = getOpenProjectPage(offset, pageSize);
-            String identifier = (String) executionContext.get(IDENTIFIER);
+            String identifier = getIdentifier();
             OpenProjectAccessResult access = resolveAccess();
             OpenProjectApiClient openProjectApiClient = access.getClient();
             OpenProjectWorkItemFields fields = getWorkItemFields(access);
@@ -392,6 +399,26 @@ public class OpenProjectClient implements ProjectManagementClient
         return openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters, sortBy);
     }
 
+    /**
+     * @return the identifier of the macro, where the link of a single work package is replaced by the id of the work
+     *     package, so that it's displayed like when given by its id
+     */
+    private String getIdentifier()
+    {
+        String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
+        if (identifier != null && URL_PATTERN.matcher(identifier).matches()) {
+            try {
+                Matcher matcher = WORK_PACKAGE_PATH_PATTERN.matcher(new URL(identifier).getPath());
+                if (matcher.find()) {
+                    return matcher.group(1);
+                }
+            } catch (MalformedURLException e) {
+                // The identifier is then rejected like the other invalid links.
+            }
+        }
+        return identifier;
+    }
+
     private boolean isIdsOrSavedQuery(String identifier)
     {
         return StringUtils.isNotEmpty(identifier) && (IDS_PATTERN.matcher(identifier).matches()
@@ -410,7 +437,7 @@ public class OpenProjectClient implements ProjectManagementClient
         throws WorkItemRetrievalException
     {
         String groupBy = GROUP_BY_PROPERTIES.get(property);
-        String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
+        String identifier = getIdentifier();
         // OpenProject can't count the work packages of a saved query, and a list of work packages is short enough to
         // be retrieved.
         if (groupBy == null || isIdsOrSavedQuery(identifier)) {
@@ -442,7 +469,7 @@ public class OpenProjectClient implements ProjectManagementClient
     public Optional<String> getWorkItemsLocation(List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
     {
-        String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
+        String identifier = getIdentifier();
         try {
             if (isIdsOrSavedQuery(identifier)) {
                 // A list of work packages is never truncated, and the filters can't be added to a saved query.
