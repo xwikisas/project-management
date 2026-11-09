@@ -191,7 +191,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       currentWorkPackageId = workPackageId;
       $("#edit-connection").val(connection);
 
-      const url = `${baseUrl}${connection}/workPackages/${workPackageId}/editForm`;
+      const url = `${baseUrl}${encodeURIComponent(connection)}/workPackages/${workPackageId}/editForm`;
       $.ajax({ method: "GET", contentType: "application/json", url: url })
         .done(function (options) {
         const { lockVersion, projectHref, ...formFields } = options;
@@ -221,7 +221,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.editwork
       const payload = createWpUtils.buildPayload($("#edit-dynamic-fields-container"));
       payload.lockVersion = currentLockVersion;
 
-      const url = `${baseUrl}${currentConnection}/workPackages/${currentWorkPackageId}/update`;
+      const url = `${baseUrl}${encodeURIComponent(currentConnection)}/workPackages/${currentWorkPackageId}/update`;
       $.ajax({ method: "POST", contentType: "application/json", url: url, data: JSON.stringify(payload) })
         .done(function (response) {
         createWpUtils.notify(l10n.get("notify.success"), "done");

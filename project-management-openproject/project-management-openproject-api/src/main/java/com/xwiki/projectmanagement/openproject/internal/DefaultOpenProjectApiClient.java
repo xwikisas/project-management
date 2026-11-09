@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -373,10 +372,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             if (!sortEntries.isEmpty()) {
                 queryProps.put("t", String.join(",", sortEntries));
             }
-            String projectPath = project == null ? "" : "/projects/" + encodePathSegment(project);
+            String projectPath = project == null ? "" : "/projects/" + PathSegmentEncoder.encode(project);
             return String.format("%s%s/work_packages?query_props=%s", StringUtils.removeEnd(connectionUrl, SLASH),
                 projectPath,
-                encodePathSegment(objectMapper.writeValueAsString(queryProps)));
+                PathSegmentEncoder.encode(objectMapper.writeValueAsString(queryProps)));
         } catch (JsonProcessingException e) {
             LOGGER.debug("Failed to build the URL of the work packages matching the filters [{}].", filters, e);
             return null;
@@ -391,7 +390,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static String getWorkPackagesUrlPart(String project)
     {
         return project == null ? API_URL_WORK_PACKAGES
-            : String.format("%s/projects/%s/work_packages", API_URL_PART, encodePathSegment(project));
+            : String.format("%s/projects/%s/work_packages", API_URL_PART, PathSegmentEncoder.encode(project));
     }
 
     @Override
@@ -399,7 +398,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String sortBy) throws ProjectManagementException
     {
         // The filters are left out on purpose, sending them would replace the ones defined by the query.
-        String queryUrl = String.format(API_URL_QUERY, encodePathSegment(queryId));
+        String queryUrl = String.format(API_URL_QUERY, PathSegmentEncoder.encode(queryId));
         JsonNode queryJson = getOpenProjectResponse(queryUrl, offset, pageSize, "", sortBy, "");
 
         return getWorkPackagePaginatedResult(queryJson.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_RESULTS), offset,
@@ -409,7 +408,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public WorkPackage getWorkPackage(String idOrKey) throws ProjectManagementException
     {
-        String workPackageUrl = API_URL_WORK_PACKAGES + '/' + encodePathSegment(idOrKey);
+        String workPackageUrl = API_URL_WORK_PACKAGES + '/' + PathSegmentEncoder.encode(idOrKey);
         try {
             return createWorkPackageFromJson(getOpenProjectResponse(workPackageUrl, null, null, "", "", ""));
         } catch (WorkItemRetrievalException e) {
@@ -424,7 +423,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public String getQueryResultsUrl(String queryId) throws ProjectManagementException
     {
-        String queryUrl = String.format(API_URL_QUERY, encodePathSegment(queryId));
+        String queryUrl = String.format(API_URL_QUERY, PathSegmentEncoder.encode(queryId));
         JsonNode queryJson = getOpenProjectResponse(queryUrl, null, null, "", "", "");
         return queryJson.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_RESULTS).path(HREF).asText();
     }
@@ -800,7 +799,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public UserAvatar getUserAvatar(String userId) throws ProjectManagementException
     {
-        String urlPart = String.format("/api/v3/users/%s/avatar", encodePathSegment(userId));
+        String urlPart = String.format("/api/v3/users/%s/avatar", PathSegmentEncoder.encode(userId));
         String uriStr = connectionUrl + urlPart;
         try {
             URI uri = createInstanceUri(urlPart);
@@ -903,7 +902,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public JsonNode getWorkPackageFormResponse(String workPackageId, String jsonBody) throws ProjectManagementException
     {
-        String urlPart = String.format(API_URL_FORM_EDIT_WORK_PACKAGE, encodePathSegment(workPackageId));
+        String urlPart = String.format(API_URL_FORM_EDIT_WORK_PACKAGE, PathSegmentEncoder.encode(workPackageId));
         String urlString = connectionUrl + urlPart;
         try {
             URI uri = createInstanceUri(urlPart);
@@ -1208,15 +1207,6 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             }
         }
         return false;
-    }
-
-    /**
-     * @param value a value inserted in the path of a request, e.g. an identifier
-     * @return the value encoded to be used as a single path segment
-     */
-    private static String encodePathSegment(String value)
-    {
-        return URLEncoder.encode(String.valueOf(value), StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private HttpRequest createAuthorizedRequest(

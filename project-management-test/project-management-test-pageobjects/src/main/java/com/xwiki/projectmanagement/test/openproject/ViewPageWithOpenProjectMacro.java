@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.ViewPage;
@@ -67,6 +68,30 @@ public class ViewPageWithOpenProjectMacro extends ViewPage
     {
         return getDriver().findElementsWithoutWaiting(By.cssSelector("#xwikicontent .box.warningmessage")).stream()
             .map(WebElement::getText).collect(Collectors.toList());
+    }
+
+    /**
+     * Select the text of the first cell of the first table of the page and open the form creating one work package
+     * per row of that table.
+     *
+     * @return the form
+     * @since 1.4.0
+     */
+    public CreateWorkPackagesModal openCreateWorkPackagesFromTable()
+    {
+        WebElement cell = getDriver().findElement(By.cssSelector("#xwikicontent table td"));
+        // Select the first word of the cell with a double click: the menu is displayed when the mouse button is
+        // released over selected text. The text starts after the padding of the cell, which can be wider than its text.
+        int textStart = (int) Double.parseDouble(StringUtils.removeEnd(cell.getCssValue("padding-left"), "px")) + 5;
+        getDriver().moveToTopLeftCornerOfTargetWithOffset(cell, textStart, cell.getSize().getHeight() / 2, null)
+            .doubleClick().perform();
+        WebElement menu = getDriver().findElement(By.id("selection-menu"));
+        getDriver().waitUntilCondition(driver -> menu.isDisplayed());
+        menu.findElement(By.className("dropdown-toggle")).click();
+        WebElement fromTable = menu.findElement(By.cssSelector("#create-wp-from-table a"));
+        getDriver().waitUntilCondition(driver -> fromTable.isDisplayed());
+        fromTable.click();
+        return new CreateWorkPackagesModal();
     }
 
     /**

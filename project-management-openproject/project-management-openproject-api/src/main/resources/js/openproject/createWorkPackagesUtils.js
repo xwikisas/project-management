@@ -156,7 +156,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	}
 
 	let createWorkPackagesRequest = async function createWorkPackagesRequest(connection, requestBody) {
-	  const url = `${baseUrl}${connection}/workPackages/create`;
+	  const url = `${baseUrl}${encodeURIComponent(connection)}/workPackages/create`;
 	  return await $.ajax({
 	    method: "POST",
 	    contentType: "application/json",
@@ -234,7 +234,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	    if (!connection) {
 	      return callback([]);
 	    }
-	    const searchUrl = `${baseUrl}${connection}/workPackages/availableProjects`;
+	    const searchUrl = `${baseUrl}${encodeURIComponent(connection)}/workPackages/availableProjects`;
 	    const selectize = project[0].selectize || project[0].tomselect;
 	    $.getJSON(searchUrl, { search: text, selectedItem: project.val().split('/').pop() })
 	      .done(function (results) {
@@ -248,7 +248,9 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
               selectize.updateOption(result.value, result);
             }
 	        });
-	        selectize.refreshOptions(false);
+	        // Open the list when the picker got the focus before its options were loaded, as the picker does for the
+	        // options it loads itself.
+	        selectize.refreshOptions(selectize.isFocused && !selectize.isInputHidden);
 	        callback();
 	        // Auto-select and lock the project when the instance exposes a single one.
 	        if (!text && results.length === 1) {
@@ -330,7 +332,7 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
 	      const project = projectHref || "";
 	      // The endpoint is a full path under the instance (e.g. "workPackages/availableAssignees" or "suggest/parent"),
 	      // so field types living on different resources can all be driven the same way.
-	      const searchUrl = `${baseUrl}${connection}/${endpoint}`;
+	      const searchUrl = `${baseUrl}${encodeURIComponent(connection)}/${endpoint}`;
 	      const selectize = select[0].selectize || select[0].tomselect;
 	      $.getJSON(searchUrl, { project: project, search: text, selectedItem: select.val().split('/').pop() })
 	        .done(function (results) {

@@ -27,6 +27,7 @@ import org.xwiki.test.docker.junit5.UITest;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectAdministrationIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectCKEditorIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectChartMacroIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectCreateWorkPackagesIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectDashboardIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectLinkSearchIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
@@ -89,6 +90,12 @@ public class AllIT
     @Nested
     @DisplayName("OpenProject link search")
     class NestedOpenProjectLinkSearchIT extends OpenProjectLinkSearchIT
+    {
+    }
+
+    @Nested
+    @DisplayName("OpenProject work package creation")
+    class NestedOpenProjectCreateWorkPackagesIT extends OpenProjectCreateWorkPackagesIT
     {
     }
 
