@@ -248,7 +248,9 @@ define('create-work-package-utils', ['jquery', 'xwiki-l10n!openproject.createwor
               selectize.updateOption(result.value, result);
             }
 	        });
-	        selectize.refreshOptions(false);
+	        // Open the list when the picker got the focus before its options were loaded, as the picker does for the
+	        // options it loads itself.
+	        selectize.refreshOptions(selectize.isFocused && !selectize.isInputHidden);
 	        callback();
 	        // Auto-select and lock the project when the instance exposes a single one.
 	        if (!text && results.length === 1) {
