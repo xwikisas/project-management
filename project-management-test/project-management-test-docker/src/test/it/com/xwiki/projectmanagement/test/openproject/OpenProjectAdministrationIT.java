@@ -120,32 +120,50 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     @Order(4)
     void styleSyncJob(TestUtils setup, TestReference testReference) throws Exception
     {
-        setup.createPage(testReference,
-            String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
-        // A connection that the current user isn't connected to: its statuses and types are read without credentials.
+        // Saving a connection runs the colors job. The current user isn't connected to this connection: its statuses
+        // and types are read without credentials.
         String notConnected = "styles-not-connected";
         OpenProjectAdminPage.gotoPage()
             .addNewConnection(notConnected, this.openProject.getBaseUrl(), "someid", "somesecret");
+        DocumentReference stylesReference = new DocumentReference("xwiki", STYLE_SHEETS_SPACE, notConnected);
+        // Compare one generated type color with a known OpenProject color.
+        String taskColor = "color: #1a67a3";
+        assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
 
+        // The "Sync colors" button runs the same job: it generates the colors again once they're deleted.
+        setup.rest().delete(stylesReference);
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
         adminPage.triggerColorSyncJob();
         assertTrue(adminPage.isColorSyncJobTriggered());
-        // The scheduler doesn't execute the jobs during the test (neither the job triggered when saving a connection,
-        // nor the one triggered above), so the styles are generated synchronously, by a page that is rendered when
-        // saved.
-        setup.createPage(List.of("StartStylingJob"), "WebHome",
-            "{{velocity}}$services.openproject.generateStyling(){{/velocity}}", "");
+        assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
 
-        setup.gotoPage(testReference);
-        // Compare one rendered type property with a known OpenProject color.
+        // The job generates the colors of every connection, and the macros display them.
+        waitForStyleSheet(setup, new DocumentReference("xwiki", STYLE_SHEETS_SPACE, CONNECTION_ID));
+        setup.createPage(testReference,
+            String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
         assertEquals("rgb(26, 103, 163)",
             new ViewPageWithOpenProjectMacro().getPropertyColor("type", "Task", CONNECTION_ID));
 
-        org.xwiki.rest.model.jaxb.Object styleSheet = setup.rest().get(new ObjectReference(
-            "XWiki.StyleSheetExtension[0]", new DocumentReference("xwiki", STYLE_SHEETS_SPACE, notConnected)));
-        assertThat(TestUtils.RestTestUtils.getProperty("code", styleSheet, false).getValue().toLowerCase(),
-            containsString("color: #1a67a3"));
         OpenProjectAdminPage.gotoPage().deleteConnection(notConnected);
+    }
+
+    /**
+     * The colors job runs in a scheduler thread: wait for the style sheet it generates.
+     *
+     * @return the lowercase code of the style sheet
+     */
+    private static String waitForStyleSheet(TestUtils setup, DocumentReference stylesReference) throws Exception
+    {
+        ObjectReference styleSheetReference = new ObjectReference("XWiki.StyleSheetExtension[0]", stylesReference);
+        long deadline = System.currentTimeMillis() + 60_000;
+        org.xwiki.rest.model.jaxb.Object styleSheet = setup.rest().get(styleSheetReference, false);
+        while (styleSheet == null) {
+            assertTrue(System.currentTimeMillis() < deadline,
+                String.format("The colors job didn't generate the style sheet [%s].", styleSheetReference));
+            Thread.sleep(500);
+            styleSheet = setup.rest().get(styleSheetReference, false);
+        }
+        return TestUtils.RestTestUtils.getProperty("code", styleSheet, false).getValue().toLowerCase();
     }
 
     @Test

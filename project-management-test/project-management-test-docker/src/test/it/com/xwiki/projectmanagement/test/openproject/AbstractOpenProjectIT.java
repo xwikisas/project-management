@@ -44,10 +44,11 @@ public abstract class AbstractOpenProjectIT
 {
     /**
      * The scheduler UI needs programming rights, and so do the scripts executed by the tests to read the client
-     * secret of a connection.
+     * secret of a connection, and the colors job, a Groovy job that the scheduler only runs with programming rights.
      */
     public static final String PRCHECKER_EXCLUDE_PROPERTY = "xwikiPropertiesAdditionalProperties="
-        + "test.prchecker.excludePattern=xwiki:(Scheduler\\.WebHome|Test\\.Execute\\..*)";
+        + "test.prchecker.excludePattern="
+        + "xwiki:(Scheduler\\.WebHome|Test\\.Execute\\..*|OpenProject\\.Code\\.StylingSetupJob)";
 
     /**
      * Add the Scheduler plugin used by the Style sync job and the jsrx and ssrx plugins used by the app.
