@@ -476,8 +476,30 @@ public class OpenProjectClient implements ProjectManagementClient
         List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        int openProjectPage = getOpenProjectPage(offset, pageSize);
         List<String> ids = resolveIds(openProjectApiClient, IDS_SEPARATOR_PATTERN.split(identifier.trim()));
+        try {
+            return getWorkItemsByIds(openProjectApiClient, fields, ids, offset, pageSize, filtersEntries, sortEntries);
+        } catch (WorkItemRetrievalException e) {
+            // OpenProject rejects the whole id filter when one of the work packages doesn't exist, or can't be seen by
+            // the user: the other work packages are then displayed without it.
+            if (!Integer.valueOf(HttpURLConnection.HTTP_BAD_REQUEST).equals(e.getStatusCode())) {
+                throw e;
+            }
+            List<String> existingIds = getExistingIds(openProjectApiClient, ids);
+            if (existingIds.size() == ids.size()) {
+                throw e;
+            }
+            return getWorkItemsByIds(openProjectApiClient, fields, existingIds, offset, pageSize, filtersEntries,
+                sortEntries);
+        }
+    }
+
+    private PaginatedResult<WorkItem> getWorkItemsByIds(OpenProjectApiClient openProjectApiClient,
+        OpenProjectWorkItemFields fields, List<String> ids, int offset, int pageSize,
+        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        throws ProjectManagementException
+    {
+        int openProjectPage = getOpenProjectPage(offset, pageSize);
         if (ids.isEmpty()) {
             return new PaginatedResult<>(Collections.emptyList(), openProjectPage, pageSize, 0);
         }
@@ -536,6 +558,26 @@ public class OpenProjectClient implements ProjectManagementClient
             }
         }
         return new ArrayList<>(ids);
+    }
+
+    /**
+     * @return the ids of the work packages that exist and that the user can see, in the given order. Each id requires
+     *     a request to OpenProject, so they are checked in parallel (and the client caches them).
+     */
+    private List<String> getExistingIds(OpenProjectApiClient openProjectApiClient, List<String> ids)
+        throws ProjectManagementException
+    {
+        Map<String, CompletableFuture<WorkPackage>> checks = new HashMap<>();
+        for (String id : ids) {
+            checks.put(id, CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, id)));
+        }
+        List<String> existingIds = new ArrayList<>();
+        for (String id : ids) {
+            if (joinResolution(id, checks.get(id)) != null) {
+                existingIds.add(id);
+            }
+        }
+        return existingIds;
     }
 
     private static WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
