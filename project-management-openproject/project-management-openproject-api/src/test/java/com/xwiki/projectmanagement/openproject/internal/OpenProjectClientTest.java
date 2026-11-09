@@ -472,6 +472,56 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemsWithAnIdThatDoesntExist() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("3,99999,1");
+        // OpenProject rejects the whole id filter when one of the work packages doesn't exist.
+        doThrow(new WorkItemRetrievalException("Id filter has invalid values.", 400)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(3),
+                argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"3\",\"99999\",\"1\"]}}]")), eq(""));
+        when(this.openProjectApiClient.getWorkPackage("3")).thenReturn(createWorkPackage(3));
+        when(this.openProjectApiClient.getWorkPackage("99999")).thenReturn(null);
+        when(this.openProjectApiClient.getWorkPackage("1")).thenReturn(createWorkPackage(1));
+        doReturn(workPackages(1, 3)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(2),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"3\",\"1\"]}}]")), eq(""));
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(List.of("3", "1"), getIds(result));
+        assertEquals(2, result.getTotalItems());
+    }
+
+    @Test
+    void getWorkItemsWithOnlyIdsThatDontExist() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("99999");
+        doThrow(new WorkItemRetrievalException("Id filter has invalid values.", 400)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"99999\"]}}]")),
+                eq(""));
+        when(this.openProjectApiClient.getWorkPackage("99999")).thenReturn(null);
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(0, result.getItems().size());
+        assertEquals(0, result.getTotalItems());
+    }
+
+    @Test
+    void getWorkItemsWithExistingIdsRejectedByOpenProject() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("3");
+        // The request is rejected for another reason than the ids, e.g. one of the filters.
+        WorkItemRetrievalException rejection = new WorkItemRetrievalException("Invalid filter", 400);
+        doThrow(rejection).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"3\"]}}]")),
+                eq(""));
+        when(this.openProjectApiClient.getWorkPackage("3")).thenReturn(createWorkPackage(3));
+
+        assertSame(rejection, assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
+    }
+
+    @Test
     void getWorkItemsWithKeysKeepsTheOrderOfTheIdentifier() throws ProjectManagementException
     {
         when(this.executionContext.get(IDENTIFIER)).thenReturn(" XWIKI-123 , xwiki-456,1911,XWIKI-123,XWIKI-404 ");
