@@ -333,7 +333,7 @@ class DefaultOpenProjectApiClientTest
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
 
-        PaginatedResult<User> users = openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, FILTERS_STRING);
+        PaginatedResult<User> users = openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "[]");
 
         assertEquals(2, users.getTotalItems());
         assertEquals(PAGE_SIZE, users.getPageSize());
@@ -344,6 +344,28 @@ class DefaultOpenProjectApiClientTest
             List.of("First User", "Second User"),
             String.format("%s/users/%%s", OPEN_PROJECT_CONNECTION_URL)
         );
+    }
+
+    @Test
+    void getUsersListsTheUserPrincipals() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
+
+        // The users API is forbidden to the users who aren't administrators and to the anonymous user.
+        this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "[{\"name\":{\"operator\":\"~\",\"values\":[\"jo\"]}}]");
+        this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "");
+        this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, " [ ] ");
+        assertThrows(ProjectManagementException.class,
+            () -> this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "{\"name\":{}}"));
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client, times(3)).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        String typeFilter = "{\"type\":{\"operator\":\"=\",\"values\":[\"User\"]}}";
+        assertEquals("/api/v3/principals", captor.getAllValues().get(0).uri().getPath());
+        assertThat(captor.getAllValues().get(0).uri().getQuery(),
+            containsString("filters=[" + typeFilter + ",{\"name\":{\"operator\":\"~\",\"values\":[\"jo\"]}}]"));
+        assertThat(captor.getAllValues().get(1).uri().getQuery(), containsString("filters=[" + typeFilter + "]"));
+        assertThat(captor.getAllValues().get(2).uri().getQuery(), containsString("filters=[" + typeFilter + "]"));
     }
 
     @Test

@@ -53,6 +53,8 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemNotFoundException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
@@ -188,7 +190,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String API_URL_PRIORITIES = "/api/v3/priorities";
 
-    private static final String API_URL_USERS = "/api/v3/users";
+    // The users API is reserved to the administrators (and the users allowed to create or manage users): the users
+    // are listed from the principals API, which lists those visible to the current user (e.g. the members of the
+    // projects it can see), including for the anonymous user.
+    private static final String API_URL_PRINCIPALS = "/api/v3/principals";
+
+    private static final String INVALID_USER_FILTERS = "Invalid user filters [%s].";
+
+    private static final String OP_EQUALS = "=";
+
 
     private static final String API_URL_PROJECTS = "/api/v3/projects";
 
@@ -432,7 +442,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<User> getUsers(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
-        JsonNode mainNode = getOpenProjectResponse(API_URL_USERS, offset, pageSize, filters, "", "");
+        JsonNode mainNode =
+            getOpenProjectResponse(API_URL_PRINCIPALS, offset, pageSize, getUserPrincipalsFilters(filters), "", "");
         JsonNode usersJson = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
 
         List<User> users = new ArrayList<>();
@@ -444,6 +455,29 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         }
 
         return new PaginatedResult<>(users, offset, pageSize, getTotalNumberOfEntities(mainNode));
+    }
+
+    /**
+     * @param filters the filters of the users to retrieve, as a JSON array (possibly empty)
+     * @return the given filters, restricted to the principals that are users (not groups or placeholder users)
+     * @throws ProjectManagementException if the filters aren't a JSON array
+     */
+    private String getUserPrincipalsFilters(String filters) throws ProjectManagementException
+    {
+        try {
+            JsonNode givenFilters = readJsonArray(StringUtils.trimToEmpty(filters));
+            if (!givenFilters.isArray()) {
+                throw new ProjectManagementException(String.format(INVALID_USER_FILTERS, filters));
+            }
+            ArrayNode principalsFilters = this.objectMapper.createArrayNode();
+            ObjectNode typeFilter = principalsFilters.addObject().putObject(OP_RESPONSE_TYPE);
+            typeFilter.put(OP_OPERATOR, OP_EQUALS);
+            typeFilter.putArray(OP_VALUES).add("User");
+            principalsFilters.addAll((ArrayNode) givenFilters);
+            return this.objectMapper.writeValueAsString(principalsFilters);
+        } catch (JsonProcessingException e) {
+            throw new ProjectManagementException(String.format(INVALID_USER_FILTERS, filters), e);
+        }
     }
 
     @Override
@@ -587,7 +621,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         if (schemaIds.isEmpty()) {
             return Map.of();
         }
-        String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of(OP_OPERATOR, "=", OP_VALUES, schemaIds))));
+        String filters = toJson(List.of(Map.of(OP_RESPONSE_ID, Map.of(OP_OPERATOR, OP_EQUALS, OP_VALUES, schemaIds))));
         return WorkPackageFieldsParser.parseMultiValueFields(
             getOpenProjectResponseEntities(API_URL_WORK_PACKAGE_SCHEMAS, null, null, filters, "", ""), fieldKeys);
     }
