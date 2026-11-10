@@ -171,6 +171,21 @@ class AbstractProjectManagementChartMacroTest
     }
 
     @Test
+    void translatesTheLabelsThatAreTranslationKeys() throws Exception
+    {
+        this.parameters.setDatasetsLabels("[\"chart.open\", \"Closed\", \"\"]");
+        when(this.localizationManager.getTranslationPlain("chart.open")).thenReturn("Ouverts");
+        Map<String, Long> counts = Map.of("New", 3L);
+        when(this.projectManagementManager.countWorkItems(CLIENT, List.of(), WorkItem.KEY_STATUS))
+            .thenReturn(Optional.of(counts));
+        // A label that isn't a translation key is displayed as is.
+        when(this.displayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of("Ouverts", "Closed", ""),
+            this.macroTransformationContext, new HashMap<>())).thenReturn(this.chart);
+
+        assertEquals(this.chart, execute());
+    }
+
+    @Test
     void chartsAllTheWorkItemsWhenTheClientCantCountThem() throws Exception
     {
         PaginatedResult<WorkItem> workItems = new PaginatedResult<>(List.of(new WorkItem()), 0, 1000, 1);

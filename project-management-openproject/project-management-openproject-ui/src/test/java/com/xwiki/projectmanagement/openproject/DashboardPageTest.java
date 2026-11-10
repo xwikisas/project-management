@@ -19,8 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject;
 
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +35,6 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.page.HTML50ComponentList;
 import org.xwiki.test.page.PageTest;
 import org.xwiki.test.page.XWikiSyntax21ComponentList;
-import org.xwiki.velocity.VelocityManager;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
@@ -87,23 +84,19 @@ class DashboardPageTest extends PageTest
     void chartLegendsAreTranslated() throws Exception
     {
         XWikiDocument dashboard = loadPage(new DocumentReference("xwiki", "OpenProject", "WebHome"));
-        VelocityManager velocityManager = this.componentManager.getInstance(VelocityManager.class);
         List<String> charts = new ArrayList<>();
         for (BaseObject gadget : dashboard.getXObjects(new LocalDocumentReference("XWiki", "GadgetClass"))) {
             String content = gadget.getLargeStringValue("content");
             if (content.contains("datasetsLabels")) {
-                String script = content.substring(content.indexOf("{{velocity}}") + "{{velocity}}".length(),
-                    content.indexOf("{{/velocity}}"));
-                StringWriter output = new StringWriter();
-                velocityManager.evaluate(output, "gadget", new StringReader(script));
-                charts.add(output.toString());
+                charts.add(content);
             }
         }
 
         assertEquals(2, charts.size());
-        // The labels are escaped for the macro parameter.
         for (String chart : charts) {
-            assertTrue(chart.contains("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
+            // The chart macro translates the labels that are translation keys. The gadgets need no script, since
+            // they are executed with the rights of the last author of the dashboard, who may not have script right.
+            assertTrue(chart.startsWith("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
                 + "~\"openproject.dashboard.chart.closed~\"]\" "), chart);
         }
     }

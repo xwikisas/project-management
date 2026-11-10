@@ -32,7 +32,6 @@ import javax.inject.Singleton;
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.configuration.ConfigurationSource;
-import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
@@ -86,9 +85,6 @@ public class OpenProjectProjectDetailsMacro
     @Inject
     @Named("wiki")
     private ConfigurationSource wikiConfigSource;
-
-    @Inject
-    private ContextualLocalizationManager l10n;
 
     @Inject
     @Named("openproject")
@@ -210,7 +206,7 @@ public class OpenProjectProjectDetailsMacro
     private Block buildLabelValueBlock(String label, List<Block> valueBlocks)
     {
         List<Block> content = new ArrayList<>();
-        String translatedLabel = this.l10n.getTranslationPlain(TRANSLATION_PREFIX + label);
+        String translatedLabel = translate(TRANSLATION_PREFIX + label);
         content.add(new FormatBlock(List.of(new WordBlock(translatedLabel + ": ")), Format.BOLD));
         content.addAll(valueBlocks);
         return new ParagraphBlock(content);

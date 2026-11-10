@@ -78,13 +78,7 @@ public class OpenProjectSpentTimeMacro
 
     private static final String EMPTY_FILTER = "";
 
-    private static final String ACTIVITY_TABLE_HEADER = "ACTIVITY";
-
-    private static final String LOGGED_FOR_TABLE_HEADER = "LOGGED FOR";
-
-    private static final String COMMENT_TABLE_HEADER = "COMMENT";
-
-    private static final String HOURS_TABLE_HEADER = "HOURS";
+    private static final String TRANSLATION_PREFIX = "openproject.openproject-spent-time.";
 
     private static final String EMPTY_CELL_PLACEHOLDER = "-";
 
@@ -179,15 +173,21 @@ public class OpenProjectSpentTimeMacro
         return blocks;
     }
 
+    private Block buildHeader(String column)
+    {
+        return new FormatBlock(List.of(new WordBlock(translate(TRANSLATION_PREFIX + "header." + column))),
+            Format.BOLD);
+    }
+
     private Block buildTable(List<TimeEntry> entries)
     {
         TableBuilder tableBuilder = new TableBuilder();
 
         tableBuilder.newRow()
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(ACTIVITY_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(LOGGED_FOR_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(COMMENT_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(HOURS_TABLE_HEADER)), Format.BOLD)));
+            .newCell(List.of(buildHeader("activity")))
+            .newCell(List.of(buildHeader("loggedFor")))
+            .newCell(List.of(buildHeader("comment")))
+            .newCell(List.of(buildHeader("hours")));
 
         Map<Date, List<TimeEntry>> byDate = groupByDate(entries);
         String dateFormat = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy");
@@ -280,6 +280,6 @@ public class OpenProjectSpentTimeMacro
 
     private String formatTotalHours(double hours)
     {
-        return formatHours(hours) + " h";
+        return formatHours(hours) + " " + translate(TRANSLATION_PREFIX + "hoursUnit");
     }
 }

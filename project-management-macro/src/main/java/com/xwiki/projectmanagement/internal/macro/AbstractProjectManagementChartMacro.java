@@ -148,7 +148,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 {
                     try {
                         prepareContext(parameters);
-                        return displayChart(chartTypeDisplayer, filters, parameters, labels, context,
+                        return displayChart(chartTypeDisplayer, filters, parameters, translateLabels(labels), context,
                             typeDisplayerParams);
                     } catch (WorkItemException e) {
                         throw new MacroExecutionException("Failed to retrieve the work packages.", e);
@@ -184,6 +184,23 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     protected List<LiveDataQuery.SortEntry> getSortEntries(T parameters)
     {
         return Collections.emptyList();
+    }
+
+    /**
+     * A label of the datasets can be a translation key, so that the charts shipped in wiki pages (e.g. a dashboard)
+     * can be translated without a script. A label that isn't a translation key is displayed as is.
+     */
+    private List<String> translateLabels(List<String> labels)
+    {
+        List<String> translatedLabels = new ArrayList<>(labels.size());
+        for (String label : labels) {
+            String translation = null;
+            if (StringUtils.isNotBlank(label)) {
+                translation = this.localizationManager.getTranslationPlain(label);
+            }
+            translatedLabels.add(translation != null ? translation : label);
+        }
+        return translatedLabels;
     }
 
     private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
