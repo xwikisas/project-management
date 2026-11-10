@@ -584,14 +584,75 @@ class DefaultOpenProjectApiClientTest
         when(this.response.statusCode()).thenReturn(200);
         when(this.response.body()).thenReturn("{}");
 
-        assertThrows(ProjectManagementException.class,
-            () -> apiClient.getAvailableUsers("x/api/v3/users", OFFSET, PAGE_SIZE, ""));
+        // The links returned by OpenProject include the path of the instance: the ones without it are outside it.
+        for (String href : List.of("x/api/v3/users", "/api/v3/users", "/openprojectx/api/v3/users",
+            "/openproject/../api/v3/users", "/openproject@other.example/api/v3/users"))
+        {
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.getAvailableUsers(href, OFFSET, PAGE_SIZE, ""));
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.getAvailableProjects(href, OFFSET, PAGE_SIZE, ""));
+            assertThrows(ProjectManagementException.class, () -> apiClient.createWorkPackage(href, "{}"));
+            assertThrows(ProjectManagementException.class, () -> apiClient.updateWorkPackage(href, "{}"));
+        }
         verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
 
-        apiClient.getAvailableUsers("/api/v3/users", null, null, "");
+        apiClient.getAvailableUsers("/openproject/api/v3/users", null, null, "");
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
         assertEquals("https://example.org/openproject/api/v3/users", captor.getValue().uri().toString());
+    }
+
+    @Test
+    void linksReturnedByOpenProjectServedUnderAPath() throws Exception
+    {
+        // The links returned by OpenProject are absolute paths, which include the path of the instance.
+        DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient("https://example.org/openproject",
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{}");
+
+        apiClient.getAvailableProjects("/openproject/api/v3/work_packages/available_projects", 0, 10, "");
+        apiClient.getAvailableUsers("/openproject/api/v3/projects/1/available_assignees", 0, 10, "");
+        apiClient.createWorkPackage("/openproject/api/v3/work_packages", "{}");
+        apiClient.updateWorkPackage("/openproject/api/v3/work_packages/2", "{}");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client, times(4)).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(List.of(
+            "https://example.org/openproject/api/v3/work_packages/available_projects",
+            "https://example.org/openproject/api/v3/projects/1/available_assignees",
+            "https://example.org/openproject/api/v3/work_packages",
+            "https://example.org/openproject/api/v3/work_packages/2"),
+            captor.getAllValues().stream().map(request -> request.uri().getScheme() + "://"
+                + request.uri().getAuthority() + request.uri().getPath()).collect(Collectors.toList()));
+
+        // The pages of OpenProject are linked under the path of the instance.
+        when(this.response.body()).thenReturn("{\"_embedded\":{\"elements\":[{\"id\":7,\"title\":\"Release\","
+            + "\"summary\":\"\",\"description\":{\"raw\":\"\"},\"createdAt\":\"2026-10-01T10:00:00Z\","
+            + "\"_links\":{\"self\":{\"href\":\"/openproject/api/v3/news/7\",\"title\":\"Release\"},"
+            + "\"project\":{\"href\":\"/openproject/api/v3/projects/3\",\"title\":\"Third project\"},"
+            + "\"author\":{\"href\":\"/openproject/api/v3/users/1\",\"title\":\"Admin\"}}}]}}");
+        assertEquals(new Linkable("Third project", "https://example.org/openproject/projects/3"),
+            apiClient.getNews(OFFSET, PAGE_SIZE, "").getItems().get(0).getProjectLink());
+
+        when(this.response.body()).thenReturn("{\"_embedded\":{\"elements\":[{\"id\":5,\"subject\":\"Task\","
+            + "\"_links\":{"
+            + "\"type\":{\"href\":\"/openproject/api/v3/types/1\",\"title\":\"Task\"},"
+            + "\"status\":{\"href\":\"/openproject/api/v3/statuses/2\",\"title\":\"New\"},"
+            + "\"author\":{\"href\":\"/openproject/api/v3/users/3\",\"title\":\"Admin\"},"
+            + "\"assignee\":{\"href\":\"/openproject/api/v3/users/4\",\"title\":\"John\"},"
+            + "\"project\":{\"href\":\"/openproject/api/v3/projects/6\",\"title\":\"Demo\"},"
+            + "\"version\":{\"href\":\"/openproject/api/v3/versions/8\",\"title\":\"1.0\"}}}]}}");
+        WorkPackage workPackage = apiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0);
+        assertEquals("https://example.org/openproject/types/1/edit",
+            workPackage.getTypeOfWorkPackage().getLocation());
+        assertEquals("https://example.org/openproject/statuses/2/edit", workPackage.getStatus().getLocation());
+        assertEquals("https://example.org/openproject/users/3", workPackage.getAuthor().getLocation());
+        assertEquals("https://example.org/openproject/users/4", workPackage.getAssignee().getLocation());
+        assertEquals("https://example.org/openproject/projects/6", workPackage.getProject().getLocation());
+        assertEquals(new Linkable("1.0", "https://example.org/openproject/versions/8"),
+            workPackage.getFieldValues().get("version"));
     }
 
     @Test
