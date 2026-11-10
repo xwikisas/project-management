@@ -20,7 +20,10 @@
 package com.xwiki.projectmanagement.internal.chart.displayer;
 
 import java.io.StringReader;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.xwiki.projectmanagement.chart.ChartPeriod;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -149,6 +153,20 @@ class PieChartDisplayerTest
 
         assertEquals(List.of("A", "B", "C"), texts(data.path("labels")));
         assertEquals(List.of("1", "3", "4"), texts(data.path("datasets").path(0).path("data")));
+    }
+
+    @Test
+    void countsTheWorkItemsByHourOfTheDay() throws Exception
+    {
+        List<PaginatedResult<WorkItem>> datasets =
+            List.of(result(createdAt(2), createdAt(14), createdAt(14)));
+
+        JsonNode data = getChartData(datasets, WorkItem.KEY_CREATION_DATE, List.of("Dataset"),
+            Map.of(AbstractChartJSDisplayer.PARAM_PERIOD, ChartPeriod.HOURLY.name()));
+
+        // 02:00 and 14:00 are different hours.
+        assertEquals(List.of("2026-03-05 02", "2026-03-05 14"), texts(data.path("labels")));
+        assertEquals(List.of("1", "2"), texts(data.path("datasets").path(0).path("data")));
     }
 
     @Test
@@ -260,6 +278,15 @@ class PieChartDisplayerTest
         if (status != null) {
             workItem.put(WorkItem.KEY_STATUS, status);
         }
+        return workItem;
+    }
+
+    private static WorkItem createdAt(int hour)
+    {
+        // The work items are grouped by period in the time zone of the server.
+        WorkItem workItem = new WorkItem();
+        workItem.setCreationDate(
+            Date.from(LocalDateTime.of(2026, 3, 5, hour, 30).atZone(ZoneId.systemDefault()).toInstant()));
         return workItem;
     }
 
