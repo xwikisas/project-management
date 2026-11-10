@@ -155,6 +155,19 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
+     * Wait for the builder to display the filters it loads, e.g. the filters of a macro being edited.
+     *
+     * @param count the number of filters to wait for
+     * @return this filter parameter
+     * @since 1.4.0
+     */
+    public FilterBuilderParameter waitForFilters(int count)
+    {
+        getDriver().waitUntilCondition(driver -> getFilters().size() == count);
+        return this;
+    }
+
+    /**
      * @return retrieve all the created filters of the filter parameter.
      */
     public List<FilterBuilderFilter> getFilters()

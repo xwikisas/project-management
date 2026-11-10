@@ -273,32 +273,6 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
     @Test
     @Order(5)
-    void editDateFilters(TestUtils setup, TestReference testReference) throws Exception
-    {
-        // A range of due dates and a creation date, saved in a time zone that may not be the one of the browser.
-        String filters = "{~\"query~\":{~\"filters~\":[{~\"property~\":~\"dueDate~\",~\"constraints~\":"
-            + "[{~\"operator~\":~\"between~\",~\"value~\":~\"2024-03-01T00:00:00+01:00/2024-03-31T23:59:59+02:00~\"}]},"
-            + "{~\"property~\":~\"creationDate~\",~\"constraints~\":[{~\"operator~\":~\"after~\","
-            + "~\"value~\":~\"2024-01-15T10:30:00+01:00~\"}]}]}}";
-        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"editDateFilters\" "
-            + "filters=\"%s\"/}}", CONNECTION_ID, filters));
-        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
-        WYSIWYGEditPage editPage = modal.getEditPage();
-        modal.clickMore();
-
-        // The date pickers display the saved dates, as they were saved, not the current day.
-        String summary = modal.getFilterBuilder().getSummary();
-        assertThat(summary, containsString("2024-03-01 00:00 - 2024-03-31 23:59"));
-        assertThat(summary, containsString("2024-01-15 10:30"));
-
-        // Displaying the saved dates doesn't change them.
-        modal.clickSubmit();
-        editPage.clickSaveAndView();
-        assertThat(getContent(setup, testReference), containsString("filters=\"" + filters + "\""));
-    }
-
-    @Test
-    @Order(6)
     void useOpenProjUrl(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.deletePage(testReference);
@@ -326,7 +300,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(7)
+    @Order(6)
     void useSavedQueryUrl(TestUtils setup, TestReference testReference) throws Exception
     {
         // The saved "Milestones" query of the demo project, which only filters on the milestone type.
@@ -359,7 +333,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(8)
+    @Order(7)
     void showPublicDataToGuests(TestUtils setup, TestReference testReference) throws Exception
     {
         // The demo project is public and OpenProject doesn't require users to log in, so anonymous users can see its
@@ -400,7 +374,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(9)
+    @Order(8)
     void filterAndDisplayTargetVersion(TestUtils setup, TestReference testReference) throws Exception
     {
         // The target version is called "version" or "targetVersions", depending on the OpenProject version.
@@ -445,7 +419,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(10)
+    @Order(9)
     void displayWorkPackageAsynchronously(TestUtils setup, TestReference testReference) throws Exception
     {
         // The work package is displayed the way the View action of the Live Data displays it in its modal.
@@ -495,7 +469,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(11)
+    @Order(10)
     void displayFormattedDescription(TestUtils setup, TestReference testReference) throws Exception
     {
         JsonNode workPackages = this.openProject.getApiResource(String.format(
@@ -543,7 +517,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(12)
+    @Order(11)
     void displayNoWorkPackageMessage(TestUtils setup, TestReference testReference) throws Exception
     {
         // The macros displayed when viewing the page are rendered asynchronously.
@@ -575,6 +549,33 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             }
         }
         throw new IllegalStateException(String.format("None of %s exists under [%s].", List.of(ids), path));
+    }
+
+    @Test
+    @Order(12)
+    void editDateFilters(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // A range of due dates, saved in a time zone that may not be the one of the browser, and a creation date, saved
+        // with the date format of the filter (the default one, the OpenProject date properties having none).
+        String filters = "{~\"query~\":{~\"filters~\":[{~\"property~\":~\"dueDate~\",~\"constraints~\":"
+            + "[{~\"operator~\":~\"between~\",~\"value~\":~\"2024-03-01T00:00:00+01:00/2024-03-31T23:59:59+02:00~\"}]},"
+            + "{~\"property~\":~\"creationDate~\",~\"constraints~\":[{~\"operator~\":~\"=d~\","
+            + "~\"value~\":~\"2024/01/15 10:30~\"}]}]}}";
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"editDateFilters\" "
+            + "filters=\"%s\"/}}", CONNECTION_ID, filters));
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        modal.clickMore();
+
+        // The date pickers display the saved dates, as they were saved, not the current day.
+        String summary = modal.getFilterBuilder().waitForFilters(2).getSummary();
+        assertThat(summary, containsString("2024/03/01 00:00 - 2024/03/31 23:59"));
+        assertThat(summary, containsString("2024/01/15 10:30"));
+
+        // Displaying the saved dates doesn't change them.
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        assertThat(getContent(setup, testReference), containsString("filters=\"" + filters + "\""));
     }
 
     private static String getContent(TestUtils setup, TestReference testReference) throws Exception
