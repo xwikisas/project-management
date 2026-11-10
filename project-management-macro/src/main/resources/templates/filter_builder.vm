@@ -46,7 +46,9 @@
  * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
  *   retrieve the filterable livedata properties. The 'title' property will be used to set the title of the builder. The
  *   'removable' property will denote whether the builder can be removed or not. The 'readonly' property will make the
- *   filter builder un-editable.
+ *   filter builder un-editable. The optional 'sourceParameters' property holds the parameters of the livedata source
+ *   the filterable properties depend on (see #getFilterableProperties), e.g. {'defaultInstance': true} to use the
+ *   default instance of the client when the builder isn't tied to an instance, as for the filters of a preset.
  *#
 #macro (filterBuilder $parameters)
 #picker_import
@@ -65,7 +67,11 @@
   #set ($clientId = $clientId.split('/')[0])
 #end
 ## The properties of the instance of the client, if any, are loaded by the JavaScript code once it's known.
-#getFilterableProperties($clientId {} $filterableProperties)
+#set ($sourceParameters = $parameters.sourceParameters)
+#if ("$!sourceParameters" == '')
+  #set ($sourceParameters = {})
+#end
+#getFilterableProperties($clientId $sourceParameters $filterableProperties)
 #if ("$!filterableProperties" != '')
   #if ($filterableProperties.isEmpty())
     <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
