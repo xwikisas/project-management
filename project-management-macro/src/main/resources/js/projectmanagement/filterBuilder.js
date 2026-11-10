@@ -241,7 +241,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       if (selectize) {
         // The summary displays the labels of the values, loaded after the values are displayed. The label of a value
         // that already has an option, e.g. one created from the value alone, is loaded by updating that option, which
-        // the Selectize widget of older XWiki versions doesn't signal with an event.
+        // the Selectize version bundled with XWiki (0.13.3, from 15.10.x to 17.10.x) doesn't signal with an event.
         selectize.on('option_add', updateSummary);
         let updateOption = selectize.updateOption;
         selectize.updateOption = function (...args) {
