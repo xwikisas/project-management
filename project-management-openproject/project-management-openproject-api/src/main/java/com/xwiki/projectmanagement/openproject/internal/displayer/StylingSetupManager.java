@@ -261,8 +261,8 @@ public class StylingSetupManager
         } else {
             LOGGER.warn(REFUSED_MESSAGE
                 + "anonymous users. Either connect the user [{}] to OpenProject, or allow anonymous users to see them "
-                + "in the OpenProject administration (e.g. by disabling \"Login required\" and making a project "
-                + "public).", connectionName, context.getUserReference());
+                + "in the OpenProject administration (e.g. by disabling \"Authentication required\" and making a "
+                + "project public).", connectionName, context.getUserReference());
         }
     }
 

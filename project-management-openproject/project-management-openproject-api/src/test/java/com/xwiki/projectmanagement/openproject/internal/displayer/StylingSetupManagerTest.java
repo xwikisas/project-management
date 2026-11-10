@@ -282,8 +282,8 @@ class StylingSetupManagerTest
         verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), anyString(), any(XWikiContext.class));
         assertEquals("Skipping styling update for [main] since OpenProject refused to give its statuses or types to "
             + "anonymous users. Either connect the user [wiki:XWiki.Admin] to OpenProject, or allow anonymous users "
-            + "to see them in the OpenProject administration (e.g. by disabling \"Login required\" and making a "
-            + "project public).", this.logCapture.getMessage(0));
+            + "to see them in the OpenProject administration (e.g. by disabling \"Authentication required\" and "
+            + "making a project public).", this.logCapture.getMessage(0));
     }
 
     @Test
