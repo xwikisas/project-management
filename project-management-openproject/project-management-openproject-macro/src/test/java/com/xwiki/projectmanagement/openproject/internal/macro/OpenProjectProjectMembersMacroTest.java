@@ -107,6 +107,19 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void translatesTheTexts() throws Exception
+    {
+        usePseudoTranslations();
+        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("[openproject.openproject-project-members.empty]\n"
+            + " [openproject.openproject-project-members.viewAll]", text(result));
+    }
+
+    @Test
     void asksAnonymousUsersToConnectTheirAccountWhenNoMemberIsVisible() throws Exception
     {
         // OpenProject usually hides the members of the projects from anonymous users, without failing.

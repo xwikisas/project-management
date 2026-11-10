@@ -273,7 +273,11 @@
       </title>
     </class>
     <property>
-      <content>{{openprojectchart datasetsLabels="[~"Open~",~"Closed~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" instance="use_selected_dashboard_connection" property="creationDate" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}</content>
+      <content>{{velocity}}
+#set ($datasetsLabels = $jsontool.serialize([$services.localization.render('openproject.dashboard.chart.open'), $services.localization.render('openproject.dashboard.chart.closed')]))
+#set ($datasetsLabels = $datasetsLabels.replace('~', '~~').replace('"', '~"'))
+{{openprojectchart datasetsLabels="$datasetsLabels" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" instance="use_selected_dashboard_connection" property="creationDate" type="line" typeParams="{~"period~":~"DAILY~",~"metric~":~"accumulate~"}"/}}
+{{/velocity}}</content>
     </property>
     <property>
       <position>1, 1</position>
@@ -525,7 +529,11 @@
       </title>
     </class>
     <property>
-      <content>{{openprojectchart datasetsLabels="[~"Open~",~"Closed~"]" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" instance="use_selected_dashboard_connection" property="type" typeParams="{~"period~":~"~",~"metric~":~"accumulate~"}"/}}</content>
+      <content>{{velocity}}
+#set ($datasetsLabels = $jsontool.serialize([$services.localization.render('openproject.dashboard.chart.open'), $services.localization.render('openproject.dashboard.chart.closed')]))
+#set ($datasetsLabels = $datasetsLabels.replace('~', '~~').replace('"', '~"'))
+{{openprojectchart datasetsLabels="$datasetsLabels" filters="[{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"o~",~"value~":~"~"}]}]~}~},{~"query~":{~"filters~":[{~"property~":~"status~",~"constraints~":[{~"operator~":~"c~",~"value~":~"~"}]}]~}~}]" instance="use_selected_dashboard_connection" property="type" typeParams="{~"period~":~"~",~"metric~":~"accumulate~"}"/}}
+{{/velocity}}</content>
     </property>
     <property>
       <position>1, 3</position>

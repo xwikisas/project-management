@@ -93,4 +93,16 @@ class OpenProjectSubprojectsMacroTest extends AbstractDirectMacroTest
 
         assertEquals("Parent\nNo subprojects found.\n", text(result));
     }
+
+    @Test
+    void translatesTheTexts() throws Exception
+    {
+        usePseudoTranslations();
+        when(this.apiClient.getProjects(null, 10, ANCESTOR_FILTER))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 10, 0));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("Parent\n[openproject.openproject-subprojects.empty]\n", text(result));
+    }
 }

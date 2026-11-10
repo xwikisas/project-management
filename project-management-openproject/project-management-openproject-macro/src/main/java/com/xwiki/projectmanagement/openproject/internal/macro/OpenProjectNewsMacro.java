@@ -109,7 +109,7 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
         List<Block> blocks = new ArrayList<>();
 
         if (newsList.isEmpty()) {
-            blocks.add(new ParagraphBlock(List.of(new WordBlock("No news found.")),
+            blocks.add(new ParagraphBlock(List.of(new WordBlock(translate("openproject.openproject-news.empty"))),
                 Collections.singletonMap(CLASS, TEXT_MUTED_CLASS)));
             return blocks;
         }

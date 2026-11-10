@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject;
 
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,12 +31,16 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.page.HTML50ComponentList;
 import org.xwiki.test.page.PageTest;
 import org.xwiki.test.page.XWikiSyntax21ComponentList;
+import org.xwiki.velocity.VelocityManager;
 
+import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -75,5 +81,30 @@ class DashboardPageTest extends PageTest
             options.add(option.attr("value"));
         }
         assertEquals(List.of(CONNECTION_NAME, "other"), options);
+    }
+
+    @Test
+    void chartLegendsAreTranslated() throws Exception
+    {
+        XWikiDocument dashboard = loadPage(new DocumentReference("xwiki", "OpenProject", "WebHome"));
+        VelocityManager velocityManager = this.componentManager.getInstance(VelocityManager.class);
+        List<String> charts = new ArrayList<>();
+        for (BaseObject gadget : dashboard.getXObjects(new LocalDocumentReference("XWiki", "GadgetClass"))) {
+            String content = gadget.getLargeStringValue("content");
+            if (content.contains("datasetsLabels")) {
+                String script = content.substring(content.indexOf("{{velocity}}") + "{{velocity}}".length(),
+                    content.indexOf("{{/velocity}}"));
+                StringWriter output = new StringWriter();
+                velocityManager.evaluate(output, "gadget", new StringReader(script));
+                charts.add(output.toString());
+            }
+        }
+
+        assertEquals(2, charts.size());
+        // The labels are escaped for the macro parameter.
+        for (String chart : charts) {
+            assertTrue(chart.contains("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
+                + "~\"openproject.dashboard.chart.closed~\"]\" "), chart);
+        }
     }
 }

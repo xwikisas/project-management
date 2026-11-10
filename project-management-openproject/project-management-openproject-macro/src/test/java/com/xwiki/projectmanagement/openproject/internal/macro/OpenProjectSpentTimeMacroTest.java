@@ -201,6 +201,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void translatesTheTexts() throws Exception
+    {
+        usePseudoTranslations();
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("[openproject.openproject-spent-time.empty]\n"
+            + "[openproject.openproject-spent-time.viewTimeEntries]\n", text(result));
+    }
+
+    @Test
     void asksAnonymousUsersToConnectTheirAccountWhenNoTimeEntryIsVisible() throws Exception
     {
         // OpenProject usually hides the time entries from anonymous users, without failing.

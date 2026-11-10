@@ -130,7 +130,8 @@ public class OpenProjectSpentTimeMacro
         String linkUrl = hasProject
             ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
-        String linkLabel = hasProject ? "View project dashboard" : "View time entries";
+        String linkLabel = translate(hasProject ? "openproject.openproject-spent-time.viewProjectDashboard"
+            : "openproject.openproject-spent-time.viewTimeEntries");
 
         return Collections.singletonList(
             new GroupBlock(buildContent(entries, linkLabel, linkUrl), Collections.emptyMap()));
@@ -160,11 +161,13 @@ public class OpenProjectSpentTimeMacro
         List<Block> blocks = new ArrayList<>();
 
         if (entries.isEmpty()) {
-            blocks.add(new ParagraphBlock(List.of(new WordBlock("No time entries found.")), Collections.emptyMap()));
+            blocks.add(new ParagraphBlock(List.of(new WordBlock(translate("openproject.openproject-spent-time.empty"))),
+                Collections.emptyMap()));
         } else {
             double totalHours = entries.stream().mapToDouble(e -> parseHours(e.getHours())).sum();
 
-            blocks.add(new ParagraphBlock(List.of(new FormatBlock(List.of(new WordBlock("Total: ")), Format.BOLD),
+            Block totalLabel = new WordBlock(translate("openproject.openproject-spent-time.total") + " ");
+            blocks.add(new ParagraphBlock(List.of(new FormatBlock(List.of(totalLabel), Format.BOLD),
                 new WordBlock(formatTotalHours(totalHours)))));
 
             blocks.add(buildTable(entries));
