@@ -18,6 +18,22 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 require(['jquery'], function ($) {
+  // A picker whose value is held by a hidden input (the picker itself having no name, see
+  // openprojectprojectdetailsproperty/edit.vm) is initialized from that input, which the macro editor fills with the
+  // parameter value, and updates it when the selection changes.
+  let syncWithValueInput = function (picker) {
+    let valueInput = picker.closest('.proj-manag-property-picker-field').find('input.proj-manag-property-picker-value');
+    if (valueInput.length === 0) {
+      return;
+    }
+    let values = (valueInput.val() || '').split(',').map(value => value.trim()).filter(value => value !== '');
+    picker.val(values);
+    picker.off('change.valueInput').on('change.valueInput', function () {
+      let selected = picker.val() || [];
+      valueInput.val(Array.isArray(selected) ? selected.join(',') : selected);
+    });
+  };
+
   let selectizeWithCustomizations = function () {
 
     // The remove_button plugin fails at the following lines 
@@ -43,6 +59,9 @@ require(['jquery'], function ($) {
     if (!element.attr('multiple')) {
       delete options.plugins;
     }
+    element.not('.selectized').each(function () {
+      syncWithValueInput($(this));
+    });
     element.xwikiSelectize(options);
     //delete $.fn.search;
     //delete $.fn.substring;
