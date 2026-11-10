@@ -50,6 +50,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -147,8 +148,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     MacroTransformationContext context) throws MacroExecutionException
                 {
                     try {
-                        prepareContext(parameters);
-                        return displayChart(chartTypeDisplayer, filters, parameters, labels, context,
+                        return displayChart(chartTypeDisplayer, filters, parameters, translateLabels(labels), context,
                             typeDisplayerParams);
                     } catch (WorkItemException e) {
                         throw new MacroExecutionException("Failed to retrieve the work packages.", e);
@@ -186,9 +186,42 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         return Collections.emptyList();
     }
 
+    /**
+     * A label of the datasets can be a translation key (containing a dot and no whitespace), so that the charts shipped
+     * in wiki pages (e.g. a dashboard) can be translated without a script. Other labels are displayed as is.
+     */
+    private List<String> translateLabels(List<String> labels)
+    {
+        List<String> translatedLabels = new ArrayList<>(labels.size());
+        for (String label : labels) {
+            String translation = null;
+            // Only the labels looking like translation keys are looked up, so that a literal label (e.g. "type") isn't
+            // replaced by the translation of a key that happens to have the same name.
+            if (label != null && label.contains(".") && !label.matches(".*\\s.*")) {
+                translation = this.localizationManager.getTranslationPlain(label);
+            }
+            translatedLabels.add(translation != null ? translation : label);
+        }
+        return translatedLabels;
+    }
+
     private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
         T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams)
         throws WorkItemException, MacroExecutionException
+    {
+        // The context that the extending class sets for the client is restored once the chart is displayed.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(macroContext, macroContext.getContext()))
+        {
+            prepareContext(parameters);
+            return displayChartInContext(chartTypeDisplayer, filters, parameters, labels, context,
+                typeDisplayerParams);
+        }
+    }
+
+    private List<Block> displayChartInContext(ChartTypeDisplayer chartTypeDisplayer,
+        List<List<LiveDataQuery.Filter>> filters, T parameters, List<String> labels, MacroTransformationContext context,
+        Object typeDisplayerParams) throws WorkItemException, MacroExecutionException
     {
         Optional<List<Map<String, Long>>> counts = countDatasets(filters, parameters);
         if (counts.isPresent()) {

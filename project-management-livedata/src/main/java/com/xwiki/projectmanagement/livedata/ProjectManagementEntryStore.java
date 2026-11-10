@@ -91,20 +91,24 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
     @Override
     public LiveData get(LiveDataQuery query) throws LiveDataException
     {
-        LiveData ld = new LiveData();
         String clientId = (String) query.getSource().getParameters().getOrDefault("client", "");
         if (clientId.isEmpty()) {
             throw new LiveDataException("The client property was not specified in the source parameters.");
         }
 
-        // Set the context for the client implementation.
-        if (clientContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> context = new HashMap<>(query.getSource().getParameters());
-            context.put(ProjectManagementClientExecutionContext.LIVE_DATA, Boolean.TRUE);
-            ((DefaultProjectManagementClientExecutionContext) clientContext).setContext(context);
+        // Set the context for the client implementation and the displayers, until the entries are ready.
+        Map<String, Object> context = new HashMap<>(query.getSource().getParameters());
+        context.put(ProjectManagementClientExecutionContext.LIVE_DATA, Boolean.TRUE);
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(clientContext, context))
+        {
+            return getLiveData(query, clientId);
         }
+    }
 
-        // GET ENTRIES FROM ACTUAL SOURCE ---------------
+    private LiveData getLiveData(LiveDataQuery query, String clientId) throws LiveDataException
+    {
+        LiveData ld = new LiveData();
         PaginatedResult<WorkItem> workItems = null;
         try {
             workItems =

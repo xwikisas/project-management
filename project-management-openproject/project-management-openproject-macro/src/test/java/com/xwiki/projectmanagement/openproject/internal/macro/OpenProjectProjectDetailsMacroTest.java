@@ -26,7 +26,6 @@ import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
@@ -66,9 +65,6 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
 
     @InjectMockComponents
     private OpenProjectProjectDetailsMacro macro;
-
-    @MockComponent
-    private ContextualLocalizationManager l10n;
 
     @MockComponent
     @Named("openproject")

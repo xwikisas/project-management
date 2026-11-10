@@ -19,13 +19,18 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Properties;
 
 import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.xwiki.configuration.ConfigurationSource;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -42,13 +47,15 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
  * Common setup of the tests of the macros extending
  * {@link com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro}: the license and the user
  * token are valid, the {@code main} instance is configured with the server URL {@code https://op.example.com} and
- * the asynchronous rendering is done synchronously.
+ * the asynchronous rendering is done synchronously. The texts are translated with the English translations of the
+ * module, so a text displayed without its translation key, or a missing key, is caught by the assertions.
  *
  * @version $Id$
  */
@@ -72,6 +79,9 @@ abstract class AbstractDirectMacroTest
     @MockComponent
     protected UserTokenChecker userTokenChecker;
 
+    @MockComponent
+    protected ContextualLocalizationManager l10n;
+
     protected final MacroTransformationContext context = new MacroTransformationContext();
 
     @Mock
@@ -85,6 +95,22 @@ abstract class AbstractDirectMacroTest
             .thenReturn(new OpenProjectConnection("main", SERVER_URL, "id", "secret", "instanceId"));
         when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy")).thenReturn("yyyy-MM-dd");
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
+        Properties translations = new Properties();
+        try (InputStream input = getClass().getResourceAsStream("/ApplicationResources.properties")) {
+            translations.load(new InputStreamReader(input, StandardCharsets.UTF_8));
+        }
+        when(this.l10n.getTranslationPlain(anyString()))
+            .thenAnswer(invocation -> translations.getProperty(invocation.getArgument(0)));
+    }
+
+    /**
+     * Translate each text to its translation key between brackets, to check that the macro doesn't display English
+     * texts that can't be translated.
+     */
+    protected void usePseudoTranslations()
+    {
+        when(this.l10n.getTranslationPlain(anyString()))
+            .thenAnswer(invocation -> "[" + invocation.getArgument(0) + "]");
     }
 
     /**

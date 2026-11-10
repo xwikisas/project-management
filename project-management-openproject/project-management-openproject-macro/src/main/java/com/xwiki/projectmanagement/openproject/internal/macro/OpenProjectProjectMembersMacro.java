@@ -122,7 +122,8 @@ public class OpenProjectProjectMembersMacro
         List<Block> blocks = new ArrayList<>();
 
         if (members.isEmpty()) {
-            blocks.add(new ParagraphBlock(List.of(new WordBlock("No members found.")),
+            blocks.add(new ParagraphBlock(
+                List.of(new WordBlock(translate("openproject.openproject-project-members.empty"))),
                 Collections.singletonMap(CLASS, "text-muted")));
         } else {
             Map<String, List<Linkable>> membersByRole = groupByRole(members);
@@ -169,7 +170,8 @@ public class OpenProjectProjectMembersMacro
         Block icon = new FormatBlock(Collections.emptyList(), Format.NONE,
             Collections.singletonMap(CLASS, "fa fa-users"));
         ResourceReference ref = new ResourceReference(url, ResourceType.URL);
-        return new LinkBlock(List.of(icon, new SpaceBlock(), new WordBlock("View all members")), ref, false,
+        Block label = new WordBlock(translate("openproject.openproject-project-members.viewAll"));
+        return new LinkBlock(List.of(icon, new SpaceBlock(), label), ref, false,
             Collections.singletonMap(CLASS, "btn btn-link"));
     }
 

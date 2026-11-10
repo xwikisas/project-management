@@ -33,3 +33,4 @@ com.xwiki.projectmanagement.openproject.internal.rest.workPackages.HandleWorkPac
 com.xwiki.projectmanagement.openproject.internal.service.HandleConnectionsService
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectDocumentResource
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectSpaceResource
+com.xwiki.projectmanagement.openproject.internal.rest.document.InstanceConnectionResolver

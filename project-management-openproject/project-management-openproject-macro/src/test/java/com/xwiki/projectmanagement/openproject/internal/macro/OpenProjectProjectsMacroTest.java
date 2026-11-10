@@ -46,7 +46,7 @@ import static org.mockito.Mockito.when;
 class OpenProjectProjectsMacroTest extends AbstractDirectMacroTest
 {
     private static final String INTRODUCTION =
-        "Projects\nHere are the latest projects you have access to in OpenProject:\n";
+        "Projects\nNewest visible projects in this instance.\n";
 
     @InjectMockComponents
     private OpenProjectProjectsMacro macro;
@@ -91,5 +91,17 @@ class OpenProjectProjectsMacroTest extends AbstractDirectMacroTest
 
         assertEquals(INTRODUCTION + "No projects found.\n", text(result));
         assertEquals(List.of(), links(result));
+    }
+
+    @Test
+    void translatesTheTexts() throws Exception
+    {
+        usePseudoTranslations();
+        when(this.apiClient.getProjects(null, 3, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 3, 0));
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        assertEquals("[openproject.projectsmacro.title]\n[openproject.projectsmacro.subtitle]\n"
+            + "[openproject.projectsmacro.empty]\n", text(result));
     }
 }

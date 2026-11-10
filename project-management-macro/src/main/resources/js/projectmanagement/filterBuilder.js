@@ -224,7 +224,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       row.toggleClass('proj-manag-constraint-excluding', EXCLUDING_OPERATORS.includes(operator));
       filterDisplayer.clean(type, valElem, row.data('displayedOperator'));
       row.data('displayedOperator', operator);
-      valElem.off('change.filterBuilder');
+      valElem.off('change.filterBuilder dateDisplayed.filterBuilder');
       if (!takesValue(operator)) {
         valElem.val('');
         valueContainer.addClass('hidden');
@@ -237,11 +237,13 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       let displayerParams = $.extend({}, property.filter, { multiple: type === 'list' });
       displayer.display(type, valElem, operator, displayerParams);
       valElem.on('change.filterBuilder', onChange);
+      // The summary describes a date as the date picker displays it, once it's loaded.
+      valElem.on('dateDisplayed.filterBuilder', updateSummary);
       let selectize = valElem[0].selectize;
       if (selectize) {
         // The summary displays the labels of the values, loaded after the values are displayed. The label of a value
         // that already has an option, e.g. one created from the value alone, is loaded by updating that option, which
-        // the Selectize widget of older XWiki versions doesn't signal with an event.
+        // the Selectize version bundled with XWiki (0.13.3, from 15.10.x to 17.10.x) doesn't signal with an event.
         selectize.on('option_add', updateSummary);
         let updateOption = selectize.updateOption;
         selectize.updateOption = function (...args) {

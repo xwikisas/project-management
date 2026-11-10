@@ -94,13 +94,21 @@ public abstract class AbstractWorkItemsDisplayer extends AbstractWorkItemsMacro<
         MacroTransformationContext context)
         throws MacroExecutionException
     {
-        if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> clientContext =
-                URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8)
-                    .stream()
-                    .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
-            ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);
+        Map<String, Object> clientContext =
+            URLEncodedUtils.parse(parameters.getSourceParameters(), StandardCharsets.UTF_8)
+                .stream()
+                .collect(Collectors.toMap(NameValuePair::getName, NameValuePair::getValue));
+        // The context is needed until the work items are displayed (e.g. to translate the messages for the client).
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(macroContext, clientContext))
+        {
+            return executeInContext(parameters, context);
         }
+    }
+
+    private List<Block> executeInContext(ProjectManagementMacroParameters parameters,
+        MacroTransformationContext context) throws MacroExecutionException
+    {
         String clientId = (String) macroContext.get(KEY_CLIENT);
 
         if (clientId == null || clientId.isEmpty()) {

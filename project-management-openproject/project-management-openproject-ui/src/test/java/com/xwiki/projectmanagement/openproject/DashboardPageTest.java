@@ -76,9 +76,11 @@ import static org.mockito.Mockito.when;
 @ComponentList(ModelScriptService.class)
 class DashboardPageTest extends PageTest
 {
-    private static final String CONNECTION_NAME = "<img src=\"x\" class=\"injected\"/>{{/html}}";
-
     private static final DocumentReference DASHBOARD = new DocumentReference("xwiki", "OpenProject", "WebHome");
+
+    private static final String PUBLIC_CONNECTION = "public";
+
+    private static final String CONNECTION_NAME = "<img src=\"x\" class=\"injected\"/>{{/html}}";
 
     private static final DocumentReference SELECTION =
         new DocumentReference("xwiki", "OpenProject", "DashboardSelection");
@@ -144,6 +146,81 @@ class DashboardPageTest extends PageTest
             options.add(option.attr("value"));
         }
         assertEquals(List.of(CONNECTION_NAME, "other"), options);
+    }
+
+    @Test
+    void guestsSeeThePublicDataOfTheConnection() throws Exception
+    {
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(true);
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertEquals(1, document.select("#openproject-dashboard-gadgets").size(), document.html());
+        assertTrue(document.select(".warningmessage:not(.hidden)").isEmpty(), document.html());
+    }
+
+    @Test
+    void guestsCantSeeTheConnectionsThatDontShowPublicData() throws Exception
+    {
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(false);
+        when(openProject.getUserAccountConnections()).thenReturn(List.of(PUBLIC_CONNECTION));
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertTrue(document.select("#openproject-dashboard-gadgets").isEmpty(), document.html());
+        // Guests can't connect an OpenProject account.
+        assertEquals("openproject.dashboard.guest", document.select(".warningmessage:not(.hidden)").text());
+        verify(openProject, never()).getNotAuthorizedMessage(any(), any());
+    }
+
+    @Test
+    void guestsGetTheWarningOfAConnectionShowingOnlyPublicData() throws Exception
+    {
+        // E.g. a connection showing only public data, whose OpenProject instance refuses anonymous requests.
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(false);
+        when(openProject.getUserAccountConnections()).thenReturn(List.of());
+        when(openProject.getNotAuthorizedMessage(eq(PUBLIC_CONNECTION), any()))
+            .thenReturn("<div class=\"box warningmessage\">refused</div>");
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertTrue(document.select("#openproject-dashboard-gadgets").isEmpty(), document.html());
+        assertEquals("refused", document.select(".warningmessage:not(.hidden)").text());
+    }
+
+    private OpenProjectScriptService mockConnection() throws Exception
+    {
+        // A guest, who can't edit the dashboard.
+        this.context.setUserReference(null);
+        registerVelocityTool("hasEdit", false);
+        OpenProjectScriptService openProject = (OpenProjectScriptService) this.openProjectScriptService;
+        when(openProject.getConnectionOptions()).thenReturn(new ArrayList<>(List.of(Map.of(),
+            Map.of("name", PUBLIC_CONNECTION, "value", PUBLIC_CONNECTION))));
+        return openProject;
+    }
+
+    @Test
+    void chartLegendsAreTranslated() throws Exception
+    {
+        XWikiDocument dashboard = loadPage(new DocumentReference("xwiki", "OpenProject", "WebHome"));
+        List<String> charts = new ArrayList<>();
+        for (BaseObject gadget : dashboard.getXObjects(new LocalDocumentReference("XWiki", "GadgetClass"))) {
+            String content = gadget.getLargeStringValue("content");
+            if (content.contains("datasetsLabels")) {
+                charts.add(content);
+            }
+        }
+
+        assertEquals(2, charts.size());
+        for (String chart : charts) {
+            // The chart macro translates the labels that are translation keys. The gadgets need no script, since
+            // they are executed with the rights of the last author of the dashboard, who may not have script right.
+            assertTrue(chart.startsWith("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
+                + "~\"openproject.dashboard.chart.closed~\"]\" "), chart);
+        }
     }
 
     @Test

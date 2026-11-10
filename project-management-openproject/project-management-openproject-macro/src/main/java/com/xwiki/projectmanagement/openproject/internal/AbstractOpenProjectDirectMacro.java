@@ -29,6 +29,7 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.xwiki.job.JobException;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
@@ -81,6 +82,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
 
+    @Inject
+    private ContextualLocalizationManager l10n;
+
     /**
      * @param name the macro name.
      * @param description the macro description.
@@ -98,16 +102,6 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         return false;   
     }
 
-    /**
-     * @return {@code true} when the displayed data depends on the OpenProject account of the current user, so that a
-     *     user who can only call OpenProject anonymously sees a warning instead of the public data of the instance
-     * @since 1.4.0
-     */
-    protected boolean requiresUserAccount()
-    {
-        return false;
-    }
-
     @Override
     public final List<Block> execute(P parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
@@ -121,8 +115,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         String instanceToUse = parameters.getInstance();
 
         OpenProjectAccessResult access = openProjectAccess.resolve(instanceToUse);
-        List<Block> warningBlock =
-            userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), requiresUserAccount(), context);
+        // The public data is displayed to the users who didn't connect their OpenProject account: the macros whose
+        // data OpenProject hides from anonymous users ask them to connect it (see getEmptyAnonymousResultWarning).
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), false, context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
@@ -208,6 +203,18 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         // The project is used as a single path segment.
         return String.format("%s/projects/%s", serverUrl,
             URLEncoder.encode(String.valueOf(project), StandardCharsets.UTF_8).replace("+", "%20"));
+    }
+
+    /**
+     * @param key the translation key of a text displayed by the macro
+     * @return the translation of the key in the current locale, as plain text, or the key itself when it has no
+     *     translation
+     * @since 1.4.0
+     */
+    protected String translate(String key)
+    {
+        String translation = this.l10n.getTranslationPlain(key);
+        return translation != null ? translation : key;
     }
 
     /**

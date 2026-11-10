@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.livedata;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +50,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -104,7 +106,13 @@ class ProjectManagementEntryStoreTest
         workItemResult.getItems().add(wi);
 
         // The offset of the Live Data is passed as is.
-        when(projectManagementManager.getWorkItems(clientId, 20, 10, filters, sortEntries)).thenReturn(workItemResult);
+        Map<String, Object> clientCallContext = new HashMap<>();
+        when(projectManagementManager.getWorkItems(clientId, 20, 10, filters, sortEntries)).thenAnswer(invocation -> {
+            clientCallContext.putAll(this.clientContext.getContext());
+            return workItemResult;
+        });
+        Map<String, Object> callerContext = Map.of("client", "caller");
+        this.clientContext.setContext(callerContext);
 
         LiveData result = entryStore.get(query);
 
@@ -114,8 +122,10 @@ class ProjectManagementEntryStoreTest
         assertEquals("1", result.getEntries().get(0).get("identifier.value"));
         assertEquals("http://xwiki.com/1", result.getEntries().get(0).get("identifier.location"));
         // The client is told that the work items are requested by Live Data, whose viewers can filter them.
-        assertEquals(Boolean.TRUE, this.clientContext.get(ProjectManagementClientExecutionContext.LIVE_DATA));
-        assertEquals(clientId, this.clientContext.get("client"));
+        assertEquals(Boolean.TRUE, clientCallContext.get(ProjectManagementClientExecutionContext.LIVE_DATA));
+        assertEquals(clientId, clientCallContext.get("client"));
+        // The context of the caller is restored.
+        assertEquals(callerContext, this.clientContext.getContext());
     }
 
     @Test
@@ -150,6 +160,8 @@ class ProjectManagementEntryStoreTest
 
         LiveDataException exception = assertThrows(LiveDataException.class, () -> entryStore.get(query));
         assertSame(cause, exception.getCause());
+        // The context doesn't outlive the request, even when it fails.
+        assertTrue(this.clientContext.getContext().isEmpty());
     }
 
     @Test

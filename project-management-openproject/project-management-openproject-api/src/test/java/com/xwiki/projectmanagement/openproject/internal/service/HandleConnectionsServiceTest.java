@@ -49,12 +49,14 @@ import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.test.MockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
@@ -67,6 +69,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -335,6 +340,23 @@ class HandleConnectionsServiceTest
     }
 
     @Test
+    void handleConnectionLeavesTheCachedPageUnchangedWhenSaveFails() throws Exception
+    {
+        saveConnectionPage(CONNECTION, ADMIN, "oldName");
+        stubInstanceId(SERVER_URL);
+        doThrow(new XWikiException()).when(this.oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class),
+            anyString(), any(XWikiContext.class));
+
+        assertThrows(ProjectManagementException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        XWikiDocument page = getConnectionPage();
+        assertEquals("oldName", page.getXObject(CONNECTION_CLASS).getStringValue(CONNECTION_NAME));
+        assertEquals("currentSecret", page.getXObject(CONNECTION_CLASS).getStringValue(CLIENT_SECRET));
+        assertNull(page.getXObject(OIDC_CLASS));
+    }
+
+    @Test
     void handleConnectionUpdatesExistingPageOfSubwiki() throws Exception
     {
         DocumentReference subwikiConnection = new DocumentReference("subwiki",
@@ -405,6 +427,55 @@ class HandleConnectionsServiceTest
         // No request is sent to an invalid server URL.
         verifyNoInteractions(this.openProjectApiClientFactory);
         assertNotSaved();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "Team/Project", "Team\\Project", "/", "100%", "%2F", ".", "..", "..." })
+    void handleConnectionRefusesInvalidConnectionName(String connectionName) throws Exception
+    {
+        this.openProjectConnection.setConnectionName(connectionName);
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertInvalidConnectionName(connectionName, exception);
+        assertNotSaved();
+    }
+
+    @Test
+    void handleConnectionRefusesRenamingToInvalidConnectionName() throws Exception
+    {
+        saveConnectionPage(CONNECTION, ADMIN, "oldName");
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertInvalidConnectionName("Team/Project", exception);
+        assertEquals("oldName", getConnectionPage().getXObject(CONNECTION_CLASS).getStringValue(CONNECTION_NAME));
+    }
+
+    @Test
+    void handleConnectionKeepsInvalidNameOfExistingConnection() throws Exception
+    {
+        // A connection saved before the names were checked.
+        saveConnectionPage(CONNECTION, ADMIN, "Team/Project");
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        BaseObject config = getConnectionPage().getXObject(CONNECTION_CLASS);
+        assertEquals("Team/Project", config.getStringValue(CONNECTION_NAME));
+        assertEquals(CLIENT_SECRET, config.getStringValue(CLIENT_SECRET));
+    }
+
+    private void assertInvalidConnectionName(String connectionName, ConnectionSaveException exception)
+    {
+        assertEquals(String.format("The connection name [%s] is not valid: it can't contain [/], [\\] or [%%], nor be "
+            + "made only of dots.", connectionName), exception.getMessage());
+        assertFalse(exception.isConflict());
+        verifyNoInteractions(this.openProjectApiClientFactory);
     }
 
     @ParameterizedTest
