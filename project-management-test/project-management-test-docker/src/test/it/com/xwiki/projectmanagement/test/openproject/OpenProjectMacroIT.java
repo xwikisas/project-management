@@ -555,22 +555,22 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     @Order(12)
     void editDateFilters(TestUtils setup, TestReference testReference) throws Exception
     {
-        // A range of due dates, saved in a time zone that may not be the one of the browser, and a creation date, saved
-        // with the date format of the filter (the default one, the OpenProject date properties having none).
+        // Ranges of due dates and of creation dates, saved in time zones that may not be the one of the browser.
         String filters = "{~\"query~\":{~\"filters~\":[{~\"property~\":~\"dueDate~\",~\"constraints~\":"
             + "[{~\"operator~\":~\"between~\",~\"value~\":~\"2024-03-01T00:00:00+01:00/2024-03-31T23:59:59+02:00~\"}]},"
-            + "{~\"property~\":~\"creationDate~\",~\"constraints~\":[{~\"operator~\":~\"=d~\","
-            + "~\"value~\":~\"2024/01/15 10:30~\"}]}]}}";
+            + "{~\"property~\":~\"creationDate~\",~\"constraints~\":[{~\"operator~\":~\"between~\","
+            + "~\"value~\":~\"2024-01-15T10:30:00+01:00/2024-01-20T18:00:59+01:00~\"}]}]}}";
         setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"editDateFilters\" "
             + "filters=\"%s\"/}}", CONNECTION_ID, filters));
         OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
         WYSIWYGEditPage editPage = modal.getEditPage();
         modal.clickMore();
 
-        // The date pickers display the saved dates, as they were saved, not the current day.
+        // The date pickers display the saved dates, as they were saved, not the current day. The OpenProject date
+        // properties have no date format, so the pickers use their default one.
         String summary = modal.getFilterBuilder().waitForFilters(2).getSummary();
         assertThat(summary, containsString("2024/03/01 00:00 - 2024/03/31 23:59"));
-        assertThat(summary, containsString("2024/01/15 10:30"));
+        assertThat(summary, containsString("2024/01/15 10:30 - 2024/01/20 18:00"));
 
         // Displaying the saved dates doesn't change them.
         modal.clickSubmit();

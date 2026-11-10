@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], function ($) {
+define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], function ($, moment) {
   /*
    * The date picker is loaded when a date is displayed, from the path given by the filter field: in the macro editor,
    * this script can be loaded before the field is added to the page.
