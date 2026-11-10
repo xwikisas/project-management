@@ -109,7 +109,9 @@
     ##docDisplay('name', $context.action)
 &lt;dd&gt;
 #end
-#set ($opts = { 'client': $client })
+## A preset isn't tied to an instance of the client: its filters propose the values of the default one (e.g. the
+## default OpenProject connection), the one used by the macros that don't specify an instance.
+#set ($opts = { 'client': $client, 'sourceParameters': {'defaultInstance': true} })
 #if ($xcontext.action == 'view')
   #set ($discard = $opts.put('readonly', true))
 #else

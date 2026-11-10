@@ -49,6 +49,8 @@ import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
@@ -97,6 +99,9 @@ class OpenProjectLivedataConfigurationResolverTest
     @MockComponent
     private WorkPackageFieldsCache workPackageFieldsCache;
 
+    @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
+
     private final OpenProjectApiClient client = mock(OpenProjectApiClient.class);
 
     @BeforeEach
@@ -120,15 +125,7 @@ class OpenProjectLivedataConfigurationResolverTest
     @Test
     void resolveAddsTheWorkPackageFields() throws Exception
     {
-        WorkPackageField field = new WorkPackageField();
-        field.setKey("targetVersions");
-        field.setName("Target versions");
-        field.setFilterKey("targetVersion");
-        field.setFilterValueType("[]Version");
-        field.setFilterOperators(List.of("="));
-        when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(field), 0, 1, 1));
-        when(this.workPackageFieldsCache.getMultiValueFields(eq(INSTANCE), eq(this.client), any()))
-            .thenReturn(Set.of("targetVersions"));
+        mockTargetVersionsField();
 
         LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
 
@@ -139,6 +136,38 @@ class OpenProjectLivedataConfigurationResolverTest
         assertEquals("/rest/wikis/wiki/openproject/instance/myInstance/suggest/versions?search={encodedQuery}",
             descriptors.get(0).getFilter().getParameters().get("searchURL"));
         assertEquals(true, descriptors.get(0).getFilter().getParameters().get("multiValue"));
+        verify(this.openProjectConfiguration, never()).getDefaultConnection();
+    }
+
+    @Test
+    void resolveWithoutInstanceUsesTheDefaultConnectionWhenAsked() throws Exception
+    {
+        // The filters of a preset are edited without a connection: they get the suggestions of the default one.
+        mockTargetVersionsField();
+        when(this.openProjectConfiguration.getDefaultConnection())
+            .thenReturn(new OpenProjectConnection(INSTANCE, "http://openproject", "id", "secret", "instanceId"));
+
+        LiveDataConfiguration input = getInput(null);
+        input.getQuery().getSource().setParameter("defaultInstance", true);
+        LiveDataConfiguration configuration = this.resolver.resolve(input);
+
+        List<LiveDataPropertyDescriptor> descriptors =
+            new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
+        assertEquals("/rest/wikis/wiki/openproject/instance/myInstance/suggest/versions?search={encodedQuery}",
+            descriptors.get(0).getFilter().getParameters().get("searchURL"));
+    }
+
+    private void mockTargetVersionsField() throws Exception
+    {
+        WorkPackageField field = new WorkPackageField();
+        field.setKey("targetVersions");
+        field.setName("Target versions");
+        field.setFilterKey("targetVersion");
+        field.setFilterValueType("[]Version");
+        field.setFilterOperators(List.of("="));
+        when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(field), 0, 1, 1));
+        when(this.workPackageFieldsCache.getMultiValueFields(eq(INSTANCE), eq(this.client), any()))
+            .thenReturn(Set.of("targetVersions"));
     }
 
     @Test
@@ -208,6 +237,8 @@ class OpenProjectLivedataConfigurationResolverTest
 
         assertEquals(0, configuration.getMeta().getPropertyDescriptors().size());
         verify(this.openProjectAccess, never()).resolve(anyString());
+        // E.g. the macro editor, which reloads the properties for the connection chosen in it.
+        verify(this.openProjectConfiguration, never()).getDefaultConnection();
     }
 
     @Test

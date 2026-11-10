@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.livedata;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -45,6 +46,8 @@ import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.PathSegmentEncoder;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -67,6 +70,8 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
 
     private static final String SOURCE_PARAMS_INSTANCE = "instance";
 
+    private static final String SOURCE_PARAMS_DEFAULT_INSTANCE = "defaultInstance";
+
     @Inject
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
@@ -85,6 +90,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
     @Inject
     private WorkPackageFieldsCache workPackageFieldsCache;
 
+    @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
     private String defaultConfigJSON;
 
     @Override
@@ -102,8 +110,9 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             }
             LiveDataConfiguration configuration = stringLiveDataConfigResolver.resolve(defaultConfigJSON);
 
-            maybeAddFieldProperties(configuration, input);
-            maybeUpdateSearchURL(configuration, input);
+            String instance = getInstance(input);
+            maybeAddFieldProperties(configuration, instance);
+            maybeUpdateSearchURL(configuration, instance);
             return configuration;
         } catch (IOException | LiveDataException e) {
             logger.error("Could not read the livedata configuration of the OpenProject client.", e);
@@ -115,9 +124,8 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
      * Adds the properties exposing the work package fields of the instance that the generic properties don't cover,
      * such as the target version or the custom fields, since they depend on the instance.
      */
-    private void maybeAddFieldProperties(LiveDataConfiguration configuration, LiveDataConfiguration input)
+    private void maybeAddFieldProperties(LiveDataConfiguration configuration, String instance)
     {
-        String instance = getInstance(input);
         if (StringUtils.isBlank(instance) || configuration.getMeta() == null
             || configuration.getMeta().getPropertyDescriptors() == null)
         {
@@ -151,12 +159,11 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         }
     }
 
-    private void maybeUpdateSearchURL(LiveDataConfiguration configuration, LiveDataConfiguration input)
+    private void maybeUpdateSearchURL(LiveDataConfiguration configuration, String instance)
     {
         if (configuration.getMeta() == null || configuration.getMeta().getPropertyDescriptors() == null) {
             return;
         }
-        String instance = getInstance(input);
         String wiki = getWiki();
         for (LiveDataPropertyDescriptor propertyDescriptor : configuration.getMeta().getPropertyDescriptors()) {
             if (propertyDescriptor.getFilter() == null || !"list".equals(propertyDescriptor.getFilter().getId())) {
@@ -175,15 +182,28 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         }
     }
 
+    /**
+     * @return the connection given in the source parameters, or the default connection when they ask for it without
+     *     giving a connection, as for the filters of a preset, which aren't tied to a connection: they get the
+     *     suggestions and the fields of the connection used by the macros that don't specify one. The macro editor
+     *     gives no connection either, but reloads the properties for the chosen connection, which must not be mixed
+     *     with those of the default connection.
+     */
     private String getInstance(LiveDataConfiguration input)
     {
-        if (input.getQuery() != null
-            && input.getQuery().getSource() != null
-            && input.getQuery().getSource().getParameters() != null)
-        {
-            return (String) input.getQuery().getSource().getParameters().get(SOURCE_PARAMS_INSTANCE);
+        Map<String, Object> parameters = input.getQuery() != null && input.getQuery().getSource() != null
+            ? input.getQuery().getSource().getParameters() : null;
+        if (parameters == null) {
+            return null;
         }
-        return null;
+        String instance = (String) parameters.get(SOURCE_PARAMS_INSTANCE);
+        if (StringUtils.isBlank(instance)
+            && Boolean.parseBoolean(String.valueOf(parameters.get(SOURCE_PARAMS_DEFAULT_INSTANCE))))
+        {
+            OpenProjectConnection defaultConnection = this.openProjectConfiguration.getDefaultConnection();
+            instance = defaultConnection != null ? defaultConnection.getConnectionName() : null;
+        }
+        return instance;
     }
 
     private String getWiki()
