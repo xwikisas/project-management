@@ -365,7 +365,7 @@ When creating or updating a page, you send a `Page` object in the request body. 
 |---------------|----------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `project`     | `String` | ❌       | The OpenProject project ID to link to.                                                                                                                                                                                   |
 | `workPackage` | `String` | ❌       | The OpenProject work package ID to link to.                                                                                                                                                                              |
-| `instance`    | `String` | ❌       | The instance id of the OpenProject server. It must match the instance id of one of the OpenProject connections configured in the wiki; the name of that connection is stored in the `clientParams` property of the link. |
+| `instance`    | `String` | ❌       | The instance id of the OpenProject server. It must match the instance id of one of the OpenProject connections configured in the wiki of the page; the name of that connection is stored in the `clientParams` property of the link. |
 
 ### `SearchResults` (Response)
 
@@ -558,7 +558,7 @@ PUT /openproject/documents/{id}/links
 **What happens:**
 
 1. Looks up the page associated with the given `id`.
-2. If `instance` is set, looks for the OpenProject connection of the wiki with this instance id.
+2. If `instance` is set, looks for the OpenProject connection of the wiki of the page with this instance id.
 3. If the page doesn't have a link to OpenProject yet, a `ProjectManagement.Code.RelationClass` object is created on the page with the provided project ID, work package ID and connection name. Otherwise, the existing object is updated with the provided values (the values that aren't provided are kept).
 4. The link can later be searched for using the link search endpoints (endpoints 4 and 5), and retrieved with endpoint 11.
 
@@ -570,7 +570,7 @@ PUT /openproject/documents/{id}/links
 | **202 Accepted**              | `Object` (JSON or XML)                                     | The existing link of the page was updated.                                              |
 | **304 Not Modified**          | —                                                          | The page is already linked with the provided values.                                    |
 | **400 Bad Request**           | `"Missing link entity"`                                    | The request body was empty.                                                             |
-| **400 Bad Request**           | `"Could not find a configured instance for the id [...]."` | The `instance` doesn't match the instance id of any OpenProject connection of the wiki. |
+| **400 Bad Request**           | `"Could not find a configured instance for the id [...]."` | The `instance` doesn't match the instance id of any OpenProject connection of the wiki of the page. |
 | **401 Unauthorized**          | —                                                          | The current user doesn't have view or edit right on the page.                           |
 | **404 Not Found**             | —                                                          | No page is associated with the given `id`, or the page was deleted.                     |
 | **500 Internal Server Error** | `"Failed to link the page."`                               | An unexpected error occurred.                                                           |
@@ -676,7 +676,7 @@ POST /openproject/spaces
 |-------------------------------|-----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **200 OK**                    | `List<Page>` (JSON array)                                                   | The space was created. The list contains the page at `docRef` and the pages created from the template (pages that already existed or that the user isn't allowed to create are skipped and not listed). If `withId=true`, each page's `id` field contains its assigned short identifier. |
 | **400 Bad Request**           | Error message                                                               | The `docRef` query parameter was missing.                                                                                                                                                                                                                                                |
-| **400 Bad Request**           | `"Could not find a configured instance for the id [...]."`                  | The `instance` query parameter doesn't match the instance id of any OpenProject connection of the wiki.                                                                                                                                                                                  |
+| **400 Bad Request**           | `"Could not find a configured instance for the id [...]."`                  | The `instance` query parameter doesn't match the instance id of any OpenProject connection of the wiki of the created page.                                                                                                                                                                                 |
 | **401 Unauthorized**          | —                                                                           | The authenticated user does not have view and edit permissions on the `docRef` page.                                                                                                                                                                                                     |
 | **406 Not Acceptable**        | `"The requested wiki does not have the OpenProject application installed."` | The OpenProject template is not available in the target wiki.                                                                                                                                                                                                                            |
 | **409 Conflict**              | `"Document already exists."`                                                | A page already exists at the target location.                                                                                                                                                                                                                                            |
