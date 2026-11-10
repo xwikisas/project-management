@@ -135,7 +135,9 @@ public class HandleConnectionsService
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ConnectionSaveException if the document is not in the connections space, if the client id or the client
+     * @throws ConnectionSaveException if the document is not in the connections space, if a new or changed connection
+     *     name contains a slash, a backslash or a percent sign, or is made only of dots (it's part of the REST URLs),
+     *     if the client id or the client
      *     secret is missing while the access mode lets the users connect their account, if the server URL is not
      *     valid, if a configuration with the same name already exists or if the existing page can't be updated
      * @throws ProjectManagementException if the query failed or the document retrieval/creation fails
@@ -157,6 +159,7 @@ public class HandleConnectionsService
         XWikiContext context = this.xcontextProvider.get();
         try {
             XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            checkConnectionName(openProjectConnection.getConnectionName(), doc);
             if (!doc.isNew() && !isAuthorAdmin(doc)) {
                 throw ConnectionSaveException.conflict(String.format("The page [%s] can't be updated because it was "
                     + "last modified by a user without administration right on the wiki. Delete the connection and "
@@ -174,6 +177,26 @@ public class HandleConnectionsService
             handleConnectionObjects(openProjectConnection, clientSecret, doc, context);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
+        }
+    }
+
+    private void checkConnectionName(String connectionName, XWikiDocument doc) throws ProjectManagementException
+    {
+        // The name of an existing connection is kept even if it isn't valid anymore: renaming the connection would
+        // break the macros using it and lose the OpenProject accounts connected by the users.
+        BaseObject currentObject = doc.getXObject(getConnectionClassReference(doc));
+        if (currentObject != null && StringUtils.equals(connectionName,
+            currentObject.getStringValue(CONNECTION_NAME)))
+        {
+            return;
+        }
+        // The connection name is part of the REST URLs, where the servlet containers reject the encoded slashes and
+        // percent signs, and where the dot segments are removed.
+        if (StringUtils.containsAny(connectionName, '/', '\\', '%')
+            || (StringUtils.isNotEmpty(connectionName) && StringUtils.containsOnly(connectionName, '.')))
+        {
+            throw ConnectionSaveException.invalid(String.format("The connection name [%s] is not valid: it can't "
+                + "contain [/], [\\] or [%%], nor be made only of dots.", connectionName));
         }
     }
 
