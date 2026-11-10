@@ -29,15 +29,20 @@ import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.observation.event.Event;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -73,6 +78,12 @@ class OpenProjectMacroDisplayListenersTest
 
     private static final DocumentReference DASHBOARD = new DocumentReference("xwiki", "OpenProject", "WebHome");
 
+    private static final DocumentReference SELECTION =
+        new DocumentReference("xwiki", "OpenProject", "DashboardSelection");
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @InjectMockComponents
     private OpenProjectMacroDisplayListeners listener;
 
@@ -92,6 +103,12 @@ class OpenProjectMacroDisplayListenersTest
     private XWikiDocument document;
 
     @Mock
+    private XWiki xwiki;
+
+    @Mock
+    private XWikiDocument selectionDocument;
+
+    @Mock
     private BaseObject dashboardConfig;
 
     @Mock
@@ -100,12 +117,14 @@ class OpenProjectMacroDisplayListenersTest
     private final BaseDirectOpenProjectMacroParameters parameters = new BaseDirectOpenProjectMacroParameters();
 
     @BeforeEach
-    void setUp()
+    void setUp() throws Exception
     {
         when(this.xcontextProvider.get()).thenReturn(this.xcontext);
         when(this.xcontext.getDoc()).thenReturn(this.document);
+        when(this.xcontext.getWiki()).thenReturn(this.xwiki);
         when(this.document.getDocumentReference()).thenReturn(DASHBOARD);
-        when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(this.dashboardConfig);
+        when(this.xwiki.getDocument(SELECTION, this.xcontext)).thenReturn(this.selectionDocument);
+        when(this.selectionDocument.getXObject(DASHBOARD_CLASS)).thenReturn(this.dashboardConfig);
         configuredConnections("dashboard");
     }
 
@@ -183,12 +202,62 @@ class OpenProjectMacroDisplayListenersTest
     @Test
     void ignoresDashboardWithoutConfiguration()
     {
-        when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(null);
+        when(this.selectionDocument.getXObject(DASHBOARD_CLASS)).thenReturn(null);
 
         fireEvent(this.parameters);
 
         assertNull(this.parameters.getInstance());
         assertNull(this.parameters.getProject());
+    }
+
+    @Test
+    void fallsBackOnTheSelectionStoredOnTheDashboardBefore140()
+    {
+        BaseObject legacyConfig = mock(BaseObject.class);
+        when(legacyConfig.getStringValue("selectedConnection")).thenReturn("legacy");
+        when(legacyConfig.getStringValue("selectedProject")).thenReturn("7");
+        when(this.selectionDocument.getXObject(DASHBOARD_CLASS)).thenReturn(null);
+        when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(legacyConfig);
+        configuredConnections("dashboard", "legacy");
+
+        fireEvent(this.parameters);
+
+        assertEquals("legacy", this.parameters.getInstance());
+        assertEquals("7", this.parameters.getProject());
+    }
+
+    @Test
+    void theSelectionPageTakesPrecedenceOverTheSelectionStoredOnTheDashboard()
+    {
+        BaseObject legacyConfig = mock(BaseObject.class);
+        when(legacyConfig.getStringValue("selectedConnection")).thenReturn("legacy");
+        when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(legacyConfig);
+        configuredConnections("dashboard", "legacy");
+        selectedConnection("dashboard");
+        selectedProject("3");
+
+        fireEvent(this.parameters);
+
+        assertEquals("dashboard", this.parameters.getInstance());
+        assertEquals("3", this.parameters.getProject());
+    }
+
+    @Test
+    void fallsBackOnTheSelectionStoredOnTheDashboardWhenTheSelectionPageCannotBeRead() throws Exception
+    {
+        BaseObject legacyConfig = mock(BaseObject.class);
+        when(legacyConfig.getStringValue("selectedConnection")).thenReturn("legacy");
+        when(this.document.getXObject(DASHBOARD_CLASS)).thenReturn(legacyConfig);
+        when(legacyConfig.getStringValue("selectedProject")).thenReturn("7");
+        when(this.xwiki.getDocument(SELECTION, this.xcontext)).thenThrow(new XWikiException(0, 0, "Store failure"));
+        configuredConnections("dashboard", "legacy");
+
+        fireEvent(this.parameters);
+
+        assertEquals("legacy", this.parameters.getInstance());
+        assertEquals("7", this.parameters.getProject());
+        assertEquals("Failed to read the dashboard selection from [xwiki:OpenProject.DashboardSelection]. Root cause: "
+            + "[XWikiException: Error number 0 in 0: Store failure]", this.logCapture.getMessage(0));
     }
 
     @Test

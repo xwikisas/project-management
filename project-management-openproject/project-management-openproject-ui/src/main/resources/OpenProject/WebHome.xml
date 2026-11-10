@@ -46,12 +46,26 @@
   {{/html}}
 #else
   #set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
-  #set ($configObj = $doc.getObject($configClass))
-  #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
-    #set ($discard = $configObj.set('selectedConnection', $request.connection))
-    #set ($discard = $configObj.set('selectedProject', "$!request.project"))
-    #set ($discard = $configObj.set('selectedProjectLabel', "$!request.projectLabel"))
-    #set ($discard = $doc.save('Updated project', true))
+  ## The selection is stored on a separate, data-only page, so that selecting a connection or a project never saves
+  ## this page: a user without script right saving it would disable its scripts and extensions for everyone.
+  #set ($selectionReference = $services.model.resolveDocument('DashboardSelection', 'explicit', $doc.documentReference))
+  #set ($selectionDoc = $xwiki.getDocument($selectionReference))
+  #set ($configObj = $selectionDoc.getObject($configClass))
+  ## Fall back on the selection that versions before 1.4.0 stored on this page.
+  #if (!$configObj)
+    #set ($configObj = $doc.getObject($configClass))
+  #end
+  ## Only the users who can edit the dashboard can change its selection.
+  #set ($canSelect = $hasEdit &amp;&amp; $xwiki.hasAccessLevel('edit', $xcontext.user, $services.model.serialize($selectionReference, 'default')))
+  #if ($canSelect &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+    #if ($selectionDoc.isNew())
+      #set ($discard = $selectionDoc.setHidden(true))
+    #end
+    #set ($selectionObj = $selectionDoc.getObject($configClass, true))
+    #set ($discard = $selectionObj.set('selectedConnection', $request.connection))
+    #set ($discard = $selectionObj.set('selectedProject', "$!request.project"))
+    #set ($discard = $selectionObj.set('selectedProjectLabel', "$!request.projectLabel"))
+    #set ($discard = $selectionDoc.save('Updated the dashboard selection', true))
     $response.sendRedirect($doc.getURL())
     #stop
   #end
@@ -93,7 +107,7 @@
       &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
     &lt;/div&gt;
   #else
-    #if ($hasEdit)
+    #if ($canSelect)
       &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
         &lt;div class="form-group"&gt;
           &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
