@@ -59,6 +59,13 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 @Component(roles = ProjectManagementAsyncRenderer.class)
 public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 {
+    // The message displayed by XWiki for the failures of the synchronous macros.
+    private static final String MACRO_ERROR_MESSAGE_ID = "rendering.macro.error.failed";
+
+    private static final String MACRO_ERROR_MESSAGE = "Failed to execute the [{}] macro.";
+
+    // The message displayed when the work items aren't displayed by a macro (e.g. by the REST resource displaying a
+    // work package).
     private static final String ERROR_MESSAGE_ID = "projectmanagement.macro.async.error";
 
     private static final String ERROR_MESSAGE = "Failed to display the work items.";
@@ -152,9 +159,12 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             // the root cause and the details (the stack trace) are displayed when clicking on it.
             // The failure is displayed with its details, so it's not logged above debug: logging it each time the page
             // is viewed would be costly, like for the failures of the synchronous macros, which aren't logged.
+            MacroBlock macroBlock = this.transformationContext.getCurrentMacroBlock();
             this.logger.debug(ERROR_MESSAGE, e);
-            List<Block> errorBlocks =
-                this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
+            List<Block> errorBlocks = macroBlock != null
+                ? this.errorBlockGenerator.generateErrorBlocks(this.inline, MACRO_ERROR_MESSAGE_ID, MACRO_ERROR_MESSAGE,
+                    null, macroBlock.getId(), e)
+                : this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
             // The script makes the error expandable once the asynchronous result is inserted in the page.
             this.jsrx.use(ASYNC_ERROR_SCRIPT);
             Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, ASYNC_ERROR_CLASS);

@@ -58,4 +58,23 @@ public class OpenProjectRichTextArea
         // The macro is inserted asynchronously, after the autocomplete dropdown is closed.
         this.textArea.waitUntilContentContains("startmacro:openproject");
     }
+
+    /**
+     * Insert a macro through the quick actions: type a slash followed by the query, select the macro in the
+     * autocomplete dropdown and wait for its edit modal to be displayed.
+     *
+     * @param query the text typed after the slash
+     * @param macroName the name of the macro to select in the autocomplete dropdown
+     * @return the edit modal of the macro
+     */
+    public OpenProjectDirectMacroEditModal insertMacroWithQuickAction(String query, String macroName)
+    {
+        String text = "/" + query;
+        this.textArea.sendKeys(text);
+        AutocompleteDropdown dropdown = new AutocompleteDropdown();
+        dropdown.waitForItemSelected(text, macroName);
+        this.textArea.sendKeys(Keys.ENTER);
+        dropdown.waitForItemSubmitted();
+        return new OpenProjectDirectMacroEditModal();
+    }
 }

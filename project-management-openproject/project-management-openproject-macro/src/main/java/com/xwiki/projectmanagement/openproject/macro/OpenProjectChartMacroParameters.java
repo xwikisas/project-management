@@ -65,6 +65,8 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     /**
      * @param instance see {@link #getInstance()}.
      */
+    @PropertyGroup("connection")
+    @PropertyOrder(100)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {

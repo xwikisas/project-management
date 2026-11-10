@@ -19,7 +19,9 @@
  */
  require(['jquery'], function ($) {
    let getInstance = function () {
-     return $('.macro-editor-modal :input[name="instance"]').val();
+     let input = $('.macro-editor-modal :input[name="instance"]');
+     // An empty instance means the default connection, whose name is held by the instance picker.
+     return input.val() || input.attr('data-default-connection');
    };
    // The properties of the chosen instance, e.g. its custom fields, can be filtered on.
    let loadInstanceProperties = function (builderElement) {

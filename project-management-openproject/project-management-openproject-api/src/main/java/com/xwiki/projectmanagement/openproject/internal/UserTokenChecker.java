@@ -172,6 +172,18 @@ public class UserTokenChecker
     }
 
     /**
+     * @param hintTranslationKey the translation key of the warning to display, e.g. explaining which macro parameter
+     *     is missing
+     * @param context the macro transformation context
+     * @return the warning
+     * @since 1.4.0
+     */
+    public List<Block> getHintWarningBlock(String hintTranslationKey, MacroTransformationContext context)
+    {
+        return getMessageBlock(null, l10n.getTranslation(hintTranslationKey).render(), null, context.isInline());
+    }
+
+    /**
      * @return a warning explaining which connections can be used, when the given one isn't configured or when none was
      *     given and there's no default connection
      */

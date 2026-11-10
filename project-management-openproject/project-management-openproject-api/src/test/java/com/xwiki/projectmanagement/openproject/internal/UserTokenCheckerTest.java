@@ -257,6 +257,19 @@ class UserTokenCheckerTest
         assertEquals(List.of(noConnectionHint), result.get(0).getChildren());
     }
 
+    @Test
+    void hintWarning()
+    {
+        Block hint = new WordBlock("missing project");
+        mockTranslation("missing.project.hint", hint);
+
+        List<Block> result = this.checker.getHintWarningBlock("missing.project.hint", this.macroContext);
+
+        GroupBlock group = assertInstanceOf(GroupBlock.class, result.get(0));
+        assertEquals("box warningmessage", group.getParameter("class"));
+        assertEquals(List.of(hint), group.getChildren());
+    }
+
     private void mockConnections(String... names)
     {
         List<OpenProjectConnection> connections = new ArrayList<>();

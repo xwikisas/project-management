@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
@@ -47,6 +48,7 @@ public class OpenProjectProjectsMacroParameters implements OpenProjectInstanceHo
     }
 
     @Override
+    @PropertyOrder(100)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
@@ -70,6 +72,7 @@ public class OpenProjectProjectsMacroParameters implements OpenProjectInstanceHo
      * @param limit see {@link #getLimit()}
      * @since 1.4.0
      */
+    @PropertyOrder(50)
     public void setLimit(int limit)
     {
         this.limit = limit;

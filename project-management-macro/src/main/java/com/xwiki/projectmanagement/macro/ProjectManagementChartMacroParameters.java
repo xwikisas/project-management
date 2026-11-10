@@ -145,7 +145,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     /**
      * @param limit see {@link #getLimit()}.
      */
-    @PropertyGroup("other")
+    @PropertyGroup("display")
+    @PropertyOrder(60)
     public void setLimit(Integer limit)
     {
         this.limit = limit;
@@ -162,7 +163,7 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     /**
      * @param offset see {@link #getOffset()}.
      */
-    @PropertyGroup("other")
+    @PropertyGroup("display")
     @PropertyDisplayHidden
     public void setOffset(Long offset)
     {

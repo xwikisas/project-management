@@ -17,26 +17,29 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#template("pickers_macros.vm")
-#set ($parameters = {
-  'options': $services.openproject.getConnectionOptions(),
-  'prefix': ' ',
-  'class': 'op-instance-select'         
-})
-<script>
-  (function() {
-    let select = document.getElementsByClassName('op-instance-select');
-    if (select.length <= 0) {
-      return;
-    }
-    select = select[0];
-    const validOptions = [...select.options].filter(
-      option => !option.disabled && option.value !== ""
-    );
-    if (validOptions.length === 1) {
-      select.value = validOptions[0].value;
-    }
-  })();
-</script>
-#set ($discard = $parameters.putAll($displayer.parameters))
-#staticSelectPicker($parameters)
+## A short list of connections, so a plain select, like the macro parameters taking a few values.
+#set ($defaultConnection = $services.openproject.defaultConnectionName)
+<select class="op-instance-select" data-default-connection="$!escapetool.xml($defaultConnection)"
+  #foreach ($parameter in $displayer.parameters.entrySet())
+    $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
+  #end
+>
+## Leaving the connection empty makes the macro use the default connection. On an OpenProject dashboard, the macro
+## uses the connection selected on the dashboard instead, which has its own option.
+#if (!$services.openproject.isDashboardContext())
+  #if ("$!defaultConnection" != '')
+    #set ($emptyLabel = $services.localization.render('openproject.instance.defaultConnection', [$defaultConnection]))
+  #else
+    #set ($emptyLabel = $services.localization.render('openproject.instance.noDefaultConnection'))
+  #end
+  <option value="">$escapetool.xml($emptyLabel)</option>
+#end
+#foreach ($option in $services.openproject.getConnectionOptions())
+  ## The label of the dashboard option is a translation key, the label of a connection is its name.
+  #set ($label = $option.name)
+  #if ($option.name != $option.value)
+    #set ($label = $services.localization.render($option.name))
+  #end
+  <option value="$escapetool.xml($option.value)">$escapetool.xml($label)</option>
+#end
+</select>

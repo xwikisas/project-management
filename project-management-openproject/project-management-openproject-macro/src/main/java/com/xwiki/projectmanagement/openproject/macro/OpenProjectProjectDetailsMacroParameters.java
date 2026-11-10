@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.macro;
 import java.util.List;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectProjectDetailsProperty;
@@ -53,6 +54,7 @@ public class OpenProjectProjectDetailsMacroParameters extends BaseDirectOpenProj
      * @since 1.4.0
      */
     @Unstable
+    @PropertyOrder(20)
     @PropertyDisplayType(OpenProjectProjectDetailsProperty.class)
     public void setProperties(List<OpenProjectProjectDetailsProperty> properties)
     {

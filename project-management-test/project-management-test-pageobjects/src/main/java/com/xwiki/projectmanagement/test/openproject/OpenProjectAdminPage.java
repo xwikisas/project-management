@@ -24,6 +24,7 @@ import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.administration.test.po.AdministrationSectionPage;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
@@ -49,6 +50,10 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     private static final String EDIT_CONNECTION_ACTION = "edit-connection";
 
     private static final By CONNECTION_MODAL = By.id("handleConnectionModal");
+
+    private static final By DELETE_CONNECTION_MODAL = By.id("deleteConnectionModal");
+
+    private static final By DEFAULT_CONNECTION_SELECT = By.name(CONFIGURATION_CLASS + "_0_defaultConnection");
 
     public OpenProjectAdminPage()
     {
@@ -240,9 +245,8 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     public void deleteConnection(String name)
     {
         clickConnectionAction(name, "delete-connection");
-        By modalSelector = By.id("deleteConnectionModal");
-        getDriver().waitUntilElementIsVisible(modalSelector);
-        getDriver().findElement(modalSelector).findElement(By.className("btn-danger")).click();
+        getDriver().waitUntilElementIsVisible(DELETE_CONNECTION_MODAL);
+        getDriver().findElement(DELETE_CONNECTION_MODAL).findElement(By.className("btn-danger")).click();
         waitForNotificationSuccessMessage(String.format("Connection %s has been deleted!", name));
         waitUntilConnectionIsListed(name, false);
     }
@@ -281,8 +285,41 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     public void setDefaultConnection(String name)
     {
         getFormContainerElement(SECTION_ID.toLowerCase() + "_OpenProject.Code.OpenProjectConfiguration")
-            .setFieldValue(getDriver().findElement(By.name(CONFIGURATION_CLASS + "_0_defaultConnection")), name);
+            .setFieldValue(getDriver().findElement(DEFAULT_CONNECTION_SELECT), name);
         clickSave(true);
+    }
+
+    /**
+     * @return the connection selected as the default connection, or an empty string when none is selected; it is
+     *     updated without reloading the page after a connection is saved or deleted
+     * @since 1.4.0
+     */
+    public String getDefaultConnection()
+    {
+        WebElement select = getDriver().findElement(DEFAULT_CONNECTION_SELECT);
+        // The choices are refreshed asynchronously after a connection is saved or deleted.
+        getDriver().waitUntilCondition(driver -> select.getAttribute("data-refreshing") == null);
+        return new Select(select).getFirstSelectedOption().getAttribute("value");
+    }
+
+    /**
+     * Open the confirmation of the deletion of a connection, read the warning it displays, and close it without
+     * deleting the connection.
+     *
+     * @param name the name of the connection
+     * @return the warning displayed when deleting the default connection, or an empty string when there is none
+     * @since 1.4.0
+     */
+    public String getConnectionDeletionWarning(String name)
+    {
+        clickConnectionAction(name, "delete-connection");
+        getDriver().waitUntilElementIsVisible(DELETE_CONNECTION_MODAL);
+        WebElement modal = getDriver().findElement(DELETE_CONNECTION_MODAL);
+        String warningText = modal.findElements(By.cssSelector("[id^='delete-connection-'][id$='-warning']")).stream()
+            .filter(WebElement::isDisplayed).map(WebElement::getText).findFirst().orElse("");
+        modal.findElement(By.cssSelector(".modal-footer [data-dismiss='modal']")).click();
+        getDriver().waitUntilElementDisappears(DELETE_CONNECTION_MODAL);
+        return warningText;
     }
 
     /**

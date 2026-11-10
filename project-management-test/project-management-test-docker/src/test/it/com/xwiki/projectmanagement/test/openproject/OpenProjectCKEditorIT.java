@@ -88,4 +88,32 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         assertThat(content, containsString("displayer=\"inline\""));
         assertThat(content, not(containsString(marker)));
     }
+
+    @Test
+    @Order(2)
+    void insertMacroWithQuickAction(TestUtils setup, TestReference testReference)
+    {
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "");
+        setup.gotoPage(testReference, "edit", "editor=wysiwyg");
+        WYSIWYGEditPage editPage = new WYSIWYGEditPage();
+
+        // The OpenProject macros are inserted through their edit modal, although none of their parameters is
+        // mandatory, so that the parent project can be chosen.
+        OpenProjectDirectMacroEditModal modal =
+            new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+                .insertMacroWithQuickAction("subprojects", "OpenProject - Subprojects");
+        // The macro uses the default connection, i.e. the only one.
+        assertEquals(String.format("Default connection (%s)", CONNECTION_ID), modal.getSelectedInstance());
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+
+        // Without a project, the macro asks for one.
+        assertThat(new ViewPageWithOpenProjectMacro().getContent(),
+            containsString("Choose the project whose subprojects to display with the project parameter."));
+        setup.gotoPage(testReference, "edit", "editor=wiki");
+        String content = new WikiEditPage().getContent();
+        assertThat(content, startsWith("{{openproject-subprojects"));
+        assertThat(content, not(containsString("instance=")));
+    }
 }

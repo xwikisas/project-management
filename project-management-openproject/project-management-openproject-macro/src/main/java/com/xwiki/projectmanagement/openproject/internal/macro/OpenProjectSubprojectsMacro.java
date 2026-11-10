@@ -26,6 +26,7 @@ import java.util.List;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.BulletedListBlock;
@@ -64,6 +65,8 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
 
     private static final String ANCESTOR = "ancestor";
 
+    private static final String MISSING_PROJECT_HINT = "openproject.openproject-subprojects.missingProject";
+
     /**
      * Default constructor.
      */
@@ -72,6 +75,12 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
         super("OpenProject - Subprojects",
             "Displays the subprojects of a specific project from a configured OpenProject instance.",
             OpenProjectSubprojectsMacroParameters.class);
+    }
+
+    @Override
+    protected String getMissingParameterHint(OpenProjectSubprojectsMacroParameters parameters)
+    {
+        return StringUtils.isBlank(parameters.getProject()) ? MISSING_PROJECT_HINT : null;
     }
 
     @Override

@@ -27,6 +27,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.ckeditor.test.po.CKEditor;
 import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.ckeditor.test.po.MacroDialogSelectModal;
@@ -159,7 +160,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public void clickMore()
     {
-        // An open suggest dropdown (e.g. the one of the instance) or a notification can cover the links.
+        // An open suggest dropdown (e.g. the one of the project) or a notification can cover the links.
         closeSuggestDropdowns();
         getDriver().waitUntilElementDisappears(By.className("xnotification"));
         By collapsedMore = By.xpath("//*[contains(@class, '-editor-modal')]//li[contains(@class, 'more')]"
@@ -188,18 +189,29 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     /**
      * Select the OpenProject connection that the macro will use.
      *
-     * @param connectionId the id of the connection.
-     * @return the suggest input of the instance parameter.
+     * @param connectionId the id of the connection, or an empty string for the default connection
+     * @return this object
      */
-    public SuggestInputElement selectInstance(String connectionId)
+    public AbstractOpenProjectMacroEditModal selectInstance(String connectionId)
     {
         closeSuggestDropdowns();
-        // The instance parameter is optional, so it can be displayed after the groups of parameters, out of view.
+        // The instance parameter is in the Connection tab of the macros having parameter groups.
+        selectParameterTab("connection");
         WebElement input = getMacroParameterInput(INSTANCE_PARAMETER);
+        // It's the last parameter, so it can be out of view.
         getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
-        SuggestInputElement instanceSuggest = new SuggestInputElement(input).click().waitForSuggestions();
-        instanceSuggest.selectByValue(connectionId);
-        return instanceSuggest;
+        new Select(input).selectByValue(connectionId);
+        return this;
+    }
+
+    /**
+     * @return the label of the selected OpenProject connection, e.g. the default connection
+     * @since 1.4.0
+     */
+    public String getSelectedInstance()
+    {
+        selectParameterTab("connection");
+        return new Select(getMacroParameterInput(INSTANCE_PARAMETER)).getFirstSelectedOption().getText().trim();
     }
 
     /**
@@ -223,8 +235,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
-     * The first suggest input of the modal (the instance) can be focused when the modal is opened, and its dropdown
-     * can then cover the other parameters. Close it by clicking outside it.
+     * The first suggest input of the modal (e.g. the project) can be focused when the modal is opened, and its
+     * dropdown can then cover the other parameters. Close it by clicking outside it.
      */
     private void closeSuggestDropdowns()
     {

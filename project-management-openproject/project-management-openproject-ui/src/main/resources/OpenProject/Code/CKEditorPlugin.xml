@@ -233,10 +233,25 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
 
     // Enable the plugin for the CKEditor instances that have been already created.
     Object.values(ckeditor.instances).forEach(maybeEnableOpenProjectPlugin);
+    Object.values(ckeditor.instances).forEach(openMacroDialogOnQuickInsert);
     // Enable the plugin for the CKEditor instances that are going to be created from now on.
     ckeditor.on('instanceCreated', (event) =&gt; {
       maybeEnableOpenProjectPlugin(event.editor);
+      openMacroDialogOnQuickInsert(event.editor);
     });
+
+    // The quick actions ("/") insert the macros that have no mandatory parameter without asking for their parameters.
+    // The OpenProject macros are inserted through their dialog instead, so that the user chooses what they display
+    // (e.g. the project whose details to display), as for the other ways of inserting a macro.
+    function openMacroDialogOnQuickInsert(editor) {
+      editor.on('beforeCommandExec', (event) =&gt; {
+        const macroId = event.data.name === 'xwiki-macro-maybe-install-insert' &amp;&amp; event.data.commandData?.id;
+        if (typeof macroId === 'string' &amp;&amp; macroId.startsWith('openproject')) {
+          event.cancel();
+          editor.execCommand('xwiki-macro', {name: macroId});
+        }
+      });
+    }
 
     function maybeEnableOpenProjectPlugin(editor) {
       return Promise.all([waitForEditorReady(editor), getMarker()]).then(([editor, marker]) =&gt; {

@@ -26,6 +26,7 @@ import org.xwiki.properties.annotation.PropertyOrder;
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
 import com.xwiki.projectmanagement.internal.chart.displayer.LineChartDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 
 /**
  * The parameters for the Open v Closed macro.
@@ -80,8 +81,8 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
         super.setPresetId(preset);
     }
 
-    // The type params and the limit are overridden only to remove them from their parameter groups, so that the few
-    // parameters of this macro are displayed together in the macro editor.
+    // The type params, the limit and the instance are overridden only to remove them from their parameter groups, so
+    // that the few parameters of this macro are displayed together in the macro editor.
     @PropertyDisplayType(ProjectManagementChartTypeParams.class)
     @PropertyOrder(20)
     @Override
@@ -95,6 +96,14 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
     public void setLimit(Integer limit)
     {
         super.setLimit(limit);
+    }
+
+    @PropertyDisplayType(OpenProjectInstance.class)
+    @PropertyOrder(100)
+    @Override
+    public void setInstance(String instance)
+    {
+        super.setInstance(instance);
     }
 
     @PropertyDisplayHidden

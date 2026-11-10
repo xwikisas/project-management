@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 /**
  * Parameters for the OpenProject Subprojects macro.
@@ -56,6 +57,7 @@ public class OpenProjectSubprojectsMacroParameters extends BaseDirectOpenProject
      * @param limit see {@link #getLimit()}
      * @since 1.4.0
      */
+    @PropertyOrder(50)
     public void setLimit(int limit)
     {
         this.limit = limit;

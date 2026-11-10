@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 /**
  * Parameters for the OpenProject Spent Time macro.
@@ -54,6 +55,7 @@ public class OpenProjectSpentTimeMacroParameters extends BaseDirectOpenProjectMa
      * @param limit see {@link #getLimit()}
      * @since 1.4.0
      */
+    @PropertyOrder(50)
     public void setLimit(int limit)
     {
         this.limit = limit;
@@ -92,6 +94,7 @@ public class OpenProjectSpentTimeMacroParameters extends BaseDirectOpenProjectMa
     /**
      * @param days see {@link #getDays()}.
      */
+    @PropertyOrder(20)
     public void setDays(int days)
     {
         this.days = days;

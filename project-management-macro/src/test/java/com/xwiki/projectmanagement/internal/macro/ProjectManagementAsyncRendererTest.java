@@ -231,8 +231,9 @@ class ProjectManagementAsyncRendererTest
         MacroExecutionException exception = new MacroExecutionException("Failed");
         when(this.displayer.execute(any(), any(), any())).thenThrow(exception);
         Block errorBlock = new WordBlock("error");
-        when(this.errorBlockGenerator.generateErrorBlocks(true, "projectmanagement.macro.async.error",
-            "Failed to display the work items.", null, exception)).thenReturn(List.of(errorBlock));
+        // Like a failing synchronous macro.
+        when(this.errorBlockGenerator.generateErrorBlocks(true, "rendering.macro.error.failed",
+            "Failed to execute the [{}] macro.", null, "openproject", exception)).thenReturn(List.of(errorBlock));
 
         // The error is wrapped in a macro marker, like the result of a synchronous macro.
         List<Block> result = this.renderer.execute(true, false).getChildren();
