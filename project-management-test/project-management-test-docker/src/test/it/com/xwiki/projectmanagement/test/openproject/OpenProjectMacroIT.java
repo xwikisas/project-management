@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -575,7 +577,21 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // Displaying the saved dates doesn't change them.
         modal.clickSubmit();
         editPage.clickSaveAndView();
-        assertThat(getContent(setup, testReference), containsString("filters=\"" + filters + "\""));
+        // The editor may escape more characters of the value (e.g. the closing braces): compare the unescaped values.
+        assertEquals(unescape(filters), getMacroParameter(getContent(setup, testReference), "filters"));
+    }
+
+    // The unescaped value of a parameter of the first macro of the given wiki syntax, null when missing.
+    private static String getMacroParameter(String content, String parameter)
+    {
+        Matcher matcher = Pattern.compile("\\b" + parameter + "=\"((?:~.|[^\"~])*)\"").matcher(content);
+        return matcher.find() ? unescape(matcher.group(1)) : null;
+    }
+
+    // The given macro parameter value, without the escaping of the XWiki 2.1 syntax.
+    private static String unescape(String value)
+    {
+        return value.replaceAll("~(.)", "$1");
     }
 
     private static String getContent(TestUtils setup, TestReference testReference) throws Exception
