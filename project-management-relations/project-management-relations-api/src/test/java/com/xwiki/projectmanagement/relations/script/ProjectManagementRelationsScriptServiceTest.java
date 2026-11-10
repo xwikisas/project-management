@@ -21,7 +21,10 @@ package com.xwiki.projectmanagement.relations.script;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.context.Execution;
+import org.xwiki.context.ExecutionContext;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.security.authorization.AccessDeniedException;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
@@ -39,6 +42,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -66,6 +71,15 @@ class ProjectManagementRelationsScriptServiceTest
     @MockComponent
     private ContextualAuthorizationManager authorizationManager;
 
+    @MockComponent
+    private Execution execution;
+
+    @BeforeEach
+    void setUp()
+    {
+        when(this.execution.getContext()).thenReturn(new ExecutionContext());
+    }
+
     @Test
     void getRelationsKeepsOnlyTheViewableOnes()
     {
@@ -82,6 +96,41 @@ class ProjectManagementRelationsScriptServiceTest
         when(this.relationsManager.getRelations(PAGE, true)).thenReturn(List.of());
 
         assertEquals(List.of(), this.scriptService.getRelations(PAGE, true));
+    }
+
+    @Test
+    void getRelationsRetrievesTheRelationsOncePerRequest()
+    {
+        // The relations tab of a page needs the relations in several parameters and in its content.
+        ProjectManagementRelation viewable = relation(VIEWABLE);
+        when(this.relationsManager.getRelations(PAGE, true)).thenReturn(List.of(viewable));
+        when(this.authorizationManager.hasAccess(Right.VIEW, VIEWABLE)).thenReturn(true);
+
+        assertEquals(List.of(viewable), this.scriptService.getRelations(PAGE, true));
+        assertEquals(List.of(viewable), this.scriptService.getRelations(PAGE, true));
+        verify(this.relationsManager, times(1)).getRelations(PAGE, true);
+
+        // The other pages, and the lookup without the ancestors, are separate.
+        this.scriptService.getRelations(PAGE, false);
+        this.scriptService.getRelations(VIEWABLE, true);
+        verify(this.relationsManager).getRelations(PAGE, false);
+        verify(this.relationsManager).getRelations(VIEWABLE, true);
+
+        // A new request retrieves them again.
+        when(this.execution.getContext()).thenReturn(new ExecutionContext());
+        this.scriptService.getRelations(PAGE, true);
+        verify(this.relationsManager, times(2)).getRelations(PAGE, true);
+    }
+
+    @Test
+    void getRelationsWithoutExecutionContext()
+    {
+        when(this.execution.getContext()).thenReturn(null);
+        when(this.relationsManager.getRelations(PAGE, true)).thenReturn(List.of());
+
+        this.scriptService.getRelations(PAGE, true);
+        this.scriptService.getRelations(PAGE, true);
+        verify(this.relationsManager, times(2)).getRelations(PAGE, true);
     }
 
     @Test
