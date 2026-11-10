@@ -57,7 +57,9 @@ import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -180,12 +182,14 @@ class DefaultOpenProjectMacroInsertResourceTest
         Execution execution = this.componentManager.getInstance(Execution.class);
         ExecutionContext executionContext = execution.getContext();
         AtomicReference<Thread> otherThread = new AtomicReference<>();
+        AtomicReference<Throwable> otherFailure = new AtomicReference<>();
         when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> {
             if (otherThread.get() == null) {
                 Thread thread = new Thread(() -> {
                     execution.setContext(executionContext);
                     this.resource.insetIntoPage("xwiki", "Space", "Page", otherInsertion);
                 });
+                thread.setUncaughtExceptionHandler((failedThread, failure) -> otherFailure.set(failure));
                 otherThread.set(thread);
                 thread.start();
                 waitUntilBlocked(thread);
@@ -195,6 +199,8 @@ class DefaultOpenProjectMacroInsertResourceTest
 
         this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
         otherThread.get().join(10000);
+        assertFalse(otherThread.get().isAlive());
+        assertNull(otherFailure.get());
 
         // The second insertion is done on the page saved by the first one.
         assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n{{openproject {identifier=2}/}}Goodbye moon",
@@ -209,6 +215,8 @@ class DefaultOpenProjectMacroInsertResourceTest
         {
             Thread.sleep(10);
         }
+        // The second insertion waits for the first one to release the lock of the page.
+        assertEquals(Thread.State.WAITING, thread.getState());
     }
 
     @Test
