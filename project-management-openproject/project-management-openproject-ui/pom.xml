@@ -104,6 +104,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <!-- The translation macro used by the OpenProject dashboard. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-localization-macro</artifactId>
+      <version>${platform.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-csrf</artifactId>
       <version>${platform.version}</version>

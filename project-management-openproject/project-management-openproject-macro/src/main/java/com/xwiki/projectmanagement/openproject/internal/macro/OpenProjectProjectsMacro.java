@@ -91,16 +91,17 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
     {
         List<Block> blocks = new ArrayList<>();
 
-        blocks.add(new HeaderBlock(List.of(new WordBlock("Projects")), HeaderLevel.LEVEL2));
+        blocks.add(new HeaderBlock(List.of(new WordBlock(translate("openproject.projectsmacro.title"))),
+            HeaderLevel.LEVEL2));
 
         blocks.add(new ParagraphBlock(
-            List.of(new WordBlock("Here are the latest projects you have access to in OpenProject:")),
+            List.of(new WordBlock(translate("openproject.projectsmacro.subtitle"))),
             Collections.singletonMap(CLASS, "text-muted")));
 
         List<Block> listItems = new ArrayList<>();
         if (projects.isEmpty()) {
             listItems.add(new ListItemBlock(
-                List.of(new WordBlock("No projects found.")),
+                List.of(new WordBlock(translate("openproject.projectsmacro.empty"))),
                 Collections.emptyMap()));
         } else {
             for (Project project : projects) {

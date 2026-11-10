@@ -78,13 +78,7 @@ public class OpenProjectSpentTimeMacro
 
     private static final String EMPTY_FILTER = "";
 
-    private static final String ACTIVITY_TABLE_HEADER = "ACTIVITY";
-
-    private static final String LOGGED_FOR_TABLE_HEADER = "LOGGED FOR";
-
-    private static final String COMMENT_TABLE_HEADER = "COMMENT";
-
-    private static final String HOURS_TABLE_HEADER = "HOURS";
+    private static final String TRANSLATION_PREFIX = "openproject.openproject-spent-time.";
 
     private static final String EMPTY_CELL_PLACEHOLDER = "-";
 
@@ -130,7 +124,8 @@ public class OpenProjectSpentTimeMacro
         String linkUrl = hasProject
             ? getProjectURL(serverUrl, parameters.getProject())
             : String.format("%s/time_entries", serverUrl);
-        String linkLabel = hasProject ? "View project dashboard" : "View time entries";
+        String linkLabel = translate(hasProject ? "openproject.openproject-spent-time.viewProjectDashboard"
+            : "openproject.openproject-spent-time.viewTimeEntries");
 
         return Collections.singletonList(
             new GroupBlock(buildContent(entries, linkLabel, linkUrl), Collections.emptyMap()));
@@ -160,11 +155,13 @@ public class OpenProjectSpentTimeMacro
         List<Block> blocks = new ArrayList<>();
 
         if (entries.isEmpty()) {
-            blocks.add(new ParagraphBlock(List.of(new WordBlock("No time entries found.")), Collections.emptyMap()));
+            blocks.add(new ParagraphBlock(List.of(new WordBlock(translate("openproject.openproject-spent-time.empty"))),
+                Collections.emptyMap()));
         } else {
             double totalHours = entries.stream().mapToDouble(e -> parseHours(e.getHours())).sum();
 
-            blocks.add(new ParagraphBlock(List.of(new FormatBlock(List.of(new WordBlock("Total: ")), Format.BOLD),
+            Block totalLabel = new WordBlock(translate("openproject.openproject-spent-time.total") + " ");
+            blocks.add(new ParagraphBlock(List.of(new FormatBlock(List.of(totalLabel), Format.BOLD),
                 new WordBlock(formatTotalHours(totalHours)))));
 
             blocks.add(buildTable(entries));
@@ -176,15 +173,21 @@ public class OpenProjectSpentTimeMacro
         return blocks;
     }
 
+    private Block buildHeader(String column)
+    {
+        return new FormatBlock(List.of(new WordBlock(translate(TRANSLATION_PREFIX + "header." + column))),
+            Format.BOLD);
+    }
+
     private Block buildTable(List<TimeEntry> entries)
     {
         TableBuilder tableBuilder = new TableBuilder();
 
         tableBuilder.newRow()
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(ACTIVITY_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(LOGGED_FOR_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(COMMENT_TABLE_HEADER)), Format.BOLD)))
-            .newCell(List.of(new FormatBlock(List.of(new WordBlock(HOURS_TABLE_HEADER)), Format.BOLD)));
+            .newCell(List.of(buildHeader("activity")))
+            .newCell(List.of(buildHeader("loggedFor")))
+            .newCell(List.of(buildHeader("comment")))
+            .newCell(List.of(buildHeader("hours")));
 
         Map<Date, List<TimeEntry>> byDate = groupByDate(entries);
         String dateFormat = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy");
@@ -277,6 +280,6 @@ public class OpenProjectSpentTimeMacro
 
     private String formatTotalHours(double hours)
     {
-        return formatHours(hours) + " h";
+        return formatHours(hours) + " " + translate(TRANSLATION_PREFIX + "hoursUnit");
     }
 }

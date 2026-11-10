@@ -29,12 +29,15 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.junit.jupiter.api.Test;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.test.junit5.mockito.MockComponent;
 import org.xwiki.test.page.HTML50ComponentList;
 import org.xwiki.test.page.PageTest;
 import org.xwiki.test.page.XWikiSyntax21ComponentList;
 
+import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -83,6 +86,27 @@ class DashboardPageTest extends PageTest
             options.add(option.attr("value"));
         }
         assertEquals(List.of(CONNECTION_NAME, "other"), options);
+    }
+
+    @Test
+    void chartLegendsAreTranslated() throws Exception
+    {
+        XWikiDocument dashboard = loadPage(new DocumentReference("xwiki", "OpenProject", "WebHome"));
+        List<String> charts = new ArrayList<>();
+        for (BaseObject gadget : dashboard.getXObjects(new LocalDocumentReference("XWiki", "GadgetClass"))) {
+            String content = gadget.getLargeStringValue("content");
+            if (content.contains("datasetsLabels")) {
+                charts.add(content);
+            }
+        }
+
+        assertEquals(2, charts.size());
+        for (String chart : charts) {
+            // The chart macro translates the labels that are translation keys. The gadgets need no script, since
+            // they are executed with the rights of the last author of the dashboard, who may not have script right.
+            assertTrue(chart.startsWith("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
+                + "~\"openproject.dashboard.chart.closed~\"]\" "), chart);
+        }
     }
 
     @Test

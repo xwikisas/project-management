@@ -31,7 +31,6 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
-import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -55,9 +54,6 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroP
 public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
 {
     @Inject
-    private ContextualLocalizationManager l10n;
-
-    @Inject
     private Provider<Clock> clockProvider;
 
     /**
@@ -76,9 +72,10 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
         MacroTransformationContext context) throws MacroExecutionException
     {
         try {
+            // The chart macro translates the labels.
             parameters.setDatasetsLabels(objectMapper.writeValueAsString(
-                Arrays.asList(l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.open"),
-                    l10n.getTranslationPlain("openproject.openprojectopenclosed.labels.closed"))));
+                Arrays.asList("openproject.openprojectopenclosed.labels.open",
+                    "openproject.openprojectopenclosed.labels.closed")));
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to get the chart labels.", e);
         }
