@@ -34,6 +34,8 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
@@ -269,6 +271,52 @@ class DefaultOpenProjectApiClientTest
 
         assertNull(workPackages.get(0).getPercentageDone());
         assertEquals(60, workPackages.get(1).getPercentageDone());
+    }
+
+    @Test
+    void getWorkPackagesKeepsTheTimeOfTheCreationAndUpdateDates() throws Exception
+    {
+        // The creation and update dates are date-times, with an offset (unlike the start and due dates).
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\"", "\"startDate\": \"2025-08-13\", "
+                + "\"createdAt\": \"2025-08-13T22:30:15.123Z\", \"updatedAt\": \"2025-08-14T09:05:00+02:00\""));
+
+        WorkPackage workPackage = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0);
+
+        assertEquals(Date.from(Instant.parse("2025-08-13T22:30:15.123Z")), workPackage.getCreatedAt());
+        assertEquals(Date.from(Instant.parse("2025-08-14T07:05:00Z")), workPackage.getUpdatedAt());
+        // The start date is still a plain date, at midnight in the time zone of the server.
+        assertEquals(new GregorianCalendar(2025, GregorianCalendar.AUGUST, 13).getTime(), workPackage.getStartDate());
+    }
+
+    @Test
+    void getWorkPackagesIgnoresAnInvalidCreationDate() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\"", "\"startDate\": \"2025-08-13\", "
+                + "\"createdAt\": \"invalid\", \"updatedAt\": \"2025-08-14T09:05:00+0200\""));
+
+        List<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems();
+
+        // The other work packages and the other properties are still returned.
+        assertEquals(3, workPackages.size());
+        assertNull(workPackages.get(0).getCreatedAt());
+        assertEquals(Date.from(Instant.parse("2025-08-14T07:05:00Z")), workPackages.get(0).getUpdatedAt());
+        assertEquals("Ignoring the invalid OpenProject date-time [invalid].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getProjectsKeepsTheTimeOfTheCreationDate() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse()
+            .replace("\"name\": \"First project\",",
+                "\"name\": \"First project\", \"createdAt\": \"2025-08-13T22:30:15Z\",")
+            .replace("\"name\": \"Second project\",", "\"name\": \"Second project\", \"createdAt\": null,"));
+
+        List<Project> projects = openProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING).getItems();
+
+        assertEquals(Date.from(Instant.parse("2025-08-13T22:30:15Z")), projects.get(0).getCreatedAt());
+        assertNull(projects.get(1).getCreatedAt());
     }
 
     @Test

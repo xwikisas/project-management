@@ -76,7 +76,7 @@ import static org.mockito.Mockito.when;
  */
 @OldcoreTest
 @ReferenceComponentList
-@ComponentList({ ModelFactory.class, DefaultStringSpaceReferenceResolver.class })
+@ComponentList({ ModelFactory.class, DefaultStringSpaceReferenceResolver.class, InstanceConnectionResolver.class })
 class DefaultOpenProjectLinkObjectsResourceTest
 {
     private static final DocumentReference PAGE = new DocumentReference("xwiki", "Space", "Page");
@@ -206,6 +206,33 @@ class DefaultOpenProjectLinkObjectsResourceTest
         Response response = this.resource.link(PAGE_ID, false, link("Demo", "42"));
 
         assertEquals(Response.Status.UNAUTHORIZED.getStatusCode(), response.getStatus());
+    }
+
+    @Test
+    void linkPageOfSubwikiUsesTheConnectionsOfTheSubwiki() throws Exception
+    {
+        DocumentReference subwikiPage = new DocumentReference("subwiki", "Space", "Page");
+        DocumentReference subwikiRelationClass =
+            new DocumentReference(ProjectManagementRelation.CLASS_REFERENCE, subwikiPage.getWikiReference());
+        XWikiContext context = this.oldcore.getXWikiContext();
+        XWikiDocument classDocument = new XWikiDocument(subwikiRelationClass);
+        classDocument.getXClass().addTextAreaField(ProjectManagementRelation.FIELD_CLIENT_PARAMS, "Client parameters",
+            30, 5);
+        this.oldcore.getSpyXWiki().saveDocument(classDocument, context);
+        this.oldcore.getSpyXWiki().saveDocument(new XWikiDocument(subwikiPage), context);
+        when(this.urlShortenerManager.getDocumentReference(null, PAGE_ID)).thenReturn(subwikiPage);
+        // The connections are read from the context wiki: the REST requests run on the main wiki.
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenAnswer(invocation ->
+            "subwiki".equals(context.getWikiId()) ? List.of(new OpenProjectConnection("Sub", "https://op.example.org",
+                "clientId", "secret", "instance-1")) : List.of());
+
+        Response response = this.resource.link(PAGE_ID, false, link("Demo", "42"));
+
+        assertEquals(Response.Status.CREATED.getStatusCode(), response.getStatus());
+        assertEquals(RelationClientParams.ofInstance("Sub"),
+            this.oldcore.getSpyXWiki().getDocument(subwikiPage, context).getXObject(subwikiRelationClass)
+                .getLargeStringValue(ProjectManagementRelation.FIELD_CLIENT_PARAMS));
+        assertEquals("xwiki", context.getWikiId());
     }
 
     @Test

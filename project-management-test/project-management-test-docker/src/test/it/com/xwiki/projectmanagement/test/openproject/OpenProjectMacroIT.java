@@ -24,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -549,6 +551,47 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             }
         }
         throw new IllegalStateException(String.format("None of %s exists under [%s].", List.of(ids), path));
+    }
+
+    @Test
+    @Order(12)
+    void editDateFilters(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // Ranges of due dates and of creation dates, saved in time zones that may not be the one of the browser.
+        String filters = "{~\"query~\":{~\"filters~\":[{~\"property~\":~\"dueDate~\",~\"constraints~\":"
+            + "[{~\"operator~\":~\"between~\",~\"value~\":~\"2024-03-01T00:00:00+01:00/2024-03-31T23:59:59+02:00~\"}]},"
+            + "{~\"property~\":~\"creationDate~\",~\"constraints~\":[{~\"operator~\":~\"between~\","
+            + "~\"value~\":~\"2024-01-15T10:30:00+01:00/2024-01-20T18:00:59+01:00~\"}]}]}}";
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"editDateFilters\" "
+            + "filters=\"%s\"/}}", CONNECTION_ID, filters));
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        modal.clickMore();
+
+        // The date pickers display the saved dates, as they were saved, not the current day. The OpenProject date
+        // properties have no date format, so the pickers use their default one.
+        String summary = modal.getFilterBuilder().waitForFilters(2).getSummary();
+        assertThat(summary, containsString("2024/03/01 00:00 - 2024/03/31 23:59"));
+        assertThat(summary, containsString("2024/01/15 10:30 - 2024/01/20 18:00"));
+
+        // Displaying the saved dates doesn't change them.
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        // The editor may escape more characters of the value (e.g. the closing braces): compare the unescaped values.
+        assertEquals(unescape(filters), getMacroParameter(getContent(setup, testReference), "filters"));
+    }
+
+    // The unescaped value of a parameter of the first macro of the given wiki syntax, null when missing.
+    private static String getMacroParameter(String content, String parameter)
+    {
+        Matcher matcher = Pattern.compile("\\b" + parameter + "=\"((?:~.|[^\"~])*)\"").matcher(content);
+        return matcher.find() ? unescape(matcher.group(1)) : null;
+    }
+
+    // The given macro parameter value, without the escaping of the XWiki 2.1 syntax.
+    private static String unescape(String value)
+    {
+        return value.replaceAll("~(.)", "$1");
     }
 
     private static String getContent(TestUtils setup, TestReference testReference) throws Exception

@@ -104,6 +104,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <!-- The translation macro used by the OpenProject dashboard. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-localization-macro</artifactId>
+      <version>${platform.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-csrf</artifactId>
       <version>${platform.version}</version>
@@ -132,6 +139,13 @@
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-rendering-macro-velocity</artifactId>
+      <version>${platform.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <!-- The include macro used by the sheet of the OpenProject space pages. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-rendering-macro-include</artifactId>
       <version>${platform.version}</version>
       <scope>runtime</scope>
     </dependency>

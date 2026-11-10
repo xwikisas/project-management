@@ -71,6 +71,12 @@ public final class OpenProjectFilterHandler
      */
     private static final Set<String> TEXT_FILTER_OPERATORS = Set.of("~", "!~");
 
+    /**
+     * The OpenProject operator matching the dates of an interval, to which the Live Data operators taking a range of
+     * dates (an ISO 8601 time interval) are mapped.
+     */
+    private static final String OPERATOR_INTERVAL = "<>d";
+
     private OpenProjectFilterHandler()
     {
     }
@@ -236,15 +242,19 @@ public final class OpenProjectFilterHandler
         return convertedFilters;
     }
 
-    private static List<String> convertToOpenProjectValue(String propertyName, String values, String initialOperator)
+    private static List<String> convertToOpenProjectValue(String propertyName, String values, String initialOperator,
+        String operator)
     {
         if (!PROPERTIES_DATE.contains(propertyName)) {
             return Collections.singletonList(values);
         }
-        // We can either receive a date range or a simple date with the format specified in the livedata config json.
-        String[] parts = values.split("/");
-        if (parts.length > 1) {
-            return Arrays.asList(parts[0], parts[1]);
+        // A range of dates is an ISO 8601 time interval. The other operators take a single date, which isn't split even
+        // when it contains a slash (e.g. a date formatted as 2026/11/10).
+        if (OPERATOR_INTERVAL.equals(operator)) {
+            String[] parts = values.split("/");
+            if (parts.length > 1) {
+                return Arrays.asList(parts[0], parts[1]);
+            }
         }
         if (initialOperator.equals("before")) {
             return Arrays.asList("1970-01-01", values);
@@ -288,7 +298,7 @@ public final class OpenProjectFilterHandler
             String operatorValue = mappedConstraint.getOperator();
             List<String> values =
                 convertToOpenProjectValue(propertyName, (String) mappedConstraint.getValue(),
-                    constraint.getOperator());
+                    constraint.getOperator(), operatorValue);
             if (result.containsKey(operatorValue)) {
                 List<String> currentValues = result.get(operatorValue);
                 currentValues.addAll(values);

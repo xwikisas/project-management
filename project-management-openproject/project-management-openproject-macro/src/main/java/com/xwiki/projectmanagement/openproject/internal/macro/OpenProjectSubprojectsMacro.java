@@ -118,7 +118,7 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
 
         if (subprojects.isEmpty()) {
             blocks.add(new ParagraphBlock(
-                List.of(new WordBlock("No subprojects found.")),
+                List.of(new WordBlock(translate("openproject.openproject-subprojects.empty"))),
                 Collections.singletonMap(CLASS, "text-muted")
             ));
         } else {

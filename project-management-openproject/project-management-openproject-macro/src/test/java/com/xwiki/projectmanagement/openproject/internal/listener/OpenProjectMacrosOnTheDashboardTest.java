@@ -80,7 +80,7 @@ import static org.mockito.Mockito.when;
 /**
  * The OpenProject macros use the connection selected on the OpenProject dashboard when they are displayed on it
  * without a connection: the real {@link OpenProjectMacroDisplayListeners} receives the event that the macros send
- * through the real observation manager, and reads the selection from the dashboard page.
+ * through the real observation manager, and reads the selection saved by the dashboard.
  *
  * @version $Id$
  */
@@ -133,10 +133,14 @@ class OpenProjectMacrosOnTheDashboardTest
     {
         XWikiContext xcontext = this.oldcore.getXWikiContext();
         XWikiDocument dashboard = new XWikiDocument(new DocumentReference("xwiki", "OpenProject", "WebHome"));
-        BaseObject selection = dashboard.newXObject(
+        xcontext.setDoc(dashboard);
+        // The dashboard stores its selection on a separate page.
+        XWikiDocument selectionDocument =
+            new XWikiDocument(new DocumentReference("xwiki", "OpenProject", "DashboardSelection"));
+        BaseObject selection = selectionDocument.newXObject(
             new LocalDocumentReference(List.of("OpenProject", "Code"), "DashboardConnectionConfigClass"), xcontext);
         selection.setStringValue("selectedConnection", "dashboard");
-        xcontext.setDoc(dashboard);
+        this.oldcore.getSpyXWiki().saveDocument(selectionDocument, xcontext);
 
         OpenProjectConnection connection = new OpenProjectConnection("dashboard", SERVER_URL, "id", "secret", "1");
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of(connection));
@@ -166,8 +170,12 @@ class OpenProjectMacrosOnTheDashboardTest
         DefaultProjectManagementClientExecutionContext executionContext =
             this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
         Map<String, Long> counts = Map.of("New", 1L);
+        Map<String, Object> clientCallContext = new HashMap<>();
         when(this.projectManagementManager.countWorkItems("openproject", List.of(), WorkItem.KEY_STATUS))
-            .thenReturn(Optional.of(counts));
+            .thenAnswer(invocation -> {
+                clientCallContext.putAll(executionContext.getContext());
+                return Optional.of(counts);
+            });
         when(this.barDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
         List<Block> chart = List.of(new WordBlock("chart"));
         when(this.barDisplayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of(), this.context,
@@ -175,7 +183,7 @@ class OpenProjectMacrosOnTheDashboardTest
 
         assertChart(chart, this.chartMacro.execute(new OpenProjectChartMacroParameters(), "", this.context));
         // The connection is passed to the OpenProject client through the execution context.
-        assertEquals("dashboard", executionContext.get("instance"));
+        assertEquals("dashboard", clientCallContext.get("instance"));
     }
 
     @Test

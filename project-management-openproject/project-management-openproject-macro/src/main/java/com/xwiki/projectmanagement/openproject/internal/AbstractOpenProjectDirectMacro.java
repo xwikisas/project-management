@@ -29,6 +29,7 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 import org.xwiki.job.JobException;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.RenderingException;
 import org.xwiki.rendering.block.Block;
@@ -80,6 +81,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
+
+    @Inject
+    private ContextualLocalizationManager l10n;
 
     /**
      * @param name the macro name.
@@ -199,6 +203,18 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         // The project is used as a single path segment.
         return String.format("%s/projects/%s", serverUrl,
             URLEncoder.encode(String.valueOf(project), StandardCharsets.UTF_8).replace("+", "%20"));
+    }
+
+    /**
+     * @param key the translation key of a text displayed by the macro
+     * @return the translation of the key in the current locale, as plain text, or the key itself when it has no
+     *     translation
+     * @since 1.4.0
+     */
+    protected String translate(String key)
+    {
+        String translation = this.l10n.getTranslationPlain(key);
+        return translation != null ? translation : key;
     }
 
     /**
