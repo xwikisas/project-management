@@ -21,12 +21,15 @@ package com.xwiki.projectmanagement.openproject.internal.rest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.context.Execution;
+import org.xwiki.context.ExecutionContext;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
@@ -54,7 +57,9 @@ import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -118,15 +123,23 @@ class DefaultOpenProjectMacroInsertResourceTest
         page.getAuthors().setOriginalMetadataAuthor(previousAuthor);
         this.oldcore.getSpyXWiki().saveDocument(page, context);
 
+        // Parse each line as a paragraph holding its text.
         when(this.contentParser.parse(anyString(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> new XDOM(
-            List.of(new ParagraphBlock(List.<Block>of(new WordBlock("Hello"), new WordBlock("world"))))));
-        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.PLAIN_1_0))).thenReturn(CONTENT);
-        // Render the inserted macro (the first block of the line) followed by the rest of the line.
-        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> {
+            List.of(new ParagraphBlock(List.<Block>of(new WordBlock(invocation.getArgument(0)))))));
+        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.PLAIN_1_0))).thenAnswer(invocation -> {
             List<Block> blocks = invocation.getArgument(0);
-            MacroBlock macro = (MacroBlock) blocks.get(0).getChildren().get(0);
-            return String.format("{{%s %s/}}%s", macro.getId(), macro.getParameters(), CONTENT);
+            return ((WordBlock) blocks.get(0).getChildren().get(0)).getWord();
         });
+        // Render the inserted macro (the first block of the line) followed by the rest of the line.
+        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1)))
+            .thenAnswer(invocation -> renderLine(invocation.getArgument(0)));
+    }
+
+    private static String renderLine(List<Block> blocks)
+    {
+        MacroBlock macro = (MacroBlock) blocks.get(0).getChildren().get(0);
+        WordBlock line = (WordBlock) blocks.get(0).getChildren().get(1);
+        return String.format("{{%s %s/}}%s", macro.getId(), macro.getParameters(), line.getWord());
     }
 
     private XWikiDocument getPage() throws XWikiException
@@ -149,6 +162,61 @@ class DefaultOpenProjectMacroInsertResourceTest
         assertEquals(currentUser, page.getAuthors().getOriginalMetadataAuthor());
         assertEquals("Inserted OpenProject mention.", page.getComment());
         assertTrue(page.isMinorEdit());
+    }
+
+    @Test
+    void insertIntoPageKeepsConcurrentInsertions() throws Exception
+    {
+        XWikiContext context = this.oldcore.getXWikiContext();
+        XWikiDocument page = getPage().clone();
+        page.setContent(CONTENT + "\nGoodbye moon");
+        this.oldcore.getSpyXWiki().saveDocument(page, context);
+        MacroInsertion otherInsertion = createInsertion("openproject");
+        otherInsertion.setMacroParameters(Map.of("identifier", "2"));
+        otherInsertion.setSelectedText("moon");
+        otherInsertion.setFullLine("Goodbye moon");
+        otherInsertion.setOffset(8);
+
+        // While the first insertion computes the new content of the page, a second insertion is requested on the same
+        // page, and waits.
+        Execution execution = this.componentManager.getInstance(Execution.class);
+        ExecutionContext executionContext = execution.getContext();
+        AtomicReference<Thread> otherThread = new AtomicReference<>();
+        AtomicReference<Throwable> otherFailure = new AtomicReference<>();
+        when(this.macroUtils.renderMacroContent(anyList(), eq(Syntax.XWIKI_2_1))).thenAnswer(invocation -> {
+            if (otherThread.get() == null) {
+                Thread thread = new Thread(() -> {
+                    execution.setContext(executionContext);
+                    this.resource.insetIntoPage("xwiki", "Space", "Page", otherInsertion);
+                });
+                thread.setUncaughtExceptionHandler((failedThread, failure) -> otherFailure.set(failure));
+                otherThread.set(thread);
+                thread.start();
+                waitUntilBlocked(thread);
+            }
+            return renderLine(invocation.getArgument(0));
+        });
+
+        this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
+        otherThread.get().join(10000);
+        assertFalse(otherThread.get().isAlive());
+        assertNull(otherFailure.get());
+
+        // The second insertion is done on the page saved by the first one.
+        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n{{openproject {identifier=2}/}}Goodbye moon",
+            getPage().getContent());
+    }
+
+    private void waitUntilBlocked(Thread thread) throws InterruptedException
+    {
+        long timeout = System.currentTimeMillis() + 10000;
+        while (thread.getState() != Thread.State.WAITING && thread.getState() != Thread.State.TERMINATED
+            && System.currentTimeMillis() < timeout)
+        {
+            Thread.sleep(10);
+        }
+        // The second insertion waits for the first one to release the lock of the page.
+        assertEquals(Thread.State.WAITING, thread.getState());
     }
 
     @Test
