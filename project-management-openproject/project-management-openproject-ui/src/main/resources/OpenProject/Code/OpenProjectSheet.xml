@@ -254,7 +254,13 @@
     {{html clean="false"}}
     &lt;fieldset class="xform"&gt;
       &lt;legend&gt;$escapetool.xml($services.localization.render('openproject.config.presets.title'))&lt;/legend&gt;
-        &lt;button class="btn btn-primary" id="proj-manag-create-preset" data-client="openproject"&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.create'))&lt;/button&gt;
+        &lt;button
+          id="proj-manag-create-preset"
+          type="button" class="btn btn-primary"
+          data-client="openproject"
+        &gt;
+          $escapetool.xml($services.localization.render('projectmanagement.presets.create'))
+        &lt;/button&gt;
     &lt;/fieldset&gt;
     {{/html}}
 

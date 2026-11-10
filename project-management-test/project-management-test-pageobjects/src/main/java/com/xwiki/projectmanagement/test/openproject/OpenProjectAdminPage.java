@@ -367,6 +367,16 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
         return null;
     }
 
+    /**
+     * @return whether the filter presets are displayed inside a form, e.g. the one that saves the settings of the
+     *     administration section
+     * @since 1.4.0
+     */
+    public boolean arePresetsInsideForm()
+    {
+        return getDriver().hasElementWithoutWaiting(By.xpath("//form//*[@id = 'openproject-preset-filters']"));
+    }
+
     private TableLayoutElement getConnectionsTable()
     {
         return new LiveDataElement("openproject_connections").getTableLayout();
