@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -174,8 +175,22 @@ class OpenProjectClientTest
 
         assertEquals(List.of("1"), getIds(this.openProjectClient.getWorkItems(0, 20, List.of(), List.of())));
         assertEquals(List.of("41"), getIds(this.openProjectClient.getWorkItems(40, 20, List.of(), List.of())));
-        // An offset at the start of a page retrieves only that page.
-        verify(this.openProjectApiClient, never()).getWorkPackages(4, 20, NO_FILTERS, NO_SORTING);
+    }
+
+    @Test
+    void getWorkItemsRetrievesOnlyThePageStartingAtTheOffset() throws ProjectManagementException
+    {
+        // 60 work packages match: the offset 20 is at the start of the second page of 20.
+        int[] secondPage = IntStream.rangeClosed(21, 40).toArray();
+        doReturn(workPackagesPage(60, secondPage)).when(this.openProjectApiClient)
+            .getWorkPackages(2, 20, NO_FILTERS, NO_SORTING);
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(20, 20, List.of(), List.of());
+
+        assertEquals(Arrays.stream(secondPage).mapToObj(String::valueOf).collect(Collectors.toList()),
+            getIds(result));
+        assertEquals(60, result.getTotalItems());
+        verify(this.openProjectApiClient, never()).getWorkPackages(3, 20, NO_FILTERS, NO_SORTING);
     }
 
     @Test
