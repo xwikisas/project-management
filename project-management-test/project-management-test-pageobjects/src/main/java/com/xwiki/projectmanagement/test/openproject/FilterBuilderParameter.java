@@ -140,12 +140,14 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
-     * @return what the filters select, in plain words, once the labels of the filter values are loaded
+     * @return what the filters select, in plain words, once the labels of the filter values are loaded, and the dates
+     *     displayed by their date pickers
      * @since 1.4.0
      */
     public String getSummary()
     {
-        // The pickers of the filter values have the "loading" class while they load the labels of their values.
+        // The pickers of the filter values have the "loading" class while they load the labels of their values, and
+        // the dates while their date picker loads.
         By loading = By.cssSelector(".proj-manag-constraint .loading");
         getDriver().waitUntilCondition(
             driver -> getDriver().findElementsWithoutWaiting(getContainer(), loading).isEmpty());

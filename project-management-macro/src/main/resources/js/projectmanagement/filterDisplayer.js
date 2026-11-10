@@ -41,13 +41,20 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
    */
   let getPickerDates = function (value, operator, dateFormat) {
     let parse = text => {
-      let date = moment(text, moment.ISO_8601, true);
+      // Keep the time zone of the saved date, so that the dates are displayed as they were saved, whatever the time
+      // zone of the browser.
+      let date = moment.parseZone(text, moment.ISO_8601, true);
       return date.isValid() ? date : moment(text, dateFormat, true);
     };
     if (!value) {
       return {};
     } else if (operator === 'between') {
       let bounds = value.split('/');
+      if (bounds.length === 1) {
+        // A single date (e.g. saved by an older version) is both the start and the end of the range.
+        let date = parse(value);
+        return date.isValid() ? { startDate: date, endDate: date.clone() } : {};
+      }
       let startDate = parse(bounds[0]);
       let endDate = bounds.length === 2 ? parse(bounds[1]) : moment.invalid();
       if (!startDate.isValid() || !endDate.isValid()) {
@@ -78,7 +85,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
         break;
       case "date":
         // A date picker still loading isn't displayed.
-        inputElem.removeData('dateDisplay');
+        inputElem.removeData('dateDisplay').removeClass('loading');
         parent.find('.proj-manag-date-val').data("daterangepicker")?.remove();
       default:
         parent.children().remove();
@@ -100,7 +107,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           inputElem.attr('type', 'text');
           return;
         }
-        inputElem.attr('type', 'text').addClass('hidden');
+        // The value is marked as loading until the date picker displays it.
+        inputElem.attr('type', 'text').addClass('hidden loading');
         let dateDisplay = {};
         inputElem.data('dateDisplay', dateDisplay);
         loadDatePicker().then(() => {
@@ -154,8 +162,11 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           });
           dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
           // The saved value is now displayed as the date picker formats it (e.g. in the summary of the filters).
-          inputElem.trigger('dateDisplayed');
-        }).catch(error => console.error('Failed to load the date picker.', error));
+          inputElem.removeClass('loading').trigger('dateDisplayed');
+        }).catch(error => {
+          inputElem.removeClass('loading');
+          console.error('Failed to load the date picker.', error);
+        });
         break;
       case "list":
         let options = params.options || [];
