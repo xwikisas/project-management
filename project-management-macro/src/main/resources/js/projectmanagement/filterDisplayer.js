@@ -130,12 +130,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               // The range includes its last minute, i.e. its last day without a time picker (23:59:59).
               let endDate = daterangepicker.endDate.clone().endOf('minute');
               valToSet = `${daterangepicker.startDate.format()}/${endDate.format()}`;
-            } else if (operator === "before" || operator === "after") {
-              // Use the ISO 8601 representation, without fractional seconds.
-              valToSet = daterangepicker.startDate.format();
             } else {
-              // Use the formatted date.
-              valToSet = daterangepicker.startDate.format(dateFormat);
+              // Use the ISO 8601 representation, without fractional seconds, which the clients can parse (e.g.
+              // OpenProject matches the day of the date for its =d operator).
+              valToSet = daterangepicker.startDate.format();
             }
             inputElem.val(valToSet);
             inputElem.trigger('change');
