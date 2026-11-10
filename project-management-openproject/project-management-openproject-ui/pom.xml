@@ -136,6 +136,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <!-- The include macro used by the sheet of the OpenProject space pages. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-rendering-macro-include</artifactId>
+      <version>${platform.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.rendering</groupId>
       <artifactId>xwiki-rendering-macro-html</artifactId>
       <version>${rendering.version}</version>
