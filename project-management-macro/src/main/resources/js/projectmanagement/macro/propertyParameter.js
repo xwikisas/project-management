@@ -21,6 +21,8 @@ require(['jquery'], function ($) {
   // A picker whose value is held by a hidden input (the picker itself having no name, see
   // openprojectprojectdetailsproperty/edit.vm) is initialized from that input, which the macro editor fills with the
   // parameter value, and updates it when the selection changes.
+  // This works around the macro editor of XWiki versions older than 17.10 (see edit.vm): remove it when the minimal
+  // supported XWiki version is 17.10 or later.
   let syncWithValueInput = function (picker) {
     let valueInput = picker.closest('.proj-manag-property-picker-field').find('input.proj-manag-property-picker-value');
     if (valueInput.length === 0) {

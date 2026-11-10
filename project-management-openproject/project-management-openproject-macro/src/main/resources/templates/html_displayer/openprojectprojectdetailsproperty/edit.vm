@@ -21,6 +21,9 @@
 ## The value is held by a hidden input named after the parameter, and the picker has no name: on XWiki versions older
 ## than 17.10, the macro editor splits the value of a multiple select on commas, which fails on the default value of a
 ## list parameter (a JSON array). propertyParameter.js keeps the hidden input and the picker in sync.
+## When the minimal supported XWiki version (the parent version in the root pom.xml) is 17.10 or later, remove this
+## workaround: drop the hidden input, keep the 'name' and 'id' parameters on the picker, and remove syncWithValueInput
+## from propertyParameter.js.
 #template('pickers_macros.vm')
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js', {'minify': false}))
 #set ($selectedProperties = [])
