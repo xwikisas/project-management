@@ -464,7 +464,8 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       const serverURL = $(this).attr("data-server-url");
       const clientId = $(this).attr("data-client-id");
       const documentReference = $(this).attr("data-edit-document-reference");
-      $("#connection-name").val(connectionName);
+      // Remember the current name, which is kept even if it isn't valid anymore (see the save below).
+      $("#connection-name").val(connectionName).data("currentName", connectionName);
       $("#server-url").val(serverURL.replace(/\\\//g, "/"));
       $("#client-id").val(clientId);
       // The current client secret is not sent to the browser: leaving the field empty keeps it.
@@ -478,7 +479,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
     $("#create-connection-button").on("click", function () {
       $("#handleConnectionModal").modal("show");
       $("#handleConnectionModal-label").text(l10n.get("createConnection"));
-      $("#connection-name").val("");
+      $("#connection-name").val("").removeData("currentName");
       $("#server-url").val("");
       $("#client-id").val("");
       $("#client-secret").val("");
@@ -583,8 +584,12 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         );
       }
 
-      // The connection name is part of the REST URLs, where the encoded slashes are rejected by the servlet containers.
-      if (/[\/\\]/.test(connectionName)) {
+      // The connection name is part of the REST URLs, where the servlet containers reject the encoded slashes and
+      // percent signs, and where the dot segments are removed. The name of an existing connection is accepted as long
+      // as it isn't changed, since renaming the connection would break the macros using it.
+      const currentName = connectionAction == "edit" ? $("#connection-name").data("currentName") : undefined;
+      if (connectionName !== currentName
+          &amp;&amp; (/[\/\\%]/.test(connectionName) || /^\.+$/.test(connectionName))) {
         return new XWiki.widgets.Notification(l10n.get("invalidConnectionName").escapeHTML(), "error");
       }
 

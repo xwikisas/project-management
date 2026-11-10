@@ -372,23 +372,56 @@ class HandleConnectionsServiceTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "Team/Project", "Team\\Project", "/" })
-    void handleConnectionRefusesConnectionNameWithSlash(String connectionName) throws Exception
+    @ValueSource(strings = { "Team/Project", "Team\\Project", "/", "100%", "%2F", ".", "..", "..." })
+    void handleConnectionRefusesInvalidConnectionName(String connectionName) throws Exception
     {
         this.openProjectConnection.setConnectionName(connectionName);
 
         ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
             () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
 
-        assertEquals(String.format("The connection name [%s] is not valid: it can't contain [/] or [\\].",
-            connectionName), exception.getMessage());
-        assertFalse(exception.isConflict());
-        verifyNoInteractions(this.openProjectApiClientFactory);
+        assertInvalidConnectionName(connectionName, exception);
         assertNotSaved();
     }
 
+    @Test
+    void handleConnectionRefusesRenamingToInvalidConnectionName() throws Exception
+    {
+        saveConnectionPage(CONNECTION, ADMIN, "oldName");
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertInvalidConnectionName("Team/Project", exception);
+        assertEquals("oldName", getConnectionPage().getXObject(CONNECTION_CLASS).getStringValue(CONNECTION_NAME));
+    }
+
+    @Test
+    void handleConnectionKeepsInvalidNameOfExistingConnection() throws Exception
+    {
+        // A connection saved before the names were checked.
+        saveConnectionPage(CONNECTION, ADMIN, "Team/Project");
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        BaseObject config = getConnectionPage().getXObject(CONNECTION_CLASS);
+        assertEquals("Team/Project", config.getStringValue(CONNECTION_NAME));
+        assertEquals(CLIENT_SECRET, config.getStringValue(CLIENT_SECRET));
+    }
+
+    private void assertInvalidConnectionName(String connectionName, ConnectionSaveException exception)
+    {
+        assertEquals(String.format("The connection name [%s] is not valid: it can't contain [/], [\\] or [%%], nor be "
+            + "made only of dots.", connectionName), exception.getMessage());
+        assertFalse(exception.isConflict());
+        verifyNoInteractions(this.openProjectApiClientFactory);
+    }
+
     @ParameterizedTest
-    @ValueSource(strings = { "http://openproject.example.com","HTTPS://openproject.example.com:8443/openproject",
+    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject",
         "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com" })
     void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
     {
