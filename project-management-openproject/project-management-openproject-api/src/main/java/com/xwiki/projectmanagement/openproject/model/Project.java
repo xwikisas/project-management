@@ -19,9 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import java.time.OffsetDateTime;
 import java.util.Date;
-
-import org.joda.time.LocalDate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -73,9 +72,11 @@ public class Project extends BaseOpenProjectObject
             setStatus(new Linkable(statusName, statusHref));
         }
 
-        String createdAtText = projectJson.path(KEY_CREATED_AT).asText();
-        if (!createdAtText.isBlank() && createdAtText.length() >= 10) {
-            setCreatedAt(LocalDate.parse(createdAtText.substring(0, 10)).toDate());
+        JsonNode createdAtNode = projectJson.path(KEY_CREATED_AT);
+        String createdAtText = createdAtNode.asText();
+        if (!createdAtNode.isNull() && !createdAtText.isBlank()) {
+            // The creation date is an ISO 8601 date-time with an offset: keep its time.
+            setCreatedAt(Date.from(OffsetDateTime.parse(createdAtText).toInstant()));
         }
     }
 

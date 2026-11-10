@@ -29,6 +29,7 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -1189,21 +1190,22 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private void setCreatedAndUpdatedDates(WorkPackage wp, JsonNode node)
     {
-        if (!node.path(OP_CREATED_AT).isNull()) {
-            String createdAtText = node.path(OP_CREATED_AT).asText();
-            if (!createdAtText.isBlank() && createdAtText.length() >= 10) {
-                String dateOnly = createdAtText.substring(0, 10);
-                wp.setCreatedAt(LocalDate.parse(dateOnly).toDate());
-            }
-        }
+        wp.setCreatedAt(getDateTimeFromNode(OP_CREATED_AT, node));
+        wp.setUpdatedAt(getDateTimeFromNode(OP_UPDATED_AT, node));
+    }
 
-        if (!node.path(OP_UPDATED_AT).isNull()) {
-            String updatedAtText = node.path(OP_UPDATED_AT).asText();
-            if (!updatedAtText.isBlank() && updatedAtText.length() >= 10) {
-                String dateOnly = updatedAtText.substring(0, 10);
-                wp.setUpdatedAt(LocalDate.parse(dateOnly).toDate());
-            }
+    /**
+     * Unlike the start and due dates, which are plain dates, the creation and update dates are ISO 8601 date-times
+     * with an offset (e.g. {@code 2025-08-13T22:30:15.123Z}): they are parsed into the instant they denote, which is
+     * then displayed in the time zone of the XWiki server.
+     */
+    private Date getDateTimeFromNode(String prop, JsonNode node)
+    {
+        String dateTime = node.path(prop).asText();
+        if (node.path(prop).isNull() || dateTime.isBlank()) {
+            return null;
         }
+        return Date.from(OffsetDateTime.parse(dateTime).toInstant());
     }
 
     private PaginatedResult<WorkPackage> getWorkPackagePaginatedResult(JsonNode node, Integer offset, Integer pageSize)
