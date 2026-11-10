@@ -290,6 +290,22 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getWorkPackagesIgnoresAnInvalidCreationDate() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\"", "\"startDate\": \"2025-08-13\", "
+                + "\"createdAt\": \"invalid\", \"updatedAt\": \"2025-08-14T09:05:00+0200\""));
+
+        List<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems();
+
+        // The other work packages and the other properties are still returned.
+        assertEquals(3, workPackages.size());
+        assertNull(workPackages.get(0).getCreatedAt());
+        assertEquals(Date.from(Instant.parse("2025-08-14T07:05:00Z")), workPackages.get(0).getUpdatedAt());
+        assertEquals("Ignoring the invalid OpenProject date-time [invalid].", this.logCapture.getMessage(0));
+    }
+
+    @Test
     void getProjectsKeepsTheTimeOfTheCreationDate() throws Exception
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse()

@@ -19,11 +19,11 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
-import java.time.OffsetDateTime;
 import java.util.Date;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectDateTimes;
 
 /**
  * Describes the project object of a work package.
@@ -73,10 +73,9 @@ public class Project extends BaseOpenProjectObject
         }
 
         JsonNode createdAtNode = projectJson.path(KEY_CREATED_AT);
-        String createdAtText = createdAtNode.asText();
-        if (!createdAtNode.isNull() && !createdAtText.isBlank()) {
+        if (!createdAtNode.isNull()) {
             // The creation date is an ISO 8601 date-time with an offset: keep its time.
-            setCreatedAt(Date.from(OffsetDateTime.parse(createdAtText).toInstant()));
+            setCreatedAt(OpenProjectDateTimes.parse(createdAtNode.asText()));
         }
     }
 

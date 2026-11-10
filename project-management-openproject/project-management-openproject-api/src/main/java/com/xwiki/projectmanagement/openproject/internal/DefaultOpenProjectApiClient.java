@@ -29,7 +29,6 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -1201,11 +1200,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
      */
     private Date getDateTimeFromNode(String prop, JsonNode node)
     {
-        String dateTime = node.path(prop).asText();
-        if (node.path(prop).isNull() || dateTime.isBlank()) {
-            return null;
-        }
-        return Date.from(OffsetDateTime.parse(dateTime).toInstant());
+        JsonNode dateTime = node.path(prop);
+        return dateTime.isNull() ? null : OpenProjectDateTimes.parse(dateTime.asText());
     }
 
     private PaginatedResult<WorkPackage> getWorkPackagePaginatedResult(JsonNode node, Integer offset, Integer pageSize)
