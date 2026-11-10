@@ -37,8 +37,9 @@ public interface PresetsManager
     /**
      * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the returned list relative to the superset.
-     * @param limit the maximum number of preset objects returned.
-     * @return a list of presets that matches the offset and limit, limited to the presets the current user can view.
+     * @param limit the maximum number of preset objects returned, or 0 or less for no limit.
+     * @return a list of presets that matches the offset and limit, limited to the presets the current user can view
+     *     and that were saved by a wiki administrator. The offset and limit apply to these presets.
      */
     List<Preset> getPresets(Boolean chart, int offset, int limit);
 
@@ -46,9 +47,10 @@ public interface PresetsManager
      * @param client the identifier of the ProjectManagement client. i.e. openproject.
      * @param chart true if the chart presets should be retrieved; false if the normal presets should be retrieved.
      * @param offset the offset of the result set.
-     * @param limit the maximum size that will be returned.
+     * @param limit the maximum size that will be returned, or 0 or less for no limit.
      * @return a list of presets that were configured for a specific ProjectManagement client, limited to the presets
-     *     the current user can view.
+     *     the current user can view and that were saved by a wiki administrator. The offset and limit apply to these
+     *     presets.
      */
     List<Preset> getClientPresets(String client, Boolean chart, int offset, int limit);
 
