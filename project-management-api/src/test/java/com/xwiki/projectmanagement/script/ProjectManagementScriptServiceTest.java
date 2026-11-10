@@ -150,6 +150,8 @@ class ProjectManagementScriptServiceTest
             this.scriptService.getWorkItems(CLIENT, 1, 10, List.of(), List.of(), clientContext);
 
         assertEquals(List.of(clientContext), result.getItems());
+        // The context doesn't outlive the call.
+        assertTrue(executionContext.getContext().isEmpty());
     }
 
     @Test

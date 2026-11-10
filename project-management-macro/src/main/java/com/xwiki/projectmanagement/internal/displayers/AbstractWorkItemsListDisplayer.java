@@ -87,14 +87,17 @@ public abstract class AbstractWorkItemsListDisplayer extends AbstractWorkItemsDi
         List<LiveDataQuery.Filter> filters, List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemException
     {
         // Only the displayed properties are needed, which the client may retrieve much faster than all of them.
-        if (macroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> context = new HashMap<>(macroContext.getContext());
-            context.put(ProjectManagementClientExecutionContext.PROPERTIES, DISPLAYED_PROPERTIES);
-            ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(context);
-        }
+        Map<String, Object> context = new HashMap<>(macroContext.getContext());
+        context.put(ProjectManagementClientExecutionContext.PROPERTIES, DISPLAYED_PROPERTIES);
         long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
         int limit = parameters.getLimit() == null ? MAX_WORK_ITEMS : Math.min(parameters.getLimit(), MAX_WORK_ITEMS);
-        return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset), limit, filters, sortEntries);
+        // The other client calls (e.g. to get the location of all the work items) don't restrict the properties.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(macroContext, context))
+        {
+            return projectManagementManager.getWorkItems(clientId, Math.toIntExact(offset), limit, filters,
+                sortEntries);
+        }
     }
 
     @Override

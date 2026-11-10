@@ -24,9 +24,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 /**
  * Unit tests for {@link DefaultProjectManagementClientExecutionContext}.
@@ -65,6 +69,48 @@ class DefaultProjectManagementClientExecutionContextTest
         assertEquals("openproject", this.executionContext.get("client"));
         assertEquals("openproject.", this.executionContext.get("translationPrefix"));
         assertNull(this.executionContext.get("missing"));
+    }
+
+    @Test
+    void closingThePushedContextRestoresThePreviousOne()
+    {
+        Map<String, Object> outer = Map.of("client", "openproject");
+        this.executionContext.setContext(outer);
+
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            this.executionContext.pushContext(Map.of("client", "test")))
+        {
+            assertEquals("test", this.executionContext.get("client"));
+        }
+
+        assertEquals(outer, this.executionContext.getContext());
+    }
+
+    @Test
+    void closingThePushedContextRemovesItWhenNoneWasSet()
+    {
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(this.executionContext,
+                Map.of("client", "test")))
+        {
+            assertEquals("test", this.executionContext.get("client"));
+        }
+
+        assertTrue(this.executionContext.getContext().isEmpty());
+    }
+
+    @Test
+    void pushingAContextOnAnotherExecutionContextDoesNothing()
+    {
+        ProjectManagementClientExecutionContext otherContext = mock(ProjectManagementClientExecutionContext.class);
+
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(otherContext, Map.of("client", "test")))
+        {
+            assertTrue(this.executionContext.getContext().isEmpty());
+        }
+
+        verifyNoInteractions(otherContext);
     }
 
     @Test

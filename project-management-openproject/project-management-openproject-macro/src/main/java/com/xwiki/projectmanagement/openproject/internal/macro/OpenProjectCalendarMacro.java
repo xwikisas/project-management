@@ -119,17 +119,18 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         this.stylingSetupManager.useInstanceStyle(parameters.getInstance());
         // insert extra params for context.
         parameters.setClient("openproject");
-        if (this.macroContext instanceof DefaultProjectManagementClientExecutionContext) {
-            Map<String, Object> clientContext = populateContext(parameters);
-            ((DefaultProjectManagementClientExecutionContext) this.macroContext).setContext(clientContext);
-        }
         this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
         List<Block> result = new ArrayList<>();
-        result.add(new GroupBlock(super.execute(parameters, content, context),
-            Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance(),
-                // Editing a work package requires the user's own OpenProject account.
-                "data-can-edit", String.valueOf(accessStatus == OpenProjectAccessStatus.AUTHENTICATED))));
+        // The context is passed to the calendar resource through its URL, and isn't needed once the URL is built.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(this.macroContext, populateContext(parameters)))
+        {
+            result.add(new GroupBlock(super.execute(parameters, content, context),
+                Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance(),
+                    // Editing a work package requires the user's own OpenProject account.
+                    "data-can-edit", String.valueOf(accessStatus == OpenProjectAccessStatus.AUTHENTICATED))));
+        }
         return result;
     }
 
