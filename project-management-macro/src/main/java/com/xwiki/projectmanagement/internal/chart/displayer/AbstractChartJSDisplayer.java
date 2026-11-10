@@ -180,7 +180,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         ChartJSData chartJSData = new ChartJSData();
         chartJSData.setDatasets(new ArrayList<>());
         // Create the set of all possible labels across all datasets.
-        Set<String> chartJSLabels = new TreeSet<>();
+        Set<String> chartJSLabels = new TreeSet<>(new ChartLabelComparator());
         counts.forEach(datasetCounts -> datasetCounts.keySet().stream().filter(Objects::nonNull)
             .forEach(chartJSLabels::add));
 
@@ -212,7 +212,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         for (int i = 0; i < counts.size(); i++) {
             ChartJSDataset dataset = new ChartJSDataset();
             chartJSData.getDatasets().add(dataset);
-            Map<String, Long> dataSet = new TreeMap<>();
+            Map<String, Long> dataSet = new TreeMap<>(new ChartLabelComparator());
             chartJSLabels.forEach(label -> dataSet.put(label, 0L));
             Long[] unset = new Long[1];
             counts.get(i).forEach((label, count) -> {

@@ -115,6 +115,30 @@ class PieChartDisplayerTest
     }
 
     @Test
+    void sortsTheNumericValuesByValue() throws Exception
+    {
+        List<PaginatedResult<WorkItem>> datasets = List.of(result(withProgress(100), withProgress(20),
+            withProgress(100), withProgress(0), withProgress(null)));
+
+        JsonNode data = getChartData(datasets, WorkItem.KEY_PROGRESS, List.of("Dataset"), Map.of());
+
+        // Sorted as text, "100" would come before "20".
+        assertEquals(List.of("0", "20", "100", "UNSET"), texts(data.path("labels")));
+        assertEquals(List.of("1", "1", "2", "1"), texts(data.path("datasets").path(0).path("data")));
+    }
+
+    @Test
+    void sortsTheNumericValuesBeforeTheOtherValues() throws Exception
+    {
+        List<PaginatedResult<WorkItem>> datasets =
+            List.of(result(workItem("B"), workItem("10"), workItem("A"), workItem("9")));
+
+        JsonNode data = getChartData(datasets, List.of("Dataset"), Map.of());
+
+        assertEquals(List.of("9", "10", "A", "B"), texts(data.path("labels")));
+    }
+
+    @Test
     void accumulatesTheCountsWithTheAccumulateMetric() throws Exception
     {
         List<PaginatedResult<WorkItem>> datasets =
@@ -236,6 +260,13 @@ class PieChartDisplayerTest
         if (status != null) {
             workItem.put(WorkItem.KEY_STATUS, status);
         }
+        return workItem;
+    }
+
+    private static WorkItem withProgress(Integer progress)
+    {
+        WorkItem workItem = new WorkItem();
+        workItem.setProgress(progress);
         return workItem;
     }
 

@@ -21,8 +21,11 @@ package com.xwiki.projectmanagement.test.openproject;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,8 @@ import org.xwiki.edit.test.po.InplaceEditablePage;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -114,7 +119,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
 
     @Test
     @Order(3)
-    void chartsMacroGroupingPropertyTest(TestUtils setup, TestReference testReference)
+    void chartsMacroGroupingPropertyTest(TestUtils setup, TestReference testReference) throws Exception
     {
         setup.deletePage(testReference);
 
@@ -135,6 +140,35 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         assertThat(labels, not(hasItem(CLOSED)));
         assertThat(labels, not(hasItem(IN_PROGRESS)));
         assertThat(labels, not(hasItem(NEW)));
+
+        // The progress takes few values, so it is proposed: one slice per progress value, sorted by value, the work
+        // packages without progress last.
+        modal = new OpenProjectChartMacroEditModal(setup, testReference);
+        modal.clickMore();
+        modal.setProperty("progress");
+        modal.clickSubmit();
+        modal.getEditPage().clickSaveAndView();
+
+        // Without filters, the OpenProject API only returns the open work packages, while the chart counts them all.
+        Map<Integer, Long> progressCounts = new TreeMap<>();
+        long withoutProgress = 0;
+        for (JsonNode workPackage : this.openProject.getApiResource("/work_packages?pageSize=1000&filters=%5B%5D")
+            .path("_embedded").path("elements")) {
+            JsonNode progress = workPackage.path("percentageDone");
+            if (progress.isNumber()) {
+                progressCounts.merge(progress.asInt(), 1L, Long::sum);
+            } else {
+                withoutProgress++;
+            }
+        }
+        Map<String, Long> expected = new LinkedHashMap<>();
+        progressCounts.forEach((progress, count) -> expected.put(String.valueOf(progress), count));
+        if (withoutProgress > 0) {
+            expected.put("UNSET", withoutProgress);
+        }
+        chart = new ChartJSCanvas();
+        assertEquals(expected, chart.getValues());
+        assertEquals(new ArrayList<>(expected.keySet()), chart.getLabels());
     }
 
     @Test

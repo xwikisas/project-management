@@ -100,11 +100,12 @@ class ChartPropertyPickerPageTest extends PageTest
     @Test
     void chartPropertyPickerDoesNotProposeThePropertiesUniqueToEachWorkItem() throws Exception
     {
-        // A chart grouping by the identifier, the summary, the description or the progress would have one slice or
-        // bar per work item, and the actions aren't a property of the work items.
+        // A chart grouping by the identifier, the summary or the description would have one slice or bar per work
+        // item, and the actions aren't a property of the work items. The progress takes few values (e.g. 0, 50, 100).
         Document result = render("html_displayer/openprojectproperty/edit.vm");
 
-        assertEquals(List.of("type", "status", "assignees"), getProposedProperties(result), result.html());
+        assertEquals(List.of("type", "progress", "status", "assignees"), getProposedProperties(result),
+            result.html());
     }
 
     @Test
