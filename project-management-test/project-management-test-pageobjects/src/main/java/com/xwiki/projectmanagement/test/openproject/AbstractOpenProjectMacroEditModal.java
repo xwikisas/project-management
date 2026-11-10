@@ -182,7 +182,13 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public SuggestInputElement getSuggestInput(String name)
     {
-        return new SuggestInputElement(getMacroParameterInput(name));
+        WebElement input = getMacroParameterInput(name);
+        SuggestInputElement suggestInput = new SuggestInputElement(input);
+        // The parameters of the modal can be out of view (e.g. above the viewport after scrolling to the footer), and
+        // SuggestInputElement#click moves the mouse to its selectize container without scrolling to it.
+        getDriver().scrollTo(
+            input.findElement(By.xpath("following-sibling::*[contains(@class, 'selectize-control')][1]")));
+        return suggestInput;
     }
 
     /**
