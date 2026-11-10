@@ -27,6 +27,19 @@ require(['jquery'], function ($) {
       return;
     }
     let values = (valueInput.val() || '').split(',').map(value => value.trim()).filter(value => value !== '');
+    // Like the macro editor does for the select inputs: use the value of the option matching each value regardless of
+    // the case (the parameter values are case insensitive), and add an option for the values matching none, so that
+    // they are kept.
+    values = values.map(value => {
+      let option = picker.find('option').filter(function () {
+        return $(this).val().toUpperCase() === value.toUpperCase();
+      });
+      if (option.length > 0) {
+        return option.first().val();
+      }
+      $('<option></option>').val(value).text(value).appendTo(picker);
+      return value;
+    });
     picker.val(values);
     picker.off('change.valueInput').on('change.valueInput', function () {
       let selected = picker.val() || [];
