@@ -173,13 +173,17 @@ class AbstractProjectManagementChartMacroTest
     @Test
     void translatesTheLabelsThatAreTranslationKeys() throws Exception
     {
-        this.parameters.setDatasetsLabels("[\"chart.open\", \"Closed\", \"\"]");
+        this.parameters.setDatasetsLabels("[\"chart.open\", \"Closed\", \"\", \"type\", \"a. b\"]");
         when(this.localizationManager.getTranslationPlain("chart.open")).thenReturn("Ouverts");
+        // Labels that don't look like translation keys (no dot, or a whitespace) aren't translated, even when a
+        // translation key with the same name exists.
+        when(this.localizationManager.getTranslationPlain("type")).thenReturn("Type de page");
+        when(this.localizationManager.getTranslationPlain("a. b")).thenReturn("translated");
         Map<String, Long> counts = Map.of("New", 3L);
         when(this.projectManagementManager.countWorkItems(CLIENT, List.of(), WorkItem.KEY_STATUS))
             .thenReturn(Optional.of(counts));
         // A label that isn't a translation key is displayed as is.
-        when(this.displayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of("Ouverts", "Closed", ""),
+        when(this.displayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of("Ouverts", "Closed", "", "type", "a. b"),
             this.macroTransformationContext, new HashMap<>())).thenReturn(this.chart);
 
         assertEquals(this.chart, execute());

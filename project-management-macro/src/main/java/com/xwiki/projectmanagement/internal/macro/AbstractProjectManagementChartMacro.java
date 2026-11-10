@@ -187,15 +187,17 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     }
 
     /**
-     * A label of the datasets can be a translation key, so that the charts shipped in wiki pages (e.g. a dashboard)
-     * can be translated without a script. A label that isn't a translation key is displayed as is.
+     * A label of the datasets can be a translation key (containing a dot and no whitespace), so that the charts shipped
+     * in wiki pages (e.g. a dashboard) can be translated without a script. Other labels are displayed as is.
      */
     private List<String> translateLabels(List<String> labels)
     {
         List<String> translatedLabels = new ArrayList<>(labels.size());
         for (String label : labels) {
             String translation = null;
-            if (StringUtils.isNotBlank(label)) {
+            // Only the labels looking like translation keys are looked up, so that a literal label (e.g. "type") isn't
+            // replaced by the translation of a key that happens to have the same name.
+            if (label != null && label.contains(".") && !label.matches(".*\\s.*")) {
                 translation = this.localizationManager.getTranslationPlain(label);
             }
             translatedLabels.add(translation != null ? translation : label);
