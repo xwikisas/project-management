@@ -30,8 +30,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
     return new Promise((resolve, reject) => require(['daterangepicker'], resolve, reject));
   };
   /*
-   * The number of seconds added to the end of a range of dates when it's saved, so that the range includes its last
-   * minute.
+   * The number of seconds that older versions added to the end of a range of dates when saving it, so that the range
+   * included its last minute. Without a time picker, this moved the end of the range to 00:00:58 of the next day.
    */
   const RANGE_END_SECONDS = 59;
   /*
@@ -60,7 +60,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
       if (!startDate.isValid() || !endDate.isValid()) {
         return {};
       }
-      // Remove the seconds added when the range was saved, which can move its end to the next day.
+      // The end of a range is saved at the end of its last minute (hh:mm:59), or, by older versions, 59 seconds after
+      // it, which can be on the next day: removing these seconds gives the minute displayed by the date picker.
       if (endDate.seconds() !== 0) {
         endDate.subtract(RANGE_END_SECONDS, 'seconds');
       }
@@ -126,7 +127,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             if (operator === "between") {
               // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
               // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
-              let endDate = daterangepicker.endDate.clone().add(RANGE_END_SECONDS, 'seconds');
+              // The range includes its last minute, i.e. its last day without a time picker (23:59:59).
+              let endDate = daterangepicker.endDate.clone().endOf('minute');
               valToSet = `${daterangepicker.startDate.format()}/${endDate.format()}`;
             } else if (operator === "before" || operator === "after") {
               // Use the ISO 8601 representation, without fractional seconds.
