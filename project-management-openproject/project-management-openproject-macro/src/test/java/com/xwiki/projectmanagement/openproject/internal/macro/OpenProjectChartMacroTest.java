@@ -193,9 +193,7 @@ class OpenProjectChartMacroTest
 
     private static void assertChart(List<Block> chart, List<Block> result)
     {
-        // The chart macros wrap the chart, so that it can be drawn after an asynchronous rendering.
-        assertEquals(1, result.size());
-        assertEquals("proj-manag-chart-wrapper", result.get(0).getParameter("class"));
-        assertEquals(chart, result.get(0).getChildren());
+        // The asynchronous executor wraps the result, so that it can be initialized after an asynchronous rendering.
+        assertEquals(chart, result);
     }
 }

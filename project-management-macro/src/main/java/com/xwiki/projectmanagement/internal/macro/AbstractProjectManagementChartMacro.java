@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.manager.ComponentLookupException;
@@ -44,7 +43,6 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
-import org.xwiki.skinx.SkinExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -84,10 +82,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
 
     @Inject
     private ProjectManagementAsyncExecutor asyncExecutor;
-
-    @Inject
-    @Named("jsrx")
-    private SkinExtension jsrx;
 
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
@@ -140,7 +134,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
             {
             });
 
-            List<Block> result = asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
+            return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
             {
                 @Override
                 public boolean supportsInlineMode()
@@ -161,14 +155,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     }
                 }
             }, parameters, content, context, null, true);
-            // The chart is drawn by the Chart.js application, on page load and on the xwiki:dom:updated event. When
-            // the chart is rendered asynchronously, the event sent by XWiki targets the placeholder replaced by the
-            // chart, not the chart, so the wrapper and the script make sure the chart is drawn. Remove them once the
-            // minimal supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after
-            // an asynchronous rendering targets the removed placeholder instead of the rendered content).
-            this.jsrx.use("js/projectmanagement/chartAsyncFix.js");
-            return Collections.singletonList(
-                new GroupBlock(result, Collections.singletonMap(CLASS_ATTRIBUTE, "proj-manag-chart-wrapper")));
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (ComponentLookupException e) {

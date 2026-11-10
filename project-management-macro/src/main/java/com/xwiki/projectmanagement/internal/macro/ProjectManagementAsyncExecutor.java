@@ -22,10 +22,12 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
@@ -38,8 +40,12 @@ import org.xwiki.rendering.async.internal.AsyncRendererConfiguration;
 import org.xwiki.rendering.async.internal.block.BlockAsyncRendererExecutor;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.CompositeBlock;
+import org.xwiki.rendering.block.FormatBlock;
+import org.xwiki.rendering.block.GroupBlock;
+import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
@@ -63,6 +69,10 @@ public class ProjectManagementAsyncExecutor
 
     @Inject
     private AsyncContext asyncContext;
+
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsrx;
 
     /**
      * @param displayerMacro the macro that will be executed asynchronously.
@@ -90,14 +100,33 @@ public class ProjectManagementAsyncExecutor
             ProjectManagementAsyncRenderer asyncRenderer =
                 componentManager.getInstance(ProjectManagementAsyncRenderer.class);
             asyncRenderer.initialize(displayerMacro, parameters, content, context, paramsConsumer);
-            AsyncRendererConfiguration configuration =
-                getAsyncRendererConfiguration(forcePlaceholder && asyncRenderer.isAsyncAllowed());
+            boolean asyncAllowed = asyncRenderer.isAsyncAllowed() && this.asyncContext.isEnabled();
+            AsyncRendererConfiguration configuration = getAsyncRendererConfiguration(forcePlaceholder && asyncAllowed);
             Block result = executor.execute(asyncRenderer, configuration);
-            return result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+            List<Block> blocks =
+                result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
+            return asyncAllowed ? wrap(blocks, context) : blocks;
         } catch (ComponentLookupException e) {
             // Shouldn't happen.
             throw new RuntimeException("We are doomed.", e);
         }
+    }
+
+    /**
+     * Wraps a result that may be rendered asynchronously. Some results are initialized by JavaScript code on the
+     * xwiki:dom:updated event, in the updated elements (e.g. the charts and the Live Data tables), but XWiki sends no
+     * event after an asynchronous rendering (before XWiki 18.6) or sends it for the placeholder replaced by the result,
+     * which isn't in the page anymore: the wrapper lets the script send the event for the result. Remove them once the
+     * minimal supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after an
+     * asynchronous rendering targets the removed placeholder instead of the rendered content).
+     */
+    private List<Block> wrap(List<Block> blocks, MacroTransformationContext context)
+    {
+        this.jsrx.use("js/projectmanagement/asyncFix.js");
+        Map<String, String> parameters = Collections.singletonMap("class", "proj-manag-async-wrapper");
+        Block wrapper = context.isInline() ? new FormatBlock(blocks, Format.NONE, parameters)
+            : new GroupBlock(blocks, parameters);
+        return Collections.singletonList(wrapper);
     }
 
     private AsyncRendererConfiguration getAsyncRendererConfiguration(boolean forcePlaceholder)
