@@ -49,12 +49,14 @@ import org.xwiki.user.UserReference;
 import org.xwiki.user.UserReferenceResolver;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xpn.xwiki.test.MockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClientFactory;
@@ -67,6 +69,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -332,6 +337,23 @@ class HandleConnectionsServiceTest
         assertEquals(CLIENT_SECRET, page.getXObject(CONNECTION_CLASS).getStringValue(CLIENT_SECRET));
         // The connection objects are updated, not added.
         assertEquals(1, page.getXObjects(CONNECTION_CLASS).size());
+    }
+
+    @Test
+    void handleConnectionLeavesTheCachedPageUnchangedWhenSaveFails() throws Exception
+    {
+        saveConnectionPage(CONNECTION, ADMIN, "oldName");
+        stubInstanceId(SERVER_URL);
+        doThrow(new XWikiException()).when(this.oldcore.getSpyXWiki()).saveDocument(any(XWikiDocument.class),
+            anyString(), any(XWikiContext.class));
+
+        assertThrows(ProjectManagementException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        XWikiDocument page = getConnectionPage();
+        assertEquals("oldName", page.getXObject(CONNECTION_CLASS).getStringValue(CONNECTION_NAME));
+        assertEquals("currentSecret", page.getXObject(CONNECTION_CLASS).getStringValue(CLIENT_SECRET));
+        assertNull(page.getXObject(OIDC_CLASS));
     }
 
     @Test

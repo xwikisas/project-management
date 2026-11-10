@@ -84,6 +84,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.only;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -165,6 +166,15 @@ class DefaultOpenProjectSpaceResourceTest
     @Mock
     private XWiki xwiki;
 
+    /**
+     * The document returned by the document cache, which must not be modified.
+     */
+    @Mock
+    private XWikiDocument cachedDocument;
+
+    /**
+     * The copy of the cached document, which is modified and saved.
+     */
     @Mock
     private XWikiDocument document;
 
@@ -197,7 +207,8 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.xwiki.exists(any(DocumentReference.class), eq(this.context)))
             .thenAnswer(invocation -> this.existingPages.contains(invocation.<DocumentReference>getArgument(0)));
         this.existingPages.add(TEMPLATE_REFERENCE);
-        when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenReturn(this.document);
+        when(this.xwiki.getDocument(DOCUMENT_REFERENCE, this.context)).thenReturn(this.cachedDocument);
+        when(this.cachedDocument.clone()).thenReturn(this.document);
         when(this.document.getAuthors()).thenReturn(mock(DocumentAuthors.class));
         when(this.modelBridge.getDocumentReferences(TEMPLATE_REFERENCE.getLastSpaceReference()))
             .thenReturn(List.of(TEMPLATE_REFERENCE, TEMPLATE_CHILD_REFERENCE));
@@ -256,6 +267,9 @@ class DefaultOpenProjectSpaceResourceTest
         assertEquals(500, response.getStatus());
         assertEquals("Failed to create the OpenProject template at [Space.WebHome].", response.getEntity());
         assertEquals("Failed to create the OpenProject template at [Space.WebHome].", this.logCapture.getMessage(0));
+        // Only a copy of the cached document was modified.
+        verify(this.document).setTitle("Title");
+        verify(this.cachedDocument, only()).clone();
     }
 
     @Test
@@ -298,7 +312,8 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.modelBridge.getDocumentReferences(subwikiTemplate.getLastSpaceReference()))
             .thenReturn(List.of(subwikiTemplate));
         when(this.xwiki.getDocument(subwikiTemplate, this.context)).thenReturn(this.templateDocument);
-        when(this.xwiki.getDocument(subwikiPage, this.context)).thenReturn(this.document);
+        when(this.xwiki.getDocument(subwikiPage, this.context)).thenReturn(this.cachedDocument);
+        when(this.cachedDocument.clone()).thenReturn(this.document);
         BaseObject relation = mock(BaseObject.class);
         when(this.document.getXObject(ProjectManagementRelation.CLASS_REFERENCE, true, this.context))
             .thenReturn(relation);
@@ -389,7 +404,7 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.resolver.resolve("Space.Page", new WikiReference("xwiki"))).thenReturn(pageReference);
         when(this.authorizationManager.hasAccess(Right.VIEW, pageReference)).thenReturn(true);
         when(this.authorizationManager.hasAccess(Right.EDIT, pageReference)).thenReturn(true);
-        when(this.xwiki.getDocument(pageReference, this.context)).thenReturn(this.document);
+        when(this.xwiki.getDocument(pageReference, this.context)).thenReturn(this.cachedDocument);
         // Pages that already exist in the space of the created page.
         DocumentReference otherReference = new DocumentReference("xwiki", List.of("Space"), "Other");
         this.existingPages.add(otherReference);

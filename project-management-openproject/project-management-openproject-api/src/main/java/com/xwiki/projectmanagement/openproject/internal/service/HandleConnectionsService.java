@@ -158,7 +158,8 @@ public class HandleConnectionsService
 
         XWikiContext context = this.xcontextProvider.get();
         try {
-            XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            // Work on a copy of the cached document, which must stay unchanged if the save fails.
+            XWikiDocument doc = context.getWiki().getDocument(documentReference, context).clone();
             checkConnectionName(openProjectConnection.getConnectionName(), doc);
             if (!doc.isNew() && !isAuthorAdmin(doc)) {
                 throw ConnectionSaveException.conflict(String.format("The page [%s] can't be updated because it was "

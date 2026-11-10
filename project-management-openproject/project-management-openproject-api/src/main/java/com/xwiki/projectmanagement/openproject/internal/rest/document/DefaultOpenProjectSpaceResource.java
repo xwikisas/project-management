@@ -138,7 +138,8 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             }
             List<DocumentReference> childrenToCreate = getChildrenToCreate(docRef, templateProviderReference, context);
 
-            XWikiDocument document = context.getWiki().getDocument(docRef, context);
+            // Work on a copy of the cached document.
+            XWikiDocument document = context.getWiki().getDocument(docRef, context).clone();
             document.readFromTemplate(templateProviderReference, context);
             document.setTitle(title);
             UserReference userReference = userReferenceResolver.resolve(context.getUserReference());
