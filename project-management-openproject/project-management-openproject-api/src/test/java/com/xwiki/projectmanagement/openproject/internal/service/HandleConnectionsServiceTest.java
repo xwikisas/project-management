@@ -20,8 +20,11 @@
 package com.xwiki.projectmanagement.openproject.internal.service;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,9 +152,17 @@ class HandleConnectionsServiceTest
      */
     private void stubSameNameConnections(String... pages) throws Exception
     {
+        stubSameNameConnectionsOnWiki(WIKI, pages);
+    }
+
+    /**
+     * Answers the query looking for the other connections with the same name, run on the given wiki, with the given
+     * page names (local references, as stored in {@code doc.fullName}), except the page excluded by the query.
+     */
+    private void stubSameNameConnectionsOnWiki(String wiki, String... pages) throws Exception
+    {
         Map<String, Object> parameters = Map.of("className", "OpenProject.Code.OpenProjectConnectionClass",
-            "configFieldName", CONNECTION_NAME, "config", CONNECTION_NAME,
-            "serializedDocRef", "OpenProject.Code.OpenProjectConfigurations.FirstConnection");
+            "configFieldName", CONNECTION_NAME, "config", CONNECTION_NAME);
         when(this.queryManager.createQuery(SAME_NAME_QUERY, Query.HQL))
             .thenAnswer(invocation -> new DefaultQuery(SAME_NAME_QUERY, Query.HQL, new QueryExecutor()
             {
@@ -159,10 +170,13 @@ class HandleConnectionsServiceTest
                 @SuppressWarnings("unchecked")
                 public <T> List<T> execute(Query query)
                 {
-                    if (!WIKI.equals(query.getWiki()) || !parameters.equals(query.getNamedParameters())) {
+                    Map<String, Object> namedParameters = new HashMap<>(query.getNamedParameters());
+                    Object excludedPage = namedParameters.remove("serializedDocRef");
+                    if (!wiki.equals(query.getWiki()) || !parameters.equals(namedParameters)) {
                         return Collections.emptyList();
                     }
-                    return (List<T>) List.of(pages);
+                    return (List<T>) Stream.of(pages).filter(page -> !page.equals(excludedPage))
+                        .collect(Collectors.toList());
                 }
             }));
     }
@@ -321,6 +335,28 @@ class HandleConnectionsServiceTest
     }
 
     @Test
+    void handleConnectionUpdatesExistingPageOfSubwiki() throws Exception
+    {
+        DocumentReference subwikiConnection = new DocumentReference("subwiki",
+            List.of("OpenProject", "Code", "OpenProjectConfigurations"), "FirstConnection");
+        DocumentReference subwikiAdmin = new DocumentReference("subwiki", "XWiki", "Admin");
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.ADMIN, subwikiAdmin,
+            new WikiReference("subwiki"))).thenReturn(true);
+        saveConnectionPage(subwikiConnection, subwikiAdmin, CONNECTION_NAME);
+        // The query, run on the subwiki, finds the updated page itself unless it excludes it.
+        stubSameNameConnectionsOnWiki("subwiki", "OpenProject.Code.OpenProjectConfigurations.FirstConnection");
+        stubInstanceId(SERVER_URL + "/new");
+        this.openProjectConnection.setServerURL(SERVER_URL + "/new");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, subwikiConnection);
+
+        XWikiDocument page =
+            this.oldcore.getSpyXWiki().getDocument(subwikiConnection, this.oldcore.getXWikiContext());
+        assertEquals(SERVER_URL + "/new", page.getXObject(new DocumentReference("subwiki",
+            List.of("OpenProject", "Code"), "OpenProjectConnectionClass")).getStringValue("serverURL"));
+    }
+
+    @Test
     void handleConnectionKeepsCurrentClientSecretWhenEmpty() throws Exception
     {
         saveConnectionPage(CONNECTION, ADMIN, CONNECTION_NAME);
@@ -369,6 +405,55 @@ class HandleConnectionsServiceTest
         // No request is sent to an invalid server URL.
         verifyNoInteractions(this.openProjectApiClientFactory);
         assertNotSaved();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "Team/Project", "Team\\Project", "/", "100%", "%2F", ".", "..", "..." })
+    void handleConnectionRefusesInvalidConnectionName(String connectionName) throws Exception
+    {
+        this.openProjectConnection.setConnectionName(connectionName);
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertInvalidConnectionName(connectionName, exception);
+        assertNotSaved();
+    }
+
+    @Test
+    void handleConnectionRefusesRenamingToInvalidConnectionName() throws Exception
+    {
+        saveConnectionPage(CONNECTION, ADMIN, "oldName");
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertInvalidConnectionName("Team/Project", exception);
+        assertEquals("oldName", getConnectionPage().getXObject(CONNECTION_CLASS).getStringValue(CONNECTION_NAME));
+    }
+
+    @Test
+    void handleConnectionKeepsInvalidNameOfExistingConnection() throws Exception
+    {
+        // A connection saved before the names were checked.
+        saveConnectionPage(CONNECTION, ADMIN, "Team/Project");
+        stubInstanceId(SERVER_URL);
+        this.openProjectConnection.setConnectionName("Team/Project");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION);
+
+        BaseObject config = getConnectionPage().getXObject(CONNECTION_CLASS);
+        assertEquals("Team/Project", config.getStringValue(CONNECTION_NAME));
+        assertEquals(CLIENT_SECRET, config.getStringValue(CLIENT_SECRET));
+    }
+
+    private void assertInvalidConnectionName(String connectionName, ConnectionSaveException exception)
+    {
+        assertEquals(String.format("The connection name [%s] is not valid: it can't contain [/], [\\] or [%%], nor be "
+            + "made only of dots.", connectionName), exception.getMessage());
+        assertFalse(exception.isConflict());
+        verifyNoInteractions(this.openProjectApiClientFactory);
     }
 
     @ParameterizedTest

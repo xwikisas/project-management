@@ -18,6 +18,37 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 require(['jquery'], function ($) {
+  // A picker whose value is held by a hidden input (the picker itself having no name, see
+  // openprojectprojectdetailsproperty/edit.vm) is initialized from that input, which the macro editor fills with the
+  // parameter value, and updates it when the selection changes.
+  // This works around the macro editor of XWiki versions older than 17.10 (see edit.vm): remove it when the minimal
+  // supported XWiki version is 17.10 or later.
+  let syncWithValueInput = function (picker) {
+    let valueInput = picker.closest('.proj-manag-property-picker-field').find('input.proj-manag-property-picker-value');
+    if (valueInput.length === 0) {
+      return;
+    }
+    let values = (valueInput.val() || '').split(',').map(value => value.trim()).filter(value => value !== '');
+    // Like the macro editor does for the select inputs: use the value of the option matching each value regardless of
+    // the case (the parameter values are case insensitive), and add an option for the values matching none, so that
+    // they are kept.
+    values = values.map(value => {
+      let option = picker.find('option').filter(function () {
+        return $(this).val().toUpperCase() === value.toUpperCase();
+      });
+      if (option.length > 0) {
+        return option.first().val();
+      }
+      $('<option></option>').val(value).text(value).appendTo(picker);
+      return value;
+    });
+    picker.val(values);
+    picker.off('change.valueInput').on('change.valueInput', function () {
+      let selected = picker.val() || [];
+      valueInput.val(Array.isArray(selected) ? selected.join(',') : selected);
+    });
+  };
+
   let selectizeWithCustomizations = function () {
 
     // The remove_button plugin fails at the following lines 
@@ -43,6 +74,9 @@ require(['jquery'], function ($) {
     if (!element.attr('multiple')) {
       delete options.plugins;
     }
+    element.not('.selectized').each(function () {
+      syncWithValueInput($(this));
+    });
     element.xwikiSelectize(options);
     //delete $.fn.search;
     //delete $.fn.substring;

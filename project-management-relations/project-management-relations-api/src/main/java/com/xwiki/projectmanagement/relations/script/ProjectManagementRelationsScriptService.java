@@ -19,7 +19,9 @@
  */
 package com.xwiki.projectmanagement.relations.script;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -27,6 +29,8 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.context.Execution;
+import org.xwiki.context.ExecutionContext;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.AccessDeniedException;
@@ -54,11 +58,19 @@ public class ProjectManagementRelationsScriptService implements ScriptService
      */
     public static final String ROLE_HINT = "relations";
 
+    /**
+     * The execution context property holding the relations already retrieved in the current request.
+     */
+    private static final String RELATIONS_CACHE_PROPERTY = "projectmanagement.relations.cache";
+
     @Inject
     private ContextualAuthorizationManager authorizationManager;
 
     @Inject
     private RelationsManager relationsManager;
+
+    @Inject
+    private Execution execution;
 
     /**
      * Retrieve the relation class of a given document.
@@ -90,12 +102,31 @@ public class ProjectManagementRelationsScriptService implements ScriptService
      * @param ancestorLookup whether relation objects should be fetched from the closest ancestor (if self does not
      *     have any objects attached).
      * @return a list of all the relation objects attached to the passed document reference or to the first ancestor
-     *     that contains said objects. The user should have view rights on the returned references.
+     *     that contains said objects. The user should have view rights on the returned references. The relations are
+     *     retrieved once per request: e.g. the relations tab of a page needs them several times.
      */
     public List<ProjectManagementRelation> getRelations(DocumentReference documentReference, boolean ancestorLookup)
     {
-        return relationsManager.getRelations(documentReference, ancestorLookup).stream()
+        return getCachedRelations(documentReference, ancestorLookup).stream()
             .filter(relation -> authorizationManager.hasAccess(Right.VIEW, relation.getDocumentReference()))
             .collect(Collectors.toList());
+    }
+
+    private List<ProjectManagementRelation> getCachedRelations(DocumentReference documentReference,
+        boolean ancestorLookup)
+    {
+        ExecutionContext context = this.execution.getContext();
+        if (context == null) {
+            return this.relationsManager.getRelations(documentReference, ancestorLookup);
+        }
+        @SuppressWarnings("unchecked")
+        Map<List<Object>, List<ProjectManagementRelation>> cache =
+            (Map<List<Object>, List<ProjectManagementRelation>>) context.getProperty(RELATIONS_CACHE_PROPERTY);
+        if (cache == null) {
+            cache = new HashMap<>();
+            context.setProperty(RELATIONS_CACHE_PROPERTY, cache);
+        }
+        return cache.computeIfAbsent(List.of(documentReference, ancestorLookup),
+            key -> this.relationsManager.getRelations(documentReference, ancestorLookup));
     }
 }

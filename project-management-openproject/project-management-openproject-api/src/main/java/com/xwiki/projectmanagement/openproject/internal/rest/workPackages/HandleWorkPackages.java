@@ -53,6 +53,9 @@ import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectApiLinks;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.CreateWorkPackage;
@@ -170,6 +173,9 @@ public class HandleWorkPackages extends XWikiResource
     private OpenProjectAccess openProjectAccess;
 
     @Inject
+    private OpenProjectConfiguration openProjectConfiguration;
+
+    @Inject
     private WikiRequestExecutor wikiRequestExecutor;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -215,7 +221,11 @@ public class HandleWorkPackages extends XWikiResource
             List<Project> projects = apiClient.getProjects(0, 1,
                 FilterBuilder.get().addFilter(ID, FilterBuilder.Operator.EQUALS, selected).build()).getItems();
             if (!projects.isEmpty() && projects.get(0).getSelf() != null) {
-                projects.get(0).getSelf().setLocation("/api/v3/projects/" + selected);
+                // The value of the project is its API link, as in the projects listed from the form of OpenProject,
+                // which includes the path the instance is served under.
+                OpenProjectConnection connection = this.openProjectConfiguration.getConnection(instance);
+                projects.get(0).getSelf().setLocation(OpenProjectApiLinks.toInstanceHref(
+                    connection != null ? connection.getServerURL() : null, "/api/v3/projects/" + selected));
             }
             return Response.ok(mapToValueLabel(projects)).build();
         }

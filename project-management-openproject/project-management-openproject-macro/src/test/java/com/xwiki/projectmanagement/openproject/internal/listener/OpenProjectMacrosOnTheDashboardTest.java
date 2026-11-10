@@ -166,8 +166,12 @@ class OpenProjectMacrosOnTheDashboardTest
         DefaultProjectManagementClientExecutionContext executionContext =
             this.componentManager.getInstance(ProjectManagementClientExecutionContext.class);
         Map<String, Long> counts = Map.of("New", 1L);
+        Map<String, Object> clientCallContext = new HashMap<>();
         when(this.projectManagementManager.countWorkItems("openproject", List.of(), WorkItem.KEY_STATUS))
-            .thenReturn(Optional.of(counts));
+            .thenAnswer(invocation -> {
+                clientCallContext.putAll(executionContext.getContext());
+                return Optional.of(counts);
+            });
         when(this.barDisplayer.getParameterTypeTemplate()).thenReturn(new HashMap<>());
         List<Block> chart = List.of(new WordBlock("chart"));
         when(this.barDisplayer.executeCounts(List.of(counts), WorkItem.KEY_STATUS, List.of(), this.context,
@@ -175,7 +179,7 @@ class OpenProjectMacrosOnTheDashboardTest
 
         assertChart(chart, this.chartMacro.execute(new OpenProjectChartMacroParameters(), "", this.context));
         // The connection is passed to the OpenProject client through the execution context.
-        assertEquals("dashboard", executionContext.get("instance"));
+        assertEquals("dashboard", clientCallContext.get("instance"));
     }
 
     @Test

@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -276,6 +277,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private static final String AVATAR_REQUEST_ERROR_MESSAGE =
         "There was an issue in creating or sending the user avatar request.";
 
+    /**
+     * Builds the URI of a request to the OpenProject instance.
+     */
+    @FunctionalInterface
+    private interface InstanceUriSupplier
+    {
+        URI get() throws URISyntaxException;
+    }
+
     private final HttpClient client;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -484,7 +494,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<User> getAvailableUsers(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
-        JsonNode mainNode = getOpenProjectResponse(url, offset, pageSize, filters, "", "");
+        JsonNode mainNode =
+            getOpenProjectResponseFromHref(url, getParameters(offset, pageSize, filters, "", ""));
         JsonNode usersJson = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
 
         List<User> users = new ArrayList<>();
@@ -518,7 +529,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<Project> getAvailableProjects(String url, Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
-        JsonNode mainNode = getOpenProjectResponse(url, offset, pageSize, filters, "", "");
+        JsonNode mainNode =
+            getOpenProjectResponseFromHref(url, getParameters(offset, pageSize, filters, "", ""));
         JsonNode elements = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
 
         List<Project> projects = new ArrayList<>();
@@ -774,8 +786,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
             // The project is linked like the one of the work packages, from the API link given by OpenProject.
             JsonNode projectNode = element.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_PROJECT);
-            news.setProjectLink(new Linkable(projectNode.path(OP_RESPONSE_TITLE).asText(),
-                connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "")));
+            news.setProjectLink(new Linkable(projectNode.path(OP_RESPONSE_TITLE).asText(), getPageUrl(projectNode)));
             newsList.add(news);
         }
 
@@ -809,15 +820,11 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             JsonNode principalNode = linksNode.path(OP_RESPONSE_PRINCIPAL);
 
             String principalTitle = principalNode.path(OP_RESPONSE_TITLE).asText();
-            String principalHref = principalNode.path(HREF).asText();
-            String principalUrl = connectionUrl + principalHref.replaceFirst(API_URL_PART, "");
+            String principalUrl = getPageUrl(principalNode);
 
             List<Linkable> roles = new ArrayList<>();
             for (JsonNode roleNode : linksNode.path(OP_RESPONSE_ROLES)) {
-                roles.add(new Linkable(
-                    roleNode.path(OP_RESPONSE_TITLE).asText(),
-                    connectionUrl + roleNode.path(HREF).asText().replaceFirst(API_URL_PART, "")
-                ));
+                roles.add(new Linkable(roleNode.path(OP_RESPONSE_TITLE).asText(), getPageUrl(roleNode)));
             }
 
             User user = new User();
@@ -903,7 +910,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             // The API URL of the work package is replaced by the URL of its page.
             if (entry.getWorkPackage() != null) {
                 entry.getWorkPackage().setLocation(
-                    connectionUrl + entry.getWorkPackage().getLocation().replaceFirst(API_URL_PART, ""));
+                    OpenProjectApiLinks.toPageUrl(connectionUrl, entry.getWorkPackage().getLocation()));
             }
             entries.add(entry);
         }
@@ -914,9 +921,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public JsonNode createWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
-        String uriStr = connectionUrl + url;
+        String uriStr = url;
         try {
-            URI uri = createInstanceUri(url);
+            URI uri = createInstanceUriFromHref(url);
+            uriStr = uri.toString();
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = sendForJson(request);
 
@@ -959,9 +967,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     @Override
     public JsonNode updateWorkPackage(String url, String jsonBody) throws ProjectManagementException
     {
-        String uriStr = connectionUrl + url;
+        String uriStr = url;
         try {
-            URI uri = createInstanceUri(url);
+            URI uri = createInstanceUriFromHref(url);
+            uriStr = uri.toString();
             HttpRequest request = createAuthorizedPatchRequest(uri, jsonBody);
             HttpResponse<String> response = sendForJson(request);
 
@@ -988,6 +997,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     private JsonNode getOpenProjectResponse(String urlPart, Integer offset, Integer pageSize, String filtersString,
         String sortByString, String selectedElementsString) throws ProjectManagementException
     {
+        return getOpenProjectResponse(urlPart, getParameters(offset, pageSize, filtersString, sortByString,
+            selectedElementsString));
+    }
+
+    private static Map<String, String> getParameters(Integer offset, Integer pageSize, String filtersString,
+        String sortByString, String selectedElementsString)
+    {
         Map<String, String> parameters = new LinkedHashMap<>();
         if (offset != null) {
             parameters.put(OP_OFFSET, String.valueOf(offset));
@@ -1004,15 +1020,29 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         if (pageSize != null) {
             parameters.put(PAGE_SIZE, String.valueOf(pageSize));
         }
-        return getOpenProjectResponse(urlPart, parameters);
+        return parameters;
     }
 
     private JsonNode getOpenProjectResponse(String urlPart, Map<String, String> parameters)
         throws ProjectManagementException
     {
-        String uri = connectionUrl + urlPart;
+        return getOpenProjectResponse(connectionUrl + urlPart, () -> createInstanceUri(urlPart), parameters);
+    }
+
+    /**
+     * @param href a link returned by the OpenProject API, see {@link #createInstanceUriFromHref(String)}
+     */
+    private JsonNode getOpenProjectResponseFromHref(String href, Map<String, String> parameters)
+        throws ProjectManagementException
+    {
+        return getOpenProjectResponse(href, () -> createInstanceUriFromHref(href), parameters);
+    }
+
+    private JsonNode getOpenProjectResponse(String uri, InstanceUriSupplier uriSupplier,
+        Map<String, String> parameters) throws ProjectManagementException
+    {
         try {
-            URIBuilder uriBuilder = new URIBuilder(createInstanceUri(urlPart));
+            URIBuilder uriBuilder = new URIBuilder(uriSupplier.get());
             parameters.forEach(uriBuilder::setParameter);
 
             HttpRequest request =
@@ -1092,15 +1122,14 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private void setWorkPackageLinksNodeProperties(WorkPackage workPackage, JsonNode element)
     {
-        String editCreateUrlString = "%s%s/edit";
+        String editUrlSuffix = "/edit";
         JsonNode linksNode = element.path(OP_RESPONSE_LINKS);
         int id = element.path(OP_RESPONSE_ID).asInt();
 
         String activityUrl = String.format("%s/work_packages/%s/activity", connectionUrl, id);
 
         String typeName = linksNode.path(OP_RESPONSE_TYPE).path(OP_RESPONSE_TITLE).asText();
-        String typeUrl = String.format(editCreateUrlString, connectionUrl,
-            linksNode.path(OP_RESPONSE_TYPE).path(HREF).asText()).replaceFirst(API_URL_PART, "");
+        String typeUrl = getPageUrl(linksNode.path(OP_RESPONSE_TYPE)) + editUrlSuffix;
         workPackage.setTypeOfWorkPackage(new Linkable(typeName, typeUrl));
 
         JsonNode selfNode = linksNode.path(OP_RESPONSE_SELF);
@@ -1109,29 +1138,36 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         JsonNode statusNode = linksNode.path(OP_RESPONSE_STATUS);
         String statusName = statusNode.path(OP_RESPONSE_TITLE).asText();
-        String statusUrl =
-            String.format(editCreateUrlString, connectionUrl,
-                statusNode.path(HREF).asText().replaceFirst(API_URL_PART, ""));
+        String statusUrl = getPageUrl(statusNode) + editUrlSuffix;
         workPackage.setStatus(new Linkable(statusName, statusUrl));
 
         JsonNode authorNode = linksNode.path(OP_RESPONSE_AUTHOR);
         String authorName = authorNode.path(OP_RESPONSE_TITLE).asText();
-        String authorUrl = connectionUrl + authorNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        String authorUrl = getPageUrl(authorNode);
         workPackage.setAuthor(new Linkable(authorName, authorUrl));
 
         JsonNode assigneeNode = linksNode.path(OP_RESPONSE_ASSIGNEE);
         String assigneeName = assigneeNode.path(OP_RESPONSE_TITLE).asText();
-        String assigneeUrl = connectionUrl + assigneeNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        String assigneeUrl = getPageUrl(assigneeNode);
         workPackage.setAssignee(new Linkable(assigneeName, assigneeUrl));
 
         JsonNode projectNode = linksNode.path(OP_RESPONSE_PROJECT);
         String projectName = projectNode.path(OP_RESPONSE_TITLE).asText();
-        String projectUrl = connectionUrl + projectNode.path(HREF).asText().replaceFirst(API_URL_PART, "");
+        String projectUrl = getPageUrl(projectNode);
         workPackage.setProject(new Linkable(projectName, projectUrl));
 
         JsonNode priorityNode = linksNode.path(OP_RESPONSE_PRIORITY);
         String priorityName = priorityNode.path(OP_RESPONSE_TITLE).asText();
         workPackage.setPriority(new Linkable(priorityName, activityUrl));
+    }
+
+    /**
+     * @param linkNode a link of a resource returned by the OpenProject API
+     * @return the URL of the page of the resource in OpenProject
+     */
+    private String getPageUrl(JsonNode linkNode)
+    {
+        return OpenProjectApiLinks.toPageUrl(connectionUrl, linkNode.path(HREF).asText());
     }
 
     private void setDates(WorkPackage wp, JsonNode node)
@@ -1209,6 +1245,25 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             throw new URISyntaxException(uriString, "The URL doesn't target the configured OpenProject instance");
         }
         return uri;
+    }
+
+    /**
+     * Builds the URI of a request from a link ({@code href}) returned by the OpenProject API. Such a link is an
+     * absolute path, which already includes the path the instance is served under, so it's resolved against the
+     * origin of the instance, with the same checks as {@link #createInstanceUri(String)}.
+     *
+     * @param href the link returned by the OpenProject API, e.g. {@code /openproject/api/v3/projects/1}
+     * @return the URI of the request
+     * @throws URISyntaxException if the resulting URI is invalid or doesn't target the configured instance
+     */
+    private URI createInstanceUriFromHref(String href) throws URISyntaxException
+    {
+        String path = OpenProjectApiLinks.toInstanceRelativePath(connectionUrl, href);
+        if (path == null) {
+            throw new URISyntaxException(String.valueOf(href),
+                "The link doesn't target the configured OpenProject instance");
+        }
+        return createInstanceUri(path);
     }
 
     /**
@@ -1297,12 +1352,66 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         );
     }
 
+    /**
+     * Adds the path the instance is served under to the links of the given request body that were built by XWiki
+     * without it (e.g. {@code /api/v3/projects/1} for a project chosen from its identifier), since OpenProject only
+     * accepts the links that include it.
+     *
+     * @param jsonBody the JSON body of a request to the OpenProject API
+     * @return the body, with its links including the path of the instance
+     */
+    private String normalizeLinks(String jsonBody)
+    {
+        if (OpenProjectApiLinks.getInstancePath(connectionUrl).isEmpty()) {
+            // The instance is served at the root of its host: the links are complete.
+            return jsonBody;
+        }
+        try {
+            JsonNode body = objectMapper.readTree(jsonBody);
+            if (body == null || !normalizeLinks(body, false)) {
+                return jsonBody;
+            }
+            return objectMapper.writeValueAsString(body);
+        } catch (JsonProcessingException e) {
+            // Sent as is: OpenProject reports the invalid body.
+            return jsonBody;
+        }
+    }
+
+    /**
+     * @return whether a link was changed
+     */
+    private boolean normalizeLinks(JsonNode node, boolean inLinks)
+    {
+        boolean changed = false;
+        if (node.isObject()) {
+            JsonNode href = node.path(HREF);
+            if (inLinks && href.isTextual()) {
+                String normalizedHref = OpenProjectApiLinks.toInstanceHref(connectionUrl, href.asText());
+                if (!normalizedHref.equals(href.asText())) {
+                    ((ObjectNode) node).put(HREF, normalizedHref);
+                    changed = true;
+                }
+            }
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                changed |= normalizeLinks(field.getValue(), inLinks || OP_RESPONSE_LINKS.equals(field.getKey()));
+            }
+        } else if (node.isArray()) {
+            for (JsonNode element : node) {
+                changed |= normalizeLinks(element, inLinks);
+            }
+        }
+        return changed;
+    }
+
     private HttpRequest createAuthorizedPostRequest(URI uri, String jsonBody)
     {
         return createAuthorizedRequest(
             uri,
             POST,
-            HttpRequest.BodyPublishers.ofString(jsonBody),
+            HttpRequest.BodyPublishers.ofString(normalizeLinks(jsonBody)),
             MediaType.APPLICATION_JSON
         );
     }
@@ -1312,7 +1421,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return createAuthorizedRequest(
             uri,
             PATCH,
-            HttpRequest.BodyPublishers.ofString(jsonBody),
+            HttpRequest.BodyPublishers.ofString(normalizeLinks(jsonBody)),
             MediaType.APPLICATION_JSON
         );
     }

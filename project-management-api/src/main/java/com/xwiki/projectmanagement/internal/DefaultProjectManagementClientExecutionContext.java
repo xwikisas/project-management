@@ -73,5 +73,54 @@ public class DefaultProjectManagementClientExecutionContext implements ProjectMa
     {
         this.context.remove();
     }
+
+    /**
+     * Set the context of the current thread until the returned scope is closed, which restores the context that was
+     * set before (or removes the context when none was set), so that the context doesn't leak to the code executed
+     * later by the same thread (e.g. the next macro of the page, or the next request handled by the thread).
+     *
+     * @param context a map of entries that serve the client implementation
+     * @return the scope to close once the client calls are done, typically with a try-with-resources statement
+     */
+    public ContextScope pushContext(Map<String, Object> context)
+    {
+        Map<String, Object> previousContext = this.context.get();
+        this.context.set(context);
+        return () -> {
+            if (previousContext == null) {
+                this.context.remove();
+            } else {
+                this.context.set(previousContext);
+            }
+        };
+    }
+
+    /**
+     * Set the context of the current thread until the returned scope is closed, when the given execution context is
+     * the default one, which is the only one whose context can be set.
+     *
+     * @param executionContext the execution context of the project management clients
+     * @param context a map of entries that serve the client implementation
+     * @return the scope to close once the client calls are done, which restores the previous context
+     * @see #pushContext(Map)
+     */
+    public static ContextScope pushContext(ProjectManagementClientExecutionContext executionContext,
+        Map<String, Object> context)
+    {
+        if (executionContext instanceof DefaultProjectManagementClientExecutionContext) {
+            return ((DefaultProjectManagementClientExecutionContext) executionContext).pushContext(context);
+        }
+        return () -> { };
+    }
+
+    /**
+     * The scope of a context set with {@link #pushContext(Map)}: closing it restores the previous context.
+     */
+    @FunctionalInterface
+    public interface ContextScope extends AutoCloseable
+    {
+        @Override
+        void close();
+    }
 }
 

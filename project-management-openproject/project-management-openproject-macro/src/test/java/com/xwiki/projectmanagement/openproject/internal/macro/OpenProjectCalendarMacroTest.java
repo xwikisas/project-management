@@ -64,6 +64,7 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroPar
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
@@ -187,6 +188,8 @@ class OpenProjectCalendarMacroTest
         assertEquals("false", calendar.getParameter("editable"));
         assertEquals(Map.of("instance", "main", "sprint", "false", "version", "false", "versionColor", "",
             "sprintColor", ""), getQueryParameters(calendar.getParameter("json")));
+        // The context, passed to the calendar resource through its URL, doesn't outlive the macro.
+        assertTrue(this.executionContext.getContext().isEmpty());
         assertEquals("openproject", this.parameters.getClient());
         verify(this.observationManager).notify(any(), same(this.macro), same(this.parameters));
         verify(this.stylingSetupManager).setupInstanceStyles();

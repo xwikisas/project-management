@@ -50,6 +50,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -147,7 +148,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     MacroTransformationContext context) throws MacroExecutionException
                 {
                     try {
-                        prepareContext(parameters);
                         return displayChart(chartTypeDisplayer, filters, parameters, labels, context,
                             typeDisplayerParams);
                     } catch (WorkItemException e) {
@@ -189,6 +189,20 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
         T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams)
         throws WorkItemException, MacroExecutionException
+    {
+        // The context that the extending class sets for the client is restored once the chart is displayed.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(macroContext, macroContext.getContext()))
+        {
+            prepareContext(parameters);
+            return displayChartInContext(chartTypeDisplayer, filters, parameters, labels, context,
+                typeDisplayerParams);
+        }
+    }
+
+    private List<Block> displayChartInContext(ChartTypeDisplayer chartTypeDisplayer,
+        List<List<LiveDataQuery.Filter>> filters, T parameters, List<String> labels, MacroTransformationContext context,
+        Object typeDisplayerParams) throws WorkItemException, MacroExecutionException
     {
         Optional<List<Map<String, Long>>> counts = countDatasets(filters, parameters);
         if (counts.isPresent()) {

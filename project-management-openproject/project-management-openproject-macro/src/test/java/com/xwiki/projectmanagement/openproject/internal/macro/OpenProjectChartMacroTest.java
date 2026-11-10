@@ -57,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -149,11 +150,20 @@ class OpenProjectChartMacroTest
     @Test
     void displaysTheWorkItemsOfTheInstance() throws Exception
     {
+        Map<String, Object> clientCallContext = new HashMap<>();
+        when(this.projectManagementManager.countWorkItems(OPENPROJECT, List.of(), WorkItem.KEY_STATUS))
+            .thenAnswer(invocation -> {
+                clientCallContext.putAll(this.executionContext.getContext());
+                return Optional.of(this.counts);
+            });
+
         assertChart(this.chart, this.macro.execute(this.parameters, "", this.context));
 
         assertEquals("openproject", this.parameters.getClient());
         // The instance is made available to the OpenProject client through the execution context.
-        assertEquals("main", this.executionContext.get("instance"));
+        assertEquals("main", clientCallContext.get("instance"));
+        // The context doesn't outlive the macro.
+        assertTrue(this.executionContext.getContext().isEmpty());
     }
 
     @Test
