@@ -19,10 +19,10 @@
  */
 package com.xwiki.projectmanagement.presets.internal;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -60,6 +60,11 @@ import com.xwiki.projectmanagement.presets.PresetsManager;
 @Singleton
 public class DefaultPresetsManager implements PresetsManager
 {
+    /**
+     * The listed presets are paginated in memory: list them in a stable order, so that the pages don't overlap.
+     */
+    private static final String LISTING_ORDER = " order by doc.fullName";
+
     @Inject
     private QueryManager queryManager;
 
@@ -94,14 +99,8 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " where obj.isMultiple = 0";
             }
-            List<DocumentReference> presets =
-                queryManager.createQuery(String.format(query, Preset.CLASS_NAME), Query.XWQL)
-                    .addFilter(this.documentFilter).addFilter(this.viewableFilter)
-                    .setOffset(offset).setLimit(limit).execute();
-            if (presets.isEmpty()) {
-                return Collections.emptyList();
-            }
-            return presets.stream().map(this::getPresetObject).filter(Objects::nonNull).collect(Collectors.toList());
+            return listPresets(queryManager.createQuery(String.format(query + LISTING_ORDER, Preset.CLASS_NAME),
+                Query.XWQL), offset, limit);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
@@ -117,21 +116,8 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " and obj.isMultiple = 0";
             }
-            List<DocumentReference> presets =
-                queryManager
-                    .createQuery(
-                        String.format(query, Preset.CLASS_NAME),
-                        Query.XWQL)
-                    .addFilter(this.documentFilter)
-                    .addFilter(this.viewableFilter)
-                    .setLimit(limit)
-                    .setOffset(offset)
-                    .bindValue("client", client)
-                    .execute();
-            if (presets.isEmpty()) {
-                return Collections.emptyList();
-            }
-            return presets.stream().map(this::getPresetObject).filter(Objects::nonNull).collect(Collectors.toList());
+            return listPresets(queryManager.createQuery(String.format(query + LISTING_ORDER, Preset.CLASS_NAME),
+                Query.XWQL).bindValue("client", client), offset, limit);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
@@ -152,7 +138,8 @@ public class DefaultPresetsManager implements PresetsManager
                     .addFilter(this.documentFilter)
                     .bindValue("presetid", id)
                     .execute();
-            return presets.stream().map(this::getPresetDocument).filter(Objects::nonNull).findFirst()
+            return presets.stream().map(reference -> getPresetDocument(reference, true)).filter(Objects::nonNull)
+                .findFirst()
                 .filter(this::canContentAuthorView).map(this::toPreset).orElse(null);
         } catch (QueryException e) {
             throw new RuntimeException(e);
@@ -178,19 +165,34 @@ public class DefaultPresetsManager implements PresetsManager
         }
     }
 
-    private Preset getPresetObject(DocumentReference ref)
+    /**
+     * The viewable filter and the check of the preset author are applied after the query is executed: paginate the
+     * presets that pass them, not the query results, otherwise a page lacks the presets that are filtered out.
+     */
+    private List<Preset> listPresets(Query query, int offset, int limit) throws QueryException
     {
-        XWikiDocument document = getPresetDocument(ref);
-        return document != null ? toPreset(document) : null;
+        List<DocumentReference> references =
+            query.addFilter(this.documentFilter).addFilter(this.viewableFilter).execute();
+        // The streams are lazy: the preset pages are loaded only until the requested presets are found.
+        Stream<Preset> presets = references.stream().map(reference -> getPresetDocument(reference, false))
+            .filter(Objects::nonNull).map(this::toPreset).skip(Math.max(offset, 0));
+        if (limit > 0) {
+            presets = presets.limit(limit);
+        }
+        return presets.collect(Collectors.toList());
     }
 
-    private XWikiDocument getPresetDocument(DocumentReference ref)
+    /**
+     * @param warnWhenIgnored whether to log a warning when the preset is ignored because of its author, e.g. when a
+     *     macro uses it; when listing the presets, it's logged in debug, since it would be logged on each listing
+     */
+    private XWikiDocument getPresetDocument(DocumentReference ref, boolean warnWhenIgnored)
     {
         XWikiContext context = contextProvider.get();
         XWiki xWiki = context.getWiki();
         try {
             XWikiDocument document = xWiki.getDocument(ref, context);
-            if (document.getXObject(Preset.REFERENCE) == null || !isAuthorAdmin(document)) {
+            if (document.getXObject(Preset.REFERENCE) == null || !isAuthorAdmin(document, warnWhenIgnored)) {
                 return null;
             }
             return document;
@@ -216,15 +218,20 @@ public class DefaultPresetsManager implements PresetsManager
         return canView;
     }
 
-    private boolean isAuthorAdmin(XWikiDocument document)
+    private boolean isAuthorAdmin(XWikiDocument document, boolean warnWhenIgnored)
     {
         DocumentReference author =
             this.documentUserSerializer.serialize(document.getAuthors().getEffectiveMetadataAuthor());
         boolean isAdmin = this.authorizationManager.hasAccess(Right.ADMIN, author,
             document.getDocumentReference().getWikiReference());
         if (!isAdmin) {
-            this.logger.warn("Ignoring the preset stored on [{}] because its author [{}] doesn't have administration "
-                + "right on the wiki.", document.getDocumentReference(), author);
+            String message = "Ignoring the preset stored on [{}] because its author [{}] doesn't have administration "
+                + "right on the wiki.";
+            if (warnWhenIgnored) {
+                this.logger.warn(message, document.getDocumentReference(), author);
+            } else {
+                this.logger.debug(message, document.getDocumentReference(), author);
+            }
         }
         return isAdmin;
     }

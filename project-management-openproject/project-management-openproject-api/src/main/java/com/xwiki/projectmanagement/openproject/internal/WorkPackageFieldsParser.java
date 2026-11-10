@@ -305,7 +305,8 @@ public final class WorkPackageFieldsParser
         if (!title.isTextual() || title.asText().isEmpty()) {
             return null;
         }
-        Matcher matcher = UI_RESOURCE_PATTERN.matcher(linkNode.path(HREF).asText());
+        String path = OpenProjectApiLinks.toInstanceRelativePath(connectionUrl, linkNode.path(HREF).asText());
+        Matcher matcher = UI_RESOURCE_PATTERN.matcher(StringUtils.defaultString(path));
         return new Linkable(title.asText(), matcher.matches() ? connectionUrl + matcher.group(1) : null);
     }
 

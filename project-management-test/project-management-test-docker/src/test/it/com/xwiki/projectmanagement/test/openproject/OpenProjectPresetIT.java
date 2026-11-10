@@ -71,8 +71,13 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
     {
         String presetName = "Speakers list preset";
 
+        // The presets aren't part of the form that saves the settings of the administration section, so that pressing
+        // Enter in their Live Data filters doesn't act on that form.
+        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        assertFalse(adminPage.arePresetsInsideForm());
+
         // Create the preset from the administration section. The name is mandatory.
-        PresetCreateModal createModal = OpenProjectAdminPage.gotoPage().clickCreatePreset();
+        PresetCreateModal createModal = adminPage.clickCreatePreset();
         // The name is checked when the button is clicked, so the modal is still displayed afterwards.
         assertTrue(createModal.clickCreateWithoutName().isDisplayed());
         PresetEditPage editPage = createModal.setName(presetName).setChartPreset(false).create();

@@ -281,7 +281,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
                     break;
 
                 case HOURLY:
-                    dateFormat.applyPattern("yyyy-MM-dd hh");
+                    dateFormat.applyPattern("yyyy-MM-dd HH");
                     break;
                 case DAILY:
                 default:

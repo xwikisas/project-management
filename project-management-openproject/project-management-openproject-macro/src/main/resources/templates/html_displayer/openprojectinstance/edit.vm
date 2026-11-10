@@ -17,6 +17,9 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+## Moves the value of the deprecated count parameter of the macros having one (all have an instance parameter) to
+## the limit parameter.
+#set ($discard = $xwiki.jsrx.use('openproject/js/countParameter.js', {'minify': false}))
 ## A short list of connections, so a plain select, like the macro parameters taking a few values.
 #set ($defaultConnection = $services.openproject.defaultConnectionName)
 <select class="op-instance-select" data-default-connection="$!escapetool.xml($defaultConnection)"

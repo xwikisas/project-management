@@ -147,7 +147,8 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
               projectbadge: wp.project.value,
               // The selected text is replaced with nothing and then the macro is inserted, after the autocomplete
               // panel is closed. Using a command instead of the outputTemplate also works on XWiki versions where
-              // AdvancedAutoComplete ignores the outputTemplate (e.g. 15.10).
+              // AdvancedAutoComplete ignores the outputTemplate (e.g. 15.10). When the parent pom moves to XWiki
+              // 17.10.x, whose AdvancedAutoComplete uses the outputTemplate, the outputTemplate can be used instead.
               command: {
                 name: 'xwiki-macro-insert',
                 data: {

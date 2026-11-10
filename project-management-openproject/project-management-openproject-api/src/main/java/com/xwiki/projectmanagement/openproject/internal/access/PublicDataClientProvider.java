@@ -24,6 +24,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -35,6 +38,7 @@ import org.xwiki.cache.Cache;
 import org.xwiki.cache.CacheException;
 import org.xwiki.cache.CacheManager;
 import org.xwiki.cache.config.CacheConfiguration;
+import org.xwiki.cache.event.CacheEntryListener;
 import org.xwiki.cache.eviction.EntryEvictionConfiguration;
 import org.xwiki.cache.eviction.LRUEvictionConfiguration;
 import org.xwiki.component.annotation.Component;
@@ -102,6 +106,12 @@ public class PublicDataClientProvider implements Disposable
     private Logger logger;
 
     private final Map<String, WikiCaches> caches = new ConcurrentHashMap<>();
+
+    /**
+     * Makes the identifiers of the caches unique: the caches of a wiki that are cleared may still be in use (and not
+     * disposed yet) when its new caches are created.
+     */
+    private final AtomicLong cacheCounter = new AtomicLong();
 
     /**
      * @param connection a connection configured in the current wiki
@@ -186,10 +196,11 @@ public class PublicDataClientProvider implements Disposable
     private WikiCaches createCaches(String wikiId)
     {
         int lifespan = getCacheDuration() * SECONDS_PER_MINUTE;
+        String cacheIdSuffix = wikiId + '.' + this.cacheCounter.incrementAndGet();
         Cache<PaginatedResult<? extends BaseOpenProjectObject>> results = null;
         try {
-            results = createCache(CACHE_ID_PREFIX + wikiId, lifespan);
-            return new WikiCaches(results, createCache(ANONYMOUS_ACCESS_CACHE_ID_PREFIX + wikiId, lifespan));
+            results = createCache(CACHE_ID_PREFIX + cacheIdSuffix, lifespan);
+            return new WikiCaches(results, createCache(ANONYMOUS_ACCESS_CACHE_ID_PREFIX + cacheIdSuffix, lifespan));
         } catch (CacheException e) {
             if (results != null) {
                 results.dispose();
@@ -240,14 +251,103 @@ public class PublicDataClientProvider implements Disposable
 
         WikiCaches(Cache<PaginatedResult<? extends BaseOpenProjectObject>> results, Cache<Boolean> anonymousAccess)
         {
-            this.results = results;
-            this.anonymousAccess = anonymousAccess;
+            this.results = new DisposalSafeCache<>(results);
+            this.anonymousAccess = new DisposalSafeCache<>(anonymousAccess);
         }
 
         void dispose()
         {
             this.results.dispose();
             this.anonymousAccess.dispose();
+        }
+    }
+
+    /**
+     * A cache that can still be used once disposed, as an empty cache that keeps nothing: the caches of a wiki are
+     * disposed when its configuration changes, while the requests that started before may still use them (e.g. through
+     * the clients they got).
+     *
+     * @param <T> the type of the cached values
+     */
+    private static final class DisposalSafeCache<T> implements Cache<T>
+    {
+        private final Cache<T> cache;
+
+        private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+        private boolean disposed;
+
+        DisposalSafeCache(Cache<T> cache)
+        {
+            this.cache = cache;
+        }
+
+        @Override
+        public void set(String key, T value)
+        {
+            run(() -> this.cache.set(key, value));
+        }
+
+        @Override
+        public T get(String key)
+        {
+            this.lock.readLock().lock();
+            try {
+                return this.disposed ? null : this.cache.get(key);
+            } finally {
+                this.lock.readLock().unlock();
+            }
+        }
+
+        @Override
+        public void remove(String key)
+        {
+            run(() -> this.cache.remove(key));
+        }
+
+        @Override
+        public void removeAll()
+        {
+            run(this.cache::removeAll);
+        }
+
+        @Override
+        public void addCacheEntryListener(CacheEntryListener<T> listener)
+        {
+            run(() -> this.cache.addCacheEntryListener(listener));
+        }
+
+        @Override
+        public void removeCacheEntryListener(CacheEntryListener<T> listener)
+        {
+            run(() -> this.cache.removeCacheEntryListener(listener));
+        }
+
+        @Override
+        public void dispose()
+        {
+            // Wait for the current uses of the cache to end.
+            this.lock.writeLock().lock();
+            try {
+                if (!this.disposed) {
+                    this.disposed = true;
+                    this.cache.dispose();
+                }
+            } finally {
+                this.lock.writeLock().unlock();
+            }
+        }
+
+        private void run(Runnable action)
+        {
+            this.lock.readLock().lock();
+            try {
+                if (!this.disposed) {
+                    action.run();
+                }
+            } finally {
+                this.lock.readLock().unlock();
+            }
         }
     }
 }

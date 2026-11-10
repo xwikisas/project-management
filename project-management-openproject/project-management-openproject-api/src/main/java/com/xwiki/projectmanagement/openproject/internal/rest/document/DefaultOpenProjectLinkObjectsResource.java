@@ -27,13 +27,13 @@ import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.SpaceReference;
+import org.xwiki.model.reference.WikiReference;
 import org.xwiki.rest.XWikiRestException;
 import org.xwiki.rest.internal.ModelFactory;
 import org.xwiki.rest.internal.Utils;
@@ -45,8 +45,6 @@ import org.xwiki.rest.resources.objects.ObjectResource;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageLink;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectLinkObjectsResource;
@@ -75,7 +73,7 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
     private ModelFactory factory;
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private InstanceConnectionResolver instanceConnectionResolver;
 
     @Override
     public Response link(String id, Boolean minorRevision, WorkPackageLink link)
@@ -93,7 +91,7 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            maybeAddInstance(link);
+            maybeAddInstance(link, documentReference.getWikiReference());
 
             Object object = linkToObject(link);
 
@@ -227,22 +225,13 @@ public class DefaultOpenProjectLinkObjectsResource extends BaseObjectsResource i
         properties.add(projectProperty);
     }
 
-    private void maybeAddInstance(com.xwiki.projectmanagement.openproject.model.WorkPackageLink link)
+    private void maybeAddInstance(com.xwiki.projectmanagement.openproject.model.WorkPackageLink link,
+        WikiReference wiki)
     {
         String instance = link.getInstance();
         if (StringUtils.isEmpty(instance)) {
             return;
         }
-        OpenProjectConnection connection =
-            openProjectConfiguration.getOpenProjectConnections().stream()
-                .filter(cfg -> instance.equals(cfg.getInstanceId())).findFirst().orElse(null);
-
-        if (connection == null) {
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                .type(MediaType.TEXT_PLAIN_TYPE)
-                .entity(String.format("Could not find a configured instance for the id [%s].", instance)).build());
-        }
-
-        link.setInstance(connection.getConnectionName());
+        link.setInstance(this.instanceConnectionResolver.getConnectionName(instance, wiki));
     }
 }

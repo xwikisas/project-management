@@ -133,10 +133,13 @@ public class ProjectManagementAsyncExecutor
     {
         AsyncRendererConfiguration configuration = new AsyncRendererConfiguration();
 
-        // Pass some properties that might be of interest to a potential displayer macro.
+        // Pass some properties that might be of interest to a potential displayer macro. The current document is
+        // needed, for instance, by the links that bring the user back to the current page (e.g. after connecting their
+        // account to the project management tool).
         configuration.setContextEntries(
             Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
-                XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE));
+                XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE,
+                XWikiContextContextStore.PROP_DOCUMENT_REFERENCE));
         // The results are displayed asynchronously since they come from other servers. A forced placeholder is only
         // filled when the request supports asynchronous rendering: otherwise nothing fills it and the macro stays
         // empty, so the result is rendered synchronously instead.

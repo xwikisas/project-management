@@ -42,6 +42,10 @@ import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -53,6 +57,10 @@ import static org.mockito.Mockito.when;
 @XWikiSyntax21ComponentList
 class DashboardPageTest extends PageTest
 {
+    private static final DocumentReference DASHBOARD = new DocumentReference("xwiki", "OpenProject", "WebHome");
+
+    private static final String PUBLIC_CONNECTION = "public";
+
     private static final String CONNECTION_NAME = "<img src=\"x\" class=\"injected\"/>{{/html}}";
 
     @MockComponent(classToMock = OpenProjectScriptService.class)
@@ -99,5 +107,56 @@ class DashboardPageTest extends PageTest
             assertTrue(chart.startsWith("{{openprojectchart datasetsLabels=\"[~\"openproject.dashboard.chart.open~\","
                 + "~\"openproject.dashboard.chart.closed~\"]\" "), chart);
         }
+    }
+
+    @Test
+    void guestsSeeThePublicDataOfTheConnection() throws Exception
+    {
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(true);
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertEquals(1, document.select("#openproject-dashboard-gadgets").size(), document.html());
+        assertTrue(document.select(".warningmessage:not(.hidden)").isEmpty(), document.html());
+    }
+
+    @Test
+    void guestsCantSeeTheConnectionsThatDontShowPublicData() throws Exception
+    {
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(false);
+        when(openProject.getUserAccountConnections()).thenReturn(List.of(PUBLIC_CONNECTION));
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertTrue(document.select("#openproject-dashboard-gadgets").isEmpty(), document.html());
+        // Guests can't connect an OpenProject account.
+        assertEquals("openproject.dashboard.guest", document.select(".warningmessage:not(.hidden)").text());
+        verify(openProject, never()).getNotAuthorizedMessage(any(), any());
+    }
+
+    @Test
+    void guestsGetTheWarningOfAConnectionShowingOnlyPublicData() throws Exception
+    {
+        // E.g. a connection showing only public data, whose OpenProject instance refuses anonymous requests.
+        OpenProjectScriptService openProject = mockConnection();
+        when(openProject.canReadData(PUBLIC_CONNECTION)).thenReturn(false);
+        when(openProject.getUserAccountConnections()).thenReturn(List.of());
+        when(openProject.getNotAuthorizedMessage(eq(PUBLIC_CONNECTION), any()))
+            .thenReturn("<div class=\"box warningmessage\">refused</div>");
+
+        Document document = renderHTMLPage(DASHBOARD);
+
+        assertTrue(document.select("#openproject-dashboard-gadgets").isEmpty(), document.html());
+        assertEquals("refused", document.select(".warningmessage:not(.hidden)").text());
+    }
+
+    private OpenProjectScriptService mockConnection() throws Exception
+    {
+        OpenProjectScriptService openProject = (OpenProjectScriptService) this.openProjectScriptService;
+        when(openProject.getConnectionOptions()).thenReturn(new ArrayList<>(List.of(Map.of(),
+            Map.of("name", PUBLIC_CONNECTION, "value", PUBLIC_CONNECTION))));
+        return openProject;
     }
 }

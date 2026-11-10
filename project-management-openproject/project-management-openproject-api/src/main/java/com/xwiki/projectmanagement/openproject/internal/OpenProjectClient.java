@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -190,7 +188,6 @@ public class OpenProjectClient implements ProjectManagementClient
         List<LiveDataQuery.SortEntry> sortEntries) throws WorkItemRetrievalException
     {
         try {
-            int openProjectPage = getOpenProjectPage(offset, pageSize);
             String identifier = getIdentifier();
             OpenProjectAccessResult access = resolveAccess();
             OpenProjectApiClient openProjectApiClient = access.getClient();
@@ -203,16 +200,17 @@ public class OpenProjectClient implements ProjectManagementClient
                 workItems = handleIds(openProjectApiClient, fields, identifier, offset, pageSize, mappedFilters,
                     mappedSortEntries);
             } else if (identifier != null && !identifier.trim().isEmpty()) {
-                workItems = handleIdentifier(openProjectApiClient, fields, identifier.trim(), openProjectPage,
-                    pageSize, mappedFilters, mappedSortEntries);
+                workItems = getWorkItemsPage(offset, pageSize,
+                    openProjectPage -> handleIdentifier(openProjectApiClient, fields, identifier.trim(),
+                        openProjectPage, pageSize, mappedFilters, mappedSortEntries));
             } else {
                 String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
                 String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
-                PaginatedResult<WorkPackage> workPackagesPaginatedResult =
-                    getWorkPackages(openProjectApiClient, null, openProjectPage, pageSize, filtersString,
-                        sortByString);
-                workItems = OpenProjectConverters.convertPaginatedResult(workPackagesPaginatedResult,
-                    workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+                workItems = getWorkItemsPage(offset, pageSize,
+                    openProjectPage -> OpenProjectConverters.convertPaginatedResult(
+                        getWorkPackages(openProjectApiClient, null, openProjectPage, pageSize, filtersString,
+                            sortByString),
+                        workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)));
             }
             markClosedWorkItems(openProjectApiClient, workItems);
             return workItems;
@@ -237,6 +235,36 @@ public class OpenProjectClient implements ProjectManagementClient
     private static int getOpenProjectPage(int offset, int pageSize)
     {
         return offset / pageSize + 1;
+    }
+
+    /**
+     * Retrieves the work items starting at the given offset. When the offset isn't at the start of an OpenProject page
+     * (e.g. the Skip parameter of a macro isn't a multiple of its limit), the work items before the offset on the page
+     * holding it are left out and the missing ones are taken from the next page. The total stays the number of all the
+     * matching work items, as for an offset at the start of a page.
+     */
+    private static PaginatedResult<WorkItem> getWorkItemsPage(int offset, int pageSize,
+        WorkItemsPageRetriever retriever) throws ProjectManagementException
+    {
+        int openProjectPage = getOpenProjectPage(offset, pageSize);
+        int skipped = offset % pageSize;
+        PaginatedResult<WorkItem> result = retriever.get(openProjectPage);
+        if (skipped == 0 || result.getItems() == null) {
+            return result;
+        }
+        List<WorkItem> pageItems = result.getItems();
+        List<WorkItem> items =
+            new ArrayList<>(pageItems.subList(Math.min(skipped, pageItems.size()), pageItems.size()));
+        boolean hasNextPage = result.getTotalItems() == null
+            || result.getTotalItems() > (long) openProjectPage * pageSize;
+        if (pageItems.size() >= pageSize && hasNextPage) {
+            List<WorkItem> nextPageItems = retriever.get(openProjectPage + 1).getItems();
+            if (nextPageItems != null) {
+                items.addAll(nextPageItems.subList(0, Math.min(skipped, nextPageItems.size())));
+            }
+        }
+        result.setItems(items);
+        return result;
     }
 
     /**
@@ -536,10 +564,10 @@ public class OpenProjectClient implements ProjectManagementClient
             OpenProjectFilterHandler.mergeFilters(filtersEntries, objectMapper.valueToTree(List.of(idFiltersAsJson)));
 
         if (!sortEntries.isEmpty()) {
-            return OpenProjectConverters.convertPaginatedResult(
-                openProjectApiClient.getWorkPackages(openProjectPage, pageSize, filters,
-                    OpenProjectSortingHandler.convertSorting(sortEntries)),
-                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields));
+            String sortBy = OpenProjectSortingHandler.convertSorting(sortEntries);
+            return getWorkItemsPage(offset, pageSize, page -> OpenProjectConverters.convertPaginatedResult(
+                openProjectApiClient.getWorkPackages(page, pageSize, filters, sortBy),
+                workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)));
         }
 
         List<WorkPackage> workPackages =
@@ -556,7 +584,9 @@ public class OpenProjectClient implements ProjectManagementClient
     /**
      * Turns the work package keys into ids, dropping the duplicates and the keys of the work packages that don't exist
      * or that the user can't see, so that they don't prevent the other work packages from being displayed. Each key
-     * requires a request to OpenProject, so they are resolved in parallel (and the client caches them).
+     * requires a request to OpenProject (which the client caches). The keys are resolved one after the other, in the
+     * current thread, so that they run with the XWiki execution context of the current request (and don't block the
+     * common ForkJoinPool).
      * <p>
      * TODO: send the keys directly in the id filter, without resolving them, once OpenProject accepts them there:
      * https://community.openproject.org/wp/82068 (API v3: allow filtering work packages by their semantic identifier
@@ -565,23 +595,18 @@ public class OpenProjectClient implements ProjectManagementClient
     private List<String> resolveIds(OpenProjectApiClient openProjectApiClient, String[] idsOrKeys)
         throws ProjectManagementException
     {
-        Map<String, CompletableFuture<WorkPackage>> resolutions = new HashMap<>();
-        for (String idOrKey : idsOrKeys) {
-            if (!StringUtils.isNumeric(idOrKey)) {
-                resolutions.computeIfAbsent(idOrKey,
-                    key -> CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, key)));
-            }
-        }
-
+        Map<String, Optional<WorkPackage>> resolutions = new HashMap<>();
         Set<String> ids = new LinkedHashSet<>();
         for (String idOrKey : idsOrKeys) {
             if (StringUtils.isNumeric(idOrKey)) {
                 ids.add(idOrKey);
             } else {
-                WorkPackage workPackage = joinResolution(idOrKey, resolutions.get(idOrKey));
-                if (workPackage != null) {
-                    ids.add(String.valueOf(workPackage.getId()));
+                Optional<WorkPackage> workPackage = resolutions.get(idOrKey);
+                if (workPackage == null) {
+                    workPackage = Optional.ofNullable(getWorkPackage(openProjectApiClient, idOrKey));
+                    resolutions.put(idOrKey, workPackage);
                 }
+                workPackage.ifPresent(resolved -> ids.add(String.valueOf(resolved.getId())));
             }
         }
         return new ArrayList<>(ids);
@@ -589,51 +614,37 @@ public class OpenProjectClient implements ProjectManagementClient
 
     /**
      * @return the ids of the work packages that exist and that the user can see, in the given order. Each id requires
-     *     a request to OpenProject, so they are checked in parallel (and the client caches them).
+     *     a request to OpenProject (which the client caches), sent in the current thread like in
+     *     {@link #resolveIds(OpenProjectApiClient, String[])}.
      */
     private List<String> getExistingIds(OpenProjectApiClient openProjectApiClient, List<String> ids)
         throws ProjectManagementException
     {
-        Map<String, CompletableFuture<WorkPackage>> checks = new HashMap<>();
-        for (String id : ids) {
-            checks.put(id, CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, id)));
-        }
         List<String> existingIds = new ArrayList<>();
         for (String id : ids) {
-            if (joinResolution(id, checks.get(id)) != null) {
+            if (getWorkPackage(openProjectApiClient, id) != null) {
                 existingIds.add(id);
             }
         }
         return existingIds;
     }
 
-    private static WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
-    {
-        try {
-            return openProjectApiClient.getWorkPackage(key);
-        } catch (ProjectManagementException e) {
-            throw new CompletionException(e);
-        }
-    }
-
-    private WorkPackage joinResolution(String key, CompletableFuture<WorkPackage> resolution)
+    /**
+     * @return the work package with the given id or key, or {@code null} if it doesn't exist, if the user can't see
+     *     it or if OpenProject rejects the key
+     */
+    private WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
         throws ProjectManagementException
     {
         try {
-            return resolution.join();
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof WorkItemRetrievalException
-                && !isAuthenticationOrRightsFailure((WorkItemRetrievalException) cause))
-            {
-                // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
-                logger.warn("Failed to resolve the work package key [{}]: {}", key, cause.getMessage());
-                return null;
-            } else if (cause instanceof ProjectManagementException) {
-                throw (ProjectManagementException) cause;
+            return openProjectApiClient.getWorkPackage(key);
+        } catch (WorkItemRetrievalException e) {
+            if (isAuthenticationOrRightsFailure(e)) {
+                throw e;
             }
-            throw new WorkItemRetrievalException(String.format("Failed to resolve the work package key [%s].", key),
-                cause);
+            // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
+            logger.warn("Failed to resolve the work package key [{}]: {}", key, e.getMessage());
+            return null;
         }
     }
 
@@ -808,5 +819,14 @@ public class OpenProjectClient implements ProjectManagementClient
             this.filters = filters;
             this.sortBy = sortBy;
         }
+    }
+
+    /**
+     * Retrieves a page of work items from OpenProject.
+     */
+    @FunctionalInterface
+    private interface WorkItemsPageRetriever
+    {
+        PaginatedResult<WorkItem> get(int openProjectPage) throws ProjectManagementException;
     }
 }

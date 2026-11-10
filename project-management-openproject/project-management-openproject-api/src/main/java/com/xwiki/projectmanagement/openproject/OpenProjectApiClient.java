@@ -222,7 +222,9 @@ public interface OpenProjectApiClient
      * Retrieves a list of available users for creating a work package based on the specified page size and filter
      * criteria from the current OpenProject configuration.
      *
-     * @param url the URL of the work package for which we want to retrieve the available users.
+     * @param url the link ({@code href}) of the available users, as returned by the OpenProject API, i.e. an
+     *     absolute path including the path the instance is served under (e.g.
+     *     {@code /openproject/api/v3/projects/1/available_assignees}).
      * @param offset the offset from which to start retrieving users.
      * @param pageSize the number of users to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request
@@ -254,7 +256,8 @@ public interface OpenProjectApiClient
      * Retrieves a paginated list of available projects for creating work packages based on the specified page size and
      * filter criteria from the current OpenProject configuration.
      *
-     * @param url the URL of the work package for which we want to retrieve the available projects.
+     * @param url the link ({@code href}) of the available projects, as returned by the OpenProject API, i.e. an
+     *     absolute path including the path the instance is served under.
      * @param offset the offset from which to start retrieving projects.
      * @param pageSize the number of projects to retrieve per page.
      * @param filters a JSON-formatted string representing filter criteria to apply to the request.
@@ -415,7 +418,8 @@ public interface OpenProjectApiClient
     /**
      * Creates a work package in OpenProject.
      *
-     * @param url the URL to create the work package.
+     * @param url the link ({@code href}) to create the work package (the commit link of the form response), as
+     *     returned by the OpenProject API, i.e. an absolute path including the path the instance is served under.
      * @param jsonBody the JSON body representing the work package to be created.
      * @return the created work package.
      * @throws ProjectManagementException if there was an issue during the creation process.
@@ -509,7 +513,8 @@ public interface OpenProjectApiClient
     /**
      * Updates an existing work package in OpenProject.
      *
-     * @param url the URL to update the work package (the commit link of the form response).
+     * @param url the link ({@code href}) to update the work package (the commit link of the form response), as
+     *     returned by the OpenProject API, i.e. an absolute path including the path the instance is served under.
      * @param jsonBody the JSON body representing the work package changes to be committed.
      * @return the updated work package.
      * @throws ProjectManagementException if there was an issue during the update process.

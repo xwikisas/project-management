@@ -897,12 +897,15 @@
     </property>
     <property>
       <codeToExecute>{{velocity}}
-## The filter presets and the styling of the OpenProject integration, displayed below the default connection.
+## The filter presets and the styling of the OpenProject integration. Since they follow the default connection, the
+## administration puts them in its form: the JavaScript extension of this page moves them after it.
 #if ($services.licensing.licensor.hasLicensureForEntity(
     $services.model.createDocumentReference('', ['OpenProject', 'Code'], 'OpenProjectConnectionClass')))
   #set ($openProjectSheetPart = 'presetsAndStyling')
   {{html wiki="false"}}
+  &lt;div id="openproject-presets-and-styling"&gt;
   $xwiki.includeTopic("OpenProject.Code.OpenProjectSheet")
+  &lt;/div&gt;
   {{/html}}
 #end
 {{/velocity}}</codeToExecute>
@@ -1578,6 +1581,25 @@
     event.preventDefault();
     event.stopImmediatePropagation();
   }, true);
+
+  // The administration puts in a single form all the sections of this page from the first one with a configuration
+  // class (the default connection) to the last one, so also the filter presets and the styling. They have their own
+  // actions (Live Data, buttons) and nothing to save with the form: move them after it, so that using them doesn't act
+  // on the form (e.g. pressing Enter in a Live Data filter).
+  const movePresetsAndStylingOutOfTheForm = function() {
+    const presetsAndStyling = document.getElementById('openproject-presets-and-styling');
+    const form = presetsAndStyling &amp;&amp; presetsAndStyling.closest('form');
+    if (form) {
+      // Move the whole section, with the container added by the administration around it.
+      const section = presetsAndStyling.closest('.codeToExecute');
+      form.after(section &amp;&amp; form.contains(section) ? section : presetsAndStyling);
+    }
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', movePresetsAndStylingOutOfTheForm);
+  } else {
+    movePresetsAndStylingOutOfTheForm();
+  }
 })();</code>
     </property>
     <property>

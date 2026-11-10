@@ -18,6 +18,12 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 ## Same picker as the one of the work package properties (see property_picker.vm), proposing the project properties.
+## The value is held by a hidden input named after the parameter, and the picker has no name: on XWiki versions older
+## than 17.10, the macro editor splits the value of a multiple select on commas, which fails on the default value of a
+## list parameter (a JSON array). propertyParameter.js keeps the hidden input and the picker in sync.
+## When the minimal supported XWiki version (the parent version in the root pom.xml) is 17.10 or later, remove this
+## workaround: drop the hidden input, keep the 'name' and 'id' parameters on the picker, and remove syncWithValueInput
+## from propertyParameter.js.
 #template('pickers_macros.vm')
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/propertyParameter.js', {'minify': false}))
 #set ($selectedProperties = [])
@@ -39,5 +45,12 @@
   'prefix': ' '
 })
 #set ($discard = $parameters.putAll($displayer.parameters))
+#set ($discard = $parameters.remove('name'))
+#set ($discard = $parameters.remove('id'))
 #set ($discard = $parameters.put('value', $selectedProperties))
-#suggestInput($parameters, 'staticPickerDisplayOptions')
+<div class="proj-manag-property-picker-field">
+  <input type="hidden" name="$!escapetool.xml($displayer.parameters.name)"#if ("$!displayer.parameters.id" != '')
+    id="$escapetool.xml($displayer.parameters.id)"#end
+    class="proj-manag-property-picker-value" value="$escapetool.xml($stringtool.join($selectedProperties, ','))"/>
+  #suggestInput($parameters, 'staticPickerDisplayOptions')
+</div>

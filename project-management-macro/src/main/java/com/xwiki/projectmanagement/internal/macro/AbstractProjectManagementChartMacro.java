@@ -50,6 +50,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -147,7 +148,6 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                     MacroTransformationContext context) throws MacroExecutionException
                 {
                     try {
-                        prepareContext(parameters);
                         return displayChart(chartTypeDisplayer, filters, parameters, translateLabels(labels), context,
                             typeDisplayerParams);
                     } catch (WorkItemException e) {
@@ -208,6 +208,20 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
         T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams)
         throws WorkItemException, MacroExecutionException
+    {
+        // The context that the extending class sets for the client is restored once the chart is displayed.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(macroContext, macroContext.getContext()))
+        {
+            prepareContext(parameters);
+            return displayChartInContext(chartTypeDisplayer, filters, parameters, labels, context,
+                typeDisplayerParams);
+        }
+    }
+
+    private List<Block> displayChartInContext(ChartTypeDisplayer chartTypeDisplayer,
+        List<List<LiveDataQuery.Filter>> filters, T parameters, List<String> labels, MacroTransformationContext context,
+        Object typeDisplayerParams) throws WorkItemException, MacroExecutionException
     {
         Optional<List<Map<String, Long>>> counts = countDatasets(filters, parameters);
         if (counts.isPresent()) {
@@ -282,11 +296,14 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         if (parameters.getLimit() != null) {
             return Collections.emptyList();
         }
+        // The work items skipped by the offset are left out on purpose, so they don't count as missing.
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
         long total = 0;
         boolean truncated = false;
         for (PaginatedResult<WorkItem> dataset : datasets) {
             int count = dataset.getItems() == null ? 0 : dataset.getItems().size();
-            int datasetTotal = dataset.getTotalItems() == null ? count : dataset.getTotalItems();
+            long datasetTotal =
+                dataset.getTotalItems() == null ? count : Math.max(0, dataset.getTotalItems() - offset);
             truncated |= datasetTotal > count;
             total = Math.max(total, datasetTotal);
         }

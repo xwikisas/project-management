@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -33,12 +34,15 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -267,6 +271,52 @@ class DefaultOpenProjectApiClientTest
 
         assertNull(workPackages.get(0).getPercentageDone());
         assertEquals(60, workPackages.get(1).getPercentageDone());
+    }
+
+    @Test
+    void getWorkPackagesKeepsTheTimeOfTheCreationAndUpdateDates() throws Exception
+    {
+        // The creation and update dates are date-times, with an offset (unlike the start and due dates).
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\"", "\"startDate\": \"2025-08-13\", "
+                + "\"createdAt\": \"2025-08-13T22:30:15.123Z\", \"updatedAt\": \"2025-08-14T09:05:00+02:00\""));
+
+        WorkPackage workPackage = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0);
+
+        assertEquals(Date.from(Instant.parse("2025-08-13T22:30:15.123Z")), workPackage.getCreatedAt());
+        assertEquals(Date.from(Instant.parse("2025-08-14T07:05:00Z")), workPackage.getUpdatedAt());
+        // The start date is still a plain date, at midnight in the time zone of the server.
+        assertEquals(new GregorianCalendar(2025, GregorianCalendar.AUGUST, 13).getTime(), workPackage.getStartDate());
+    }
+
+    @Test
+    void getWorkPackagesIgnoresAnInvalidCreationDate() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\"", "\"startDate\": \"2025-08-13\", "
+                + "\"createdAt\": \"invalid\", \"updatedAt\": \"2025-08-14T09:05:00+0200\""));
+
+        List<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems();
+
+        // The other work packages and the other properties are still returned.
+        assertEquals(3, workPackages.size());
+        assertNull(workPackages.get(0).getCreatedAt());
+        assertEquals(Date.from(Instant.parse("2025-08-14T07:05:00Z")), workPackages.get(0).getUpdatedAt());
+        assertEquals("Ignoring the invalid OpenProject date-time [invalid].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getProjectsKeepsTheTimeOfTheCreationDate() throws Exception
+    {
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse()
+            .replace("\"name\": \"First project\",",
+                "\"name\": \"First project\", \"createdAt\": \"2025-08-13T22:30:15Z\",")
+            .replace("\"name\": \"Second project\",", "\"name\": \"Second project\", \"createdAt\": null,"));
+
+        List<Project> projects = openProjectApiClient.getProjects(OFFSET, PAGE_SIZE, FILTERS_STRING).getItems();
+
+        assertEquals(Date.from(Instant.parse("2025-08-13T22:30:15Z")), projects.get(0).getCreatedAt());
+        assertNull(projects.get(1).getCreatedAt());
     }
 
     @Test
@@ -584,14 +634,140 @@ class DefaultOpenProjectApiClientTest
         when(this.response.statusCode()).thenReturn(200);
         when(this.response.body()).thenReturn("{}");
 
-        assertThrows(ProjectManagementException.class,
-            () -> apiClient.getAvailableUsers("x/api/v3/users", OFFSET, PAGE_SIZE, ""));
+        // The links returned by OpenProject include the path of the instance, and the ones built by XWiki are API
+        // paths relative to the URL of the instance: the other ones are outside it.
+        for (String href : List.of("x/api/v3/users", "/users", "/openprojectx/api/v3/users",
+            "/openproject/../api/v3/users", "/api/v3/../users", "/openproject@other.example/api/v3/users"))
+        {
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.getAvailableUsers(href, OFFSET, PAGE_SIZE, ""));
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.getAvailableProjects(href, OFFSET, PAGE_SIZE, ""));
+            assertThrows(ProjectManagementException.class, () -> apiClient.createWorkPackage(href, "{}"));
+            assertThrows(ProjectManagementException.class, () -> apiClient.updateWorkPackage(href, "{}"));
+        }
         verify(this.client, never()).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
 
-        apiClient.getAvailableUsers("/api/v3/users", null, null, "");
+        apiClient.getAvailableUsers("/openproject/api/v3/users", null, null, "");
         ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
         assertEquals("https://example.org/openproject/api/v3/users", captor.getValue().uri().toString());
+    }
+
+    @Test
+    void linksBuiltByXWikiForOpenProjectServedUnderAPath() throws Exception
+    {
+        // A local server, to read the bodies of the requests.
+        List<String> requests = new CopyOnWriteArrayList<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
+        server.createContext("/", exchange -> {
+            try (InputStream body = exchange.getRequestBody()) {
+                requests.add(exchange.getRequestMethod() + ' ' + exchange.getRequestURI().getPath() + ' '
+                    + new String(body.readAllBytes(), StandardCharsets.UTF_8));
+            }
+            byte[] response = "{}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(response);
+            }
+        });
+        server.start();
+        try {
+            InetSocketAddress address = server.getAddress();
+            DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient(
+                "http://" + address.getHostString() + ':' + address.getPort() + "/openproject",
+                new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), HTTP_CLIENT, this.descriptionCleaner);
+
+            // The project preselected in the work package form is linked without the path of the instance.
+            apiClient.getAvailableUsers("/api/v3/projects/1/available_assignees", 0, 10, "");
+            // The links chosen in the form are sent to OpenProject with the path of the instance.
+            apiClient.getWorkPackagesFormResponse("{\"subject\":\"/api/v3/x\",\"_links\":{"
+                + "\"project\":{\"href\":\"/api/v3/projects/1\"},"
+                + "\"parent\":{\"href\":\"/openproject/api/v3/work_packages/2\"},"
+                + "\"customField3\":[{\"href\":\"/api/v3/users/4\"}],\"assignee\":{\"href\":null}}}");
+            apiClient.updateWorkPackage("/openproject/api/v3/work_packages/2", "{\"lockVersion\":1}");
+
+            assertEquals(List.of(
+                "GET /openproject/api/v3/projects/1/available_assignees ",
+                "POST /openproject/api/v3/work_packages/form {\"subject\":\"/api/v3/x\",\"_links\":{"
+                    + "\"project\":{\"href\":\"/openproject/api/v3/projects/1\"},"
+                    + "\"parent\":{\"href\":\"/openproject/api/v3/work_packages/2\"},"
+                    + "\"customField3\":[{\"href\":\"/openproject/api/v3/users/4\"}],\"assignee\":{\"href\":null}}}",
+                "PATCH /openproject/api/v3/work_packages/2 {\"lockVersion\":1}"), requests);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void failedWorkPackageCommitHasTheURLOfTheRequest() throws Exception
+    {
+        DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient("https://example.org/openproject",
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenThrow(new IOException("down"));
+
+        assertEquals("There was an issue in communicating with "
+            + "[https://example.org/openproject/api/v3/work_packages].",
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.createWorkPackage("/openproject/api/v3/work_packages", "{}")).getMessage());
+        assertEquals("There was an issue in communicating with "
+            + "[https://example.org/openproject/api/v3/work_packages/2].",
+            assertThrows(ProjectManagementException.class,
+                () -> apiClient.updateWorkPackage("/openproject/api/v3/work_packages/2", "{}")).getMessage());
+    }
+
+    @Test
+    void linksReturnedByOpenProjectServedUnderAPath() throws Exception
+    {
+        // The links returned by OpenProject are absolute paths, which include the path of the instance.
+        DefaultOpenProjectApiClient apiClient = new DefaultOpenProjectApiClient("https://example.org/openproject",
+            new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{}");
+
+        apiClient.getAvailableProjects("/openproject/api/v3/work_packages/available_projects", 0, 10, "");
+        apiClient.getAvailableUsers("/openproject/api/v3/projects/1/available_assignees", 0, 10, "");
+        apiClient.createWorkPackage("/openproject/api/v3/work_packages", "{}");
+        apiClient.updateWorkPackage("/openproject/api/v3/work_packages/2", "{}");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client, times(4)).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(List.of(
+            "https://example.org/openproject/api/v3/work_packages/available_projects",
+            "https://example.org/openproject/api/v3/projects/1/available_assignees",
+            "https://example.org/openproject/api/v3/work_packages",
+            "https://example.org/openproject/api/v3/work_packages/2"),
+            captor.getAllValues().stream().map(request -> request.uri().getScheme() + "://"
+                + request.uri().getAuthority() + request.uri().getPath()).collect(Collectors.toList()));
+
+        // The pages of OpenProject are linked under the path of the instance.
+        when(this.response.body()).thenReturn("{\"_embedded\":{\"elements\":[{\"id\":7,\"title\":\"Release\","
+            + "\"summary\":\"\",\"description\":{\"raw\":\"\"},\"createdAt\":\"2026-10-01T10:00:00Z\","
+            + "\"_links\":{\"self\":{\"href\":\"/openproject/api/v3/news/7\",\"title\":\"Release\"},"
+            + "\"project\":{\"href\":\"/openproject/api/v3/projects/3\",\"title\":\"Third project\"},"
+            + "\"author\":{\"href\":\"/openproject/api/v3/users/1\",\"title\":\"Admin\"}}}]}}");
+        assertEquals(new Linkable("Third project", "https://example.org/openproject/projects/3"),
+            apiClient.getNews(OFFSET, PAGE_SIZE, "").getItems().get(0).getProjectLink());
+
+        when(this.response.body()).thenReturn("{\"_embedded\":{\"elements\":[{\"id\":5,\"subject\":\"Task\","
+            + "\"_links\":{"
+            + "\"type\":{\"href\":\"/openproject/api/v3/types/1\",\"title\":\"Task\"},"
+            + "\"status\":{\"href\":\"/openproject/api/v3/statuses/2\",\"title\":\"New\"},"
+            + "\"author\":{\"href\":\"/openproject/api/v3/users/3\",\"title\":\"Admin\"},"
+            + "\"assignee\":{\"href\":\"/openproject/api/v3/users/4\",\"title\":\"John\"},"
+            + "\"project\":{\"href\":\"/openproject/api/v3/projects/6\",\"title\":\"Demo\"},"
+            + "\"version\":{\"href\":\"/openproject/api/v3/versions/8\",\"title\":\"1.0\"}}}]}}");
+        WorkPackage workPackage = apiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems().get(0);
+        assertEquals("https://example.org/openproject/types/1/edit",
+            workPackage.getTypeOfWorkPackage().getLocation());
+        assertEquals("https://example.org/openproject/statuses/2/edit", workPackage.getStatus().getLocation());
+        assertEquals("https://example.org/openproject/users/3", workPackage.getAuthor().getLocation());
+        assertEquals("https://example.org/openproject/users/4", workPackage.getAssignee().getLocation());
+        assertEquals("https://example.org/openproject/projects/6", workPackage.getProject().getLocation());
+        assertEquals(new Linkable("1.0", "https://example.org/openproject/versions/8"),
+            workPackage.getFieldValues().get("version"));
     }
 
     @Test

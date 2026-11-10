@@ -133,6 +133,17 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
         }
     }
 
+    /**
+     * The lock of a document, with the number of threads holding it or waiting for it, accessed only from the atomic
+     * operations of the lock map.
+     */
+    static final class DocumentLock
+    {
+        private final ReentrantLock lock = new ReentrantLock();
+
+        private int users;
+    }
+
     class FoundLine
     {
         private String plainText;
@@ -218,8 +229,7 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
     @Named("document")
     private UserReferenceResolver<DocumentReference> userReferenceResolver;
 
-    private final ConcurrentMap<DocumentReference, ReentrantLock> documentLocks =
-        new ConcurrentHashMap<>();
+    private final ConcurrentMap<DocumentReference, DocumentLock> documentLocks = new ConcurrentHashMap<>();
 
     @Override
     public Response insetIntoPage(String wikiName, String spaces, String pageName, MacroInsertion macroInsertion)
@@ -230,14 +240,14 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
             if (!authorizationManager.hasAccess(Right.EDIT, documentReference)) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            // Work on a copy of the cached document.
-            XWikiDocument document = context.getWiki().getDocument(documentReference, context).clone();
-
-            maybeEarlyExit(document, macroInsertion);
-
-            ReentrantLock lock = documentLocks.computeIfAbsent(documentReference, id -> new ReentrantLock());
-            lock.lock();
+            DocumentLock lock = acquireLock(documentReference);
             try {
+                // Load the document once the lock is taken, so that it includes the insertions done concurrently, and
+                // work on a copy of the cached document.
+                XWikiDocument document = context.getWiki().getDocument(documentReference, context).clone();
+
+                maybeEarlyExit(document, macroInsertion);
+
                 // Return is doc syntax is not xwiki syntax.
                 String docContent = document.getContent();
                 SelectionSearch selectionSearch = findSelectionLine(macroInsertion, docContent);
@@ -253,16 +263,32 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
                     context.getWiki().saveDocument(document, "Inserted OpenProject mention.", true, context);
                 }
             } finally {
-                lock.unlock();
-                if (!lock.hasQueuedThreads()) {
-                    documentLocks.remove(documentReference, lock);
-                }
+                releaseLock(documentReference, lock);
             }
         } catch (XWikiRestException | XWikiException | MissingParserException | ParseException
                  | ComponentLookupException e) {
             throw new RuntimeException(e);
         }
         return Response.ok().build();
+    }
+
+    private DocumentLock acquireLock(DocumentReference documentReference)
+    {
+        // Count the threads using the lock, atomically, so that it's removed only when no thread is about to take it.
+        DocumentLock lock = this.documentLocks.compute(documentReference, (reference, currentLock) -> {
+            DocumentLock documentLock = currentLock != null ? currentLock : new DocumentLock();
+            documentLock.users++;
+            return documentLock;
+        });
+        lock.lock.lock();
+        return lock;
+    }
+
+    private void releaseLock(DocumentReference documentReference, DocumentLock lock)
+    {
+        lock.lock.unlock();
+        this.documentLocks.computeIfPresent(documentReference,
+            (reference, documentLock) -> --documentLock.users == 0 ? null : documentLock);
     }
 
     private void setAuthors(XWikiDocument document, XWikiContext context)

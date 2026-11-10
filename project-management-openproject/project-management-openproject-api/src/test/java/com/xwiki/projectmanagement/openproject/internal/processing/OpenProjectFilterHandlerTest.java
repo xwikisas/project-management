@@ -299,6 +299,21 @@ class OpenProjectFilterHandlerTest
     }
 
     @Test
+    void convertSingleDateFilters() throws JsonProcessingException, ProjectManagementException
+    {
+        // Only a range of dates is split: a single date is passed as is, even when it contains a slash.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("creationDate", "=d", "2026/11/10 10:30"),
+            new LiveDataQuery.Filter("dueDate", "=d", "2026-11-10T10:30:00+01:00"));
+
+        String expected = "["
+            + "{\"createdAt\":{\"operator\":\"=d\",\"values\":[\"2026/11/10 10:30\"]}},"
+            + "{\"dueDate\":{\"operator\":\"=d\",\"values\":[\"2026-11-10T10:30:00+01:00\"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, OpenProjectFilterHandler.convertFilters(filters));
+    }
+
+    @Test
     void convertFiltersDropsTheConstraintsWithoutValue() throws JsonProcessingException, ProjectManagementException
     {
         LiveDataQuery.Filter summary = new LiveDataQuery.Filter("summary", "contains", "");
