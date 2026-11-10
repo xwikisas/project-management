@@ -555,7 +555,8 @@ public class OpenProjectClient implements ProjectManagementClient
      * Turns the work package keys into ids, dropping the duplicates and the keys of the work packages that don't exist
      * or that the user can't see, so that they don't prevent the other work packages from being displayed. Each key
      * requires a request to OpenProject (which the client caches). The keys are resolved one after the other, in the
-     * current thread, since the requests need the XWiki execution context of the current request.
+     * current thread, so that they run with the XWiki execution context of the current request (and don't block the
+     * common ForkJoinPool).
      * <p>
      * TODO: send the keys directly in the id filter, without resolving them, once OpenProject accepts them there:
      * https://community.openproject.org/wp/82068 (API v3: allow filtering work packages by their semantic identifier
