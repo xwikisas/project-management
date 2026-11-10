@@ -171,25 +171,27 @@ class DefaultPresetsManagerTest
     private void stubQuery(String statement, Map<String, Object> parameters, int offset, int limit,
         Object... rows) throws QueryException
     {
-        when(this.queryManager.createQuery(statement, Query.XWQL))
-            .thenReturn(new DefaultQuery(statement, Query.XWQL, new QueryExecutor()
+        QueryExecutor executor = new QueryExecutor()
+        {
+            @Override
+            @SuppressWarnings("unchecked")
+            public <T> List<T> execute(Query query)
             {
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> List<T> execute(Query query)
+                if (!parameters.equals(query.getNamedParameters()) || query.getOffset() != offset
+                    || query.getLimit() != limit)
                 {
-                    if (!parameters.equals(query.getNamedParameters()) || query.getOffset() != offset
-                        || query.getLimit() != limit)
-                    {
-                        return Collections.emptyList();
-                    }
-                    List<Object> results = new ArrayList<>(List.of(rows));
-                    for (QueryFilter filter : query.getFilters()) {
-                        results = filter.filterResults(results);
-                    }
-                    return (List<T>) results;
+                    return Collections.emptyList();
                 }
-            }));
+                List<Object> results = new ArrayList<>(List.of(rows));
+                for (QueryFilter filter : query.getFilters()) {
+                    results = filter.filterResults(results);
+                }
+                return (List<T>) results;
+            }
+        };
+        // A new query each time, like the query manager.
+        when(this.queryManager.createQuery(statement, Query.XWQL))
+            .thenAnswer(invocation -> new DefaultQuery(statement, Query.XWQL, executor));
     }
 
     private void stubFailingQuery(String statement) throws QueryException
@@ -213,23 +215,23 @@ class DefaultPresetsManagerTest
     @Test
     void getNormalPresets() throws Exception
     {
-        stubQuery(NORMAL_PRESETS, Map.of(), 20, 10, "Preset.MyPreset");
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 0, "Preset.MyPreset");
 
-        assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 20, 10)));
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 0, 10)));
     }
 
     @Test
     void getChartPresets() throws Exception
     {
-        stubQuery(CHART_PRESETS, Map.of(), 20, 10, "Preset.MyPreset");
+        stubQuery(CHART_PRESETS, Map.of(), 0, 0, "Preset.MyPreset");
 
-        assertEquals(List.of("default"), names(this.presetsManager.getPresets(true, 20, 10)));
+        assertEquals(List.of("default"), names(this.presetsManager.getPresets(true, 0, 10)));
     }
 
     @Test
     void getPresetsWhenNoneExist() throws Exception
     {
-        stubQuery(CHART_PRESETS, Map.of(), 0, 10);
+        stubQuery(CHART_PRESETS, Map.of(), 0, 0);
 
         assertEquals(List.of(), this.presetsManager.getPresets(true, 0, 10));
     }
@@ -247,23 +249,23 @@ class DefaultPresetsManagerTest
     @Test
     void getNormalClientPresets() throws Exception
     {
-        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 20, 10, "Preset.MyPreset");
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0, "Preset.MyPreset");
 
-        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, false, 20, 10)));
+        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, false, 0, 10)));
     }
 
     @Test
     void getChartClientPresets() throws Exception
     {
-        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 20, 10, "Preset.MyPreset");
+        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0, "Preset.MyPreset");
 
-        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, true, 20, 10)));
+        assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, true, 0, 10)));
     }
 
     @Test
     void getClientPresetsWhenNoneExist() throws Exception
     {
-        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10);
+        stubQuery(CHART_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0);
 
         assertEquals(List.of(), this.presetsManager.getClientPresets(CLIENT, true, 0, 10));
     }
@@ -365,20 +367,43 @@ class DefaultPresetsManagerTest
     void getPresetsIgnoresPresetsWhoseAuthorIsNotAdmin() throws Exception
     {
         savePreset(OTHER_PRESET, USER, "other");
-        stubQuery(NORMAL_PRESETS, Map.of(), 0, 10, "Space.OtherPreset", "Preset.MyPreset");
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
         assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 0, 10)));
-        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
+        // Not logged as a warning, since it would be on each listing.
+        assertEquals(0, this.logCapture.size());
     }
 
     @Test
     void getClientPresetsIgnoresPresetsWhoseAuthorIsNotAdmin() throws Exception
     {
         savePreset(OTHER_PRESET, USER, "other");
-        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10, "Space.OtherPreset", "Preset.MyPreset");
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
         assertEquals(List.of("default"), names(this.presetsManager.getClientPresets(CLIENT, false, 0, 10)));
-        assertEquals(NOT_ADMIN_WARNING, this.logCapture.getMessage(0));
+        assertEquals(0, this.logCapture.size());
+    }
+
+    @Test
+    void getPresetsPaginatesThePresetsThatAreKept() throws Exception
+    {
+        // The ignored presets don't count in the pagination: the requested page is complete.
+        savePreset(OTHER_PRESET, USER, "other");
+        DocumentReference hidden = new DocumentReference("xwiki", "Space", "Hidden");
+        savePreset(hidden, ADMIN, "hidden");
+        setViewableByCurrentUser(hidden, false);
+        savePreset(new DocumentReference("xwiki", "Space", "Second"), ADMIN, "second");
+        savePreset(new DocumentReference("xwiki", "Space", "Third"), ADMIN, "third");
+        savePreset(new DocumentReference("xwiki", "Space", "Fourth"), ADMIN, "fourth");
+        Object[] rows = { "Space.OtherPreset", "Preset.MyPreset", "Space.Hidden", "Space.Second", "Space.Third",
+            "Space.Fourth" };
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 0, rows);
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0, rows);
+
+        assertEquals(List.of("second", "third"), names(this.presetsManager.getPresets(false, 1, 2)));
+        assertEquals(List.of("third", "fourth"), names(this.presetsManager.getClientPresets(CLIENT, false, 2, 5)));
+        assertEquals(List.of("default", "second", "third", "fourth"),
+            names(this.presetsManager.getPresets(false, 0, 0)));
     }
 
     @Test
@@ -386,7 +411,7 @@ class DefaultPresetsManagerTest
     {
         savePreset(OTHER_PRESET, ADMIN, "other");
         setViewableByCurrentUser(OTHER_PRESET, false);
-        stubQuery(NORMAL_PRESETS, Map.of(), 0, 10, "Space.OtherPreset", "Preset.MyPreset");
+        stubQuery(NORMAL_PRESETS, Map.of(), 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
         assertEquals(List.of("default"), names(this.presetsManager.getPresets(false, 0, 10)));
     }
@@ -396,7 +421,7 @@ class DefaultPresetsManagerTest
     {
         savePreset(OTHER_PRESET, ADMIN, "other");
         setViewableByCurrentUser(DEFAULT_PRESET, false);
-        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 10, "Space.OtherPreset", "Preset.MyPreset");
+        stubQuery(NORMAL_CLIENT_PRESETS, CLIENT_PARAMETER, 0, 0, "Space.OtherPreset", "Preset.MyPreset");
 
         assertEquals(List.of("other"), names(this.presetsManager.getClientPresets(CLIENT, false, 0, 10)));
     }
