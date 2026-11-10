@@ -36,6 +36,7 @@ import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.page.PageTest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Page test for the editor of the properties parameter of the OpenProject Project Details macro.
@@ -55,7 +56,7 @@ class ProjectDetailsPropertiesPickerPageTest extends PageTest
             OpenProjectProjectDetailsProperty.STATUS));
 
         // The same picker as the one of the work package properties of the other macros.
-        Element picker = result.selectFirst("select.proj-manag-property-picker[name=properties][multiple]");
+        Element picker = result.selectFirst("select.proj-manag-property-picker[multiple]");
         assertEquals(List.of("ID", "NAME", "IDENTIFIER", "DESCRIPTION", "STATUS", "CREATED"),
             picker.select("option").stream().map(Element::val).collect(Collectors.toList()), result.html());
         assertEquals(List.of("NAME", "STATUS"),
@@ -65,12 +66,29 @@ class ProjectDetailsPropertiesPickerPageTest extends PageTest
             picker.select("option").get(2).text());
     }
 
+    @Test
+    void holdsTheValueInAHiddenInput() throws Exception
+    {
+        Document result = render(List.of(OpenProjectProjectDetailsProperty.NAME,
+            OpenProjectProjectDetailsProperty.STATUS));
+
+        // Before XWiki 17.10, the macro editor splits the value of a multiple select on commas, which fails on the
+        // default value of the parameter, a JSON array: the value is held by a hidden input and the picker has no name.
+        Element valueInput = result.selectFirst("input[type=hidden][name=properties]");
+        assertEquals("NAME,STATUS", valueInput.val(), result.html());
+        assertEquals("properties-id", valueInput.id());
+        assertEquals(1, result.select("[name=properties]").size());
+        Element picker = result.selectFirst("select.proj-manag-property-picker");
+        assertFalse(picker.hasAttr("name"));
+        assertFalse(picker.hasAttr("id"));
+    }
+
     private Document render(List<OpenProjectProjectDetailsProperty> value) throws Exception
     {
         ScriptContext scriptContext =
             this.componentManager.<ScriptContextManager>getInstance(ScriptContextManager.class).getScriptContext();
         scriptContext.setAttribute("displayer",
-            Map.of("value", value, "parameters", Map.of("name", "properties")),
+            Map.of("value", value, "parameters", Map.of("name", "properties", "id", "properties-id")),
             ScriptContext.ENGINE_SCOPE);
         TemplateManager templateManager = this.componentManager.getInstance(TemplateManager.class);
         return Jsoup.parse(templateManager.render(TEMPLATE));
