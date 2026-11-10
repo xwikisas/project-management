@@ -23,9 +23,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -56,6 +53,7 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.doc.XWikiLock;
 import com.xwiki.commons.document.MacroUtils;
+import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 import com.xwiki.projectmanagement.openproject.rest.OpenProjectMacroInsertResource;
 
@@ -200,18 +198,8 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
     @Inject
     private ContextualAuthorizationManager authorizationManager;
 
-    private final ConcurrentMap<DocumentReference, DocumentLock> documentLocks = new ConcurrentHashMap<>();
-
-    /**
-     * A lock shared by the insertions in the same document, which counts the requests using it so that it is removed
-     * from the map only when no request holds or waits for it.
-     */
-    private static final class DocumentLock
-    {
-        private final ReentrantLock lock = new ReentrantLock();
-
-        private int users;
-    }
+    @Inject
+    private DocumentModificationLock documentModificationLock;
 
     @Override
     public Response insetIntoPage(String wikiName, String spaces, String pageName, MacroInsertion macroInsertion)
@@ -222,11 +210,11 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
             if (!authorizationManager.hasAccess(Right.EDIT, documentReference)) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            DocumentLock lock = acquireLock(documentReference);
+            this.documentModificationLock.lock(documentReference);
             try {
-                // Load the document only once the lock is held, so that the content saved by a concurrent insertion
-                // in the same page is not overwritten. Work on a copy of the cached document.
-                XWikiDocument document = context.getWiki().getDocument(documentReference, context).clone();
+                // Load the document only once the lock is held, so that the content saved by a concurrent
+                // modification of the page is not overwritten.
+                XWikiDocument document = this.documentModificationLock.loadLatestDocument(documentReference);
 
                 maybeEarlyExit(document, macroInsertion);
 
@@ -243,35 +231,13 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
                     context.getWiki().saveDocument(document, "Inserted OpenProject mention.", true, context);
                 }
             } finally {
-                releaseLock(documentReference, lock);
+                this.documentModificationLock.unlock(documentReference);
             }
         } catch (XWikiRestException | XWikiException | MissingParserException | ParseException
                  | ComponentLookupException e) {
             throw new RuntimeException(e);
         }
         return Response.ok().build();
-    }
-
-    private DocumentLock acquireLock(DocumentReference documentReference)
-    {
-        // The user count is updated atomically with the map entry, so a lock can't be removed between the moment a
-        // request gets it and the moment it locks it.
-        DocumentLock documentLock = this.documentLocks.compute(documentReference, (reference, existing) -> {
-            DocumentLock result = existing != null ? existing : new DocumentLock();
-            result.users++;
-            return result;
-        });
-        documentLock.lock.lock();
-        return documentLock;
-    }
-
-    private void releaseLock(DocumentReference documentReference, DocumentLock documentLock)
-    {
-        documentLock.lock.unlock();
-        this.documentLocks.computeIfPresent(documentReference, (reference, existing) -> {
-            existing.users--;
-            return existing.users > 0 ? existing : null;
-        });
     }
 
     private SelectionSearch findSelectionLine(MacroInsertion selection, String docContent)

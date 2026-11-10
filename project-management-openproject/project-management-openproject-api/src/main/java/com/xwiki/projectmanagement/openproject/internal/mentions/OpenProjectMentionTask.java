@@ -47,6 +47,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.commons.document.MacroBlockFinder;
+import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_INSTANCE;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_WORK_PACKAGE_ID;
@@ -83,6 +84,9 @@ public class OpenProjectMentionTask implements TaskConsumer
     private MacroBlockFinder macroBlockFinder;
 
     @Inject
+    private DocumentModificationLock documentModificationLock;
+
+    @Inject
     private Provider<XWikiContext> xWikiContextProvider;
 
     @Inject
@@ -98,9 +102,15 @@ public class OpenProjectMentionTask implements TaskConsumer
         XWikiContext context = xWikiContextProvider.get();
         context.put(TASK_EXECUTING_KEY, true);
 
+        // The mention objects are saved with the whole document: lock it, so that a concurrent modification (e.g. a
+        // macro inserted in the page) is not overwritten by the version loaded here.
+        this.documentModificationLock.lock(documentReference);
         try {
             logger.debug("Creating OP mentions for [{}].", documentReference);
-            XWikiDocument doc = context.getWiki().getDocument(documentReference, context);
+            XWikiDocument doc = this.documentModificationLock.loadLatestDocument(documentReference);
+            if (doc.isNew()) {
+                return;
+            }
             List<MacroBlock> opMacros = getMacroBlocks(doc);
 
             List<BaseObject> existingObjs = doc.getXObjects(REFERENCE);
@@ -128,6 +138,7 @@ public class OpenProjectMentionTask implements TaskConsumer
             logger.warn("Failed to create the OpenProject mention objects for the document [{}]. Cause: [{}]",
                 documentReference, ExceptionUtils.getRootCauseMessage(e));
         } finally {
+            this.documentModificationLock.unlock(documentReference);
             context.remove(TASK_EXECUTING_KEY);
         }
     }
