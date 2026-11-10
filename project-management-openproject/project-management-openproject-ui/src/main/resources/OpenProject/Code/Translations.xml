@@ -80,6 +80,7 @@ openproject.config.serverUrl=Server URL
 openproject.config.update=Update
 openproject.config.update=Update
 openproject.config.fillInAllFields=Please fill in all fields!
+openproject.config.invalidConnectionName=The connection name cannot contain "/" or "\\".
 openproject.config.update.notUpdated=Connection {0} was not updated!
 openproject.config.update.updated=Connection {0} has been updated!
 openproject.config.isAuthorized.true=Authorized

@@ -131,7 +131,8 @@ public class HandleConnectionsService
      *
      * @param openProjectConnection the connection data to be saved
      * @param documentReference the document reference
-     * @throws ConnectionSaveException if the document is not in the connections space, if the client id or the client
+     * @throws ConnectionSaveException if the document is not in the connections space, if the connection name contains
+     *     a slash or a backslash (it's part of the REST URLs), if the client id or the client
      *     secret is missing while the access mode lets the users connect their account, if the server URL is not
      *     valid, if a configuration with the same name already exists or if the existing page can't be updated
      * @throws ProjectManagementException if the query failed or the document retrieval/creation fails
@@ -148,6 +149,7 @@ public class HandleConnectionsService
                 this.compactSerializer.serialize(documentReference)));
         }
 
+        checkConnectionName(openProjectConnection.getConnectionName());
         checkServerURL(openProjectConnection.getServerURL());
 
         XWikiContext context = this.xcontextProvider.get();
@@ -170,6 +172,15 @@ public class HandleConnectionsService
             handleConnectionObjects(openProjectConnection, clientSecret, doc, context);
         } catch (QueryException | XWikiException e) {
             throw new ProjectManagementException("There was a problem while saving the connection", e);
+        }
+    }
+
+    private void checkConnectionName(String connectionName) throws ProjectManagementException
+    {
+        // The connection name is part of the REST URLs, where the servlet containers reject the encoded slashes.
+        if (StringUtils.containsAny(connectionName, '/', '\\')) {
+            throw ConnectionSaveException.invalid(String.format("The connection name [%s] is not valid: it can't "
+                + "contain [/] or [\\].", connectionName));
         }
     }
 

@@ -372,7 +372,23 @@ class HandleConnectionsServiceTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "http://openproject.example.com", "HTTPS://openproject.example.com:8443/openproject",
+    @ValueSource(strings = { "Team/Project", "Team\\Project", "/" })
+    void handleConnectionRefusesConnectionNameWithSlash(String connectionName) throws Exception
+    {
+        this.openProjectConnection.setConnectionName(connectionName);
+
+        ConnectionSaveException exception = assertThrows(ConnectionSaveException.class,
+            () -> this.handleConnectionsService.handleConnection(this.openProjectConnection, CONNECTION));
+
+        assertEquals(String.format("The connection name [%s] is not valid: it can't contain [/] or [\\].",
+            connectionName), exception.getMessage());
+        assertFalse(exception.isConflict());
+        verifyNoInteractions(this.openProjectApiClientFactory);
+        assertNotSaved();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "http://openproject.example.com","HTTPS://openproject.example.com:8443/openproject",
         "http://[::1]:8080", "http://172.17.0.1:8082", "https://user@openproject.example.com" })
     void handleConnectionAcceptsHttpServerURL(String serverURL) throws Exception
     {

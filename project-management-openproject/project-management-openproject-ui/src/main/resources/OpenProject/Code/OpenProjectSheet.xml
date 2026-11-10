@@ -388,6 +388,7 @@
     "delete.errorOccurred",
     "defaultConnection.refreshFailed",
     "fillInAllFields",
+    "invalidConnectionName",
     "save",
     "save.saved",
     "save.errorOccurred",
@@ -580,6 +581,11 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
           l10n.get("fillInAllFields"),
           "error"
         );
+      }
+
+      // The connection name is part of the REST URLs, where the encoded slashes are rejected by the servlet containers.
+      if (/[\/\\]/.test(connectionName)) {
+        return new XWiki.widgets.Notification(l10n.get("invalidConnectionName").escapeHTML(), "error");
       }
 
       const connectionRef = XWiki.Model.resolve(
