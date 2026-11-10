@@ -173,7 +173,7 @@ public class PublicDataClientProvider implements Disposable
             {
                 this.logger.warn("The OpenProject connection [{}] is configured to show its public data, but [{}] "
                     + "doesn't accept anonymous requests. Allow them in the OpenProject administration (e.g. by "
-                    + "disabling \"Login required\") or change the access mode of the connection.",
+                    + "disabling \"Authentication required\") or change the access mode of the connection.",
                     connection.getConnectionName(), connection.getServerURL());
                 return false;
             }
