@@ -55,8 +55,8 @@
   #if (!$configObj)
     #set ($configObj = $doc.getObject($configClass))
   #end
-  ## Only the users who can edit the dashboard can change its selection.
-  #set ($canSelect = $hasEdit &amp;&amp; $xwiki.hasAccessLevel('edit', $xcontext.user, $services.model.serialize($selectionReference, 'default')))
+  ## Only the logged-in users who can edit the dashboard can change its selection, which is shared by all users.
+  #set ($canSelect = "$!xcontext.userReference" != '' &amp;&amp; $hasEdit &amp;&amp; $xwiki.hasAccessLevel('edit', $xcontext.user, $services.model.serialize($selectionReference, 'default')))
   #if ($canSelect &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
     #if ($selectionDoc.isNew())
       #set ($discard = $selectionDoc.setHidden(true))

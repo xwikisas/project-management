@@ -51,6 +51,7 @@ import com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -183,6 +184,39 @@ class DashboardPageTest extends PageTest
     void selectionIsNotSavedWithoutEditRightOnTheDashboard() throws Exception
     {
         registerVelocityTool("hasEdit", false);
+        XWikiDocument dashboard = loadPage(DASHBOARD);
+        post(Map.of("action", "saveProject", "csrf_token", TOKEN, "connection", "second", "project", "3",
+            "projectLabel", "Demo project"));
+
+        Document document = render(dashboard);
+
+        assertTrue(this.xwiki.getDocument(SELECTION, this.context).isNew());
+        assertNull(document.getElementById("openproject-dashboard-project-form"));
+    }
+
+    @Test
+    void selectionIsNotSavedWithoutEditRightOnTheSelectionPage() throws Exception
+    {
+        when(this.oldcore.getMockRightService().hasAccessLevel(eq("edit"), anyString(),
+            eq("xwiki:OpenProject.DashboardSelection"), any())).thenReturn(false);
+        XWikiDocument dashboard = loadPage(DASHBOARD);
+
+        assertNull(render(dashboard).getElementById("openproject-dashboard-project-form"));
+
+        post(Map.of("action", "saveProject", "csrf_token", TOKEN, "connection", "second", "project", "3",
+            "projectLabel", "Demo project"));
+        Document document = render(dashboard);
+
+        // The dashboard is displayed: the selection isn't even attempted to be saved, which would fail.
+        assertNotNull(document.getElementById("openproject-dashboard-data"), document.html());
+        assertTrue(this.xwiki.getDocument(SELECTION, this.context).isNew());
+    }
+
+    @Test
+    void guestsCannotChangeTheSelection() throws Exception
+    {
+        // Guests with edit right must not change the selection shared by all users.
+        this.context.setUserReference(null);
         XWikiDocument dashboard = loadPage(DASHBOARD);
         post(Map.of("action", "saveProject", "csrf_token", TOKEN, "connection", "second", "project", "3",
             "projectLabel", "Demo project"));
