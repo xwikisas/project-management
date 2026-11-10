@@ -1031,7 +1031,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
         workPackage.setDescription(
             this.descriptionCleaner.clean(element.path(OP_DESCRIPTION).path(OP_HTML).asText(), this.connectionUrl));
-        workPackage.setPercentageDone(element.path(OP_RESPONSE_PERCENTAGE_DONE).asInt());
+        // The progress isn't set (null) e.g. in the work-based progress mode when the work isn't estimated, which isn't
+        // the same as no progress (0).
+        JsonNode percentageDone = element.path(OP_RESPONSE_PERCENTAGE_DONE);
+        workPackage.setPercentageDone(percentageDone.isNumber() ? percentageDone.asInt() : null);
         int id = element.path(OP_RESPONSE_ID).asInt();
         workPackage.setId(id);
 

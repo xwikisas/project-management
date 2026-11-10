@@ -257,6 +257,19 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getWorkPackagesWithoutProgress() throws Exception
+    {
+        // E.g. in the work-based progress mode, when the work of the work package isn't estimated.
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replace("\"percentageDone\": 30", "\"percentageDone\": null"));
+
+        List<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems();
+
+        assertNull(workPackages.get(0).getPercentageDone());
+        assertEquals(60, workPackages.get(1).getPercentageDone());
+    }
+
+    @Test
     void getWorkPackagesWithFieldValues() throws Exception
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse());
