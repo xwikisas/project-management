@@ -21,10 +21,9 @@ package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.Date;
 
-import org.joda.time.LocalDate;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectDateTimes;
 
 /**
  * Describes the project object of a work package.
@@ -73,9 +72,10 @@ public class Project extends BaseOpenProjectObject
             setStatus(new Linkable(statusName, statusHref));
         }
 
-        String createdAtText = projectJson.path(KEY_CREATED_AT).asText();
-        if (!createdAtText.isBlank() && createdAtText.length() >= 10) {
-            setCreatedAt(LocalDate.parse(createdAtText.substring(0, 10)).toDate());
+        JsonNode createdAtNode = projectJson.path(KEY_CREATED_AT);
+        if (!createdAtNode.isNull()) {
+            // The creation date is an ISO 8601 date-time with an offset: keep its time.
+            setCreatedAt(OpenProjectDateTimes.parse(createdAtNode.asText()));
         }
     }
 
