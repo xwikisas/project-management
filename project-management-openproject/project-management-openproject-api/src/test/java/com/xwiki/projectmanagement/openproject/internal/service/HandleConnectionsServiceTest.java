@@ -20,8 +20,11 @@
 package com.xwiki.projectmanagement.openproject.internal.service;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -149,9 +152,17 @@ class HandleConnectionsServiceTest
      */
     private void stubSameNameConnections(String... pages) throws Exception
     {
+        stubSameNameConnectionsOnWiki(WIKI, pages);
+    }
+
+    /**
+     * Answers the query looking for the other connections with the same name, run on the given wiki, with the given
+     * page names (local references, as stored in {@code doc.fullName}), except the page excluded by the query.
+     */
+    private void stubSameNameConnectionsOnWiki(String wiki, String... pages) throws Exception
+    {
         Map<String, Object> parameters = Map.of("className", "OpenProject.Code.OpenProjectConnectionClass",
-            "configFieldName", CONNECTION_NAME, "config", CONNECTION_NAME,
-            "serializedDocRef", "OpenProject.Code.OpenProjectConfigurations.FirstConnection");
+            "configFieldName", CONNECTION_NAME, "config", CONNECTION_NAME);
         when(this.queryManager.createQuery(SAME_NAME_QUERY, Query.HQL))
             .thenAnswer(invocation -> new DefaultQuery(SAME_NAME_QUERY, Query.HQL, new QueryExecutor()
             {
@@ -159,10 +170,13 @@ class HandleConnectionsServiceTest
                 @SuppressWarnings("unchecked")
                 public <T> List<T> execute(Query query)
                 {
-                    if (!WIKI.equals(query.getWiki()) || !parameters.equals(query.getNamedParameters())) {
+                    Map<String, Object> namedParameters = new HashMap<>(query.getNamedParameters());
+                    Object excludedPage = namedParameters.remove("serializedDocRef");
+                    if (!wiki.equals(query.getWiki()) || !parameters.equals(namedParameters)) {
                         return Collections.emptyList();
                     }
-                    return (List<T>) List.of(pages);
+                    return (List<T>) Stream.of(pages).filter(page -> !page.equals(excludedPage))
+                        .collect(Collectors.toList());
                 }
             }));
     }
@@ -318,6 +332,28 @@ class HandleConnectionsServiceTest
         assertEquals(CLIENT_SECRET, page.getXObject(CONNECTION_CLASS).getStringValue(CLIENT_SECRET));
         // The connection objects are updated, not added.
         assertEquals(1, page.getXObjects(CONNECTION_CLASS).size());
+    }
+
+    @Test
+    void handleConnectionUpdatesExistingPageOfSubwiki() throws Exception
+    {
+        DocumentReference subwikiConnection = new DocumentReference("subwiki",
+            List.of("OpenProject", "Code", "OpenProjectConfigurations"), "FirstConnection");
+        DocumentReference subwikiAdmin = new DocumentReference("subwiki", "XWiki", "Admin");
+        when(this.oldcore.getMockAuthorizationManager().hasAccess(Right.ADMIN, subwikiAdmin,
+            new WikiReference("subwiki"))).thenReturn(true);
+        saveConnectionPage(subwikiConnection, subwikiAdmin, CONNECTION_NAME);
+        // The query, run on the subwiki, finds the updated page itself unless it excludes it.
+        stubSameNameConnectionsOnWiki("subwiki", "OpenProject.Code.OpenProjectConfigurations.FirstConnection");
+        stubInstanceId(SERVER_URL + "/new");
+        this.openProjectConnection.setServerURL(SERVER_URL + "/new");
+
+        this.handleConnectionsService.handleConnection(this.openProjectConnection, subwikiConnection);
+
+        XWikiDocument page =
+            this.oldcore.getSpyXWiki().getDocument(subwikiConnection, this.oldcore.getXWikiContext());
+        assertEquals(SERVER_URL + "/new", page.getXObject(new DocumentReference("subwiki",
+            List.of("OpenProject", "Code"), "OpenProjectConnectionClass")).getStringValue("serverURL"));
     }
 
     @Test
