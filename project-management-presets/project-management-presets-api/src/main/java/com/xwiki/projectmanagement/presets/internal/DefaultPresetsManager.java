@@ -60,6 +60,11 @@ import com.xwiki.projectmanagement.presets.PresetsManager;
 @Singleton
 public class DefaultPresetsManager implements PresetsManager
 {
+    /**
+     * The listed presets are paginated in memory: list them in a stable order, so that the pages don't overlap.
+     */
+    private static final String LISTING_ORDER = " order by doc.fullName";
+
     @Inject
     private QueryManager queryManager;
 
@@ -94,8 +99,8 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " where obj.isMultiple = 0";
             }
-            return listPresets(queryManager.createQuery(String.format(query, Preset.CLASS_NAME), Query.XWQL), offset,
-                limit);
+            return listPresets(queryManager.createQuery(String.format(query + LISTING_ORDER, Preset.CLASS_NAME),
+                Query.XWQL), offset, limit);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
@@ -111,8 +116,8 @@ public class DefaultPresetsManager implements PresetsManager
             } else {
                 query += " and obj.isMultiple = 0";
             }
-            return listPresets(queryManager.createQuery(String.format(query, Preset.CLASS_NAME), Query.XWQL)
-                .bindValue("client", client), offset, limit);
+            return listPresets(queryManager.createQuery(String.format(query + LISTING_ORDER, Preset.CLASS_NAME),
+                Query.XWQL).bindValue("client", client), offset, limit);
         } catch (QueryException e) {
             throw new RuntimeException(e);
         }
