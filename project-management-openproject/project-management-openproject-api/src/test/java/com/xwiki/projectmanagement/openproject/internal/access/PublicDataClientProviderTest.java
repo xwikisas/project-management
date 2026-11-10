@@ -22,6 +22,12 @@ package com.xwiki.projectmanagement.openproject.internal.access;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import javax.inject.Provider;
@@ -63,6 +69,7 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -326,6 +333,40 @@ class PublicDataClientProviderTest
         verify(this.cache, never()).remove(anyString());
         verify(this.cache, never()).removeAll();
         verify(this.cache).dispose();
+    }
+
+    @Test
+    void clearCacheWaitsForTheCurrentUsesOfTheCache() throws Exception
+    {
+        this.provider.getClient(this.connection);
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> clientCache = getClientCache();
+        CountDownLatch reading = new CountDownLatch(1);
+        CountDownLatch readEnd = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            reading.countDown();
+            readEnd.await();
+            return this.result;
+        }).when(this.cache).get("key");
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<PaginatedResult<? extends BaseOpenProjectObject>> read =
+                executor.submit(() -> clientCache.get("key"));
+            assertTrue(reading.await(10, TimeUnit.SECONDS));
+            Future<?> clear = executor.submit(() -> this.provider.clearCache("wiki"));
+
+            // The cache isn't disposed while a request reads it.
+            assertThrows(TimeoutException.class, () -> clear.get(200, TimeUnit.MILLISECONDS));
+            verify(this.cache, never()).dispose();
+
+            readEnd.countDown();
+            assertSame(this.result, read.get(10, TimeUnit.SECONDS));
+            clear.get(10, TimeUnit.SECONDS);
+            verify(this.cache).dispose();
+        } finally {
+            readEnd.countDown();
+            executor.shutdownNow();
+        }
     }
 
     @Test

@@ -89,12 +89,13 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <!-- The user profile menu, to which the OpenProject tab of the user profile is added. -->
+      <!-- Required to display the OpenProject user profile UIX. -->
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-user-profile-ui</artifactId>
       <version>${platform.version}</version>
       <type>xar</type>
       <scope>runtime</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>

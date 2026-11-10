@@ -121,8 +121,10 @@
   ## Carries the effective connection to the JS for users without pickers (no connection select).
   &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
   ## The current user can't read the data of this connection: show the (per-user) authorize warning.
-  ## Guests can only see the connections that show their public data, since they can't connect an account.
-  #if (!$tokenValid &amp;&amp; $isGuest)
+  ## Guests can't connect an OpenProject account: ask them to log in when the connection lets users connect their
+  ## account. A connection showing only public data gets the usual warning (e.g. OpenProject refuses anonymous
+  ## requests).
+  #if (!$tokenValid &amp;&amp; $isGuest &amp;&amp; $services.openproject.getUserAccountConnections().contains($effectiveConnection))
     &lt;div class="box warningmessage"&gt;
       &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.guest'))&lt;/p&gt;
     &lt;/div&gt;
