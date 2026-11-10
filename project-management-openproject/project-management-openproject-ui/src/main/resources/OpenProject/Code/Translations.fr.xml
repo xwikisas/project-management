@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with this software; if not, write to the Free
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ * 02110-1301 USA, or see the FSF site: https://www.fsf.org.
 -->
 
 <xwikidoc version="1.5" reference="OpenProject.Code.Translations" locale="fr">
@@ -40,14 +40,21 @@
 openproject.config.addNewConnection=Ajouter une nouvelle connexion
 openproject.config.cancel=Annuler
 openproject.config.clientId=ID Client
-openproject.config.clientIdDescription.first=Créez une application OAuth dans OpenProject dans Authentification &gt; Applications OAuth et copiez l'ID Client.
+openproject.config.clientIdDescription.first=À partir d'une application OAuth créée dans OpenProject, dans Authentification &gt; Applications OAuth.
 openproject.config.clientIdDescription.second=Commencez la configuration &amp; copiez l'ID Client Oauth d'OpenProject. Collez-le ci-dessous.
 openproject.config.clientSecret=Clé secrète du client
-openproject.config.clientSecretDescription=Copiez la Clé secrète du client depuis l'application OAuth dans OpenProject, dans Authentification &gt; Applications OAuth.
-openproject.config.clientSecretKeep=Laisser vide pour garder la clé secrète du client actuelle.
-openproject.config.clientSecretKeepHint=La clé secrète du client actuelle n'est pas affichée, mais elle est toujours configurée. Laissez ce champ vide pour la garder, ou saisissez une nouvelle valeur pour la remplacer.
-openproject.config.showPublicData=Afficher les données publiques aux utilisateurs sans compte OpenProject
-openproject.config.showPublicDataDescription=Les utilisateurs invités et ceux ne s'étant pas connectés à OpenProject voient les données qu'OpenProject affiche aux utilisateurs anonymes, au lieu d'un message leur indiquant de se connecter à OpenProject. OpenProject doit accepter les requêtes anonymes (c'est-à-dire "Connexion requise" désactivé dans ses paramètres d'authentification).
+openproject.config.clientSecretDescription=Depuis la même application OAuth.
+openproject.config.clientSecretKeepHint=Laissez ce champ vide pour garder le secret actuel.
+openproject.config.accessMode=Méthode d'accès
+openproject.config.accessModeDescription=Les données publiques requièrent que l'option "Authentification requise" soit désactivée dans OpenProject.
+openproject.config.accessMode.USER_ACCOUNTS=Comptes utilisateurs seulement
+openproject.config.accessMode.USER_ACCOUNTS.description=Les utilisateurs doivent connecter leur compte OpenProject pour accéder à des données.
+openproject.config.accessMode.PUBLIC_DATA_AND_USER_ACCOUNTS=Données publiques et comptes utiisateur
+### Missing: openproject.config.accessMode.PUBLIC_DATA_AND_USER_ACCOUNTS.description=Everyone sees public data. Users can connect their account to see more.
+### Missing: openproject.config.accessMode.PUBLIC_DATA=Public data only
+### Missing: openproject.config.accessMode.PUBLIC_DATA.description=Everyone sees public data. No OAuth application needed.
+### Missing: openproject.config.notApplicable=Not applicable
+### Missing: openproject.config.authorize.notAllowed=The OpenProject connection {0} doesn''t let users connect their OpenProject account.
 openproject.config.connectionName=Nom de la connexion
 openproject.config.connectionNameDescription=Définissez un nom facilement reconnaissable pour l'instance OpenProject à laquelle vous vous connectez.
 openproject.config.connectionsDescription=Définit les accès aux instances OpenProject et associe un nom à chaque Connexion. Le nom de la Connexion peut ensuite être utilisé de nombreux composants OpenProject, lorsqu'une instance OpenProject est requise, comme dans un paramètre pour la Macro OpenProject.
@@ -79,6 +86,7 @@ openproject.config.isAuthorized.true=Autorisation obtenue
 openproject.config.isAuthorized.false=Pas encore autorisé
 openproject.livedatalabels.isAuthorized=Autorisé ?
 openproject.livedatalabels.actions=Actions
+### Missing: openproject.livedatalabels.accessMode=Access mode
 openproject.livedatalabels.clientId=ID Client
 openproject.livedatalabels.clientSecret=Clé secrète du Client
 openproject.livedatalabels.connectionName=Nom de la Connexion
@@ -106,6 +114,7 @@ openproject.createworkpackage.highlight=OpenProject
 openproject.createworkpackage.highlight.single=Créer un Lot de Travaux (WP)
 openproject.createworkpackage.highlight.multiple=Créer des Lots de Travaux (WP) depuis un tableau
 openproject.createworkpackage.modal.cancel=Annuler
+### Missing: openproject.createworkpackage.modal.close=Close
 openproject.createworkpackage.modal.create.single=Créer un Lot de Travaux (WP)
 openproject.createworkpackage.modal.create.multiple=Créer des Lots de Travaux (WP)
 openproject.createworkpackage.modal.single.description=Ce formulaire vous permet de créer un nouveau Lot de Travaux (WP) dans OpenProject basé sur le texte sélectionné.
@@ -180,5 +189,36 @@ openproject.config.presets.title=Présélection de filtres
 openproject.presets.name=Nom de la présélection
 openproject.presets.isMultiple=Préfiltre pour la macro chart ?
 openproject.presets._actions=Actions
+### Missing: openproject.userprofile.menu=OpenProject
+### Missing: openproject.userprofile.title=OpenProject accounts
+### Missing: openproject.userprofile.description=Connect your OpenProject account to see, in this wiki, the OpenProject data that your account can access. Without connecting it, you only see the public data of the connections that show it, if any.
+### Missing: openproject.userprofile.noConnections=No OpenProject connection of this wiki lets users connect their OpenProject account.
+### Missing: openproject.userprofile.connection=Connection
+### Missing: openproject.userprofile.server=Server
+### Missing: openproject.userprofile.status=Status
+### Missing: openproject.userprofile.actions=Actions
+### Missing: openproject.userprofile.connected=Connected
+### Missing: openproject.userprofile.notConnected=Not connected
+### Missing: openproject.userprofile.connect=Connect
+### Missing: openproject.userprofile.disconnect=Disconnect
+### Missing: openproject.userprofile.disconnected=Your OpenProject account has been disconnected from {0}.
+### Missing: openproject.userprofile.disconnectFailed=Failed to disconnect your OpenProject account from {0}.
+### Missing: openproject.createworkpackage.insert.inProgress=Inserting the work package in the page...
+### Missing: openproject.createworkpackage.insert.done=Work package inserted in the page
+### Missing: openproject.createworkpackage.insert.error=Failed to insert the work package in the page
+### Missing: openproject.createworkpackage.insert.noElement=Failed to find where to insert the work package in the page
+### Missing: openproject.createworkpackage.insert.lockedConfirm=Someone else is editing the page. Insert the work package anyway?
+### Missing: openproject.relations.clientParams.invalid=The parameters of the relation aren't valid JSON.
+### Missing: openproject.dashboard.gadget.openVsClosed=Open vs Closed
+### Missing: openproject.dashboard.gadget.projectDetails=Project Details
+### Missing: openproject.dashboard.gadget.workPackageTypes=Work Package Types
+### Missing: openproject.dashboard.gadget.projectMembers=Project Members
+### Missing: openproject.dashboard.gadget.openVsClosedPerType=Open vs Closed per Type
+### Missing: openproject.dashboard.gadget.spentTime=Time Spent in the Last 7 Days
+### Missing: openproject.dashboard.gadget.projectNews=Project News
+### Missing: openproject.dashboard.gadget.subprojects=Subprojects
+### Missing: openproject.dashboard.gadget.allWorkPackages=All Work Packages
+### Missing: openproject.template.provider.name=OpenProject Space
+### Missing: openproject.template.provider.description=A wiki space linked to an OpenProject project
 </content>
 </xwikidoc>
