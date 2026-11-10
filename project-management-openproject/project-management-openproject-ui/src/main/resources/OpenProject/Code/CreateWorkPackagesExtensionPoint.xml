@@ -972,8 +972,17 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     </property>
     <property>
       <code>require(['jquery'], function ($) {
+  // Whether at least one macro was inserted, so the page has to be reloaded to display it.
   let shouldReload = false;
-  let makeRequest = function (url, data, notification, forceReload) {
+  // The insertions are sent one after the other: when work packages are created from a table, each of them modifies
+  // the same page.
+  let insertQueue = Promise.resolve();
+  // The answer to the question asked when the page is locked, so that it's asked only once for all the rows.
+  let forceWhenLocked;
+  let makeRequest = function (url, data, notification, forceReload, onComplete) {
+    if (forceWhenLocked) {
+      data.force = true;
+    }
     $.ajax({
       url: url,
       type: "POST",
@@ -982,25 +991,40 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
     })
       .done(function () {
         shouldReload = true;
+        notification.replace(new XWiki.widgets.Notification("Macro inserted successfully.", "done"));
+        onComplete();
         if (forceReload) {
           window.location.reload();
         }
-        notification.replace(new XWiki.widgets.Notification("Macro inserted successfully.", "done"));
       })
       .fail(function (xhr) {
-        if (xhr.status == 423 &amp;&amp; confirm("The page is being edited by someone else. Insert the macro anyway?")) {
-          data.force = true;
-          makeRequest(url, data, notification, forceReload);
-          return;
+        if (xhr.status == 423 &amp;&amp; !data.force) {
+          if (forceWhenLocked === undefined) {
+            forceWhenLocked = confirm("The page is being edited by someone else. Insert the macro anyway?");
+          }
+          if (forceWhenLocked) {
+            makeRequest(url, data, notification, forceReload, onComplete);
+            return;
+          }
         }
-        shouldReload = false;
         notification.replace(new XWiki.widgets.Notification("Failed to insert the macro in page.", "error"));
+        onComplete();
       });
   };
+  let insertMacro = function (url, data, notification, forceReload) {
+    insertQueue = insertQueue.then(function () {
+      return new Promise(function (resolve) {
+        makeRequest(url, data, notification, forceReload, resolve);
+      });
+    });
+  };
   $(document).on('hidden.bs.modal', '#create-work-packages-modal', function () {
-    if (shouldReload) {
-      window.location.reload();
-    }
+    // Wait for the pending insertions, otherwise reloading the page would cancel them.
+    insertQueue.then(function () {
+      if (shouldReload) {
+        window.location.reload();
+      }
+    });
   });
   window.openProjectEvents = window.openProjectEvents || new EventTarget();
   window.openProjectEvents.addEventListener('op-creation-success', function (event) {
@@ -1050,7 +1074,7 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       fullLine: line
     };
     let notification = new XWiki.widgets.Notification("Inserting macro in page.", "inprogress");
-    makeRequest(url, data, notification, !(event.detail.batch == true));
+    insertMacro(url, data, notification, !(event.detail.batch == true));
 
   });
 });</code>
