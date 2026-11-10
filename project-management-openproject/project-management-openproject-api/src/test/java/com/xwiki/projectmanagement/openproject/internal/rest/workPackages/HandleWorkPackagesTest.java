@@ -31,6 +31,7 @@ import javax.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.xwiki.model.reference.WikiReference;
@@ -53,6 +54,8 @@ import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -68,6 +71,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -85,6 +89,9 @@ class HandleWorkPackagesTest
 
     @MockComponent
     private ContextualAuthorizationManager authorizationManager;
+
+    @MockComponent
+    private OpenProjectConfiguration openProjectConfiguration;
 
     @MockComponent
     private WikiDescriptorManager wikiDescriptorManager;
@@ -216,6 +223,27 @@ class HandleWorkPackagesTest
             Map.of("value", "/api/v3/projects/2", "label", "Project 2")
         );
         assertEquals(expected, response.getEntity());
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "https://example.org, /api/v3/projects/7", "https://example.org/openproject, "
+        + "/openproject/api/v3/projects/7" })
+    void getAvailableProjectsWithTheSelectedProject(String serverURL, String expectedValue) throws Exception
+    {
+        OpenProjectConnection connection = mock(OpenProjectConnection.class);
+        when(connection.getServerURL()).thenReturn(serverURL);
+        when(this.openProjectConfiguration.getConnection(INSTANCE)).thenReturn(connection);
+        Project project = new Project();
+        project.setName("Demo");
+        project.setSelf(new Linkable("Demo", serverURL + "/projects/7"));
+        when(this.openProjectApiClient.getProjects(eq(0), eq(1), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(project), 0, 1, 1));
+
+        Response response = this.handleWorkPackages.getAvailableProjects(WIKI, INSTANCE, "", OFFSET, PAGE_SIZE, 7);
+
+        // The value of the selected project is its API link, like the projects listed from the form of OpenProject,
+        // which include the path the instance is served under.
+        assertEquals(List.of(Map.of("value", expectedValue, "label", "Demo")), response.getEntity());
     }
 
     @Test
