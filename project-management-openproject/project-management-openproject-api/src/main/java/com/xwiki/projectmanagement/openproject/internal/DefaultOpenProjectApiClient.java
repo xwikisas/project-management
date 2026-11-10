@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -923,6 +924,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String uriStr = url;
         try {
             URI uri = createInstanceUriFromHref(url);
+            uriStr = uri.toString();
             HttpRequest request = createAuthorizedPostRequest(uri, jsonBody);
             HttpResponse<String> response = sendForJson(request);
 
@@ -968,6 +970,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String uriStr = url;
         try {
             URI uri = createInstanceUriFromHref(url);
+            uriStr = uri.toString();
             HttpRequest request = createAuthorizedPatchRequest(uri, jsonBody);
             HttpResponse<String> response = sendForJson(request);
 
@@ -1349,12 +1352,66 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         );
     }
 
+    /**
+     * Adds the path the instance is served under to the links of the given request body that were built by XWiki
+     * without it (e.g. {@code /api/v3/projects/1} for a project chosen from its identifier), since OpenProject only
+     * accepts the links that include it.
+     *
+     * @param jsonBody the JSON body of a request to the OpenProject API
+     * @return the body, with its links including the path of the instance
+     */
+    private String normalizeLinks(String jsonBody)
+    {
+        if (OpenProjectApiLinks.getInstancePath(connectionUrl).isEmpty()) {
+            // The instance is served at the root of its host: the links are complete.
+            return jsonBody;
+        }
+        try {
+            JsonNode body = objectMapper.readTree(jsonBody);
+            if (body == null || !normalizeLinks(body, false)) {
+                return jsonBody;
+            }
+            return objectMapper.writeValueAsString(body);
+        } catch (JsonProcessingException e) {
+            // Sent as is: OpenProject reports the invalid body.
+            return jsonBody;
+        }
+    }
+
+    /**
+     * @return whether a link was changed
+     */
+    private boolean normalizeLinks(JsonNode node, boolean inLinks)
+    {
+        boolean changed = false;
+        if (node.isObject()) {
+            JsonNode href = node.path(HREF);
+            if (inLinks && href.isTextual()) {
+                String normalizedHref = OpenProjectApiLinks.toInstanceHref(connectionUrl, href.asText());
+                if (!normalizedHref.equals(href.asText())) {
+                    ((ObjectNode) node).put(HREF, normalizedHref);
+                    changed = true;
+                }
+            }
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                changed |= normalizeLinks(field.getValue(), inLinks || OP_RESPONSE_LINKS.equals(field.getKey()));
+            }
+        } else if (node.isArray()) {
+            for (JsonNode element : node) {
+                changed |= normalizeLinks(element, inLinks);
+            }
+        }
+        return changed;
+    }
+
     private HttpRequest createAuthorizedPostRequest(URI uri, String jsonBody)
     {
         return createAuthorizedRequest(
             uri,
             POST,
-            HttpRequest.BodyPublishers.ofString(jsonBody),
+            HttpRequest.BodyPublishers.ofString(normalizeLinks(jsonBody)),
             MediaType.APPLICATION_JSON
         );
     }
@@ -1364,7 +1421,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         return createAuthorizedRequest(
             uri,
             PATCH,
-            HttpRequest.BodyPublishers.ofString(jsonBody),
+            HttpRequest.BodyPublishers.ofString(normalizeLinks(jsonBody)),
             MediaType.APPLICATION_JSON
         );
     }

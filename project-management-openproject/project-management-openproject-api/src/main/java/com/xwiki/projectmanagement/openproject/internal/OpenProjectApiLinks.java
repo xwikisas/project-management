@@ -28,7 +28,8 @@ import org.apache.commons.lang3.StringUtils;
  * Resolves the links ({@code href}) returned by the OpenProject API. They are absolute paths, which include the path
  * the instance is served under: e.g. {@code /openproject/api/v3/projects/1} for an instance served at
  * {@code https://example.org/openproject}. They must thus be resolved against the origin of the instance, not
- * appended to its URL.
+ * appended to its URL. The links built by XWiki from an identifier, e.g. {@code /api/v3/projects/1}, don't include
+ * this path: they are relative to the URL of the instance.
  *
  * @version $Id$
  * @since 1.4.0
@@ -55,10 +56,30 @@ public final class OpenProjectApiLinks
             return null;
         }
         String instancePath = getInstancePath(connectionUrl);
-        if (instancePath.isEmpty()) {
+        if (instancePath.isEmpty() || isApiPath(href)) {
+            // The links built by XWiki from an identifier, e.g. "/api/v3/projects/1", don't include the path of the
+            // instance.
             return href;
         }
         return href.startsWith(instancePath + SLASH) ? href.substring(instancePath.length()) : null;
+    }
+
+    /**
+     * @param connectionUrl the URL of the OpenProject instance, e.g. {@code https://example.org/openproject}
+     * @param href a link to a resource of the OpenProject API, possibly without the path of the instance, e.g.
+     *     {@code /api/v3/projects/1}
+     * @return the link as OpenProject expects it, with the path of the instance, e.g.
+     *     {@code /openproject/api/v3/projects/1}, or the link unchanged when it isn't a link built without the path of
+     *     the instance
+     */
+    public static String toInstanceHref(String connectionUrl, String href)
+    {
+        return href != null && isApiPath(href) ? getInstancePath(connectionUrl) + href : href;
+    }
+
+    private static boolean isApiPath(String href)
+    {
+        return href.equals(API_PATH) || href.startsWith(API_PATH + SLASH);
     }
 
     /**
@@ -80,7 +101,7 @@ public final class OpenProjectApiLinks
      * @return the path the instance is served under, without trailing slash, e.g. {@code /openproject}, or an empty
      *     string when it is served at the root of its host
      */
-    private static String getInstancePath(String connectionUrl)
+    public static String getInstancePath(String connectionUrl)
     {
         if (connectionUrl == null) {
             return "";

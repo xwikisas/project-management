@@ -51,10 +51,26 @@ class OpenProjectApiLinksTest
             OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/openproject/api/v3/projects/1"));
         assertEquals("/api/v3/projects/1",
             OpenProjectApiLinks.toInstanceRelativePath(PATH_URL + '/', "/openproject/api/v3/projects/1"));
+        // The links built by XWiki don't include the path of the instance.
+        assertEquals("/api/v3/projects/1", OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/api/v3/projects/1"));
+        assertEquals("/api/v3", OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/api/v3"));
         // The links outside the path of the instance are rejected.
-        assertNull(OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/api/v3/projects/1"));
+        assertNull(OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/projects/1"));
+        assertNull(OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/api/v30/projects/1"));
         assertNull(OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/openprojectx/api/v3/projects/1"));
         assertNull(OpenProjectApiLinks.toInstanceRelativePath(PATH_URL, "/openproject"));
+    }
+
+    @Test
+    void toInstanceHref()
+    {
+        assertEquals("/api/v3/projects/1", OpenProjectApiLinks.toInstanceHref(ROOT_URL, "/api/v3/projects/1"));
+        assertEquals("/openproject/api/v3/projects/1",
+            OpenProjectApiLinks.toInstanceHref(PATH_URL, "/api/v3/projects/1"));
+        // The links that already include the path of the instance are kept.
+        assertEquals("/openproject/api/v3/projects/1",
+            OpenProjectApiLinks.toInstanceHref(PATH_URL, "/openproject/api/v3/projects/1"));
+        assertNull(OpenProjectApiLinks.toInstanceHref(PATH_URL, null));
     }
 
     @Test
