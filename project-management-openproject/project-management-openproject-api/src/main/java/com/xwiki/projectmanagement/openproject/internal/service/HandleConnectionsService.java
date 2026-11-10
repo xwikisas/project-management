@@ -100,6 +100,10 @@ public class HandleConnectionsService
     private EntityReferenceSerializer<String> compactSerializer;
 
     @Inject
+    @Named("local")
+    private EntityReferenceSerializer<String> localSerializer;
+
+    @Inject
     @Named("document")
     private UserReferenceSerializer<DocumentReference> documentUserSerializer;
 
@@ -206,7 +210,8 @@ public class HandleConnectionsService
             )
             .bindValue("configFieldName", CONNECTION_NAME)
             .bindValue("config", connectionName)
-            .bindValue("serializedDocRef", compactSerializer.serialize(documentReference))
+            // The query runs on the wiki of the page, where doc.fullName holds local references.
+            .bindValue("serializedDocRef", this.localSerializer.serialize(documentReference))
             .setWiki(documentReference.getWikiReference().getName())
             .execute();
 
