@@ -263,11 +263,14 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         if (parameters.getLimit() != null) {
             return Collections.emptyList();
         }
+        // The work items skipped by the offset are left out on purpose, so they don't count as missing.
+        long offset = parameters.getOffset() == null ? 0 : parameters.getOffset();
         long total = 0;
         boolean truncated = false;
         for (PaginatedResult<WorkItem> dataset : datasets) {
             int count = dataset.getItems() == null ? 0 : dataset.getItems().size();
-            int datasetTotal = dataset.getTotalItems() == null ? count : dataset.getTotalItems();
+            long datasetTotal =
+                dataset.getTotalItems() == null ? count : Math.max(0, dataset.getTotalItems() - offset);
             truncated |= datasetTotal > count;
             total = Math.max(total, datasetTotal);
         }

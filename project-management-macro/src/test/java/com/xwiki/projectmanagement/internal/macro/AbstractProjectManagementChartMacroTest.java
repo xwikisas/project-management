@@ -216,6 +216,41 @@ class AbstractProjectManagementChartMacroTest
         verify(this.projectManagementManager, never()).countWorkItems(any(), any(), any());
     }
 
+    @Test
+    void doesntWarnAboutTheWorkItemsSkippedByTheOffset() throws Exception
+    {
+        this.parameters.setOffset(5L);
+        // 8 work items match: the first 5 are skipped and the 3 others are all charted.
+        PaginatedResult<WorkItem> workItems =
+            new PaginatedResult<>(List.of(new WorkItem(), new WorkItem(), new WorkItem()), 5, 1000, 8);
+        when(this.projectManagementManager.getWorkItems(CLIENT, 5, 1000, List.of(), List.of())).thenReturn(workItems);
+        when(this.displayer.execute(List.of(workItems), WorkItem.KEY_STATUS, List.of(),
+            this.macroTransformationContext, new HashMap<>())).thenReturn(this.chart);
+
+        assertEquals(this.chart, execute());
+    }
+
+    @Test
+    void warnsWhenTheChartDoesntCountAllTheWorkItemsAfterTheOffset() throws Exception
+    {
+        this.parameters.setOffset(5L);
+        PaginatedResult<WorkItem> workItems = new PaginatedResult<>(List.of(new WorkItem()), 5, 1000, 1500);
+        when(this.projectManagementManager.getWorkItems(CLIENT, 5, 1000, List.of(), List.of())).thenReturn(workItems);
+        when(this.displayer.execute(List.of(workItems), WorkItem.KEY_STATUS, List.of(),
+            this.macroTransformationContext, new HashMap<>())).thenReturn(this.chart);
+        Translation translation = mock(Translation.class);
+        WordBlock message = new WordBlock("truncated");
+        // The total doesn't include the work items skipped by the offset.
+        when(translation.render(1000, 1495L)).thenReturn(message);
+        when(this.localizationManager.getTranslation("projectmanagement.macro.chart.truncated"))
+            .thenReturn(translation);
+
+        List<Block> result = execute();
+
+        assertEquals(2, result.size());
+        assertEquals(List.of(message), result.get(1).getChildren().get(0).getChildren());
+    }
+
     private List<Block> execute() throws Exception
     {
         when(this.asyncExecutor.execute(any(), any(), any(), any(), any(), anyBoolean())).thenAnswer(invocation -> {
