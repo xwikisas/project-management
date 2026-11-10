@@ -28,6 +28,7 @@ import java.util.Map;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -67,6 +68,8 @@ public class OpenProjectProjectMembersMacro
 {
     private static final String CLASS = "class";
 
+    private static final String MISSING_PROJECT_HINT = "openproject.openproject-project-members.missingProject";
+
     /**
      * Default constructor.
      */
@@ -78,15 +81,19 @@ public class OpenProjectProjectMembersMacro
     }
 
     @Override
+    protected String getMissingParameterHint(OpenProjectProjectMembersMacroParameters parameters)
+    {
+        // The members of all projects are never listed.
+        return StringUtils.isBlank(parameters.getProject()) ? MISSING_PROJECT_HINT : null;
+    }
+
+    @Override
     protected List<Block> executeInternal(OpenProjectProjectMembersMacroParameters parameters, String content,
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
         String project = parameters.getProject();
-        // The members of all projects are never listed.
-        if (!hasProject(project)) {
-            throw new MacroExecutionException("The project whose members to display is missing.");
-        }
+        checkDashboardProject(project);
         String filters = FilterBuilder.get()
             .addFilter("project", FilterBuilder.Operator.EQUALS, Collections.singletonList(project)).build();
         List<User> members;

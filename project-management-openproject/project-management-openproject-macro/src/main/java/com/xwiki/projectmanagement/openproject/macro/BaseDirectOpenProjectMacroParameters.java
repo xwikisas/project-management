@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.macro;
 
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
@@ -45,6 +46,7 @@ public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstance
     }
 
     @Override
+    @PropertyOrder(100)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
@@ -62,6 +64,7 @@ public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstance
     /**
      * @param project see {@link #getProject()}.
      */
+    @PropertyOrder(10)
     @PropertyDisplayType(OpenProjectProject.class)
     public void setProject(String project)
     {

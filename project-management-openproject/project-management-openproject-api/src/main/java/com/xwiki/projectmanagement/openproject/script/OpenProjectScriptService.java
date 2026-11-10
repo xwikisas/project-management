@@ -37,6 +37,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.script.service.ScriptService;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.stability.Unstable;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiDocument;
@@ -180,6 +181,19 @@ public class OpenProjectScriptService implements ScriptService
             }
         }
         return names;
+    }
+
+    /**
+     * @return the name of the connection used by the OpenProject macros that don't specify their connection, or
+     *     {@code null} when there is none, i.e. when several connections are configured and none of them is the default
+     *     one
+     * @since 1.4.0
+     */
+    @Unstable
+    public String getDefaultConnectionName()
+    {
+        OpenProjectConnection connection = openProjectConfiguration.getDefaultConnection();
+        return connection == null ? null : connection.getConnectionName();
     }
 
     /**

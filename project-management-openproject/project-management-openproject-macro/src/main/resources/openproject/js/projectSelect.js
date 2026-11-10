@@ -33,7 +33,9 @@ require(['jquery'], function ($) {
 
   // Reads the currently selected OpenProject instance from the macro parameters.
   function getSelectedInstance() {
-    let instance = $('.macro-editor-modal :input[name="instance"]').val();
+    let instanceInput = $('.macro-editor-modal :input[name="instance"]');
+    // An empty instance means the default connection, whose name is held by the instance picker.
+    let instance = instanceInput.val() || instanceInput.attr('data-default-connection');
     if (instance === 'use_selected_dashboard_connection') {
       instance = $('#openproject-dashboard-connection-select').val();
     }

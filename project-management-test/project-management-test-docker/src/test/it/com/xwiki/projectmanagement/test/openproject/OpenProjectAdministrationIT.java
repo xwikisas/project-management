@@ -38,6 +38,7 @@ import org.xwiki.test.ui.TestUtils;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -284,31 +285,78 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     @Order(8)
     void defaultConnection(TestUtils setup, TestReference testReference) throws Exception
     {
+        // Start from the shared connection alone, without default connection: the connections added by the other
+        // tests made it the default one.
+        resetDefaultConnection(setup);
+
         // A macro that doesn't set its instance parameter uses the only connection.
         setup.createPage(testReference, "{{openproject id=\"defaultConnection\"/}}");
         ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
         assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
 
-        // With several connections, it has to choose one.
         String otherConnection = "other";
-        OpenProjectAdminPage.gotoPage()
-            .addNewConnection(otherConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
+        String renamedConnection = "renamed";
+        String thirdConnection = "third";
         try {
-            setup.gotoPage(testReference);
-            page = new ViewPageWithOpenProjectMacro();
-            assertEquals(List.of(String.format("Choose the OpenProject connection to use with the instance parameter, "
-                + "among: %s, %s. An administrator can also choose the default connection in the OpenProject "
-                + "section of the administration.", CONNECTION_ID, otherConnection)), page.getWarnings());
-
-            // Unless a default connection is chosen in the administration.
-            OpenProjectAdminPage.gotoPage().setDefaultConnection(CONNECTION_ID);
+            // Adding a second connection makes the first one the default connection, so that the macro keeps
+            // using it.
+            OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+            assertEquals("", adminPage.getDefaultConnection());
+            adminPage.addNewConnection(otherConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
+            assertEquals(CONNECTION_ID, adminPage.getDefaultConnection());
             setup.gotoPage(testReference);
             page = new ViewPageWithOpenProjectMacro();
             assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
+
+            // The default connection stays the default one when it's renamed.
+            adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.setDefaultConnection(otherConnection);
+            adminPage.updateConnection(otherConnection, renamedConnection, this.openProject.getBaseUrl(), "someid",
+                "");
+            assertEquals(renamedConnection, adminPage.getDefaultConnection());
+
+            // Adding a third connection keeps the default one.
+            adminPage.addNewConnection(thirdConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
+            assertEquals(renamedConnection, adminPage.getDefaultConnection());
+
+            // Deleting the default connection warns that the macros that don't specify a connection stop working, and
+            // clears the default connection.
+            assertEquals("", adminPage.getConnectionDeletionWarning(thirdConnection));
+            assertEquals("This is the default connection: the OpenProject macros that don't specify a connection "
+                + "will stop working until another default connection is chosen.",
+                adminPage.getConnectionDeletionWarning(renamedConnection));
+            adminPage.deleteConnection(renamedConnection);
+            assertEquals("", adminPage.getDefaultConnection());
+            setup.gotoPage(testReference);
+            page = new ViewPageWithOpenProjectMacro();
+            List<String> warnings = page.getWarnings();
+            assertEquals(1, warnings.size());
+            assertThat(warnings.get(0), startsWith("Choose the OpenProject connection to use with the instance "
+                + "parameter, among: "));
+            assertThat(warnings.get(0), containsString(CONNECTION_ID));
+            assertThat(warnings.get(0), containsString(thirdConnection));
+
+            // When a single connection would remain, the macros would use it.
+            adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.setDefaultConnection(thirdConnection);
+            adminPage = OpenProjectAdminPage.gotoPage();
+            assertEquals(String.format("This is the default connection: the OpenProject macros without a connection "
+                + "will then display the data of the %s connection.", CONNECTION_ID),
+                adminPage.getConnectionDeletionWarning(thirdConnection));
         } finally {
-            setup.updateObject("OpenProject.Code", "OpenProjectConfiguration",
-                "OpenProject.Code.OpenProjectConfigurationClass", 0, "defaultConnection", "");
-            OpenProjectAdminPage.gotoPage().deleteConnection(otherConnection);
+            OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+            for (String connection : List.of(otherConnection, renamedConnection, thirdConnection)) {
+                if (adminPage.isConnectionListed(connection)) {
+                    adminPage.deleteConnection(connection);
+                }
+            }
+            resetDefaultConnection(setup);
         }
+    }
+
+    private static void resetDefaultConnection(TestUtils setup)
+    {
+        setup.updateObject(List.of("OpenProject", "Code"), "OpenProjectConfiguration",
+            "OpenProject.Code.OpenProjectConfigurationClass", 0, "defaultConnection", "");
     }
 }

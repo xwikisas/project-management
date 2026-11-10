@@ -149,6 +149,13 @@
             &lt;div class="modal-body"&gt;
               &lt;p class="text-muted" id="delete-connection-confirmation-message"&gt;
               &lt;/p&gt;
+              &lt;div class="box warningmessage" id="delete-connection-default-warning" hidden&gt;
+                $escapetool.xml($services.localization.render('openproject.config.delete.defaultConnection'))
+              &lt;/div&gt;
+              &lt;div class="box warningmessage" id="delete-connection-replaced-warning" hidden&gt;&lt;/div&gt;
+              &lt;div class="box warningmessage" id="delete-connection-last-warning" hidden&gt;
+                $escapetool.xml($services.localization.render('openproject.config.delete.lastConnection'))
+              &lt;/div&gt;
               &lt;p class="text-muted"&gt;
                 $escapetool.xml($services.localization.render('openproject.config.delete.description.second'))
               &lt;/p&gt;
@@ -167,7 +174,11 @@
     &lt;/div&gt;
   #end
 
+  ## The administration displays the connections and the other settings (presets, styling) in separate blocks, so
+  ## that the default connection can be chosen right below the connections. The whole sheet is displayed otherwise.
+  #set ($sheetPart = "$!openProjectSheetPart")
   #if($hasAdmin)
+  #if ($sheetPart != 'presetsAndStyling')
   {{html clean="false"}}
     &lt;button
      id="create-connection-button"
@@ -237,6 +248,8 @@
       }
     }
     {{/liveData}}
+  #end
+  #if ($sheetPart != 'connections')
 
     {{html clean="false"}}
     &lt;fieldset class="xform"&gt;
@@ -270,7 +283,8 @@
       &lt;/dl&gt;
     &lt;/fieldset&gt;
     {{/html}}
-  #else
+  #end
+  #elseif ($sheetPart != 'presetsAndStyling')
     {{info}}
       $escapetool.xml($services.localization.render('openproject.config.noRights'))
     {{/info}}
@@ -370,7 +384,9 @@
   keys: [
     "delete.description.first",
     "delete.deleted",
+    "delete.defaultConnection.replaced",
     "delete.errorOccurred",
+    "defaultConnection.refreshFailed",
     "fillInAllFields",
     "save",
     "save.saved",
@@ -398,8 +414,46 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
     updateOAuthApplicationFields();
   }
 
+  // The default connection is chosen in another section of the administration, below the connections.
+  function getDefaultConnectionSelect() {
+    return $("select[name$='_defaultConnection']");
+  }
+
+  // The saved default connection, which may differ from the one currently selected.
+  function getSavedDefaultConnection() {
+    return getDefaultConnectionSelect().find("option").filter(function () {
+      return this.defaultSelected;
+    }).val() || "";
+  }
+
+  // Saving, renaming or deleting a connection can change the connections that can be chosen as the default one, and
+  // the default connection itself (e.g. the first connection becomes the default one when a second one is added).
+  async function refreshDefaultConnectionSelect() {
+    const select = getDefaultConnectionSelect();
+    if (!select.length) {
+      return;
+    }
+    select.attr("data-refreshing", "true");
+    try {
+      const page = $("&lt;div&gt;").append($.parseHTML(await $.get(window.location.href)));
+      const freshSelect = page.find("select[name$='_defaultConnection']");
+      if (freshSelect.length) {
+        select.html(freshSelect.html()).val(freshSelect.val());
+      }
+    } catch (e) {
+      // Saving the current choice could revert a change of the default connection made when saving the connection.
+      // The notification message is HTML.
+      new XWiki.widgets.Notification(l10n.get("defaultConnection.refreshFailed").escapeHTML(), "error");
+    } finally {
+      select.removeAttr("data-refreshing");
+    }
+  }
+
   $(document).ready(function () {
     $(document).on("change", "input[name='access-mode']", updateOAuthApplicationFields);
+    // Keep the saved default connection up to date once the administration form is saved. The event is fired by
+    // Prototype.
+    document.observe("xwiki:document:saved", refreshDefaultConnectionSelect);
 
     $(document).on("click", ".edit-button", function () {
       $("#handleConnectionModal").modal("show");
@@ -457,6 +511,19 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
       $("#delete-connection-confirmation-message").text(
         `${l10n.get("delete.description.first", connectionName)}?`
       );
+      // The macros that don't specify a connection use the default connection, i.e. the only connection or the saved
+      // default one. Once it's deleted, they stop working when several connections remain, without a default one,
+      // and use the remaining connection when a single one remains. No macro works once the last one is deleted.
+      const connections = getDefaultConnectionSelect().find("option[value!='']").map(function () {
+        return this.value;
+      }).get();
+      const remainingConnections = connections.filter(name =&gt; name !== connectionName);
+      const isDefault = connections.length === 1 || getSavedDefaultConnection() === connectionName;
+      $("#delete-connection-last-warning").prop("hidden", remainingConnections.length &gt; 0);
+      $("#delete-connection-default-warning").prop("hidden", !isDefault || remainingConnections.length &lt; 2);
+      $("#delete-connection-replaced-warning").prop("hidden", !isDefault || remainingConnections.length !== 1)
+        .text(remainingConnections.length === 1
+          ? l10n.get("delete.defaultConnection.replaced", remainingConnections[0]) : "");
     });
 
     $("#delete-connection-form").on("submit", async function (e) {
@@ -479,6 +546,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         });
 
         $("#openproject_connections").data("liveData").updateEntries();
+        refreshDefaultConnectionSelect();
         $("#deleteConnectionModal").modal("hide");
 
         // The notification message is HTML.
@@ -540,6 +608,7 @@ require(["jquery", "xwiki-l10n!openproject.config"], function ($, l10n) {
         });
 
         $("#openproject_connections").data("liveData").updateEntries();
+        refreshDefaultConnectionSelect();
         $("#handleConnectionModal").modal("hide");
 
         // The notification message is HTML.

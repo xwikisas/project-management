@@ -60,6 +60,8 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     /**
      * @param instance see {@link #getInstance()}.
      */
+    @PropertyGroup("connection")
+    @PropertyOrder(100)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
@@ -95,6 +97,7 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
 
     @PropertyDisplayType(OpenProjectPreset.class)
     @PropertyGroup("filters")
+    @PropertyOrder(15)
     @Override
     public void setPresetId(String presetId)
     {

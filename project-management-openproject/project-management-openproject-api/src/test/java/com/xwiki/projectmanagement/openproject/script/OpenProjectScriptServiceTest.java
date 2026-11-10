@@ -170,6 +170,21 @@ class OpenProjectScriptServiceTest
         assertEquals(List.of("users", "both"), this.scriptService.getUserAccountConnections());
     }
 
+    @Test
+    void getDefaultConnectionName()
+    {
+        when(this.openProjectConfiguration.getDefaultConnection())
+            .thenReturn(connection(CONNECTION_NAME, OpenProjectAccessMode.USER_ACCOUNTS));
+
+        assertEquals(CONNECTION_NAME, this.scriptService.getDefaultConnectionName());
+    }
+
+    @Test
+    void getDefaultConnectionNameWhenThereIsNone()
+    {
+        assertNull(this.scriptService.getDefaultConnectionName());
+    }
+
     private static OpenProjectConnection connection(String name, OpenProjectAccessMode accessMode)
     {
         OpenProjectConnection connection = new OpenProjectConnection(name, "https://op.example.org", null, null, null);

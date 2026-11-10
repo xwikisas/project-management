@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -31,6 +32,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -168,13 +171,43 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
         assertSame(cause, exception.getCause());
     }
 
+    static Stream<Arguments> macrosWithoutProject()
+    {
+        return Stream.of(null, "", " ").flatMap(project -> Stream.of(
+            macro("subprojects", test -> test.subprojectsMacro,
+                withProject(new OpenProjectSubprojectsMacroParameters(), project),
+                "openproject.openproject-subprojects.missingProject"),
+            macro("project details", test -> test.projectDetailsMacro,
+                withProject(new OpenProjectProjectDetailsMacroParameters(), project),
+                "openproject.openproject-project-details.missingProject"),
+            // The members of all the projects are never listed.
+            macro("members", test -> test.membersMacro,
+                withProject(new OpenProjectProjectMembersMacroParameters(), project),
+                "openproject.openproject-project-members.missingProject")));
+    }
+
+    @ParameterizedTest
+    @MethodSource("macrosWithoutProject")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    void warnsWhenTheProjectIsMissing(Function<DirectMacrosContractTest, AbstractOpenProjectDirectMacro> macro,
+        OpenProjectInstanceHolder parameters, String hintKey) throws Exception
+    {
+        List<Block> warning = List.of(new WordBlock("hint"));
+        when(this.userTokenChecker.getHintWarningBlock(hintKey, this.context)).thenReturn(warning);
+
+        // E.g. a macro inserted without parameters in the WYSIWYG editor.
+        assertSame(warning, macro.apply(this).execute(parameters, "", this.context));
+        verifyNoInteractions(this.apiClient);
+    }
+
     static Stream<Arguments> macrosOfAProjectId()
     {
-        return Stream.of("", UNRESOLVED_DASHBOARD_PROJECT).flatMap(project -> Stream.of(
+        String project = "xwiki-platform";
+        return Stream.of(
             macro("subprojects", test -> test.subprojectsMacro,
                 withProject(new OpenProjectSubprojectsMacroParameters(), project), project),
             macro("project details", test -> test.projectDetailsMacro,
-                withProject(new OpenProjectProjectDetailsMacroParameters(), project), project)));
+                withProject(new OpenProjectProjectDetailsMacroParameters(), project), project));
     }
 
     @ParameterizedTest
@@ -199,7 +232,11 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
             macro("members", test -> test.membersMacro,
                 withProject(new OpenProjectProjectMembersMacroParameters(), UNRESOLVED_DASHBOARD_PROJECT)),
             macro("spent time", test -> test.spentTimeMacro,
-                withProject(new OpenProjectSpentTimeMacroParameters(), UNRESOLVED_DASHBOARD_PROJECT)));
+                withProject(new OpenProjectSpentTimeMacroParameters(), UNRESOLVED_DASHBOARD_PROJECT)),
+            macro("subprojects", test -> test.subprojectsMacro,
+                withProject(new OpenProjectSubprojectsMacroParameters(), UNRESOLVED_DASHBOARD_PROJECT)),
+            macro("project details", test -> test.projectDetailsMacro,
+                withProject(new OpenProjectProjectDetailsMacroParameters(), UNRESOLVED_DASHBOARD_PROJECT)));
     }
 
     @ParameterizedTest

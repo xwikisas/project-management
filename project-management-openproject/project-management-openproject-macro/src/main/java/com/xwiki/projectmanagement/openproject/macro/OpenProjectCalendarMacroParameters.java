@@ -64,6 +64,8 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param instance see {@link #getInstance()}.
      */
     @Override
+    @PropertyGroup("connection")
+    @PropertyOrder(100)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
@@ -125,7 +127,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param versionColor see {@link #getVersionColor()}.
      */
     @PropertyDisplayType(Color.class)
-    @PropertyGroup("other")
+    @PropertyGroup("display")
     @PropertyOrder(43)
     public void setVersionColor(String versionColor)
     {
@@ -146,7 +148,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param sprintColor see {@link #getSprintColor()}.
      */
     @PropertyDisplayType(Color.class)
-    @PropertyGroup("other")
+    @PropertyGroup("display")
     @PropertyOrder(46)
     public void setSprintColor(String sprintColor)
     {

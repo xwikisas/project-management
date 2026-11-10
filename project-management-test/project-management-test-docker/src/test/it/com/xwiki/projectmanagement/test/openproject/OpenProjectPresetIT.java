@@ -36,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -207,8 +208,11 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
 
         List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(4);
         assertEquals(4, errors.size(), errors.toString());
+        // The failures of the macros rendered asynchronously are displayed like those of the other macros.
+        assertThat(errors.get(0), startsWith("Failed to execute the [openproject] macro."));
         assertThat(errors.get(0), containsString("The preset id should be a number."));
         assertThat(errors.get(1), containsString("There is no preset with id [999999]."));
+        assertThat(errors.get(2), startsWith("Failed to execute the [openprojectchart] macro."));
         assertThat(errors.get(2), containsString("The preset id should be a number."));
         assertThat(errors.get(3), containsString("There is no preset with id [999999]."));
     }

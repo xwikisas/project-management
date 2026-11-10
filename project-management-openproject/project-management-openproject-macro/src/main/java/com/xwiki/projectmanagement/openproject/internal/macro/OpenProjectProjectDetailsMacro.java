@@ -29,6 +29,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.localization.ContextualLocalizationManager;
@@ -68,6 +69,8 @@ public class OpenProjectProjectDetailsMacro
 {
     private static final String TRANSLATION_PREFIX = "openproject.openproject-project-details.labels.";
 
+    private static final String MISSING_PROJECT_HINT = "openproject.openproject-project-details.missingProject";
+
     private static final String NAME = "name";
 
     private static final String ID = "id";
@@ -99,6 +102,12 @@ public class OpenProjectProjectDetailsMacro
         super("OpenProject - Project Details",
             "Displays the details of a specific project from a configured OpenProject instance.",
             OpenProjectProjectDetailsMacroParameters.class);
+    }
+
+    @Override
+    protected String getMissingParameterHint(OpenProjectProjectDetailsMacroParameters parameters)
+    {
+        return StringUtils.isBlank(parameters.getProject()) ? MISSING_PROJECT_HINT : null;
     }
 
     @Override

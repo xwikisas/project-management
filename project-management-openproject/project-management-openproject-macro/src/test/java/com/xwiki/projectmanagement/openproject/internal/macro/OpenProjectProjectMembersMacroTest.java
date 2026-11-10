@@ -25,11 +25,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.NullSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 
@@ -43,8 +39,6 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -158,20 +152,5 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
 
         assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/a%2Fb%20c%3Fd%23e/members"),
             links(this.macro.execute(this.parameters, "", this.context)));
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = { "", " " })
-    void failsWhenTheProjectIsNotSet(String project)
-    {
-        this.parameters.setProject(project);
-
-        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
-            () -> this.macro.execute(this.parameters, "", this.context));
-
-        // The members of all the projects are not listed.
-        assertEquals("The project whose members to display is missing.", exception.getMessage());
-        verifyNoInteractions(this.apiClient);
     }
 }

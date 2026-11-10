@@ -127,6 +127,11 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
             return warningBlock;
         }
 
+        String missingParameterHint = getMissingParameterHint(parameters);
+        if (missingParameterHint != null) {
+            return userTokenChecker.getHintWarningBlock(missingParameterHint, context);
+        }
+
         OpenProjectApiClient apiClient = access.getClient();
         try {
             return asyncExecutor.execute(new AbstractMacro<ProjectManagementAsyncMacroParams>("")
@@ -147,6 +152,19 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         } catch (RenderingException | JobException e) {
             throw new MacroExecutionException("Failed to render the macro asynchronously.", e);
         }
+    }
+
+    /**
+     * @param parameters the macro parameters, once the default connection and the project selected on the OpenProject
+     *     dashboard are resolved
+     * @return the translation key of the warning displayed instead of the macro output when a parameter needed by the
+     *     macro is missing (e.g. when the macro is inserted without parameters), or {@code null} when nothing is
+     *     missing
+     * @since 1.4.0
+     */
+    protected String getMissingParameterHint(P parameters)
+    {
+        return null;
     }
 
     /**
@@ -200,11 +218,22 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
      */
     protected boolean hasProject(String project) throws MacroExecutionException
     {
+        checkDashboardProject(project);
+        return project != null && !project.isBlank();
+    }
+
+    /**
+     * @param project the project parameter of the macro
+     * @throws MacroExecutionException if the project is the project selected on the OpenProject dashboard and it
+     *     couldn't be resolved, e.g. when the macro is not on the dashboard
+     * @since 1.4.0
+     */
+    protected void checkDashboardProject(String project) throws MacroExecutionException
+    {
         if (USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(project)) {
             throw new MacroExecutionException("The project selected on the OpenProject dashboard couldn't be resolved."
                 + " Select a project explicitly when the macro is not on the dashboard.");
         }
-        return project != null && !project.isBlank();
     }
 
     /**
@@ -215,6 +244,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
      */
     protected int getProjectId(String project) throws MacroExecutionException
     {
+        checkDashboardProject(project);
         try {
             return Integer.parseInt(project);
         } catch (NumberFormatException e) {
