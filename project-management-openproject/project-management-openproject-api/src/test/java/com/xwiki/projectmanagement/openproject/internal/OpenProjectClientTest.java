@@ -23,6 +23,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -504,6 +505,32 @@ class OpenProjectClientTest
 
         assertEquals(List.of("3", "1"), getIds(result));
         assertEquals(2, result.getTotalItems());
+    }
+
+    @Test
+    void getWorkItemsRequestsTheWorkPackagesInTheCurrentThread() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,99999");
+        doThrow(new WorkItemRetrievalException("Id filter has invalid values.", 400)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(2),
+                argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\",\"99999\"]}}]")), eq(""));
+        doReturn(workPackages(5)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\"]}}]")), eq(""));
+        // The work packages are requested with the XWiki execution context of the current thread.
+        Set<Thread> requestThreads = new HashSet<>();
+        when(this.openProjectApiClient.getWorkPackage(anyString())).thenAnswer(invocation -> {
+            requestThreads.add(Thread.currentThread());
+            String key = invocation.getArgument(0);
+            return "XWIKI-123".equals(key) || "5".equals(key) ? createWorkPackage(5) : null;
+        });
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(List.of("5"), getIds(result));
+        // The key is resolved, then each id is checked after the id filter was rejected.
+        verify(this.openProjectApiClient).getWorkPackage("XWIKI-123");
+        verify(this.openProjectApiClient).getWorkPackage("99999");
+        assertEquals(Set.of(Thread.currentThread()), requestThreads);
     }
 
     @Test

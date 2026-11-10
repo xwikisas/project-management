@@ -35,8 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -556,7 +554,8 @@ public class OpenProjectClient implements ProjectManagementClient
     /**
      * Turns the work package keys into ids, dropping the duplicates and the keys of the work packages that don't exist
      * or that the user can't see, so that they don't prevent the other work packages from being displayed. Each key
-     * requires a request to OpenProject, so they are resolved in parallel (and the client caches them).
+     * requires a request to OpenProject (which the client caches). The keys are resolved one after the other, in the
+     * current thread, since the requests need the XWiki execution context of the current request.
      * <p>
      * TODO: send the keys directly in the id filter, without resolving them, once OpenProject accepts them there:
      * https://community.openproject.org/wp/82068 (API v3: allow filtering work packages by their semantic identifier
@@ -565,23 +564,18 @@ public class OpenProjectClient implements ProjectManagementClient
     private List<String> resolveIds(OpenProjectApiClient openProjectApiClient, String[] idsOrKeys)
         throws ProjectManagementException
     {
-        Map<String, CompletableFuture<WorkPackage>> resolutions = new HashMap<>();
-        for (String idOrKey : idsOrKeys) {
-            if (!StringUtils.isNumeric(idOrKey)) {
-                resolutions.computeIfAbsent(idOrKey,
-                    key -> CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, key)));
-            }
-        }
-
+        Map<String, Optional<WorkPackage>> resolutions = new HashMap<>();
         Set<String> ids = new LinkedHashSet<>();
         for (String idOrKey : idsOrKeys) {
             if (StringUtils.isNumeric(idOrKey)) {
                 ids.add(idOrKey);
             } else {
-                WorkPackage workPackage = joinResolution(idOrKey, resolutions.get(idOrKey));
-                if (workPackage != null) {
-                    ids.add(String.valueOf(workPackage.getId()));
+                Optional<WorkPackage> workPackage = resolutions.get(idOrKey);
+                if (workPackage == null) {
+                    workPackage = Optional.ofNullable(getWorkPackage(openProjectApiClient, idOrKey));
+                    resolutions.put(idOrKey, workPackage);
                 }
+                workPackage.ifPresent(resolved -> ids.add(String.valueOf(resolved.getId())));
             }
         }
         return new ArrayList<>(ids);
@@ -589,51 +583,37 @@ public class OpenProjectClient implements ProjectManagementClient
 
     /**
      * @return the ids of the work packages that exist and that the user can see, in the given order. Each id requires
-     *     a request to OpenProject, so they are checked in parallel (and the client caches them).
+     *     a request to OpenProject (which the client caches), sent in the current thread like in
+     *     {@link #resolveIds(OpenProjectApiClient, String[])}.
      */
     private List<String> getExistingIds(OpenProjectApiClient openProjectApiClient, List<String> ids)
         throws ProjectManagementException
     {
-        Map<String, CompletableFuture<WorkPackage>> checks = new HashMap<>();
-        for (String id : ids) {
-            checks.put(id, CompletableFuture.supplyAsync(() -> getWorkPackage(openProjectApiClient, id)));
-        }
         List<String> existingIds = new ArrayList<>();
         for (String id : ids) {
-            if (joinResolution(id, checks.get(id)) != null) {
+            if (getWorkPackage(openProjectApiClient, id) != null) {
                 existingIds.add(id);
             }
         }
         return existingIds;
     }
 
-    private static WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
-    {
-        try {
-            return openProjectApiClient.getWorkPackage(key);
-        } catch (ProjectManagementException e) {
-            throw new CompletionException(e);
-        }
-    }
-
-    private WorkPackage joinResolution(String key, CompletableFuture<WorkPackage> resolution)
+    /**
+     * @return the work package with the given id or key, or {@code null} if it doesn't exist, if the user can't see
+     *     it or if OpenProject rejects the key
+     */
+    private WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
         throws ProjectManagementException
     {
         try {
-            return resolution.join();
-        } catch (CompletionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof WorkItemRetrievalException
-                && !isAuthenticationOrRightsFailure((WorkItemRetrievalException) cause))
-            {
-                // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
-                logger.warn("Failed to resolve the work package key [{}]: {}", key, cause.getMessage());
-                return null;
-            } else if (cause instanceof ProjectManagementException) {
-                throw (ProjectManagementException) cause;
+            return openProjectApiClient.getWorkPackage(key);
+        } catch (WorkItemRetrievalException e) {
+            if (isAuthenticationOrRightsFailure(e)) {
+                throw e;
             }
-            throw new WorkItemRetrievalException(String.format("Failed to resolve the work package key [%s].", key),
-                cause);
+            // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
+            logger.warn("Failed to resolve the work package key [{}]: {}", key, e.getMessage());
+            return null;
         }
     }
 
