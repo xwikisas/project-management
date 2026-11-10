@@ -29,13 +29,16 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 
 import com.xpn.xwiki.XWikiContext;
+import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -55,8 +58,9 @@ import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptSe
 /**
  * Listener for OpenProject macro before execution event. Handles{@link BeforeOpenProjectMacroExecutionEvent} When the
  * macro is rendered on {@code OpenProject.WebHome}, the instance parameter is overridden with the selectedConnection
- * value from the OpenProject.Code.DashboardConnectionConfigClass object on that page, allowing the dashboard connection
- * picker to drive all macros on the page.
+ * value from the OpenProject.Code.DashboardConnectionConfigClass object on {@code OpenProject.DashboardSelection} (or,
+ * for a selection made before 1.4.0, on the dashboard page itself), allowing the dashboard connection picker to drive
+ * all macros on the page.
  *
  * @version $Id$
  */
@@ -76,6 +80,8 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
     private static final String OPEN_PROJECT = "OpenProject";
 
     private static final String DASHBOARD_PAGE_NAME = "WebHome";
+
+    private static final String SELECTION_PAGE_NAME = "DashboardSelection";
 
     private static final List<String> DASHBOARD_CONFIG_CLASS_SPACE = Arrays.asList(OPEN_PROJECT, "Code");
 
@@ -141,7 +147,7 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
             return;
         }
 
-        BaseObject configObject = currentDoc.getXObject(DASHBOARD_CLASS_REF);
+        BaseObject configObject = getDashboardSelection(currentDoc, xContext);
 
         if (configObject == null) {
             logger.debug("No DashboardConnectionConfigClass object found on [{}]", currentDoc.getDocumentReference());
@@ -155,6 +161,26 @@ public class OpenProjectMacroDisplayListeners extends AbstractEventListener
         if (parameters instanceof OpenProjectProjectHolder) {
             resolveProject((OpenProjectProjectHolder) parameters, configObject);
         }
+    }
+
+    private BaseObject getDashboardSelection(XWikiDocument dashboard, XWikiContext xContext)
+    {
+        // The dashboard stores its selection on a data-only page next to it, so that selecting a connection or a
+        // project never saves the dashboard, which holds scripts and extensions.
+        DocumentReference selectionReference =
+            new DocumentReference(SELECTION_PAGE_NAME, dashboard.getDocumentReference().getLastSpaceReference());
+        try {
+            BaseObject selection =
+                xContext.getWiki().getDocument(selectionReference, xContext).getXObject(DASHBOARD_CLASS_REF);
+            if (selection != null) {
+                return selection;
+            }
+        } catch (XWikiException e) {
+            logger.warn("Failed to read the dashboard selection from [{}]. Root cause: [{}]", selectionReference,
+                ExceptionUtils.getRootCauseMessage(e));
+        }
+        // Fall back on the selection that versions before 1.4.0 stored on the dashboard page itself.
+        return dashboard.getXObject(DASHBOARD_CLASS_REF);
     }
 
     private void resolveInstance(OpenProjectInstanceHolder parameters, BaseObject configObject)

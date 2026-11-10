@@ -80,7 +80,7 @@ import static org.mockito.Mockito.when;
 /**
  * The OpenProject macros use the connection selected on the OpenProject dashboard when they are displayed on it
  * without a connection: the real {@link OpenProjectMacroDisplayListeners} receives the event that the macros send
- * through the real observation manager, and reads the selection from the dashboard page.
+ * through the real observation manager, and reads the selection saved by the dashboard.
  *
  * @version $Id$
  */
@@ -133,10 +133,14 @@ class OpenProjectMacrosOnTheDashboardTest
     {
         XWikiContext xcontext = this.oldcore.getXWikiContext();
         XWikiDocument dashboard = new XWikiDocument(new DocumentReference("xwiki", "OpenProject", "WebHome"));
-        BaseObject selection = dashboard.newXObject(
+        xcontext.setDoc(dashboard);
+        // The dashboard stores its selection on a separate page.
+        XWikiDocument selectionDocument =
+            new XWikiDocument(new DocumentReference("xwiki", "OpenProject", "DashboardSelection"));
+        BaseObject selection = selectionDocument.newXObject(
             new LocalDocumentReference(List.of("OpenProject", "Code"), "DashboardConnectionConfigClass"), xcontext);
         selection.setStringValue("selectedConnection", "dashboard");
-        xcontext.setDoc(dashboard);
+        this.oldcore.getSpyXWiki().saveDocument(selectionDocument, xcontext);
 
         OpenProjectConnection connection = new OpenProjectConnection("dashboard", SERVER_URL, "id", "secret", "1");
         when(this.openProjectConfiguration.getOpenProjectConnections()).thenReturn(List.of(connection));

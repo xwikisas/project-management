@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.ObjectReference;
+import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
 
@@ -100,16 +101,22 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
     @Order(2)
     void selectedProjectIsRemembered(TestUtils setup) throws Exception
     {
+        DocumentReference dashboardReference = new DocumentReference("xwiki", "OpenProject", "WebHome");
+        String dashboardVersion = setup.rest().<Page>get(dashboardReference).getVersion();
+
         OpenProjectDashboardPage dashboard = OpenProjectDashboardPage.gotoPage();
         assertEquals(CONNECTION_ID, dashboard.getSelectedConnection());
         // Not the first project, which the dashboard displays (without saving it) until a project is selected.
         dashboard = dashboard.selectProject("Demo project").waitUntilGadgetsAreDisplayed();
         assertEquals("Demo project", dashboard.getSelectedProject());
 
+        // The selection is saved on a separate page: saving the dashboard as a user without script right would
+        // disable its scripts and extensions for everyone.
+        assertEquals(dashboardVersion, setup.rest().<Page>get(dashboardReference).getVersion());
         // The name of the project is saved with its id, so that the picker displays it without asking OpenProject.
-        DocumentReference dashboardReference = new DocumentReference("xwiki", "OpenProject", "WebHome");
-        org.xwiki.rest.model.jaxb.Object config = setup.rest()
-            .get(new ObjectReference("OpenProject.Code.DashboardConnectionConfigClass[0]", dashboardReference));
+        org.xwiki.rest.model.jaxb.Object config = setup.rest().get(new ObjectReference(
+            "OpenProject.Code.DashboardConnectionConfigClass[0]",
+            new DocumentReference("xwiki", "OpenProject", "DashboardSelection")));
         assertEquals("Demo project",
             TestUtils.RestTestUtils.getProperty("selectedProjectLabel", config, false).getValue());
 
