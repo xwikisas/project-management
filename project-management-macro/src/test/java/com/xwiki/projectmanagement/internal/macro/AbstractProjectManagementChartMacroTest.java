@@ -229,10 +229,6 @@ class AbstractProjectManagementChartMacroTest
         this.parameters.setType("pie");
         this.parameters.setProperty(WorkItem.KEY_STATUS);
 
-        List<Block> result = this.macro.execute(this.parameters, null, this.macroTransformationContext);
-
-        // The chart is wrapped, so that it can be drawn after an asynchronous rendering.
-        assertEquals(1, result.size());
-        return result.get(0).getChildren();
+        return this.macro.execute(this.parameters, null, this.macroTransformationContext);
     }
 }

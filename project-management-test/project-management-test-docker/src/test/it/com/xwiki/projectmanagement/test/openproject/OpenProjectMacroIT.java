@@ -32,6 +32,7 @@ import javax.naming.OperationNotSupportedException;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
+import org.xwiki.edit.test.po.InplaceEditablePage;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.TestReference;
@@ -106,6 +107,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private static final String SUBJECT_COLUMN = "Subject";
 
     private static final String PROPERTIES_PARAMETER = "properties";
+
+    private static final String INPLACE_EDITOR = "InplaceWorkPackagesEditor";
+
+    private static final String INPLACE_EDITOR_PASSWORD = "pass";
 
     @Test
     @Order(1)
@@ -352,6 +357,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
             // The type is displayed in upper case.
             assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
+
+            // The work packages are displayed again when the page is saved with the in-place editor, which renders
+            // the content again without reloading the page. The "Edit" button opens the in-place editor for the users
+            // preferring the WYSIWYG editor, who see the public work packages without an OpenProject account.
+            setup.loginAsSuperAdmin();
+            setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
+            setup.loginAndGotoPage(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
+            new InplaceEditablePage().editInplace().saveAndView();
+            ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+            assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
         } finally {
             setup.loginAsSuperAdmin();
             OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
