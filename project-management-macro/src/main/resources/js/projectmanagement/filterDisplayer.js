@@ -29,6 +29,39 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
     }
     return new Promise((resolve, reject) => require(['daterangepicker'], resolve, reject));
   };
+  /*
+   * The number of seconds added to the end of a range of dates when it's saved, so that the range includes its last
+   * minute.
+   */
+  const RANGE_END_SECONDS = 59;
+  /*
+   * The dates of a saved value, to select in the date picker: the bounds of an ISO 8601 time interval for the "between"
+   * operator, and a single date otherwise, in the ISO 8601 format or the date format of the filter. Empty when there's
+   * no saved value or when it can't be parsed, the date picker then selecting the current day.
+   */
+  let getPickerDates = function (value, operator, dateFormat) {
+    let parse = text => {
+      let date = moment(text, moment.ISO_8601, true);
+      return date.isValid() ? date : moment(text, dateFormat, true);
+    };
+    if (!value) {
+      return {};
+    } else if (operator === 'between') {
+      let bounds = value.split('/');
+      let startDate = parse(bounds[0]);
+      let endDate = bounds.length === 2 ? parse(bounds[1]) : moment.invalid();
+      if (!startDate.isValid() || !endDate.isValid()) {
+        return {};
+      }
+      // Remove the seconds added when the range was saved, which can move its end to the next day.
+      if (endDate.seconds() !== 0) {
+        endDate.subtract(RANGE_END_SECONDS, 'seconds');
+      }
+      return { startDate: startDate, endDate: endDate };
+    }
+    let date = parse(value);
+    return date.isValid() ? { startDate: date, endDate: date.clone() } : {};
+  };
   let clean = function (type, inputElem, operator) {
     let parent = inputElem.parent();
     switch (type) {
@@ -85,7 +118,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             if (operator === "between") {
               // Serialize the date range as a ISO 8601 time interval, without fractional seconds.
               // See https://en.wikipedia.org/wiki/ISO_8601#Time_intervals
-              valToSet = `${daterangepicker.startDate.format()}/${daterangepicker.endDate.add(59, "seconds").format()}`;
+              let endDate = daterangepicker.endDate.clone().add(RANGE_END_SECONDS, 'seconds');
+              valToSet = `${daterangepicker.startDate.format()}/${endDate.format()}`;
             } else if (operator === "before" || operator === "after") {
               // Use the ISO 8601 representation, without fractional seconds.
               valToSet = daterangepicker.startDate.format();
@@ -95,7 +129,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             }
             inputElem.val(valToSet);
             inputElem.trigger('change');
-          }).appendTo(parent).daterangepicker({
+          }).appendTo(parent).daterangepicker($.extend({
             drops: "down",
             opens: "right",
             timePicker: /[Hhkms]/.test(dateFormat),
@@ -105,7 +139,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               format: dateFormat,
               cancelLabel: "Clear",
             },
-          }).on("hide.daterangepicker", function (e) {
+          // The date picker selects the saved dates, instead of the current day.
+          }, getPickerDates(inputElem.val(), operator, dateFormat))).on("hide.daterangepicker", function (e) {
             // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
             // This removes the 'hide' function only for the event target.
             e.target.hide = undefined;
@@ -118,6 +153,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             }, 0);
           });
           dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
+          // The saved value is now displayed as the date picker formats it (e.g. in the summary of the filters).
+          inputElem.trigger('dateDisplayed');
         }).catch(error => console.error('Failed to load the date picker.', error));
         break;
       case "list":
