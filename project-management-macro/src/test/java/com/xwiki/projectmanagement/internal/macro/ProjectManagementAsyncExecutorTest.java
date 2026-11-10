@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Named;
 
@@ -42,6 +43,7 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xpn.xwiki.internal.context.XWikiContextContextStore;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -107,6 +109,17 @@ class ProjectManagementAsyncExecutorTest
 
         verify(this.asyncRenderer).initialize(this.displayer, this.parameters, CONTENT, this.context, null);
         assertTrue(getConfiguration().isPlaceHolderForced());
+    }
+
+    @Test
+    void executeRestoresTheCurrentDocument() throws Exception
+    {
+        execute(true);
+
+        // The asynchronous rendering needs the current document, e.g. for the links that bring the user back to it.
+        assertEquals(Set.of(XWikiContextContextStore.PROP_USER, XWikiContextContextStore.PROP_WIKI,
+            XWikiContextContextStore.PROP_ACTION, XWikiContextContextStore.PROP_LOCALE,
+            XWikiContextContextStore.PROP_DOCUMENT_REFERENCE), getConfiguration().getContextEntries());
     }
 
     @Test

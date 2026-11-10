@@ -89,6 +89,15 @@
       <scope>runtime</scope>
     </dependency>
     <dependency>
+      <!-- Required to display the OpenProject user profile UIX. -->
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-user-profile-ui</artifactId>
+      <version>${platform.version}</version>
+      <type>xar</type>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-localization-script</artifactId>
       <version>${platform.version}</version>

@@ -22,6 +22,13 @@ package com.xwiki.projectmanagement.openproject.internal.access;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import javax.inject.Provider;
 
@@ -62,11 +69,14 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -121,6 +131,9 @@ class PublicDataClientProviderTest
     @Mock
     private Cache<Boolean> anonymousAccessCache;
 
+    @Mock
+    private PaginatedResult<BaseOpenProjectObject> result;
+
     private final Map<String, Boolean> anonymousAccessCacheEntries = new HashMap<>();
 
     private final OpenProjectConnection connection =
@@ -157,7 +170,12 @@ class PublicDataClientProviderTest
         assertSame(this.client, this.provider.getClient(this.connection));
 
         verify(this.builder).serverUrl(SERVER_URL);
-        verify(this.builder).caching(this.cache, SERVER_URL);
+        // The client uses the cache of the wiki.
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> clientCache = getClientCache();
+        clientCache.set("key", this.result);
+        verify(this.cache).set("key", this.result);
+        doReturn(this.result).when(this.cache).get("key");
+        assertSame(this.result, clientCache.get("key"));
         verify(this.builder, never()).authentication(any());
         verify(this.client).getProjects(1, 1, "");
         assertEquals(600, getCacheLifespan());
@@ -295,6 +313,80 @@ class PublicDataClientProviderTest
     }
 
     @Test
+    void clearCacheWhileAClientUsesIt() throws Exception
+    {
+        // A request that got its client before the configuration changed may still use it after its cache is cleared.
+        this.provider.getClient(this.connection);
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> clientCache = getClientCache();
+
+        this.provider.clearCache("wiki");
+
+        verify(this.cache).dispose();
+        // The disposed cache isn't used anymore: the client acts as if nothing was cached.
+        assertNull(clientCache.get("key"));
+        clientCache.set("key", this.result);
+        clientCache.remove("key");
+        clientCache.removeAll();
+        clientCache.dispose();
+        verify(this.cache, never()).get(anyString());
+        verify(this.cache, never()).set(anyString(), any());
+        verify(this.cache, never()).remove(anyString());
+        verify(this.cache, never()).removeAll();
+        verify(this.cache).dispose();
+    }
+
+    @Test
+    void clearCacheWaitsForTheCurrentUsesOfTheCache() throws Exception
+    {
+        this.provider.getClient(this.connection);
+        Cache<PaginatedResult<? extends BaseOpenProjectObject>> clientCache = getClientCache();
+        CountDownLatch reading = new CountDownLatch(1);
+        CountDownLatch readEnd = new CountDownLatch(1);
+        doAnswer(invocation -> {
+            reading.countDown();
+            readEnd.await();
+            return this.result;
+        }).when(this.cache).get("key");
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<PaginatedResult<? extends BaseOpenProjectObject>> read =
+                executor.submit(() -> clientCache.get("key"));
+            assertTrue(reading.await(10, TimeUnit.SECONDS));
+            Future<?> clear = executor.submit(() -> this.provider.clearCache("wiki"));
+
+            // The cache isn't disposed while a request reads it.
+            assertThrows(TimeoutException.class, () -> clear.get(200, TimeUnit.MILLISECONDS));
+            verify(this.cache, never()).dispose();
+
+            readEnd.countDown();
+            assertSame(this.result, read.get(10, TimeUnit.SECONDS));
+            clear.get(10, TimeUnit.SECONDS);
+            verify(this.cache).dispose();
+        } finally {
+            readEnd.countDown();
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void clearCacheCreatesCachesWithNewIdentifiers() throws Exception
+    {
+        // The new caches can be created before the old ones are disposed, so their identifiers must differ.
+        this.provider.getClient(this.connection);
+        this.provider.clearCache("wiki");
+        this.provider.getClient(this.connection);
+
+        ArgumentCaptor<CacheConfiguration> captor = ArgumentCaptor.forClass(CacheConfiguration.class);
+        verify(this.cacheManager, times(4)).createNewCache(captor.capture());
+        assertEquals(List.of("projectmanagement.openproject.publicdata.wiki.1",
+            "projectmanagement.openproject.publicdata.anonymousaccess.wiki.1",
+            "projectmanagement.openproject.publicdata.wiki.2",
+            "projectmanagement.openproject.publicdata.anonymousaccess.wiki.2"),
+            captor.getAllValues().stream().map(CacheConfiguration::getConfigurationId).collect(Collectors.toList()));
+    }
+
+    @Test
     void dispose() throws Exception
     {
         this.provider.getClient(this.connection);
@@ -310,13 +402,22 @@ class PublicDataClientProviderTest
         ArgumentCaptor<CacheConfiguration> captor = ArgumentCaptor.forClass(CacheConfiguration.class);
         verify(this.cacheManager, times(2)).createNewCache(captor.capture());
         List<CacheConfiguration> configurations = captor.getAllValues();
-        assertEquals("projectmanagement.openproject.publicdata.wiki", configurations.get(0).getConfigurationId());
-        assertEquals("projectmanagement.openproject.publicdata.anonymousaccess.wiki",
+        assertEquals("projectmanagement.openproject.publicdata.wiki.1", configurations.get(0).getConfigurationId());
+        assertEquals("projectmanagement.openproject.publicdata.anonymousaccess.wiki.1",
             configurations.get(1).getConfigurationId());
         int lifespan = getLifespan(configurations.get(0));
         // Whether OpenProject accepts anonymous requests is cached for as long as the public data.
         assertEquals(lifespan, getLifespan(configurations.get(1)));
         return lifespan;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Cache<PaginatedResult<? extends BaseOpenProjectObject>> getClientCache()
+    {
+        ArgumentCaptor<Cache<PaginatedResult<? extends BaseOpenProjectObject>>> captor =
+            ArgumentCaptor.forClass(Cache.class);
+        verify(this.builder).caching(captor.capture(), eq(SERVER_URL));
+        return captor.getValue();
     }
 
     private int getLifespan(CacheConfiguration configuration)

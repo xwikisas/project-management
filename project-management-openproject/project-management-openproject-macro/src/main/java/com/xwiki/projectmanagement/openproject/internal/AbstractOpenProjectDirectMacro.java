@@ -98,16 +98,6 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         return false;   
     }
 
-    /**
-     * @return {@code true} when the displayed data depends on the OpenProject account of the current user, so that a
-     *     user who can only call OpenProject anonymously sees a warning instead of the public data of the instance
-     * @since 1.4.0
-     */
-    protected boolean requiresUserAccount()
-    {
-        return false;
-    }
-
     @Override
     public final List<Block> execute(P parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
@@ -121,8 +111,9 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         String instanceToUse = parameters.getInstance();
 
         OpenProjectAccessResult access = openProjectAccess.resolve(instanceToUse);
-        List<Block> warningBlock =
-            userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), requiresUserAccount(), context);
+        // The public data is displayed to the users who didn't connect their OpenProject account: the macros whose
+        // data OpenProject hides from anonymous users ask them to connect it (see getEmptyAnonymousResultWarning).
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), false, context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }

@@ -203,7 +203,12 @@ $services.localization.render('openproject.userprofile.description')
       #set ($connected = $services.openproject.isUserAuthorized($connectionName))
       &lt;tr&gt;
         &lt;td&gt;$escapetool.xml($connectionName)&lt;/td&gt;
-        &lt;td&gt;&lt;a href="$escapetool.xml($serverURL)"&gt;$escapetool.xml($serverURL)&lt;/a&gt;&lt;/td&gt;
+        #set ($lowerCaseServerURL = "$!serverURL.toLowerCase()")
+        #if ($lowerCaseServerURL.startsWith('http://') || $lowerCaseServerURL.startsWith('https://'))
+          &lt;td&gt;&lt;a href="$escapetool.xml($serverURL)"&gt;$escapetool.xml($serverURL)&lt;/a&gt;&lt;/td&gt;
+        #else
+          &lt;td&gt;$escapetool.xml($serverURL)&lt;/td&gt;
+        #end
         &lt;td&gt;
         #if ($connected)
           &lt;span class="label label-success"&gt;$escapetool.xml($services.localization.render('openproject.userprofile.connected'))&lt;/span&gt;
