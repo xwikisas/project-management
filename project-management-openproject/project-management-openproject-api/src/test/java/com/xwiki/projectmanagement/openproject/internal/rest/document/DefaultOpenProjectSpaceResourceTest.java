@@ -54,6 +54,7 @@ import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -65,8 +66,11 @@ import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
+import com.xpn.xwiki.objects.BaseObject;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
+import com.xwiki.projectmanagement.relations.store.ProjectManagementRelation;
 import com.xwiki.urlshortener.URLShortenerManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +78,9 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -88,6 +94,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(InstanceConnectionResolver.class)
 class DefaultOpenProjectSpaceResourceTest
 {
     private static final DocumentReference DOCUMENT_REFERENCE =
@@ -290,6 +297,42 @@ class DefaultOpenProjectSpaceResourceTest
         assertEquals("Could not find a configured instance for the id [unknownInstanceId].",
             exception.getResponse().getEntity());
         verify(this.xwiki, never()).saveDocument(any(XWikiDocument.class), any(XWikiContext.class));
+    }
+
+    @Test
+    void createSpaceOnSubwikiUsesTheConnectionsOfTheSubwiki() throws Exception
+    {
+        DocumentReference subwikiPage = new DocumentReference("subwiki", List.of("Space"), "WebHome");
+        DocumentReference subwikiTemplate =
+            new DocumentReference("subwiki", List.of("OpenProject", "Code", "Template"), "WebHome");
+        when(this.resolver.resolve("subwiki:Space.WebHome", new WikiReference("xwiki"))).thenReturn(subwikiPage);
+        when(this.authorizationManager.hasAccess(Right.VIEW, subwikiPage)).thenReturn(true);
+        when(this.authorizationManager.hasAccess(Right.EDIT, subwikiPage)).thenReturn(true);
+        this.existingPages.add(subwikiTemplate);
+        when(this.modelBridge.getDocumentReferences(subwikiTemplate.getLastSpaceReference()))
+            .thenReturn(List.of(subwikiTemplate));
+        when(this.xwiki.getDocument(subwikiTemplate, this.context)).thenReturn(this.templateDocument);
+        when(this.xwiki.getDocument(subwikiPage, this.context)).thenReturn(this.document);
+        BaseObject relation = mock(BaseObject.class);
+        when(this.document.getXObject(ProjectManagementRelation.CLASS_REFERENCE, true, this.context))
+            .thenReturn(relation);
+        mockCreateJobAndRestPages();
+        // The REST requests are made on the main wiki, and the connections are read from the context wiki.
+        String[] contextWiki = { "xwiki" };
+        when(this.context.getWikiId()).thenAnswer(invocation -> contextWiki[0]);
+        doAnswer(invocation -> contextWiki[0] = invocation.getArgument(0)).when(this.context)
+            .setWikiId(anyString());
+        when(this.openProjectConfiguration.getOpenProjectConnections()).thenAnswer(invocation ->
+            "subwiki".equals(contextWiki[0]) ? List.of(new OpenProjectConnection("Sub", "https://op.example.org",
+                "clientId", "secret", "instance-1")) : List.of());
+
+        Response response = this.resource.createSpace("subwiki:Space.WebHome", false, "instance-1", null, null,
+            "Title");
+
+        assertEquals(200, response.getStatus());
+        verify(relation).setLargeStringValue(ProjectManagementRelation.FIELD_CLIENT_PARAMS,
+            RelationClientParams.ofInstance("Sub"));
+        assertEquals("xwiki", contextWiki[0]);
     }
 
     @Test

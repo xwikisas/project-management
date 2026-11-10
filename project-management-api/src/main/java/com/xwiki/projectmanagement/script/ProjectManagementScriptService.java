@@ -109,9 +109,6 @@ public class ProjectManagementScriptService implements ScriptService
         List<Object> filters, List<Object> sortEntries,
         Map<String, Object> clientContext) throws WorkItemException
     {
-        if (clientExecutionContext instanceof DefaultProjectManagementClientExecutionContext) {
-            ((DefaultProjectManagementClientExecutionContext) clientExecutionContext).setContext(clientContext);
-        }
         List<LiveDataQuery.Filter> livedataFilters =
             filters.stream().map(filter -> objectMapper.convertValue(filter, LiveDataQuery.Filter.class))
                 .collect(Collectors.toList());
@@ -119,6 +116,11 @@ public class ProjectManagementScriptService implements ScriptService
             sortEntries.stream().map(sortEntry -> objectMapper.convertValue(sortEntry, LiveDataQuery.SortEntry.class))
                 .collect(Collectors.toList());
         int offset = Pagination.getOffset(page, pageSize);
-        return projectManagementManager.getWorkItems(client, offset, pageSize, livedataFilters, livedataSortEntries);
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(clientExecutionContext, clientContext))
+        {
+            return projectManagementManager.getWorkItems(client, offset, pageSize, livedataFilters,
+                livedataSortEntries);
+        }
     }
 }

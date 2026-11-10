@@ -28,8 +28,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
@@ -62,8 +60,6 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.api.Document;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.objects.BaseObject;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
-import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.AdminAuthorChecker;
 import com.xwiki.projectmanagement.openproject.internal.rest.RestErrorResponses;
 import com.xwiki.projectmanagement.openproject.rest.document.OpenProjectSpaceResource;
@@ -109,7 +105,7 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
     private WikiDescriptorManager wikiDescriptorManager;
 
     @Inject
-    private OpenProjectConfiguration openProjectConfiguration;
+    private InstanceConnectionResolver instanceConnectionResolver;
 
     @Inject
     private AdminAuthorChecker adminAuthorChecker;
@@ -147,7 +143,7 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
             document.readFromTemplate(templateProviderReference, context);
             document.setTitle(title);
             UserReference userReference = userReferenceResolver.resolve(context.getUserReference());
-            String configuredInstance = findConfigurationWithInstance(instance);
+            String configuredInstance = findConfigurationWithInstance(instance, docRef.getWikiReference());
             maybeAddRelationObj(document, configuredInstance, workPackage, project);
             document.getAuthors().setCreator(userReference);
             document.getAuthors().setEffectiveMetadataAuthor(userReference);
@@ -250,22 +246,12 @@ public class DefaultOpenProjectSpaceResource extends XWikiResource implements Op
         return true;
     }
 
-    private String findConfigurationWithInstance(String instance)
+    private String findConfigurationWithInstance(String instance, WikiReference wiki)
     {
         if (StringUtils.isEmpty(instance)) {
             return "";
         }
-        OpenProjectConnection connection =
-            openProjectConfiguration.getOpenProjectConnections().stream()
-                .filter(cfg -> instance.equals(cfg.getInstanceId())).findFirst().orElse(null);
-
-        if (connection == null) {
-            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                .type(MediaType.TEXT_PLAIN_TYPE)
-                .entity(String.format("Could not find a configured instance for the id [%s].", instance)).build());
-        }
-
-        return connection.getConnectionName();
+        return this.instanceConnectionResolver.getConnectionName(instance, wiki);
     }
 
     private void maybeAddRelationObj(XWikiDocument document, String instance, Integer workPackage, Integer project)

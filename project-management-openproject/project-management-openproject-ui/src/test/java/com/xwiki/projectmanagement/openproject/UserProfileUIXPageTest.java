@@ -131,6 +131,20 @@ class UserProfileUIXPageTest extends PageTest
         assertTrue(connectURL.contains("RenewOAuthConnection") && connectURL.contains("connectionName="
             + NOT_CONNECTED) && connectURL.contains("token=" + TOKEN), connectURL);
         verify(this.openProject, never()).disconnect(any());
+        assertEquals("https://openproject.example.org",
+            result.select("tr:has(td:contains(" + CONNECTED + ")) a[href^=https]").attr("href"));
+    }
+
+    @Test
+    void serverURLWithoutHTTPSchemeIsNotLinked() throws Exception
+    {
+        when(this.openProject.getConnectionUrl(any())).thenReturn("javascript:alert(1)");
+
+        Document result = Jsoup.parse(renderProfileTab(USER));
+
+        assertTrue(result.select(".openproject-user-connections a[href^=javascript]").isEmpty(), result.html());
+        assertEquals(2, result.select(".openproject-user-connections td").stream()
+            .filter(cell -> "javascript:alert(1)".equals(cell.ownText())).count(), result.html());
     }
 
     @Test

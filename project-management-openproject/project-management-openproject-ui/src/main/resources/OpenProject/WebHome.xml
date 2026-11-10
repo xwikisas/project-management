@@ -37,119 +37,118 @@
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
   <content>{{velocity}}
-#set ($currentUser = $xcontext.user)
-#if ($currentUser == 'XWiki.XWikiGuest')
-  {{html}}
-  &lt;div class="box warningmessage"&gt;
-    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.guest'))&lt;/p&gt;
-  &lt;/div&gt;
-  {{/html}}
-#else
-  #set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
-  #set ($configObj = $doc.getObject($configClass))
-  #if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
-    #set ($discard = $configObj.set('selectedConnection', $request.connection))
-    #set ($discard = $configObj.set('selectedProject', "$!request.project"))
-    #set ($discard = $configObj.set('selectedProjectLabel', "$!request.projectLabel"))
-    #set ($discard = $doc.save('Updated project', true))
-    $response.sendRedirect($doc.getURL())
-    #stop
+#set ($isGuest = $xcontext.user == 'XWiki.XWikiGuest')
+#set ($configClass = 'OpenProject.Code.DashboardConnectionConfigClass')
+#set ($configObj = $doc.getObject($configClass))
+#if ($hasEdit &amp;&amp; $request.method == 'POST' &amp;&amp; $request.action == 'saveProject' &amp;&amp; $services.csrf.isTokenValid($request.csrf_token))
+  #set ($discard = $configObj.set('selectedConnection', $request.connection))
+  #set ($discard = $configObj.set('selectedProject', "$!request.project"))
+  #set ($discard = $configObj.set('selectedProjectLabel', "$!request.projectLabel"))
+  #set ($discard = $doc.save('Updated project', true))
+  $response.sendRedirect($doc.getURL())
+  #stop
+#end
+#set ($connectionOptions = $services.openproject.getConnectionOptions())
+#set ($discard = $connectionOptions.remove(0))
+#set ($selectedConnection = '')
+#set ($selectedProject = '')
+#set ($selectedProjectLabel = '')
+#if ($configObj)
+  #set ($selectedConnection = $configObj.getValue('selectedConnection'))
+  #set ($selectedProject = $configObj.getValue('selectedProject'))
+  #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
+#end
+## Fall back to the first connection when none is selected or when the selected one no longer exists, so that
+## the authorization warning matches the connection displayed in the picker.
+#set ($effectiveConnection = '')
+#foreach ($option in $connectionOptions)
+  #if ("$!selectedConnection" != '' &amp;&amp; $option.value == $selectedConnection)
+    #set ($effectiveConnection = $selectedConnection)
   #end
-  #set ($connectionOptions = $services.openproject.getConnectionOptions())
-  #set ($discard = $connectionOptions.remove(0))
-  #set ($selectedConnection = '')
+#end
+#if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
+  #set ($effectiveConnection = $connectionOptions.get(0).value)
+#end
+## The selected project belongs to the selected connection.
+#if ("$!effectiveConnection" != "$!selectedConnection")
   #set ($selectedProject = '')
   #set ($selectedProjectLabel = '')
-  #if ($configObj)
-    #set ($selectedConnection = $configObj.getValue('selectedConnection'))
-    #set ($selectedProject = $configObj.getValue('selectedProject'))
-    #set ($selectedProjectLabel = $configObj.getValue('selectedProjectLabel'))
-  #end
-  ## Fall back to the first connection when none is selected or when the selected one no longer exists, so that
-  ## the authorization warning matches the connection displayed in the picker.
-  #set ($effectiveConnection = '')
-  #foreach ($option in $connectionOptions)
-    #if ("$!selectedConnection" != '' &amp;&amp; $option.value == $selectedConnection)
-      #set ($effectiveConnection = $selectedConnection)
-    #end
-  #end
-  #if ("$!effectiveConnection" == '' &amp;&amp; $connectionOptions.size() &gt; 0)
-    #set ($effectiveConnection = $connectionOptions.get(0).value)
-  #end
-  ## The selected project belongs to the selected connection.
-  #if ("$!effectiveConnection" != "$!selectedConnection")
-    #set ($selectedProject = '')
-    #set ($selectedProjectLabel = '')
-  #end
-  ## The current user can read the data of the connection, with their own OpenProject account or anonymously when
-  ## the connection shows its public data.
-  #set ($tokenValid = false)
-  #if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.canReadData($effectiveConnection))
-    #set ($tokenValid = true)
-  #end
-  {{html clean="false"}}
-  #if ($connectionOptions.size() == 0)
-    &lt;div class="box warningmessage"&gt;
-      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
-    &lt;/div&gt;
-  #else
-    #if ($hasEdit)
-      &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
-        &lt;div class="form-group"&gt;
-          &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
-          &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
-            #if($connectionOptions.size() == 1) disabled #end&gt;
-            #foreach ($option in $connectionOptions)
-            &lt;option value="$escapetool.xml($option.value)" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
-            #end
-          &lt;/select&gt;
-          #if ($connectionOptions.size() == 1)
-          &lt;input type="hidden" name="connection" value="$!escapetool.xml($effectiveConnection)"/&gt;
+#end
+## The current user can read the data of the connection, with their own OpenProject account or anonymously when
+## the connection shows its public data.
+#set ($tokenValid = false)
+#if ("$!effectiveConnection" != '' &amp;&amp; $services.openproject.canReadData($effectiveConnection))
+  #set ($tokenValid = true)
+#end
+{{html clean="false"}}
+#if ($connectionOptions.size() == 0)
+  &lt;div class="box warningmessage"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.noConnections'))&lt;/p&gt;
+  &lt;/div&gt;
+#else
+  #if ($hasEdit)
+    &lt;form id="openproject-dashboard-project-form" method="post" class="withLock xform" action=""&gt;
+      &lt;div class="form-group"&gt;
+        &lt;label for="openproject-dashboard-connection-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectConnection.label'))&lt;/label&gt;
+        &lt;select id="openproject-dashboard-connection-select" name="connection" class="form-control"
+          #if($connectionOptions.size() == 1) disabled #end&gt;
+          #foreach ($option in $connectionOptions)
+          &lt;option value="$escapetool.xml($option.value)" #if($effectiveConnection == $option.value) selected #end&gt;$escapetool.xml($option.name)&lt;/option&gt;
           #end
-        &lt;/div&gt;
-        ## The project picker is only useful once the current user can read the data of the connection.
-        #if ($tokenValid)
-        &lt;div class="form-group"&gt;
-          &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
-          &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
-            data-connection="$!escapetool.xml($effectiveConnection)"
-            data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
-            #if ("$!selectedProject" != '')
-            &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
-            #end
-          &lt;/select&gt;
-          &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
-        &lt;/div&gt;
+        &lt;/select&gt;
+        #if ($connectionOptions.size() == 1)
+        &lt;input type="hidden" name="connection" value="$!escapetool.xml($effectiveConnection)"/&gt;
         #end
-        &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
-        &lt;input type="hidden" name="action" value="saveProject"/&gt;
-      &lt;/form&gt;
-    #end
-    ## Carries the effective connection to the JS for users without pickers (no connection select).
-    &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
-    ## The current user can't read the data of this connection: show the (per-user) authorize warning.
-    #if (!$tokenValid)
-      #set ($notAuthorized = $services.openproject.getNotAuthorizedMessage($effectiveConnection, 'html/5.0'))
-      #if ("$!notAuthorized" != '')
-        $notAuthorized
+      &lt;/div&gt;
+      ## The project picker is only useful once the current user can read the data of the connection.
+      #if ($tokenValid)
+      &lt;div class="form-group"&gt;
+        &lt;label for="openproject-dashboard-project-select"&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.label'))&lt;/label&gt;
+        &lt;select id="openproject-dashboard-project-select" name="project" class="form-control"
+          data-connection="$!escapetool.xml($effectiveConnection)"
+          data-placeholder="$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.placeholder'))"&gt;
+          #if ("$!selectedProject" != '')
+          &lt;option value="$!escapetool.xml($selectedProject)" selected="selected"&gt;$!escapetool.xml($selectedProjectLabel)&lt;/option&gt;
+          #end
+        &lt;/select&gt;
+        &lt;input type="hidden" name="projectLabel" id="openproject-dashboard-project-label-input"/&gt;
+      &lt;/div&gt;
       #end
+      &lt;input type="hidden" name="csrf_token" value="${escapetool.xml($services.csrf.token)}"/&gt;
+      &lt;input type="hidden" name="action" value="saveProject"/&gt;
+    &lt;/form&gt;
+  #end
+  ## Carries the effective connection to the JS for users without pickers (no connection select).
+  &lt;span id="openproject-dashboard-data" class="hidden" data-connection="$!escapetool.xml($effectiveConnection)"&gt;&lt;/span&gt;
+  ## The current user can't read the data of this connection: show the (per-user) authorize warning.
+  ## Guests can't connect an OpenProject account: ask them to log in when the connection lets users connect their
+  ## account. A connection showing only public data gets the usual warning (e.g. OpenProject refuses anonymous
+  ## requests).
+  #if (!$tokenValid &amp;&amp; $isGuest &amp;&amp; $services.openproject.getUserAccountConnections().contains($effectiveConnection))
+    &lt;div class="box warningmessage"&gt;
+      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.guest'))&lt;/p&gt;
+    &lt;/div&gt;
+  #elseif (!$tokenValid)
+    #set ($notAuthorized = $services.openproject.getNotAuthorizedMessage($effectiveConnection, 'html/5.0'))
+    #if ("$!notAuthorized" != '')
+      $notAuthorized
     #end
-    ## Warnings revealed by the JS (invalid/expired connection, or connection without any projects).
-    &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
-      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection', [$effectiveConnection]))&lt;/p&gt;
-    &lt;/div&gt;
-    &lt;div id="openproject-dashboard-no-project" class="box warningmessage hidden"&gt;
-      &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.noProject'))&lt;/p&gt;
-    &lt;/div&gt;
   #end
-  {{/html}}
-  ## Render the macros (hidden) only when the current user can read the data of the connection; the project
-  ## is defaulted transiently by the listener. The JS reveals them once it confirms the connection works.
-  #if ("$!effectiveConnection" != '' &amp;&amp; $tokenValid)
-  (% id="openproject-dashboard-gadgets" class="hidden" %)(((
-  {{dashboard/}}
-  )))
-  #end
+  ## Warnings revealed by the JS (invalid/expired connection, or connection without any projects).
+  &lt;div id="openproject-dashboard-invalid-connection" class="box warningmessage hidden"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.selectProject.invalidConnection', [$effectiveConnection]))&lt;/p&gt;
+  &lt;/div&gt;
+  &lt;div id="openproject-dashboard-no-project" class="box warningmessage hidden"&gt;
+    &lt;p&gt;$escapetool.xml($services.localization.render('openproject.dashboard.noProject'))&lt;/p&gt;
+  &lt;/div&gt;
+#end
+{{/html}}
+## Render the macros (hidden) only when the current user can read the data of the connection; the project
+## is defaulted transiently by the listener. The JS reveals them once it confirms the connection works.
+#if ("$!effectiveConnection" != '' &amp;&amp; $tokenValid)
+(% id="openproject-dashboard-gadgets" class="hidden" %)(((
+{{dashboard/}}
+)))
 #end
 {{/velocity}}</content>
   <object>

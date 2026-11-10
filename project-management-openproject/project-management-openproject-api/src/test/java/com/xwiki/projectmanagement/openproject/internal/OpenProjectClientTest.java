@@ -23,11 +23,13 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -163,7 +165,7 @@ class OpenProjectClientTest
     {
         doReturn(workPackages(1, 2)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertEquals(List.of("1", "2"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+        assertEquals(List.of("1", "2"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @Test
@@ -171,12 +173,55 @@ class OpenProjectClientTest
     {
         doReturn(workPackages(1)).when(this.openProjectApiClient).getWorkPackages(1, 20, NO_FILTERS, NO_SORTING);
         doReturn(workPackages(41)).when(this.openProjectApiClient).getWorkPackages(3, 20, NO_FILTERS, NO_SORTING);
-        doReturn(workPackages(21)).when(this.openProjectApiClient).getWorkPackages(3, 10, NO_FILTERS, NO_SORTING);
 
         assertEquals(List.of("1"), getIds(this.openProjectClient.getWorkItems(0, 20, List.of(), List.of())));
         assertEquals(List.of("41"), getIds(this.openProjectClient.getWorkItems(40, 20, List.of(), List.of())));
-        // An offset in the middle of a page retrieves the page that holds it.
-        assertEquals(List.of("21"), getIds(this.openProjectClient.getWorkItems(25, 10, List.of(), List.of())));
+    }
+
+    @Test
+    void getWorkItemsRetrievesOnlyThePageStartingAtTheOffset() throws ProjectManagementException
+    {
+        // 60 work packages match: the offset 20 is at the start of the second page of 20.
+        int[] secondPage = IntStream.rangeClosed(21, 40).toArray();
+        doReturn(workPackagesPage(60, secondPage)).when(this.openProjectApiClient)
+            .getWorkPackages(2, 20, NO_FILTERS, NO_SORTING);
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(20, 20, List.of(), List.of());
+
+        assertEquals(Arrays.stream(secondPage).mapToObj(String::valueOf).collect(Collectors.toList()),
+            getIds(result));
+        assertEquals(60, result.getTotalItems());
+        verify(this.openProjectApiClient, never()).getWorkPackages(3, 20, NO_FILTERS, NO_SORTING);
+    }
+
+    @Test
+    void getWorkItemsSkipsTheWorkItemsBeforeAnOffsetInTheMiddleOfAPage() throws ProjectManagementException
+    {
+        // 12 work packages match: the offset 5 is in the middle of the first page of 10.
+        doReturn(workPackagesPage(12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)).when(this.openProjectApiClient)
+            .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+        doReturn(workPackagesPage(12, 11, 12)).when(this.openProjectApiClient)
+            .getWorkPackages(2, 10, NO_FILTERS, NO_SORTING);
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(5, 10, List.of(), List.of());
+
+        assertEquals(List.of("6", "7", "8", "9", "10", "11", "12"), getIds(result));
+        // The total still counts all the matching work packages, including the skipped ones.
+        assertEquals(12, result.getTotalItems());
+    }
+
+    @Test
+    void getWorkItemsWithAnOffsetInTheMiddleOfTheLastPage() throws ProjectManagementException
+    {
+        doReturn(workPackagesPage(6, 1, 2, 3)).when(this.openProjectApiClient)
+            .getWorkPackages(1, 3, NO_FILTERS, NO_SORTING);
+        doReturn(workPackagesPage(6, 4, 5, 6)).when(this.openProjectApiClient)
+            .getWorkPackages(2, 3, NO_FILTERS, NO_SORTING);
+
+        assertEquals(List.of("2", "3", "4"), getIds(this.openProjectClient.getWorkItems(1, 3, List.of(), List.of())));
+        assertEquals(List.of("5", "6"), getIds(this.openProjectClient.getWorkItems(4, 3, List.of(), List.of())));
+        // There's no work package after the second page, which holds the offset 4.
+        verify(this.openProjectApiClient, never()).getWorkPackages(3, 3, NO_FILTERS, NO_SORTING);
     }
 
     @Test
@@ -185,7 +230,7 @@ class OpenProjectClientTest
         when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages");
         doReturn(workPackages(3)).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertEquals(List.of("3"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+        assertEquals(List.of("3"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @ParameterizedTest
@@ -211,7 +256,7 @@ class OpenProjectClientTest
         doReturn(workPackages(4)).when(this.openProjectApiClient)
             .getProjectWorkPackages("first-project", 1, 10, NO_FILTERS, NO_SORTING);
 
-        assertEquals(List.of("4"), getIds(this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+        assertEquals(List.of("4"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @Test
@@ -372,6 +417,16 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemsWithSavedQuerySkipsTheWorkItemsBeforeTheOffset() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
+        doReturn(workPackagesPage(5, 1, 2)).when(this.openProjectApiClient).getQueryWorkPackages(QUERY_ID, 1, 2, "");
+        doReturn(workPackagesPage(5, 3, 4)).when(this.openProjectApiClient).getQueryWorkPackages(QUERY_ID, 2, 2, "");
+
+        assertEquals(List.of("2", "3"), getIds(this.openProjectClient.getWorkItems(1, 2, List.of(), List.of())));
+    }
+
+    @Test
     void getWorkItemsWithSavedQueryAndLivedataSortingButNoFilters() throws ProjectManagementException
     {
         when(this.executionContext.get(IDENTIFIER)).thenReturn(SAVED_QUERY_IDENTIFIER);
@@ -507,6 +562,32 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemsRequestsTheWorkPackagesInTheCurrentThread() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,99999");
+        doThrow(new WorkItemRetrievalException("Id filter has invalid values.", 400)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(2),
+                argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\",\"99999\"]}}]")), eq(""));
+        doReturn(workPackages(5)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"5\"]}}]")), eq(""));
+        // The work packages are requested with the XWiki execution context of the current thread.
+        Set<Thread> requestThreads = new HashSet<>();
+        when(this.openProjectApiClient.getWorkPackage(anyString())).thenAnswer(invocation -> {
+            requestThreads.add(Thread.currentThread());
+            String key = invocation.getArgument(0);
+            return "XWIKI-123".equals(key) || "5".equals(key) ? createWorkPackage(5) : null;
+        });
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
+
+        assertEquals(List.of("5"), getIds(result));
+        // The key is resolved, then each id is checked after the id filter was rejected.
+        verify(this.openProjectApiClient).getWorkPackage("XWIKI-123");
+        verify(this.openProjectApiClient).getWorkPackage("99999");
+        assertEquals(Set.of(Thread.currentThread()), requestThreads);
+    }
+
+    @Test
     void getWorkItemsWithOnlyIdsThatDontExist() throws ProjectManagementException
     {
         when(this.executionContext.get(IDENTIFIER)).thenReturn("99999");
@@ -579,6 +660,24 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemsWithKeysSortedByTheLivedataSkipsTheWorkItemsBeforeTheOffset() throws ProjectManagementException
+    {
+        when(this.executionContext.get(IDENTIFIER)).thenReturn("XWIKI-123,XWIKI-456,1911");
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-456")).thenReturn(createWorkPackage(2));
+        doReturn(workPackagesPage(3, 1911, 5)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(2),
+            argThat(idFilterOf5And2And1911()), eq("[[\"id\",\"desc\"]]"));
+        doReturn(workPackagesPage(3, 2)).when(this.openProjectApiClient).getWorkPackages(eq(2), eq(2),
+            argThat(idFilterOf5And2And1911()), eq("[[\"id\",\"desc\"]]"));
+
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(1, 2, List.of(),
+            List.of(new LiveDataQuery.SortEntry(IDENTIFIER, true)));
+
+        assertEquals(List.of("5", "2"), getIds(result));
+        assertEquals(3, result.getTotalItems());
+    }
+
+    @Test
     void getWorkItemsWithUnknownKeys() throws ProjectManagementException
     {
         // The keys don't resolve to any work package, so no work packages are requested.
@@ -642,7 +741,7 @@ class OpenProjectClientTest
         doThrow(new WorkItemRetrievalException("Invalid filter", statusCode)).when(this.openProjectApiClient)
             .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(1, 10, List.of(), List.of());
+        PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
@@ -656,7 +755,7 @@ class OpenProjectClientTest
         doThrow(new ProjectManagementException("Server error")).when(this.openProjectApiClient)
             .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertEquals(0, this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()).getTotalItems());
+        assertEquals(0, this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()).getTotalItems());
         assertEquals("Failed to retrieve work packages: Server error", this.logCapture.getMessage(0));
     }
 
@@ -669,7 +768,7 @@ class OpenProjectClientTest
         doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         assertSame(failure, assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @ParameterizedTest
@@ -681,7 +780,7 @@ class OpenProjectClientTest
         doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         assertSame(failure, assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of())));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @Test
@@ -691,7 +790,7 @@ class OpenProjectClientTest
         doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
         assertEquals("An error occurred while trying to get the work items", exception.getMessage());
         assertEquals(failure, exception.getCause());
@@ -705,7 +804,7 @@ class OpenProjectClientTest
             .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
         assertEquals("Rejected", exception.getMessage());
         assertEquals(statusCode, exception.getStatusCode());
@@ -717,7 +816,7 @@ class OpenProjectClientTest
         when(this.openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConnected());
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
         assertEquals("The current user isn't connected to the OpenProject instance [].", exception.getMessage());
         assertEquals(401, exception.getStatusCode());
@@ -729,7 +828,7 @@ class OpenProjectClientTest
         when(this.openProjectAccess.resolve(anyString())).thenReturn(OpenProjectAccessResult.notConfigured());
 
         WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(1, 10, List.of(), List.of()));
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
 
         assertEquals("No configuration for instance [] was found.", exception.getMessage());
     }
@@ -924,6 +1023,16 @@ class OpenProjectClientTest
         List<WorkPackage> workPackages =
             Arrays.stream(ids).mapToObj(OpenProjectClientTest::createWorkPackage).collect(Collectors.toList());
         return new PaginatedResult<>(workPackages, 1, workPackages.size(), workPackages.size());
+    }
+
+    /**
+     * @return a page of the work packages matching a request, out of the given total
+     */
+    private static PaginatedResult<WorkPackage> workPackagesPage(int total, int... ids)
+    {
+        PaginatedResult<WorkPackage> page = workPackages(ids);
+        page.setTotalItems(total);
+        return page;
     }
 
     private static WorkPackage createWorkPackage(int id)
