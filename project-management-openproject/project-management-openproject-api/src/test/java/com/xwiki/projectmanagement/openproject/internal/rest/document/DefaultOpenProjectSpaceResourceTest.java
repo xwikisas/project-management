@@ -312,7 +312,8 @@ class DefaultOpenProjectSpaceResourceTest
         when(this.modelBridge.getDocumentReferences(subwikiTemplate.getLastSpaceReference()))
             .thenReturn(List.of(subwikiTemplate));
         when(this.xwiki.getDocument(subwikiTemplate, this.context)).thenReturn(this.templateDocument);
-        when(this.xwiki.getDocument(subwikiPage, this.context)).thenReturn(this.document);
+        when(this.xwiki.getDocument(subwikiPage, this.context)).thenReturn(this.cachedDocument);
+        when(this.cachedDocument.clone()).thenReturn(this.document);
         BaseObject relation = mock(BaseObject.class);
         when(this.document.getXObject(ProjectManagementRelation.CLASS_REFERENCE, true, this.context))
             .thenReturn(relation);
