@@ -110,11 +110,12 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
         // Wait for the selection to be initialized.
         new SuggestInputElement(input);
         return getSelectizeControl(input).findElements(By.cssSelector(".selectize-input > .item")).stream()
-            .map(item -> item.getText().trim()).findFirst().orElse("");
+            .map(item -> item.getAttribute("textContent").trim()).findFirst().orElse("");
     }
 
     private WebElement getChartOptionInput(String option)
     {
+        selectParameterTab("display");
         // The chart options are loaded once the modal is displayed, and again when the chart type changes.
         By optionInput = By.cssSelector(
             String.format(".macro-editor-modal .proj-manag-chart-type-param input[name='%s'].selectized", option));
