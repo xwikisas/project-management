@@ -19,7 +19,10 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import javax.naming.OperationNotSupportedException;
@@ -298,6 +301,31 @@ public class OpenProjectMacroElement extends BaseElement
     public List<String> waitForLiveDataCards()
     {
         return waitForLiveDataEntries(By.cssSelector(".liveData .layout-cards .card"));
+    }
+
+    /**
+     * Wait for the Live Data of the macro to display its entries in the cards layout.
+     *
+     * @return for each card, the properties displayed in the card (except its title): their label (e.g.
+     *     {@code "Status"}) and their value
+     * @since 1.4.0
+     */
+    public List<Map<String, String>> waitForLiveDataCardProperties()
+    {
+        waitForLiveDataCards();
+        List<Map<String, String>> cards = new ArrayList<>();
+        for (WebElement card : self.findElements(By.cssSelector(".liveData .layout-cards .card"))) {
+            Map<String, String> properties = new LinkedHashMap<>();
+            for (WebElement property : card.findElements(By.className("card-property"))) {
+                if (property.isDisplayed()) {
+                    String label = StringUtils.removeEnd(
+                        property.findElement(By.className("property-name")).getText().trim(), ":");
+                    properties.put(label, property.findElement(By.className("value")).getText().trim());
+                }
+            }
+            cards.add(properties);
+        }
+        return cards;
     }
 
     /**

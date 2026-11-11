@@ -31,10 +31,12 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
@@ -64,6 +66,10 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
 
     @Inject
     private ComponentManager componentManager;
+
+    @Inject
+    @Named("ssrx")
+    private SkinExtension ssrx;
 
     /**
      * Default constructor.
@@ -96,6 +102,11 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
             }
             if (WorkItemsDisplayer.CARDS.equals(parameters.getDisplayer())) {
                 parameters.setLayouts("cards,table");
+                // The style hides the labels of the properties without value in the cards.
+                this.ssrx.use("css/projectmanagement/displayer/cards.css",
+                    Collections.singletonMap("forceSkinAction", true));
+                return Collections.singletonList(new GroupBlock(displayerMacro.execute(parameters, newContent, context),
+                    Collections.singletonMap("class", "proj-manag-cards")));
             }
             return displayerMacro.execute(parameters, newContent, context);
         } catch (ComponentLookupException e) {
