@@ -40,6 +40,22 @@ require(['jquery'], function ($) {
     let parameters = (input.macroCall && input.macroCall.parameters) || {};
     return Object.keys(parameters).some(key => key.toLowerCase() === 'displayer');
   };
+  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it empty,
+  // and its tab when it holds no other visible field, activating the first visible tab if it was the active one (the
+  // macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
+  let hideParameter = function (input) {
+    let tabPanel = input.closest('.macro-parameter').addClass('hidden').closest('.tab-pane');
+    while (tabPanel.length > 0 && tabPanel.find('.macro-parameter').not('.hidden').length === 0) {
+      let tabPanels = tabPanel.parent().children();
+      let tabs = tabPanel.parent().siblings('[role="tablist"]').children();
+      tabs.eq(tabPanels.index(tabPanel)).add(tabPanel).addClass('hidden');
+      if (tabPanel.hasClass('active')) {
+        tabs.add(tabPanels).removeClass('active');
+        tabs.not('.hidden').first().add(tabPanels.not('.hidden').first()).addClass('active');
+      }
+      tabPanel = tabPanel.parent().closest('.tab-pane');
+    }
+  };
   // Edit a macro using the deprecated parameter with the displayer one, so that the displayer chosen in the editor,
   // the default one included, isn't overridden by the deprecated parameter left in the macro. The displayer parameter
   // takes precedence over the deprecated one, so the deprecated value is used only when the macro call has no displayer
@@ -54,6 +70,7 @@ require(['jquery'], function ($) {
         displayerSelect.val(legacyDisplayers[legacyValue]);
       }
       legacyInput.val('');
+      hideParameter(legacyInput);
     }
   };
   let initParams = function () {

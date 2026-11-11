@@ -241,6 +241,17 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
+     * @return the name of the selected parameter tab, e.g. "Filters", or {@code null} if the modal displays no tabs
+     * @since 1.4.0
+     */
+    public String getSelectedParameterTab()
+    {
+        return getDriver().findElementsWithoutWaiting(By.cssSelector(
+            ".macro-editor-modal [role='tablist'] > li.active > a[role='tab']")).stream()
+            .filter(WebElement::isDisplayed).map(tab -> tab.getText().trim()).findFirst().orElse(null);
+    }
+
+    /**
      * The first suggest input of the modal (e.g. the project) can be focused when the modal is opened, and its
      * dropdown can then cover the other parameters. Close it by clicking outside it.
      */
