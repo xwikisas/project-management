@@ -210,21 +210,22 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     @Order(5)
     void openClosedMacroTest(TestUtils setup, TestReference testReference)
     {
-        setup.deletePage(testReference);
-
-        // The datasets and the grouping property are predefined, only the time range can be configured.
-        OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
-        modal.selectInstance(CONNECTION_ID);
-        modal.clickMore();
-        assertFalse(modal.hasFilterBuilder());
-        assertFalse(modal.isMacroParameterDisplayed("property"));
-        modal.setMacroParameter("days", "30");
-        modal.clickSubmit();
-        modal.getEditPage().clickSaveAndView();
+        // The datasets, the chart type and the grouping property are predefined, only the time range can be configured:
+        // the parameters defining them are never displayed and have no effect, even when the macro call sets them.
+        setup.createPage(testReference, String.format("{{openprojectopenclosed instance=\"%s\" filters=\"[]\" "
+            + "type=\"%s\" property=\"status\"/}}", CONNECTION_ID, PIE));
+        setup.gotoPage(testReference);
 
         // Checks that the chart compares the open and closed work packages.
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("line", chart.getChartType());
         assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
+
+        OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
+        modal.clickMore();
+        assertFalse(modal.hasFilterBuilder());
+        assertFalse(modal.isMacroParameterDisplayed("filters"));
+        assertFalse(modal.isMacroParameterDisplayed("type"));
+        assertFalse(modal.isMacroParameterDisplayed("property"));
     }
 }

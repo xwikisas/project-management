@@ -23,9 +23,9 @@ package com.xwiki.projectmanagement.openproject.macro;
 import java.awt.Color;
 import java.util.List;
 
-import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
+import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
@@ -106,7 +106,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
         super.setFilters(filters);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setClient(String client)
     {
