@@ -79,7 +79,11 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
           clone = $('.proj-manag-chart-type-params').find(".proj-manag-chart-type-param").last();
 
 
-          let selectizeOptions = template.values ? template.values.map(val => { return { value: val, label: val } }) : [];
+          // Display the translated labels of the values, the parameter keeping the values themselves.
+          let valueLabels = template.valueLabels || {};
+          let selectizeOptions = template.values ? template.values.map(val => {
+            return { value: val, label: valueLabels[val] || val };
+          }) : [];
           clone.find('input').xwikiSelectize({
             delimiter: SEPARATOR,
             create: template.values ? false : true,

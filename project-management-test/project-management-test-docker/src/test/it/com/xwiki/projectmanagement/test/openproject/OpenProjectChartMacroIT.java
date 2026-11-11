@@ -102,6 +102,9 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
         modal.setChartType(PIE);
+        // The chart options display translated values.
+        assertThat(modal.getChartOptionChoices("period"), containsInAnyOrder("Hourly", "Daily", "Monthly", "Yearly"));
+        assertThat(modal.getChartOptionChoices("metric"), containsInAnyOrder("Count", "Cumulative"));
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
         assertEquals(PIE, new ChartJSCanvas().getChartType());
