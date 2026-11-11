@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -190,8 +191,13 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             String data = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(chartJSData);
 
             WikiPrinter wikiPrinter = new DefaultWikiPrinter();
-            renderer.render(new MacroBlock("chartjs", Map.of("type", getChartType()), data, false),
-                wikiPrinter);
+            Map<String, String> chartParameters = new LinkedHashMap<>();
+            chartParameters.put("type", getChartType());
+            if (isSingleUnlabeledDataset(counts, labels) && isLegendOfDatasets()) {
+                // The legend would only display the missing name of the single dataset.
+                chartParameters.put("options", "{\"legend\":{\"display\":false}}");
+            }
+            renderer.render(new MacroBlock("chartjs", chartParameters, data, false), wikiPrinter);
             return wikiPrinter.toString();
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
@@ -223,7 +229,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
                 }
             });
             unsetCounts.add(unset[0]);
-            dataset.setLabel(labels.size() > i ? labels.get(i) : "Unlabeled");
+            dataset.setLabel(getDatasetLabel(counts, labels, i));
             applyMetric(metric, chartJSData, i, dataSet);
         }
 
@@ -236,6 +242,29 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
                 }
             }
         }
+    }
+
+    private static boolean isSingleUnlabeledDataset(List<Map<String, Long>> counts, List<String> labels)
+    {
+        return counts.size() == 1 && labels.isEmpty();
+    }
+
+    private static String getDatasetLabel(List<Map<String, Long>> counts, List<String> labels, int index)
+    {
+        if (labels.size() > index) {
+            return labels.get(index);
+        }
+        // A single dataset needs no name: it would only be displayed by the tooltips, before the values.
+        return isSingleUnlabeledDataset(counts, labels) ? "" : "Unlabeled";
+    }
+
+    /**
+     * @return {@code true} if the legend of the chart displays the labels of the datasets, {@code false} if it
+     *     displays the labels of the values (e.g. the slices of a pie chart)
+     */
+    protected boolean isLegendOfDatasets()
+    {
+        return true;
     }
 
     /**

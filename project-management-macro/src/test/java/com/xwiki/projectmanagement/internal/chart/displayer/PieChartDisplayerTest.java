@@ -58,9 +58,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link PieChartDisplayer} and the common code of {@link AbstractChartJSDisplayer}. The displayer and
- * the components it uses are the real ones, except for the macro content parser, so that the test checks the wiki
- * syntax actually generated for the chart, parsed by the real XWiki 2.1 parser.
+ * Unit tests for {@link PieChartDisplayer} and the common code of {@link AbstractChartJSDisplayer}, also checked with
+ * the {@link BarChartDisplayer} where the chart types differ. The displayer and the components it uses are the real
+ * ones, except for the macro content parser, so that the test checks the wiki syntax actually generated for the chart,
+ * parsed by the real XWiki 2.1 parser.
  *
  * @version $Id$
  */
@@ -78,6 +79,10 @@ class PieChartDisplayerTest
     @Inject
     @Named("pie")
     private ChartTypeDisplayer displayer;
+
+    @Inject
+    @Named("bar")
+    private ChartTypeDisplayer barDisplayer;
 
     @Inject
     @Named("xwiki/2.1")
@@ -98,6 +103,27 @@ class PieChartDisplayerTest
         assertEquals(List.of("1", "2", "1"), texts(data.path("datasets").path(0).path("data")));
         assertEquals("Unlabeled", data.path("datasets").path(1).path("label").asText());
         assertEquals(List.of("1", "0"), texts(data.path("datasets").path(1).path("data")));
+    }
+
+    @Test
+    void hidesTheLegendOfASingleUnlabeledDataset() throws Exception
+    {
+        List<PaginatedResult<WorkItem>> datasets = List.of(result(workItem(NEW)));
+        AbstractChartJSDisplayer bar = (AbstractChartJSDisplayer) this.barDisplayer;
+
+        // The legend of a bar chart displays the names of the datasets: a single dataset without name has none.
+        MacroBlock chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of(), Map.of()));
+        assertEquals(Map.of("type", "bar", "options", "{\"legend\":{\"display\":false}}"), chart.getParameters());
+        assertEquals("", new ObjectMapper().readTree(chart.getContent()).path("datasets").path(0).path("label")
+            .asText(null));
+
+        // A named dataset keeps its legend.
+        chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of("Mine"), Map.of()));
+        assertEquals(Map.of("type", "bar"), chart.getParameters());
+
+        // The legend of a pie chart displays the slices.
+        JsonNode data = getChartData(datasets, List.of(), Map.of());
+        assertEquals("", data.path("datasets").path(0).path("label").asText(null));
     }
 
     @Test
@@ -253,13 +279,19 @@ class PieChartDisplayerTest
 
     private JsonNode getChartData(String chartMacro) throws Exception
     {
+        MacroBlock macro = getChartMacroBlock(chartMacro);
+        assertEquals(Map.of("type", "pie"), macro.getParameters());
+        return new ObjectMapper().readTree(macro.getContent());
+    }
+
+    private MacroBlock getChartMacroBlock(String chartMacro) throws Exception
+    {
         List<Block> macros = this.parser.parse(new StringReader(chartMacro))
             .getBlocks(new ClassBlockMatcher(MacroBlock.class), Block.Axes.DESCENDANT);
         assertEquals(1, macros.size());
         MacroBlock macro = (MacroBlock) macros.get(0);
         assertEquals("chartjs", macro.getId());
-        assertEquals(Map.of("type", "pie"), macro.getParameters());
-        return new ObjectMapper().readTree(macro.getContent());
+        return macro;
     }
 
     private AbstractChartJSDisplayer getDisplayer()

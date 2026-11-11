@@ -43,6 +43,7 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the OpenProject chart macro.
@@ -89,6 +90,8 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("bar", chart.getChartType());
         assertThat(chart.getLabels(), hasItems(NEW, IN_PROGRESS, CLOSED));
+        // The legend would only name the single series of bars, which has no name.
+        assertFalse(chart.isLegendDisplayed());
     }
 
     @Test
@@ -220,6 +223,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         ChartJSCanvas chart = new ChartJSCanvas();
         assertEquals("line", chart.getChartType());
         assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
+        assertTrue(chart.isLegendDisplayed());
 
         OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
         modal.clickMore();

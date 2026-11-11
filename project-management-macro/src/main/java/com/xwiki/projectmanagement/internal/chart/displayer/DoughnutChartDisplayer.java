@@ -45,4 +45,11 @@ public class DoughnutChartDisplayer extends AbstractChartJSDisplayer
     {
         return TYPE;
     }
+
+    @Override
+    protected boolean isLegendOfDatasets()
+    {
+        // The legend displays the slices.
+        return false;
+    }
 }
