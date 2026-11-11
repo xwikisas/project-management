@@ -88,9 +88,9 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        int projectId = getProjectId(parameters.getProject());
+        Project parentProject = getProject(parameters.getProject(), apiClient);
+        Integer projectId = parentProject.getId();
         try {
-            Project parentProject = apiClient.getProject(projectId);
             String filters = new FilterBuilder()
                 .addFilter(ANCESTOR, FilterBuilder.Operator.EQUALS, projectId)
                 .build();

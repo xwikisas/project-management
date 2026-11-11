@@ -184,6 +184,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     void linksToAProjectWithReservedURLCharacters() throws Exception
     {
         this.parameters.setProject("a/b c?d#e\"");
+        resolveProject("a/b c?d#e\"", 12);
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
@@ -268,14 +269,14 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
-    void filtersByProjectWithSpecialCharacters() throws Exception
+    void filtersByProjectIdentifier() throws Exception
     {
-        this.parameters.setProject("a\"]}},{\"x\":{\"operator\":\"!\",\"values\":[\"\\");
+        // OpenProject filters the time entries by project id only.
+        this.parameters.setProject("demo-project");
+        resolveProject("demo-project", 12);
         this.parameters.setDays(0);
 
-        assertEquals(matchingEntry() + "View project dashboard\n", executeWithFilters(
-            "[{\"project\":{\"operator\":\"=\",\"values\":"
-                + "[\"a\\\"]}},{\\\"x\\\":{\\\"operator\\\":\\\"!\\\",\\\"values\\\":[\\\"\\\\\"]}}]"));
+        assertEquals(matchingEntry() + "View project dashboard\n", executeWithFilters("[" + PROJECT_FILTER + "]"));
     }
 
     @Test

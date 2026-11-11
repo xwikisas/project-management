@@ -90,6 +90,7 @@ class WorkItemLivedataDisplayerTest
         // The limit is the size of the pages of the table.
         assertEquals(25, this.parameters.getLimit());
         assertNull(this.parameters.getLayouts());
+        assertNull(this.parameters.getShowPageSizeDropdown());
     }
 
     @Test
@@ -109,5 +110,17 @@ class WorkItemLivedataDisplayerTest
         assertEquals(10, this.parameters.getLimit());
         assertEquals("cards,table", this.parameters.getLayouts());
         assertEquals("", this.parameters.getFilters());
+    }
+
+    @Test
+    void displaysThePageSizeSelectorWhenPageSizesAreGiven() throws Exception
+    {
+        this.parameters.setPageSizes("5, 10, 20");
+        when(this.liveDataMacro.execute(this.parameters, "", this.context)).thenReturn(this.liveData);
+
+        assertEquals(this.liveData, this.displayer.execute(this.parameters, "", this.context));
+        // Live Data uses the page sizes only in its page size selector, which is hidden by default.
+        assertEquals(Boolean.TRUE, this.parameters.getShowPageSizeDropdown());
+        assertEquals("5, 10, 20", this.parameters.getPageSizes());
     }
 }
