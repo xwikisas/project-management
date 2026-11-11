@@ -31,7 +31,7 @@
   <properties>
     <checkstyle.suppressions.location>${basedir}/src/checkstyle/checkstyle-suppressions.xml
     </checkstyle.suppressions.location>
-    <xwiki.jacoco.instructionRatio>0.98</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.99</xwiki.jacoco.instructionRatio>
   </properties>
   <artifactId>project-management-openproject-macro</artifactId>
   <name>Project Management - Open Project - Macro</name>
