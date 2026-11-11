@@ -52,7 +52,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     }
     let params = paramsInput.val() ? JSON.parse(paramsInput.val()) : {};
 
-    let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val();
+    // The macros drawing a single chart type don't have a type parameter (e.g. the completion rate one draws lines):
+    // the chart types have the same options anyway.
+    let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val() || 'line';
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
     let notif = createNotification(l10n.get('loading'), 'inprogress');
     notif.show();

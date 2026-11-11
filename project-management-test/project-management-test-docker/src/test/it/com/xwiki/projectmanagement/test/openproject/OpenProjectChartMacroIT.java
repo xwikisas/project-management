@@ -249,5 +249,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         assertFalse(modal.isMacroParameterDisplayed("filters"));
         assertFalse(modal.isMacroParameterDisplayed("type"));
         assertFalse(modal.isMacroParameterDisplayed("property"));
+        // The chart options can be changed, although the chart type can't be.
+        assertThat(modal.getChartOptionNames(), containsInAnyOrder("Date Grouping", "Measure"));
     }
 }
