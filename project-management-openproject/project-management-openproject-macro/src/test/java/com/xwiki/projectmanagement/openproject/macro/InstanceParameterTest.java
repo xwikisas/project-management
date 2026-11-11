@@ -29,6 +29,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.properties.BeanManager;
 import org.xwiki.properties.PropertyMandatoryException;
+import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.properties.internal.DefaultBeanManager;
 import org.xwiki.properties.internal.DefaultConverterManager;
 import org.xwiki.properties.internal.converter.ConvertUtilsConverter;
@@ -43,10 +44,11 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Checks that the OpenProject macros don't require the {@code instance} parameter, which defaults to the default
- * connection.
+ * connection, and that the macros displaying a project list it before the project.
  *
  * @version $Id$
  */
@@ -94,6 +96,32 @@ class InstanceParameterTest
 
         assertNull(parameters.getInstance());
         assertFalse(this.beanManager.getBeanDescriptor(parametersClass).getProperty(INSTANCE).isMandatory());
+    }
+
+    static Stream<Class<? extends BaseDirectOpenProjectMacroParameters>> projectParameters()
+    {
+        return Stream.of(OpenProjectNewsMacroParameters.class, OpenProjectSubprojectsMacroParameters.class,
+            OpenProjectProjectDetailsMacroParameters.class, OpenProjectProjectMembersMacroParameters.class,
+            OpenProjectSpentTimeMacroParameters.class);
+    }
+
+    @ParameterizedTest
+    @MethodSource("projectParameters")
+    void instanceComesBeforeTheProject(Class<? extends BaseDirectOpenProjectMacroParameters> parametersClass)
+        throws Exception
+    {
+        // The projects to choose from depend on the instance. The macro editor orders the parameters by their
+        // PropertyOrder on XWiki 17.5.0+, which the bean descriptors of the older versions don't expose.
+        int instanceOrder = getOrder(parametersClass, "setInstance");
+        int projectOrder = getOrder(parametersClass, "setProject");
+
+        assertTrue(instanceOrder < projectOrder,
+            String.format("The instance (%d) comes after the project (%d)", instanceOrder, projectOrder));
+    }
+
+    private static int getOrder(Class<?> parametersClass, String setter) throws Exception
+    {
+        return parametersClass.getMethod(setter, String.class).getAnnotation(PropertyOrder.class).value();
     }
 
     @Test

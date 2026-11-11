@@ -46,7 +46,8 @@ public class BaseDirectOpenProjectMacroParameters implements OpenProjectInstance
     }
 
     @Override
-    @PropertyOrder(100)
+    // Before the project, since the projects to choose from depend on the instance.
+    @PropertyOrder(5)
     @PropertyDisplayType(OpenProjectInstance.class)
     public void setInstance(String instance)
     {
