@@ -107,6 +107,15 @@ public class ChartJSCanvas extends BaseElement
     }
 
     /**
+     * @return {@code true} if the chart displays its legend, e.g. the names of its datasets
+     * @since 1.4.0
+     */
+    public boolean isLegendDisplayed()
+    {
+        return Boolean.TRUE.equals(this.chart.get("legend"));
+    }
+
+    /**
      * @return the number of datasets that the chart is displaying
      * @since 1.3.0-rc-2
      */
@@ -132,6 +141,7 @@ public class ChartJSCanvas extends BaseElement
             + "require(['chart'], Chart => {"
             + "  const chart = Object.values(Chart.instances || {}).find(instance => instance.canvas === canvas);"
             + "  done(chart ? {type: chart.config.type, labels: chart.data.labels || [],"
+            + "    legend: !chart.options.legend || chart.options.legend.display !== false,"
             + "    datasets: chart.data.datasets.map(dataset => ({label: dataset.label, data: dataset.data}))} : null);"
             + "}, () => done(null));", this.canvas);
     }
