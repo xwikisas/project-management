@@ -606,6 +606,26 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertNull(getMacroParameter(content, "workItemsDisplayer"));
     }
 
+    @Test
+    @Order(14)
+    void editMacroWithDeprecatedDisplayer(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // Without the displayer parameter, the editor shows the deprecated workItemsDisplayer one as the displayer, and
+        // replaces it on save.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" "
+            + "id=\"editMacroWithDeprecatedDisplayer\" workItemsDisplayer=\"workItemsList\" limit=\"3\"/}}",
+            CONNECTION_ID));
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        assertEquals("List", modal.getSelectedDisplayer());
+
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        String content = getContent(setup, testReference);
+        assertEquals("list", getMacroParameter(content, "displayer"));
+        assertNull(getMacroParameter(content, "workItemsDisplayer"));
+    }
+
     // The unescaped value of a parameter of the first macro of the given wiki syntax, null when missing.
     private static String getMacroParameter(String content, String parameter)
     {

@@ -95,6 +95,8 @@ require(['jquery'], function ($) {
         });
     };
 
+    // Remember the instance the project was chosen for, so that only a real instance change clears the project.
+    input.data('openprojectInstance', getSelectedInstance());
     input.xwikiSelectize(selectizeCfg);
 
     if (dashboardOption) {

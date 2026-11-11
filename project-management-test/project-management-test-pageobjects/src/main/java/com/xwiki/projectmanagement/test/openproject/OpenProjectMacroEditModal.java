@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.test.openproject;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
+import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 
@@ -77,7 +78,36 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
      */
     public String getSelectedDisplayer()
     {
+        waitForDeprecatedDisplayerMigration();
         return new Select(getDisplayerSelect()).getFirstSelectedOption().getText().trim();
+    }
+
+    @Override
+    public MacroDialogEditModal waitUntilReady()
+    {
+        super.waitUntilReady();
+        waitForDeprecatedDisplayerMigration();
+        return this;
+    }
+
+    @Override
+    public void clickSubmit()
+    {
+        waitForDeprecatedDisplayerMigration();
+        super.clickSubmit();
+    }
+
+    /**
+     * The modal is ready before the script of the displayer parameter is loaded. That script moves the value of the
+     * deprecated workItemsDisplayer parameter to the displayer one and clears the deprecated parameter, so wait until
+     * the deprecated parameter is empty (it always is for the macros that don't use it).
+     */
+    private void waitForDeprecatedDisplayerMigration()
+    {
+        getDriver().waitUntilCondition(driver -> getDriver().findElementsWithoutWaiting(
+            By.cssSelector(".macro-editor input[name='workItemsDisplayer'], "
+                + ".macro-editor select[name='workItemsDisplayer']"))
+            .stream().map(input -> input.getAttribute("value")).allMatch(value -> value == null || value.isEmpty()));
     }
 
     private WebElement getDisplayerSelect()
