@@ -116,4 +116,21 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         assertThat(content, startsWith("{{openproject-subprojects"));
         assertThat(content, not(containsString("instance=")));
     }
+
+    @Test
+    @Order(3)
+    void editProjectMacroTwice(TestUtils setup, TestReference testReference)
+    {
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "{{openproject-subprojects project=\"1\"/}}");
+
+        // Opening the edit modal of a macro again in the same editor keeps its project.
+        OpenProjectDirectMacroEditModal modal =
+            new OpenProjectDirectMacroEditModal(setup, testReference, "OpenProject - Subprojects");
+        modal.cancelAndEditAgain().clickSubmit();
+        modal.getEditPage().clickSaveAndView();
+
+        setup.gotoPage(testReference, "edit", "editor=wiki");
+        assertThat(new WikiEditPage().getContent(), containsString("project=\"1\""));
+    }
 }
