@@ -61,8 +61,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 {
-    private static final String CONNECTIONS_SPACE = "OpenProject.Code.OpenProjectConfigurations";
-
     private static final List<String> STYLE_SHEETS_SPACE = List.of("OpenProject", "Code", "StyleSheets");
 
     @Test
@@ -96,14 +94,20 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 
     @Test
     @Order(3)
-    void addUpdateAndDeleteConnection()
+    void addUpdateAndDeleteConnection(TestUtils setup)
     {
         // Use a connection of its own, so that the shared connection keeps working for the other tests.
         String name = "temporary";
         String newName = "temporary2";
+        resetDefaultConnection(setup);
         OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+        // No connection is chosen as the default one while there is a single connection.
+        assertEquals("", adminPage.getDefaultConnection());
         // The connection actions wait for the saved or deleted connection to be listed or removed.
         adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", "somesecret");
+        // Adding a second connection makes the first one the default connection, and the choices of the default
+        // connection are updated without reloading the page.
+        assertEquals(CONNECTION_ID, adminPage.getDefaultConnection());
         assertTrue(adminPage.isConnectionListed(name));
         assertEquals("Not yet authorized", adminPage.getConnectionAuthorization(name));
         assertEquals(3, adminPage.getConnectionActionCount(name));
@@ -124,28 +128,30 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         // Saving a connection runs the colors job. The current user isn't connected to this connection: its statuses
         // and types are read without credentials.
         String notConnected = "styles-not-connected";
-        OpenProjectAdminPage.gotoPage()
-            .addNewConnection(notConnected, this.openProject.getBaseUrl(), "someid", "somesecret");
-        DocumentReference stylesReference = new DocumentReference("xwiki", STYLE_SHEETS_SPACE, notConnected);
-        // Compare one generated type color with a known OpenProject color.
-        String taskColor = "color: #1a67a3";
-        assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
+        DocumentReference notConnectedReference = getConnectionReference("StylesNotConnectedConnection");
+        saveConnection(setup, notConnectedReference, notConnected);
+        try {
+            DocumentReference stylesReference = new DocumentReference("xwiki", STYLE_SHEETS_SPACE, notConnected);
+            // Compare one generated type color with a known OpenProject color.
+            String taskColor = "color: #1a67a3";
+            assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
 
-        // The "Sync colors" button runs the same job: it generates the colors again once they're deleted.
-        setup.rest().delete(stylesReference);
-        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.triggerColorSyncJob();
-        assertTrue(adminPage.isColorSyncJobTriggered());
-        assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
+            // The "Sync colors" button runs the same job: it generates the colors again once they're deleted.
+            setup.rest().delete(stylesReference);
+            OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.triggerColorSyncJob();
+            assertTrue(adminPage.isColorSyncJobTriggered());
+            assertThat(waitForStyleSheet(setup, stylesReference), containsString(taskColor));
 
-        // The job generates the colors of every connection, and the macros display them.
-        waitForStyleSheet(setup, new DocumentReference("xwiki", STYLE_SHEETS_SPACE, CONNECTION_ID));
-        setup.createPage(testReference,
-            String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
-        assertEquals("rgb(26, 103, 163)",
-            new ViewPageWithOpenProjectMacro().getPropertyColor("type", "Task", CONNECTION_ID));
-
-        OpenProjectAdminPage.gotoPage().deleteConnection(notConnected);
+            // The job generates the colors of every connection, and the macros display them.
+            waitForStyleSheet(setup, new DocumentReference("xwiki", STYLE_SHEETS_SPACE, CONNECTION_ID));
+            setup.createPage(testReference,
+                String.format("{{openproject instance=\"%s\" id=\"styleSyncJob\"/}}", CONNECTION_ID));
+            assertEquals("rgb(26, 103, 163)",
+                new ViewPageWithOpenProjectMacro().getPropertyColor("type", "Task", CONNECTION_ID));
+        } finally {
+            deleteConnection(setup, notConnectedReference);
+        }
     }
 
     /**
@@ -189,69 +195,63 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
     {
         String name = "restricted";
         String clientSecret = "initialSecret";
-        OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-        adminPage.addNewConnection(name, this.openProject.getBaseUrl(), "someid", clientSecret);
-        // The form explains that the client secret is not displayed when editing a connection.
-        assertEquals("", adminPage.getNewConnectionClientSecretHint());
-        assertEquals("Leave empty to keep the current secret.", adminPage.getEditConnectionClientSecretHint(name));
-        // Leaving the client secret empty keeps the current one.
-        adminPage.updateConnection(name, name, this.openProject.getBaseUrl(), "someid", "");
-
-        // Reading the client secret from a script requires programming right (see PRCHECKER_EXCLUDE_PROPERTY).
-        UsernamePasswordCredentials credentials = setup.setDefaultCredentials(TestUtils.SUPER_ADMIN_CREDENTIALS);
-        String connectionInfo;
+        DocumentReference connectionReference = getConnectionReference("RestrictedConnection");
+        saveConnection(setup, connectionReference, name, "someid", clientSecret);
         try {
-            connectionInfo = setup.executeWiki(String.join("\n",
-                "{{velocity}}",
-                "#set ($statement = 'from doc.object(OpenProject.Code.OpenProjectConnectionClass) as connection "
-                    + "where connection.connectionName = :name')",
-                "#foreach ($reference in $services.query.xwql($statement).bindValue('name', '" + name + "').execute())",
-                "#set ($connectionDocument = $xwiki.getDocument($reference))",
-                "$reference|$connectionDocument.getObject('OpenProject.Code.OpenProjectConnectionClass')"
-                    + ".getValue('clientSecret')|$connectionDocument.getObject('XWiki.OIDC.ClientConfigurationClass')"
-                    + ".getValue('clientSecret')",
-                "#end",
-                "{{/velocity}}"), Syntax.XWIKI_2_1);
+            OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
+            // The form explains that the client secret is not displayed when editing a connection.
+            assertEquals("", adminPage.getNewConnectionClientSecretHint());
+            assertEquals("Leave empty to keep the current secret.", adminPage.getEditConnectionClientSecretHint(name));
+            // Leaving the client secret empty keeps the current one.
+            adminPage.updateConnection(name, name, this.openProject.getBaseUrl(), "someid", "");
+
+            // Reading the client secret from a script requires programming right (see PRCHECKER_EXCLUDE_PROPERTY).
+            UsernamePasswordCredentials credentials = setup.setDefaultCredentials(TestUtils.SUPER_ADMIN_CREDENTIALS);
+            String connectionInfo;
+            try {
+                connectionInfo = setup.executeWiki(String.join("\n",
+                    "{{velocity}}",
+                    "#set ($connectionDocument = $xwiki.getDocument('" + connectionReference + "'))",
+                    "$connectionDocument.getObject('OpenProject.Code.OpenProjectConnectionClass')"
+                        + ".getValue('clientSecret')"
+                        + "|$connectionDocument.getObject('XWiki.OIDC.ClientConfigurationClass')"
+                        + ".getValue('clientSecret')",
+                    "{{/velocity}}"), Syntax.XWIKI_2_1);
+            } finally {
+                setup.setDefaultCredentials(credentials);
+            }
+            // Remove the paragraph markup around the result.
+            String[] secrets = connectionInfo.replaceAll("<[^>]+>", "").trim().split("\\|");
+            assertEquals(List.of(clientSecret, clientSecret), List.of(secrets));
+
+            // The client secret is not returned by the REST API.
+            org.xwiki.rest.model.jaxb.Object connectionObject =
+                setup.rest().get(new ObjectReference("OpenProject.Code.OpenProjectConnectionClass[0]",
+                    connectionReference));
+            assertNotEquals(clientSecret, TestUtils.RestTestUtils.getProperty("clientSecret", connectionObject, false)
+                .getValue());
+
+            // Guests can't view the connection page. Use a client without the session of the administrator.
+            HttpClient guestClient = HttpClient.newHttpClient();
+            // The URL of the REST API as seen from the tests, which may differ from the one seen by the browser.
+            String webAppURL = StringUtils.removeEnd(StringUtils.removeEnd(setup.rest().getBaseURL(), "/"), "rest");
+            String pageName = connectionReference.getName();
+            HttpResponse<String> response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
+                + "rest/wikis/xwiki/spaces/OpenProject/spaces/Code/spaces/OpenProjectConfigurations/pages/" + pageName
+                + "/objects/OpenProject.Code.OpenProjectConnectionClass/0")).build(),
+                HttpResponse.BodyHandlers.ofString());
+            assertEquals(401, response.statusCode());
+            assertFalse(response.body().contains(clientSecret));
+            // Guests are redirected to the login page.
+            response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
+                + "bin/view/OpenProject/Code/OpenProjectConfigurations/" + pageName + "?xpage=xml")).build(),
+                HttpResponse.BodyHandlers.ofString());
+            assertEquals(302, response.statusCode());
+            assertTrue(response.headers().firstValue("Location").orElse("").contains("/login/"));
+            assertFalse(response.body().contains(clientSecret));
         } finally {
-            setup.setDefaultCredentials(credentials);
+            deleteConnection(setup, connectionReference);
         }
-        // Remove the paragraph markup around the result.
-        String[] connection = connectionInfo.replaceAll("<[^>]+>", "").trim().split("\\|");
-        assertEquals(3, connection.length);
-        assertEquals(CONNECTIONS_SPACE, connection[0].substring(0, connection[0].lastIndexOf('.')));
-        assertEquals(clientSecret, connection[1]);
-        assertEquals(clientSecret, connection[2]);
-
-        DocumentReference connectionReference = new DocumentReference("xwiki",
-            List.of("OpenProject", "Code", "OpenProjectConfigurations"),
-            connection[0].substring(CONNECTIONS_SPACE.length() + 1));
-        // The client secret is not returned by the REST API.
-        org.xwiki.rest.model.jaxb.Object connectionObject =
-            setup.rest().get(new ObjectReference("OpenProject.Code.OpenProjectConnectionClass[0]",
-                connectionReference));
-        assertNotEquals(clientSecret, TestUtils.RestTestUtils.getProperty("clientSecret", connectionObject, false)
-            .getValue());
-
-        // Guests can't view the connection page. Use a client without the session of the administrator.
-        HttpClient guestClient = HttpClient.newHttpClient();
-        // The URL of the REST API as seen from the tests, which may differ from the one seen by the browser.
-        String webAppURL = StringUtils.removeEnd(StringUtils.removeEnd(setup.rest().getBaseURL(), "/"), "rest");
-        String pageName = connectionReference.getName();
-        HttpResponse<String> response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
-            + "rest/wikis/xwiki/spaces/OpenProject/spaces/Code/spaces/OpenProjectConfigurations/pages/" + pageName
-            + "/objects/OpenProject.Code.OpenProjectConnectionClass/0")).build(), HttpResponse.BodyHandlers.ofString());
-        assertEquals(401, response.statusCode());
-        assertFalse(response.body().contains(clientSecret));
-        // Guests are redirected to the login page.
-        response = guestClient.send(HttpRequest.newBuilder(URI.create(webAppURL
-            + "bin/view/OpenProject/Code/OpenProjectConfigurations/" + pageName + "?xpage=xml")).build(),
-            HttpResponse.BodyHandlers.ofString());
-        assertEquals(302, response.statusCode());
-        assertTrue(response.headers().firstValue("Location").orElse("").contains("/login/"));
-        assertFalse(response.body().contains(clientSecret));
-
-        adminPage = OpenProjectAdminPage.gotoPage();
-        OpenProjectAdminPage.gotoPage().deleteConnection(name);
     }
 
     @Test
@@ -294,29 +294,29 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
         ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
         assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
 
+        // The other connections are added, renamed and removed through the REST endpoint of the administration, whose
+        // form is tested by addUpdateAndDeleteConnection.
         String otherConnection = "other";
         String renamedConnection = "renamed";
         String thirdConnection = "third";
+        DocumentReference otherReference = getConnectionReference("DefaultConnectionOther");
+        DocumentReference thirdReference = getConnectionReference("DefaultConnectionThird");
         try {
             // Adding a second connection makes the first one the default connection, so that the macro keeps
             // using it.
+            saveConnection(setup, otherReference, otherConnection);
             OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-            assertEquals("", adminPage.getDefaultConnection());
-            adminPage.addNewConnection(otherConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
             assertEquals(CONNECTION_ID, adminPage.getDefaultConnection());
             setup.gotoPage(testReference);
             page = new ViewPageWithOpenProjectMacro();
             assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
 
-            // The default connection stays the default one when it's renamed.
+            // The default connection stays the default one when it's renamed, and when another connection is added.
             adminPage = OpenProjectAdminPage.gotoPage();
             adminPage.setDefaultConnection(otherConnection);
-            adminPage.updateConnection(otherConnection, renamedConnection, this.openProject.getBaseUrl(), "someid",
-                "");
-            assertEquals(renamedConnection, adminPage.getDefaultConnection());
-
-            // Adding a third connection keeps the default one.
-            adminPage.addNewConnection(thirdConnection, this.openProject.getBaseUrl(), "someid", "somesecret");
+            saveConnection(setup, otherReference, renamedConnection);
+            saveConnection(setup, thirdReference, thirdConnection);
+            adminPage = OpenProjectAdminPage.gotoPage();
             assertEquals(renamedConnection, adminPage.getDefaultConnection());
 
             // Deleting the default connection warns that the macros that don't specify a connection stop working, and
@@ -344,12 +344,8 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
                 + "will then display the data of the %s connection.", CONNECTION_ID),
                 adminPage.getConnectionDeletionWarning(thirdConnection));
         } finally {
-            OpenProjectAdminPage adminPage = OpenProjectAdminPage.gotoPage();
-            for (String connection : List.of(otherConnection, renamedConnection, thirdConnection)) {
-                if (adminPage.isConnectionListed(connection)) {
-                    adminPage.deleteConnection(connection);
-                }
-            }
+            deleteConnection(setup, otherReference);
+            deleteConnection(setup, thirdReference);
             resetDefaultConnection(setup);
         }
     }

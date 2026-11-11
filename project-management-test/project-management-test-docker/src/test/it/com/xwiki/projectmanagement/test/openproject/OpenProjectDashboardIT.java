@@ -54,40 +54,45 @@ public class OpenProjectDashboardIT extends AbstractOpenProjectIT
 {
     @Test
     @Order(1)
-    void authorizationWarningMatchesTheSelectedConnection()
+    void authorizationWarningMatchesTheSelectedConnection(TestUtils setup) throws Exception
     {
         // A second connection, that the current user hasn't authorized.
         String unauthorized = "dashboard-unauthorized";
-        OpenProjectAdminPage.gotoPage()
-            .addNewConnection(unauthorized, this.openProject.getBaseUrl(), "someid", "somesecret");
+        DocumentReference unauthorizedReference = getConnectionReference("DashboardUnauthorizedConnection");
+        saveConnection(setup, unauthorizedReference, unauthorized);
+        OpenProjectDashboardPage dashboard;
+        try {
+            dashboard = OpenProjectDashboardPage.gotoPage();
+            if (!CONNECTION_ID.equals(dashboard.getSelectedConnection())) {
+                dashboard = dashboard.selectConnection(CONNECTION_ID);
+            }
+            dashboard.waitUntilGadgetsAreDisplayed();
+            assertEquals(List.of(), dashboard.getWarnings());
+            assertTrue(dashboard.hasProjectPicker());
+            assertThat(dashboard.getGadgetTitles(), containsInAnyOrder("Open vs. Closed", "Project Details",
+                "Work Package Types", "Project Members", "Open vs. Closed per Type", "Time Spent in the Last 7 Days",
+                "Project News", "Subprojects", "All Work Packages"));
 
-        OpenProjectDashboardPage dashboard = OpenProjectDashboardPage.gotoPage();
-        if (!CONNECTION_ID.equals(dashboard.getSelectedConnection())) {
-            dashboard = dashboard.selectConnection(CONNECTION_ID);
+            // Only the warning of the selected connection is displayed.
+            dashboard = dashboard.selectConnection(unauthorized);
+            assertEquals(unauthorized, dashboard.getSelectedConnection());
+            assertEquals(1, dashboard.getWarnings().size());
+            assertEquals(List.of(unauthorized), dashboard.getConnectionsToAuthorize());
+            assertFalse(dashboard.hasProjectPicker());
+
+            // The warning of the previous connection doesn't stay.
+            dashboard = dashboard.selectConnection(CONNECTION_ID).waitUntilGadgetsAreDisplayed();
+            assertEquals(CONNECTION_ID, dashboard.getSelectedConnection());
+            assertEquals(List.of(), dashboard.getWarnings());
+
+            dashboard.selectConnection(unauthorized);
+        } finally {
+            // Delete the connection even if the test fails: the other tests expect a single connection.
+            deleteConnection(setup, unauthorizedReference);
         }
-        dashboard.waitUntilGadgetsAreDisplayed();
-        assertEquals(List.of(), dashboard.getWarnings());
-        assertTrue(dashboard.hasProjectPicker());
-        assertThat(dashboard.getGadgetTitles(), containsInAnyOrder("Open vs. Closed", "Project Details",
-            "Work Package Types", "Project Members", "Open vs. Closed per Type", "Time Spent in the Last 7 Days",
-            "Project News", "Subprojects", "All Work Packages"));
-
-        // Only the warning of the selected connection is displayed.
-        dashboard = dashboard.selectConnection(unauthorized);
-        assertEquals(unauthorized, dashboard.getSelectedConnection());
-        assertEquals(1, dashboard.getWarnings().size());
-        assertEquals(List.of(unauthorized), dashboard.getConnectionsToAuthorize());
-        assertFalse(dashboard.hasProjectPicker());
-
-        // The warning of the previous connection doesn't stay.
-        dashboard = dashboard.selectConnection(CONNECTION_ID).waitUntilGadgetsAreDisplayed();
-        assertEquals(CONNECTION_ID, dashboard.getSelectedConnection());
-        assertEquals(List.of(), dashboard.getWarnings());
 
         // When the selected connection is deleted, the dashboard falls back on the first connection, and doesn't
         // display the warning of the deleted connection.
-        dashboard.selectConnection(unauthorized);
-        OpenProjectAdminPage.gotoPage().deleteConnection(unauthorized);
 
         dashboard = OpenProjectDashboardPage.gotoPage();
         // The connection picker is disabled when there is a single connection.
