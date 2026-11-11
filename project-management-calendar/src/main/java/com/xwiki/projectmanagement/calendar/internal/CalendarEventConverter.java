@@ -50,8 +50,6 @@ public class CalendarEventConverter
 {
     private static final long MILLIS_PER_HOUR = 3600000L;
 
-    private static final long MILLIS_PER_DAY = 24 * MILLIS_PER_HOUR;
-
     /**
      * Convert a single {@link WorkItem} to a {@link CalendarEvent}.
      *
@@ -81,7 +79,7 @@ public class CalendarEventConverter
             // Without a start date, the work item is displayed as an all-day event on its due date (the end of an
             // all-day event is exclusive).
             event.setStart(dueDate);
-            event.setEnd(new Date(dueDate.getTime() + MILLIS_PER_DAY));
+            event.setEnd(getNextDay(dueDate));
             event.setAllDay(true);
         } else {
             // A work item without any date cannot be placed in the calendar.

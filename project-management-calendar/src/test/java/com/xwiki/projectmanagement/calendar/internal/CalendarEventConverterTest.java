@@ -110,7 +110,8 @@ class CalendarEventConverterTest
 
         // The work item is displayed as an all-day event on its due date.
         assertEquals(DUE, event.getStart());
-        assertEquals(Date.from(Instant.parse("2026-03-13T17:30:00Z")), event.getEnd());
+        assertEquals(Date.from(DUE.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().plusDays(1)
+            .atStartOfDay(ZoneId.systemDefault()).toInstant()), event.getEnd());
         assertTrue(event.isAllDay());
         assertEquals("1", event.getId());
         assertEquals("workItem", event.getMeta().get("entity-type"));
