@@ -65,7 +65,8 @@ class DefaultChartDisplayerResourceTest
         ChartTypeDisplayer displayer = this.componentManager.registerMockComponent(ChartTypeDisplayer.class, "line");
         when(displayer.getParameterTypeTemplate()).thenReturn(Map.of(PERIOD, "DAILY", LABEL, ""));
         when(displayer.getParameterTypeValues()).thenReturn(Map.of(PERIOD, List.of("HOURLY", "DAILY")));
-        when(this.l10n.getTranslationPlain("projectmanagement.chart.line.parameter.period")).thenReturn("Date Grouping");
+        when(this.l10n.getTranslationPlain("projectmanagement.chart.line.parameter.period"))
+            .thenReturn("Date Grouping");
         when(this.l10n.getTranslationPlain("projectmanagement.chart.parameter.period.value.HOURLY"))
             .thenReturn("Hourly");
 

@@ -90,18 +90,41 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
      */
     public List<String> getChartOptionChoices(String option)
     {
-        // The chart options are loaded once the modal is displayed, and again when the chart type changes.
-        By optionInput = By.cssSelector(
-            String.format(".macro-editor-modal .proj-manag-chart-type-param input[name='%s'].selectized", option));
-        getDriver().waitUntilCondition(driver -> !getDriver().findElementsWithoutWaiting(optionInput).isEmpty());
-        WebElement input = getDriver().findElementWithoutWaiting(optionInput);
+        WebElement input = getChartOptionInput(option);
         SuggestInputElement suggestInput = new SuggestInputElement(input);
-        getDriver().scrollTo(
-            input.findElement(By.xpath("following-sibling::*[contains(@class, 'selectize-control')][1]")));
+        getDriver().scrollTo(getSelectizeControl(input));
         List<String> choices = suggestInput.click().waitForSuggestions().getSuggestions().stream()
             .map(SuggestInputElement.SuggestionElement::getLabel).collect(Collectors.toList());
         suggestInput.hideSuggestions();
         return choices;
+    }
+
+    /**
+     * @param option the technical name of an option of the Chart Options field, e.g. {@code period}
+     * @return the selected value of the option, as displayed, or an empty string if none is selected
+     * @since 1.4.0
+     */
+    public String getChartOptionSelectedValue(String option)
+    {
+        WebElement input = getChartOptionInput(option);
+        // Wait for the selection to be initialized.
+        new SuggestInputElement(input);
+        return getSelectizeControl(input).findElements(By.cssSelector(".selectize-input > .item")).stream()
+            .map(item -> item.getText().trim()).findFirst().orElse("");
+    }
+
+    private WebElement getChartOptionInput(String option)
+    {
+        // The chart options are loaded once the modal is displayed, and again when the chart type changes.
+        By optionInput = By.cssSelector(
+            String.format(".macro-editor-modal .proj-manag-chart-type-param input[name='%s'].selectized", option));
+        getDriver().waitUntilCondition(driver -> !getDriver().findElementsWithoutWaiting(optionInput).isEmpty());
+        return getDriver().findElementWithoutWaiting(optionInput);
+    }
+
+    private WebElement getSelectizeControl(WebElement input)
+    {
+        return input.findElement(By.xpath("following-sibling::*[contains(@class, 'selectize-control')][1]"));
     }
 
     private Select getTypeSelect()
