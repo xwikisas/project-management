@@ -122,10 +122,16 @@
         'connectionName': $connectionName,
         'redirectUrl': $xwiki.getURL('XWiki.XWikiPreferences', 'admin', 'editor=globaladmin&amp;section=OpenProject'),
         'token': $services.csrf.token})))
+    ## The action icons have no text: name them for screen readers and tooltips.
+    #set ($editLabel = $escapetool.xml($services.localization.render('openproject.config.action.edit')))
+    #set ($deleteLabel = $escapetool.xml($services.localization.render('openproject.config.action.delete')))
+    #set ($authorizeLabel = $escapetool.xml($services.localization.render('openproject.config.action.authorize')))
     #set ($actionsHTML = "&lt;div class='displayer-actions'&gt;&lt;a
       class='edit-button action'
       href='#'
       name='edit-connection'
+      title='$editLabel'
+      aria-label='$editLabel'
       data-connection-name='$escapetool.xml($connectionName)'
       data-server-url='$escapetool.xml($serverURL)'
       data-client-id='$escapetool.xml($clientId)'
@@ -135,6 +141,8 @@
       class='delete-button action'
       name='delete-connection'
       href='#'
+      title='$deleteLabel'
+      aria-label='$deleteLabel'
       data-connection-name='$escapetool.xml($connectionName)'
       data-delete-document-reference='$escapetool.xml($documentReference)'
     &gt;$services.icon.renderHTML('trash')&lt;/a&gt;")
@@ -143,6 +151,8 @@
       class='op-auth-button action'
       name='authorize-connection'
       href='$escapetool.xml($authLink)'
+      title='$authorizeLabel'
+      aria-label='$authorizeLabel'
     &gt;$services.icon.renderHTML('unlock')&lt;/a&gt;")
     #end
     #set ($actionsHTML = "${actionsHTML}&lt;/div&gt;")
