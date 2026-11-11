@@ -38,6 +38,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
+import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -287,6 +288,19 @@ class CachingOpenProjectApiClientTest
 
         verify(openProjectApiClient).getWorkPackage("XWIKI-123");
         verify(openProjectApiClient).getWorkPackage("XWIKI-456");
+    }
+
+    @Test
+    void projectCaching() throws ProjectManagementException
+    {
+        useMapBackedCache(cache);
+        Project project = new Project();
+        when(openProjectApiClient.getProject("demo-project")).thenReturn(project);
+
+        assertSame(project, cachingOpenProjectApiClient.getProject("demo-project"));
+        assertSame(project, cachingOpenProjectApiClient.getProject("demo-project"));
+
+        verify(openProjectApiClient).getProject("demo-project");
     }
 
     @Test

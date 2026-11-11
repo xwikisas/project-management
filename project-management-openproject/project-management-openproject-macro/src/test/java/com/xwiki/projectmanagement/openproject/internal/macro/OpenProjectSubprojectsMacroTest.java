@@ -58,7 +58,10 @@ class OpenProjectSubprojectsMacroTest extends AbstractDirectMacroTest
         this.parameters.setInstance("main");
         this.parameters.setProject("5");
         this.parameters.setLimit(10);
-        when(this.apiClient.getProject(5)).thenReturn(project("Parent", "/projects/parent"));
+        Project parent = project("Parent", "/projects/parent");
+        parent.setId(5);
+        when(this.apiClient.getProject("5")).thenReturn(parent);
+        when(this.apiClient.getProject("parent")).thenReturn(parent);
     }
 
     private static Project project(String name, String path)
@@ -81,6 +84,17 @@ class OpenProjectSubprojectsMacroTest extends AbstractDirectMacroTest
         assertEquals(List.of("Parent -> " + SERVER_URL + "/projects/parent",
             "Child 1 -> " + SERVER_URL + "/projects/child1", "Child 2 -> " + SERVER_URL + "/projects/child2"),
             links(result));
+    }
+
+    @Test
+    void listsTheSubprojectsOfAProjectIdentifier() throws Exception
+    {
+        // OpenProject filters the subprojects by the id of their ancestor only.
+        this.parameters.setProject("parent");
+        when(this.apiClient.getProjects(null, 10, ANCESTOR_FILTER)).thenReturn(new PaginatedResult<>(
+            List.of(project("Child", "/projects/child")), 1, 10, 1));
+
+        assertEquals("Parent\nChild\n", text(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test

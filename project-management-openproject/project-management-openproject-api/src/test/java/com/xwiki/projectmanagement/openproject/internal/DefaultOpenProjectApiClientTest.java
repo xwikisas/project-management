@@ -454,6 +454,21 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getProjectByIdentifier() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"_type\": \"Project\", \"id\": 7, \"name\": \"Doc\", "
+            + "\"identifier\": \"doc-project\"}");
+
+        Project project = openProjectApiClient.getProject("doc-project");
+
+        assertEquals(7, project.getId());
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(this.client).send(requestCaptor.capture(), any(HttpResponse.BodyHandler.class));
+        // OpenProject accepts both the id and the identifier of the project in the URL.
+        assertEquals("/api/v3/projects/doc-project", requestCaptor.getValue().uri().getPath());
+    }
+
+    @Test
     void getProjectsParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getProjectsValidResponse());
