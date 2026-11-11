@@ -18,10 +18,9 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 /* Don't display the label of the properties without value: the value displayers render nothing for them. The boolean
-   displayer always displays a value. */
+   and date displayers always display a value (a missing date is displayed as a date too). */
 .proj-manag-cards .layout-cards .card-property:has(.html-wrapper:empty),
 .proj-manag-cards .layout-cards .card-property:has(.displayer-text .view span:empty),
-.proj-manag-cards .layout-cards .card-property:has(.displayer-number .view span:empty),
-.proj-manag-cards .layout-cards .card-property:has(.displayer-date .displayed-date:empty) {
+.proj-manag-cards .layout-cards .card-property:has(.displayer-number .view span:empty) {
   display: none;
 }
