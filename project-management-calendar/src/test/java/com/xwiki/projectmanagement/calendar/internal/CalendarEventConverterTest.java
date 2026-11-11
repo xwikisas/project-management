@@ -143,9 +143,9 @@ class CalendarEventConverterTest
     }
 
     @Test
-    void convertMilestone()
+    void convertSingleDayDatesWithoutTime()
     {
-        // An OpenProject milestone starts and ends on its single date.
+        // A work item starting and ending on the same day is an all-day event on that day.
         WorkItem workItem = createWorkItem("1", day(2026, 11, 24));
         workItem.setDueDate(day(2026, 11, 24));
 
