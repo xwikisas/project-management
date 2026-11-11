@@ -272,9 +272,16 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public Project getProject(Integer projectId) throws ProjectManagementException
+    public Project getProject(String idOrIdentifier) throws ProjectManagementException
     {
-        return client.getProject(projectId);
+        String cacheKey = getCacheKey(String.format("project/%s", idOrIdentifier), null, null, "", "");
+        PaginatedResult<Project> result = (PaginatedResult<Project>) cache.get(cacheKey);
+        if (result == null) {
+            Project project = client.getProject(idOrIdentifier);
+            result = new PaginatedResult<>(List.of(project), 0, 1, 1);
+            cache.set(cacheKey, result);
+        }
+        return result.getItems().get(0);
     }
 
     @Override

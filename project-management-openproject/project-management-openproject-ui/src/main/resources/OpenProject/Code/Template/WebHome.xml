@@ -186,7 +186,7 @@ This project aims to deliver a clear, well-documented solution with transparent 
         <disabled>0</disabled>
         <name>workItem</name>
         <number>3</number>
-        <prettyName>Work item ID</prettyName>
+        <prettyName>Work Item ID</prettyName>
         <size>20</size>
         <unmodifiable>0</unmodifiable>
         <classType>com.xpn.xwiki.objects.classes.StringClass</classType>

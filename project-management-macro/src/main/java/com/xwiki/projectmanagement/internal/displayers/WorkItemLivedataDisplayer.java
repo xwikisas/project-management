@@ -27,6 +27,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -93,6 +94,10 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
             }
             if (parameters.getLimit() == null) {
                 parameters.setLimit(DEFAULT_PAGE_SIZE);
+            }
+            if (StringUtils.isNotBlank(parameters.getPageSizes())) {
+                // Live Data uses the page sizes only in its page size selector, which is hidden by default.
+                parameters.setShowPageSizeDropdown(true);
             }
             if (WorkItemsDisplayer.CARDS.equals(parameters.getDisplayer())) {
                 parameters.setLayouts("cards,table");

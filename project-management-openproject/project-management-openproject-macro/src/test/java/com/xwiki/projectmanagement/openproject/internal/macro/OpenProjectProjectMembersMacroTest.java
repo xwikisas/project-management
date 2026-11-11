@@ -142,25 +142,26 @@ class OpenProjectProjectMembersMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
-    void filtersOnAProjectWithSpecialCharacters() throws Exception
+    void filtersOnAProjectIdentifier() throws Exception
     {
-        this.parameters.setProject("a\"b\\");
-        when(this.apiClient.getMemberships(null, 20,
-            "[{\"project\":{\"operator\":\"=\",\"values\":[\"a\\\"b\\\\\"]}}]"))
+        // OpenProject filters the memberships by project id only.
+        this.parameters.setProject("demo-project");
+        resolveProject("demo-project", 12);
+        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertEquals("No members found.\n View all members", text(result));
-        assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/a%22b%5C/members"), links(result));
+        assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/demo-project/members"), links(result));
     }
 
     @Test
     void linksToTheMembersOfAProjectWithReservedURLCharacters() throws Exception
     {
         this.parameters.setProject("a/b c?d#e");
-        when(this.apiClient.getMemberships(null, 20,
-            "[{\"project\":{\"operator\":\"=\",\"values\":[\"a/b c?d#e\"]}}]"))
+        resolveProject("a/b c?d#e", 12);
+        when(this.apiClient.getMemberships(null, 20, MEMBERS_FILTER))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 20, 0));
 
         assertEquals(List.of("View all members -> " + SERVER_URL + "/projects/a%2Fb%20c%3Fd%23e/members"),

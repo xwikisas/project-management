@@ -794,9 +794,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public Project getProject(Integer projectId) throws ProjectManagementException
+    public Project getProject(String idOrIdentifier) throws ProjectManagementException
     {
-        String urlPart = String.format(API_URL_PROJECT, projectId);
+        // OpenProject accepts both the id and the identifier of the project in its URL.
+        String urlPart = String.format(API_URL_PROJECT, PathSegmentEncoder.encode(idOrIdentifier));
         JsonNode projectJson = getOpenProjectResponse(urlPart, null, null, "", "", "");
         Project project = new Project(projectJson);
         project.initializeSelfWithPath(connectionUrl, String.format(API_PROJECT_PLACEHOLDER, project.getId()));

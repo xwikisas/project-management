@@ -94,7 +94,8 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
     {
         String filters = "";
         if (hasProject(project)) {
-            filters = FilterBuilder.get().addFilter("project_id", FilterBuilder.Operator.EQUALS, project).build();
+            filters = FilterBuilder.get()
+                .addFilter("project_id", FilterBuilder.Operator.EQUALS, getProjectId(project, apiClient)).build();
         }
 
         try {
