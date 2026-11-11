@@ -109,7 +109,7 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
         WebElement input = getChartOptionInput(option);
         // Wait for the selection to be initialized.
         new SuggestInputElement(input);
-        return getSelectizeControl(input).findElements(By.cssSelector(".selectize-input > .item")).stream()
+        return getSelectizeControl(input).findElements(By.cssSelector(".selectize-input > [data-value]")).stream()
             .map(item -> item.getAttribute("textContent").trim()).findFirst().orElse("");
     }
 
