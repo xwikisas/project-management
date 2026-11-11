@@ -37,6 +37,8 @@ import com.xwiki.projectmanagement.openproject.model.Project;
  */
 final class OpenProjectProjectResolver
 {
+    private static final String ASCII_DIGITS = "0123456789";
+
     private OpenProjectProjectResolver()
     {
     }
@@ -50,7 +52,8 @@ final class OpenProjectProjectResolver
      */
     static String getProjectId(String project, OpenProjectApiClient apiClient) throws MacroExecutionException
     {
-        if (StringUtils.isNumeric(project)) {
+        // OpenProject accepts only ASCII digits in the project filters (e.g. not the Arabic-Indic ones).
+        if (StringUtils.isNotEmpty(project) && StringUtils.containsOnly(project, ASCII_DIGITS)) {
             return project;
         }
         return String.valueOf(getProject(project, apiClient).getId());

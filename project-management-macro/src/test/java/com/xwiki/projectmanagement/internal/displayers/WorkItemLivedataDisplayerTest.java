@@ -20,15 +20,20 @@
 package com.xwiki.projectmanagement.internal.displayers;
 
 import java.util.List;
+import java.util.Map;
+
+import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -38,6 +43,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -55,6 +61,10 @@ class WorkItemLivedataDisplayerTest
 
     @MockComponent
     private ComponentManager componentManager;
+
+    @MockComponent
+    @Named("ssrx")
+    private SkinExtension ssrx;
 
     @Mock
     private Macro<ProjectManagementMacroParameters> liveDataMacro;
@@ -92,7 +102,11 @@ class WorkItemLivedataDisplayerTest
         // The filters are passed to Live Data as its content.
         when(this.liveDataMacro.execute(this.parameters, FILTERS, this.context)).thenReturn(this.liveData);
 
-        assertEquals(this.liveData, this.displayer.execute(this.parameters, "", this.context));
+        List<Block> result = this.displayer.execute(this.parameters, "", this.context);
+
+        // The cards are wrapped to style them: the labels of the properties without value are hidden.
+        assertEquals(List.of(new GroupBlock(this.liveData, Map.of("class", "proj-manag-cards"))), result);
+        verify(this.ssrx).use("css/projectmanagement/displayer/cards.css", Map.of("forceSkinAction", true));
         assertEquals(10, this.parameters.getLimit());
         assertEquals("cards,table", this.parameters.getLayouts());
         assertEquals("", this.parameters.getFilters());
