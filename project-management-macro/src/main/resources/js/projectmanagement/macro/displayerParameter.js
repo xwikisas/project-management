@@ -18,9 +18,11 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 require(['jquery'], function ($) {
-  // The keys are the values of the displayer parameter.
+  // The keys are the values of the displayer parameter. The single and inline displayers display the first work item
+  // only, with properties of their own: the sort and the offset still choose which work item comes first.
   const unneededParams = {
-    single: ["sort", "offset", "limit", "properties"],
+    single: ["limit", "properties"],
+    inline: ["limit", "properties"],
     list: ["properties"],
     enum: ["properties"]
   };
