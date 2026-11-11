@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
+import org.xwiki.ckeditor.test.po.MacroDialogEditModal;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 
@@ -49,5 +52,38 @@ public class OpenProjectDirectMacroEditModal extends AbstractOpenProjectMacroEdi
     public OpenProjectDirectMacroEditModal(TestUtils setup, DocumentReference docRef, String macroName)
     {
         super(setup, docRef, macroName, 1);
+    }
+
+    @Override
+    public MacroDialogEditModal waitUntilReady()
+    {
+        super.waitUntilReady();
+        waitForDeprecatedCountMigration();
+        return this;
+    }
+
+    @Override
+    public void clickSubmit()
+    {
+        waitForDeprecatedCountMigration();
+        super.clickSubmit();
+    }
+
+    /**
+     * The modal is ready before the script of the instance parameter is loaded. That script moves the value of the
+     * deprecated count parameter to the limit one, clears the deprecated parameter and hides its field, so wait until
+     * the count field is empty or hidden (it is always hidden for the macros that don't set it).
+     */
+    private void waitForDeprecatedCountMigration()
+    {
+        getDriver().waitUntilCondition(driver -> getDriver().findElementsWithoutWaiting(
+            By.cssSelector(".macro-editor input[name='count']")).stream()
+            .allMatch(input -> !input.isDisplayed() || isEmpty(input)));
+    }
+
+    private static boolean isEmpty(WebElement input)
+    {
+        String value = input.getAttribute("value");
+        return value == null || value.isEmpty();
     }
 }
