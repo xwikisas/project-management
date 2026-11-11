@@ -35,6 +35,23 @@ require(['jquery'], function ($) {
     return value === undefined || value === null ? undefined : String(value);
   };
 
+  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it empty,
+  // and its tab when it holds no other visible field, activating the first visible tab if it was the active one (the
+  // macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
+  let hideParameter = function (input) {
+    let tabPanel = input.closest('.macro-parameter').addClass('hidden').closest('.tab-pane');
+    while (tabPanel.length > 0 && tabPanel.find('.macro-parameter').not('.hidden').length === 0) {
+      let tabPanels = tabPanel.parent().children();
+      let tabs = tabPanel.parent().siblings('[role="tablist"]').children();
+      tabs.eq(tabPanels.index(tabPanel)).add(tabPanel).addClass('hidden');
+      if (tabPanel.hasClass('active')) {
+        tabs.add(tabPanels).removeClass('active');
+        tabs.not('.hidden').first().add(tabPanels.not('.hidden').first()).addClass('active');
+      }
+      tabPanel = tabPanel.parent().closest('.tab-pane');
+    }
+  };
+
   // Edit a macro using the deprecated count parameter with the limit one, so that the limit chosen in the editor, the
   // default one included, isn't overridden by the deprecated parameter left in the macro. The limit wins over the count
   // when the call sets both. This script is loaded by the instance parameter, which all the macros having a count
@@ -56,6 +73,7 @@ require(['jquery'], function ($) {
     }
     // Always clear the count, whose input holds at least its default value, so that it isn't saved.
     countInput.val('');
+    hideParameter(countInput);
   };
   // The macro editor sends this event once it displays the parameters of the edited macro.
   $(document).on('xwiki:dom:updated', function (event, data) {
