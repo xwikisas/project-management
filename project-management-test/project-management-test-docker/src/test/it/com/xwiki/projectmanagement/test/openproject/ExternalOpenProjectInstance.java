@@ -35,7 +35,7 @@ import org.xwiki.test.ui.TestUtils;
  * docker run -d -p 8082:80 -e SECRET_KEY_BASE=$(openssl rand -hex 64) -e OPENPROJECT_HTTPS=false \
  *   -e OPENPROJECT_DEFAULT__LANGUAGE=en -e OPENPROJECT_LOGIN__REQUIRED=false \
  *   -v "$PWD/src/test/resources/doorkeeper.rb:/app/config/initializers/doorkeeper.rb:ro" \
- *   openproject/openproject:17.9.4
+ *   openproject/openproject:17.9.7
  * </pre>
  *
  * The tests also call the API of the instance, from outside Docker, through the same URL.

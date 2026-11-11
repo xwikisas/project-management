@@ -182,7 +182,7 @@ public class OpenProjectInstance
     public void startOpenProject(TestUtils testUtils, TestConfiguration testConfiguration) throws Exception
     {
         GenericContainer<?> openProject =
-            new GenericContainer<>(DockerImageName.parse("openproject/openproject:17.9.4"))
+            new GenericContainer<>(DockerImageName.parse("openproject/openproject:17.9.7"))
             // OpenProject refuses to start with a weak key. Each run starts from an empty database, so a new key can be
             // generated for each run.
             .withEnv("SECRET_KEY_BASE", RandomStringUtils.randomAlphanumeric(128))
