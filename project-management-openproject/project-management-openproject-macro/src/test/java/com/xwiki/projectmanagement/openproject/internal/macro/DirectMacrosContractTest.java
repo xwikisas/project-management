@@ -60,6 +60,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -239,6 +241,37 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
         assertEquals(String.format("The OpenProject project [%s] doesn't exist or you are not allowed to view it.",
             project), exception.getMessage());
         assertSame(cause, exception.getCause());
+    }
+
+    static Stream<Arguments> macrosFilteringOnAProjectId()
+    {
+        String project = "12";
+        return Stream.of(
+            macro("news", test -> test.newsMacro, withProject(new OpenProjectNewsMacroParameters(), project),
+                (FailingCall) (client, cause) -> when(client.getNews(any(), any(), anyString())).thenThrow(cause)),
+            macro("members", test -> test.membersMacro,
+                withProject(new OpenProjectProjectMembersMacroParameters(), project),
+                (FailingCall) (client, cause) -> when(client.getMemberships(any(), any(), anyString()))
+                    .thenThrow(cause)),
+            macro("spent time", test -> test.spentTimeMacro,
+                withProject(new OpenProjectSpentTimeMacroParameters(), project),
+                (FailingCall) (client, cause) -> when(client.getTimeEntries(any(), any(), anyString()))
+                    .thenThrow(cause)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("macrosFilteringOnAProjectId")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    void doesNotRequestTheProjectOfAnId(Function<DirectMacrosContractTest, AbstractOpenProjectDirectMacro> macro,
+        OpenProjectInstanceHolder parameters, FailingCall dataCall) throws Exception
+    {
+        // The data request is the only one: the macro fails when it is made.
+        dataCall.stub(this.apiClient, new ProjectManagementException("data"));
+
+        assertThrows(MacroExecutionException.class, () -> macro.apply(this).execute(parameters, "", this.context));
+
+        // The project id is used as is in the filters, without resolving it.
+        verify(this.apiClient, never()).getProject(anyString());
     }
 
     static Stream<Arguments> macrosAcceptingTheDashboardProject()

@@ -451,7 +451,9 @@ public interface OpenProjectApiClient
      * @return the {@link Project} with all detail fields populated.
      * @throws ProjectManagementException if some error was encountered while trying to retrieve the project.
      * @since 1.2
+     * @deprecated since 1.4.0, use {@link #getProject(String)}, which accepts the identifier of the project too
      */
+    @Deprecated(since = "1.4.0")
     default Project getProject(Integer projectId) throws ProjectManagementException
     {
         return getProject(String.valueOf(projectId));
