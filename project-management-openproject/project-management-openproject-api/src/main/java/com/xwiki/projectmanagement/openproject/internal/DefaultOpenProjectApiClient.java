@@ -135,6 +135,8 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private static final String OP_DUE_DATE = "dueDate";
 
+    private static final String OP_DATE = "date";
+
     private static final String OP_CREATED_AT = "createdAt";
 
     private static final String OP_UPDATED_AT = "updatedAt";
@@ -1173,8 +1175,15 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
 
     private void setDates(WorkPackage wp, JsonNode node)
     {
-        wp.setStartDate(getDateFromNode(OP_START_DATE, node));
-        wp.setDueDate(getDateFromNode(OP_DUE_DATE, node));
+        if (node.has(OP_DATE)) {
+            // A milestone has a single date instead of a start date and a due date: it starts and ends on that date.
+            Date date = getDateFromNode(OP_DATE, node);
+            wp.setStartDate(date);
+            wp.setDueDate(date);
+        } else {
+            wp.setStartDate(getDateFromNode(OP_START_DATE, node));
+            wp.setDueDate(getDateFromNode(OP_DUE_DATE, node));
+        }
         wp.setDerivedStartDate(getDateFromNode(OP_DERIVED_START_DATE, node));
         wp.setDerivedDueDate(getDateFromNode(OP_DERIVED_DUE_DATE, node));
     }
