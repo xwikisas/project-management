@@ -35,6 +35,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the OpenProject CKEditor plugin.
@@ -132,5 +134,29 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wiki");
         assertThat(new WikiEditPage().getContent(), containsString("project=\"1\""));
+    }
+
+    @Test
+    @Order(4)
+    void editMacroWithDeprecatedCount(TestUtils setup, TestReference testReference)
+    {
+        setup.deletePage(testReference);
+        setup.createPage(testReference, String.format("{{openproject-news instance=\"%s\" count=\"3\"/}}",
+            CONNECTION_ID));
+
+        // The editor migrates the deprecated count parameter to the limit one, and doesn't display its field, which
+        // would be a second, empty, "Maximum News Items" field.
+        OpenProjectDirectMacroEditModal modal =
+            new OpenProjectDirectMacroEditModal(setup, testReference, "OpenProject - Project News");
+        modal.clickMore();
+        assertFalse(modal.isMacroParameterDisplayed("count"));
+        assertTrue(modal.isMacroParameterDisplayed("limit"));
+        modal.clickSubmit();
+        modal.getEditPage().clickSaveAndView();
+
+        setup.gotoPage(testReference, "edit", "editor=wiki");
+        String content = new WikiEditPage().getContent();
+        assertThat(content, containsString("limit=\"3\""));
+        assertThat(content, not(containsString("count=")));
     }
 }

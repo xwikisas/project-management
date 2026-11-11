@@ -144,8 +144,37 @@ class OpenProjectOpenClosedMacroTest
         OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
         parameters.setInstance("main");
         parameters.setDays(10);
-        // OpenProject can't count the work packages by creation date: they are all retrieved, up to a maximum, the
-        // newest ones being kept when there are more.
+        List<Block> chart = mockOpenClosedChartOfTheLast10Days();
+
+        assertChart(chart, this.macro.execute(parameters, "", this.context));
+    }
+
+    @Test
+    void ignoresTheParametersDefiningTheChart() throws Exception
+    {
+        OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
+        parameters.setInstance("main");
+        parameters.setDays(10);
+        parameters.setFilters("[]");
+        parameters.setType("pie");
+        parameters.setProperty("status");
+        parameters.setPresetId("preset");
+        parameters.setOffset(5L);
+        parameters.setDatasetsLabels("[\"label\"]");
+        List<Block> chart = mockOpenClosedChartOfTheLast10Days();
+
+        // The same open v closed line chart as without these parameters.
+        assertChart(chart, this.macro.execute(parameters, "", this.context));
+    }
+
+    /**
+     * OpenProject can't count the work packages by creation date: they are all retrieved, up to a maximum, the newest
+     * ones being kept when there are more.
+     *
+     * @return the chart displayed for the open and closed work packages created during the last 10 days
+     */
+    private List<Block> mockOpenClosedChartOfTheLast10Days() throws Exception
+    {
         String period = "creationDate between 2026-03-20T00:00:00+01:00/2026-03-30T23:59:59.999999999+02:00";
         PaginatedResult<WorkItem> open = new PaginatedResult<>(List.of(new WorkItem()), 0, 1000, 1);
         when(this.projectManagementManager.getAllWorkItems(eq("openproject"),
@@ -156,8 +185,7 @@ class OpenProjectOpenClosedMacroTest
         List<Block> chart = List.of(new WordBlock("chart"));
         when(this.lineDisplayer.execute(List.of(open, closed), WorkItem.KEY_CREATION_DATE, List.of("Open", "Closed"),
             this.context, new HashMap<>(Map.of("period", "DAILY", "metric", "accumulate")))).thenReturn(chart);
-
-        assertChart(chart, this.macro.execute(parameters, "", this.context));
+        return chart;
     }
 
     @Test

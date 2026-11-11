@@ -594,6 +594,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
         WYSIWYGEditPage editPage = modal.getEditPage();
         assertEquals("Cards", modal.getSelectedDisplayer());
+        // The field of the migrated deprecated parameter, which would be empty, isn't displayed.
+        assertFalse(modal.isMacroParameterDisplayed("workItemsDisplayer"));
 
         modal.clickSubmit();
         editPage.clickSaveAndView();

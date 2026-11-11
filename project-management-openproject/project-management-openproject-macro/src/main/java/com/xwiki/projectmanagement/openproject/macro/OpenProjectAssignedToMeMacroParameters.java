@@ -20,7 +20,7 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import org.xwiki.properties.annotation.PropertyDisplayHidden;
+import org.xwiki.properties.annotation.PropertyHidden;
 
 /**
  * Parameters for the OpenProject "Assigned to Me" macro. Extends {@link OpenProjectMacroParameters} but hides the
@@ -30,14 +30,14 @@ import org.xwiki.properties.annotation.PropertyDisplayHidden;
  */
 public class OpenProjectAssignedToMeMacroParameters extends OpenProjectMacroParameters
 {
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setIdentifier(String identifier)
     {

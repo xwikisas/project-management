@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.macro;
  */
 
 import java.util.Arrays;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
@@ -160,9 +161,10 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     {
         WorkItemsDisplayer value = WorkItemsDisplayer.fromString(workItemsDisplayer);
         if (value == null) {
-            throw new IllegalArgumentException(String.format("Unknown displayer [%s]. Allowed values are %s.",
-                workItemsDisplayer, Arrays.stream(WorkItemsDisplayer.values()).map(WorkItemsDisplayer::getLegacyName)
-                    .collect(Collectors.joining(", "))));
+            throw new IllegalArgumentException(String.format(
+                "Unknown displayer [%s]. Allowed values are %s. Use the displayer parameter (%s) instead.",
+                workItemsDisplayer, joinDisplayers(WorkItemsDisplayer::getLegacyName),
+                joinDisplayers(WorkItemsDisplayer::toString)));
         }
         this.legacyDisplayer = value;
     }
@@ -252,9 +254,14 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      * 
      * @param description remove javadoc when parent is greater than 16.0.
      */
-    @PropertyDisplayHidden
+    @PropertyHidden
     @PropertyDescription("An optional textual description of the Live Data.")
     public void setDescription(String description)
     {
+    }
+
+    private static String joinDisplayers(Function<WorkItemsDisplayer, String> name)
+    {
+        return Arrays.stream(WorkItemsDisplayer.values()).map(name).collect(Collectors.joining(", "));
     }
 }

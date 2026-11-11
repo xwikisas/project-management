@@ -71,6 +71,14 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        // The chart always compares the open and the closed work packages by creation date: the parameters defining it
+        // are forced, whatever the macro call says.
+        OpenProjectOpenClosedMacroParameters defaults = new OpenProjectOpenClosedMacroParameters();
+        parameters.setType(defaults.getType());
+        parameters.setProperty(defaults.getProperty());
+        parameters.setFilters(defaults.getFilters());
+        parameters.setPresetId(defaults.getPresetId());
+        parameters.setOffset(defaults.getOffset());
         try {
             // The chart macro translates the labels.
             parameters.setDatasetsLabels(objectMapper.writeValueAsString(
