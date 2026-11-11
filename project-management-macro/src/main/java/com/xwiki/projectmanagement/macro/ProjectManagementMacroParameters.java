@@ -252,7 +252,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      * 
      * @param description remove javadoc when parent is greater than 16.0.
      */
-    @PropertyDisplayHidden
+    @PropertyHidden
     @PropertyDescription("An optional textual description of the Live Data.")
     public void setDescription(String description)
     {

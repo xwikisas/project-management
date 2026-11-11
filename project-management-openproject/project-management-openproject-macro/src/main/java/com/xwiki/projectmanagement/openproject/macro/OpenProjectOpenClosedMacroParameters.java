@@ -19,8 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.macro;
 
-import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
+import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.properties.annotation.PropertyOrder;
 
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
@@ -53,28 +53,28 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
         setProperty(WorkItem.KEY_CREATION_DATE);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setProperty(String property)
     {
         super.setProperty(property);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setType(String type)
     {
         super.setType(type);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setPresetId(String preset)
     {
@@ -106,7 +106,7 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
         super.setInstance(instance);
     }
 
-    @PropertyDisplayHidden
+    @PropertyHidden
     @Override
     public void setOffset(Long offset)
     {
@@ -133,7 +133,7 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
     }
 
     @Override
-    @PropertyDisplayHidden
+    @PropertyHidden
     public void setDatasetsLabels(String datasetsLabels)
     {
         super.setDatasetsLabels(datasetsLabels);

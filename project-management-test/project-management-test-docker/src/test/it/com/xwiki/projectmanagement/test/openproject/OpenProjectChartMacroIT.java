@@ -210,13 +210,15 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
     @Order(5)
     void openClosedMacroTest(TestUtils setup, TestReference testReference)
     {
-        setup.deletePage(testReference);
-
-        // The datasets and the grouping property are predefined, only the time range can be configured.
+        // The datasets, the chart type and the grouping property are predefined, only the time range can be configured:
+        // the parameters defining them are never displayed and have no effect, even when the macro call sets them.
+        setup.createPage(testReference, String.format("{{openprojectopenclosed instance=\"%s\" filters=\"[]\" "
+            + "type=\"%s\" property=\"status\"/}}", CONNECTION_ID, PIE));
         OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
-        modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
         assertFalse(modal.hasFilterBuilder());
+        assertFalse(modal.isMacroParameterDisplayed("filters"));
+        assertFalse(modal.isMacroParameterDisplayed("type"));
         assertFalse(modal.isMacroParameterDisplayed("property"));
         modal.setMacroParameter("days", "30");
         modal.clickSubmit();
