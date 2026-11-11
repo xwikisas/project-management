@@ -664,7 +664,7 @@
       </title>
     </class>
     <property>
-      <content>{{openproject-news instance="use_selected_dashboard_connection" count="10" project="use_selected_dashboard_project"/}}</content>
+      <content>{{openproject-news instance="use_selected_dashboard_connection" limit="10" project="use_selected_dashboard_project"/}}</content>
     </property>
     <property>
       <position>1, 4</position>
