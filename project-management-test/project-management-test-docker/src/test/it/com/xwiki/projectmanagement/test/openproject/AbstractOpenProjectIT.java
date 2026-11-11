@@ -19,17 +19,30 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 import javax.naming.OperationNotSupportedException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReference;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Base class of the OpenProject functional tests. All the test classes share the same OpenProject instance, see
@@ -70,6 +83,11 @@ public abstract class AbstractOpenProjectIT
 
     protected static final String CONNECTION_ID = OpenProjectFixture.CONNECTION_ID;
 
+    /**
+     * The space where the administration saves the connections.
+     */
+    protected static final List<String> CONNECTIONS_SPACE = List.of("OpenProject", "Code", "OpenProjectConfigurations");
+
     protected OpenProjectInstance openProject;
 
     @BeforeAll
@@ -77,6 +95,77 @@ public abstract class AbstractOpenProjectIT
     {
         setup.loginAsSuperAdmin();
         this.openProject = OpenProjectFixture.ensureReady(setup, testConfiguration);
+    }
+
+    /**
+     * @param pageName the name of the page holding a connection
+     * @return the reference of the page holding the connection, in the space where the administration saves them
+     */
+    protected static DocumentReference getConnectionReference(String pageName)
+    {
+        return new DocumentReference("xwiki", CONNECTIONS_SPACE, pageName);
+    }
+
+    /**
+     * Add or update a connection to the shared OpenProject instance, using its OAuth application, through the REST
+     * endpoint used by the administration. Use it to build the connections a test needs without filling the
+     * connection form, which {@code OpenProjectAdministrationIT} tests.
+     *
+     * @param setup the test setup
+     * @param reference the page holding the connection
+     * @param name the name of the connection
+     * @throws Exception if the connection isn't saved
+     */
+    protected void saveConnection(TestUtils setup, DocumentReference reference, String name) throws Exception
+    {
+        saveConnection(setup, reference, name, this.openProject.getClientId(), this.openProject.getClientSecret());
+    }
+
+    /**
+     * Add or update a connection to the shared OpenProject instance through the REST endpoint used by the
+     * administration, which takes JSON, unlike the REST API of the test utilities. Like the connection form, it creates
+     * the connection with {@code POST} and updates an existing one with {@code PUT}.
+     *
+     * @param setup the test setup
+     * @param reference the page holding the connection
+     * @param name the name of the connection
+     * @param clientId the client id of the OAuth application
+     * @param clientSecret the client secret of the OAuth application, or an empty string to keep the current one
+     * @throws Exception if the connection isn't saved
+     */
+    protected void saveConnection(TestUtils setup, DocumentReference reference, String name, String clientId,
+        String clientSecret) throws Exception
+    {
+        // The URL of the REST API as seen from the tests, which may differ from the one seen by the browser.
+        String webAppURL = StringUtils.removeEnd(StringUtils.removeEnd(setup.rest().getBaseURL(), "/"), "rest");
+        String url = String.format("%srest/wikis/%s/spaces/%s/pages/%s/openproject/configurations", webAppURL,
+            reference.getWikiReference().getName(), String.join("/spaces/", reference.getSpaceReferences().stream()
+                .map(EntityReference::getName).toArray(String[]::new)), reference.getName());
+        String body = new ObjectMapper().writeValueAsString(Map.of("connectionName", name, "serverURL",
+            this.openProject.getBaseUrl(), "clientId", clientId, "clientSecret", clientSecret));
+        String credentials = TestUtils.SUPER_ADMIN_CREDENTIALS.getUserName() + ':'
+            + TestUtils.SUPER_ADMIN_CREDENTIALS.getPassword();
+        String method = setup.rest().exists(reference) ? "PUT" : "POST";
+        HttpResponse<String> response = HttpClient.newHttpClient().send(HttpRequest.newBuilder(URI.create(url))
+            .header("Authorization",
+                "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)))
+            .header("Content-Type", "application/json")
+            .method(method, HttpRequest.BodyPublishers.ofString(body)).build(), HttpResponse.BodyHandlers.ofString());
+        assertTrue(response.statusCode() < 300, response::body);
+    }
+
+    /**
+     * Delete the page holding a connection, if it exists.
+     *
+     * @param setup the test setup
+     * @param reference the page holding the connection
+     * @throws Exception if the page can't be deleted
+     */
+    protected static void deleteConnection(TestUtils setup, DocumentReference reference) throws Exception
+    {
+        if (setup.rest().exists(reference)) {
+            setup.rest().delete(reference);
+        }
     }
 
     protected static TableLayoutElement saveAndGetFirstOPMacro(WYSIWYGEditPage editPage)
