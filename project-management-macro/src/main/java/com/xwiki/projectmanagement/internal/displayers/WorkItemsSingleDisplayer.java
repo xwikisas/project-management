@@ -279,8 +279,8 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         }
         Translation translation = getTranslation(PREFIX_PROPERTY + property);
         if (translation == null) {
-            // A property without translation whose name is its id, such as an OpenProject custom field (identified
-            // by its name), is labelled by its id.
+            // A property with neither a translation nor a name different from its id (e.g. an OpenProject custom
+            // field, identified by its name) is labelled by its id.
             return getTextBlocks(property);
         }
         List<Block> blocks = new ArrayList<>();

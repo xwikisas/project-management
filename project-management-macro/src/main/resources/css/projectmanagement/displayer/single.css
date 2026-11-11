@@ -40,8 +40,10 @@
   font-size: 0.8em;
 }
 
-.work-item-page-displayer table {
-  width: 100%;
+.work-item-page-displayer {
+  /* Wrap the long words without spaces (e.g. URLs) of the summary, the project and the description so that they
+     stay inside the macro. */
+  overflow-wrap: break-word;
 }
 
 .work-item-page-displayer td {
