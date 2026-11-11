@@ -62,7 +62,7 @@ public class RelationClassDocumentInitializer extends AbstractMandatoryClassInit
     {
         xclass.addTextField(ProjectManagementRelation.FIELD_CLIENT, "Project Management Client ID", 20);
         xclass.addTextField(ProjectManagementRelation.FIELD_PROJECT, "Project ID", 20);
-        xclass.addTextField(ProjectManagementRelation.FIELD_WORK_ITEM, "Work item ID", 20);
+        xclass.addTextField(ProjectManagementRelation.FIELD_WORK_ITEM, "Work Item ID", 20);
         xclass.addTextAreaField(ProjectManagementRelation.FIELD_CLIENT_PARAMS, "Client Parameters", 40, 20,
             TextAreaClass.EditorType.PURE_TEXT, TextAreaClass.ContentType.PURE_TEXT);
     }

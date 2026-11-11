@@ -24,14 +24,14 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 
 /**
- * Models the edit modal of the OpenProject Charts macro.
+ * Models the edit modal of the OpenProject - Chart macro.
  *
  * @version $Id$
  * @since 1.3.0-rc-2
  */
 public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEditModal
 {
-    private static final String MACRO_NAME = "OpenProject Charts";
+    private static final String MACRO_NAME = "OpenProject - Chart";
 
     private static final int EXPECTED_MACRO_COUNT = 1;
 
@@ -44,7 +44,7 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
     }
 
     /**
-     * Insert an OpenProject Charts macro in the given page and wait for its edit modal to be displayed.
+     * Insert an OpenProject - Chart macro in the given page and wait for its edit modal to be displayed.
      *
      * @param setup the test setup.
      * @param docRef the page in which the macro will be inserted.

@@ -105,7 +105,8 @@ public class OpenProjectSpentTimeMacro
         throws MacroExecutionException
     {
         boolean hasProject = hasProject(parameters.getProject());
-        String filters = buildFilters(hasProject ? parameters.getProject() : null, parameters.getDays());
+        String filters =
+            buildFilters(hasProject ? getProjectId(parameters.getProject(), apiClient) : null, parameters.getDays());
 
         List<TimeEntry> entries;
         try {

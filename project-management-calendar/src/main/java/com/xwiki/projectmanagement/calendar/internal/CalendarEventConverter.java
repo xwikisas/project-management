@@ -20,6 +20,8 @@
 
 package com.xwiki.projectmanagement.calendar.internal;
 
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,7 +66,13 @@ public class CalendarEventConverter
         event.setTitle(workItem.getLinkableValue(WorkItem.KEY_SUMMARY));
         Date startDate = workItem.getStartDate();
         Date dueDate = workItem.getDueDate();
-        if (startDate != null) {
+        if (startDate != null && isDateOnly(startDate) && (dueDate == null || isDateOnly(dueDate))) {
+            // Dates without time (e.g. the dates of the OpenProject work packages) are displayed as an all-day event
+            // covering the due date too (the end of an all-day event is exclusive).
+            event.setStart(startDate);
+            event.setEnd(getNextDay(Objects.requireNonNullElse(dueDate, startDate)));
+            event.setAllDay(true);
+        } else if (startDate != null) {
             event.setStart(startDate);
             event.setEnd(
                 Objects.requireNonNullElseGet(dueDate, () -> new Date(startDate.getTime() + MILLIS_PER_HOUR)));
@@ -108,6 +116,22 @@ public class CalendarEventConverter
             }
         }
         return events;
+    }
+
+    /**
+     * @param date a date
+     * @return {@code true} if the date has no time, i.e. if it is at midnight in the server time zone (the dates
+     *     without time are parsed as such)
+     */
+    private static boolean isDateOnly(Date date)
+    {
+        return LocalTime.MIDNIGHT.equals(date.toInstant().atZone(ZoneId.systemDefault()).toLocalTime());
+    }
+
+    private static Date getNextDay(Date date)
+    {
+        ZoneId zone = ZoneId.systemDefault();
+        return Date.from(date.toInstant().atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant());
     }
 
     /**

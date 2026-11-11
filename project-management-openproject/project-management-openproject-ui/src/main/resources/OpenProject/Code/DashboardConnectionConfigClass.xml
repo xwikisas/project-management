@@ -53,7 +53,7 @@
       <name>selectedConnection</name>
       <number>1</number>
       <picker>1</picker>
-      <prettyName>selectedConnection</prettyName>
+      <prettyName>Selected Connection</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
@@ -67,7 +67,7 @@
       <name>selectedProject</name>
       <number>2</number>
       <picker>1</picker>
-      <prettyName>selectedProject</prettyName>
+      <prettyName>Selected Project</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
@@ -81,7 +81,7 @@
       <name>selectedProjectLabel</name>
       <number>3</number>
       <picker>1</picker>
-      <prettyName>selectedProjectLabel</prettyName>
+      <prettyName>Selected Project Label</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
