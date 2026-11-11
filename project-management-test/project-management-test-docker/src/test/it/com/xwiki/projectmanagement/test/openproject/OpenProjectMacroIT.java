@@ -602,6 +602,15 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         String content = getContent(setup, testReference);
         assertEquals("cards", getMacroParameter(content, "displayer"));
         assertNull(getMacroParameter(content, "workItemsDisplayer"));
+
+        // The cards don't display the label of the properties without value (e.g. a work package without start date).
+        List<Map<String, String>> cards =
+            new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForLiveDataCardProperties();
+        assertEquals(3, cards.size(), cards.toString());
+        cards.forEach(card -> {
+            assertFalse(card.isEmpty(), cards.toString());
+            card.values().forEach(value -> assertFalse(value.isEmpty(), cards.toString()));
+        });
     }
 
     @Test
