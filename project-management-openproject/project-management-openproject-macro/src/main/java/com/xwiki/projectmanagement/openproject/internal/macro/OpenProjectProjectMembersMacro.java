@@ -93,9 +93,8 @@ public class OpenProjectProjectMembersMacro
         throws MacroExecutionException
     {
         String project = parameters.getProject();
-        checkDashboardProject(project);
-        String filters = FilterBuilder.get()
-            .addFilter("project", FilterBuilder.Operator.EQUALS, Collections.singletonList(project)).build();
+        String filters = FilterBuilder.get().addFilter("project", FilterBuilder.Operator.EQUALS,
+            Collections.singletonList(getProjectId(project, apiClient))).build();
         List<User> members;
         try {
             members = apiClient.getMemberships(null, parameters.getLimit(), filters).getItems();

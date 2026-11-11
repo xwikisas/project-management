@@ -53,7 +53,7 @@
       <name>publicDataCacheDuration</name>
       <number>2</number>
       <numberType>integer</numberType>
-      <prettyName>Public data cache duration (minutes)</prettyName>
+      <prettyName>Public Data Cache Duration (minutes)</prettyName>
       <size>10</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
@@ -83,7 +83,7 @@
       <name>workPackageSearchMarker</name>
       <number>1</number>
       <picker>0</picker>
-      <prettyName>Work package search trigger</prettyName>
+      <prettyName>Work Package Search Trigger</prettyName>
       <size>10</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage>openproject.config.editor.marker.invalid</validationMessage>
@@ -112,7 +112,7 @@
       <name>defaultConnection</name>
       <number>3</number>
       <picker>0</picker>
-      <prettyName>Default connection</prettyName>
+      <prettyName>Default Connection</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>

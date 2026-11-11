@@ -454,6 +454,20 @@ public interface OpenProjectApiClient
      */
     default Project getProject(Integer projectId) throws ProjectManagementException
     {
+        return getProject(String.valueOf(projectId));
+    }
+
+    /**
+     * Retrieves the full details of a single project from the current OpenProject configuration.
+     *
+     * @param project the id (e.g. {@code 1}) or the identifier (e.g. {@code demo-project}) of the project to retrieve
+     * @return the {@link Project} with all detail fields populated
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the project, e.g. when
+     *     the project doesn't exist or isn't visible to the current user
+     * @since 1.4.0
+     */
+    default Project getProject(String project) throws ProjectManagementException
+    {
         throw new UnsupportedOperationException(
             "Retrieving a single project is not supported by this client implementation.");
     }
