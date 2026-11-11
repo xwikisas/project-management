@@ -5,6 +5,11 @@
         "id": "customField",
         "type": "String",
         "name": "Custom field"
+      },
+      {
+        "id": "Documentation in Release Notes",
+        "type": "String",
+        "name": "Documentation in Release Notes"
       }
     ]
   }

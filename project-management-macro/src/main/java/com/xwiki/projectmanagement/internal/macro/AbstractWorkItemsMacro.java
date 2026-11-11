@@ -161,7 +161,7 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
                 }
             }
         } catch (LiveDataException e) {
-            // The properties are then labelled by their translation keys.
+            // The properties without translation are then labelled by their ids.
         }
         return names;
     }
