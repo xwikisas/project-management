@@ -68,6 +68,7 @@
     },
     "key": "PROJ-3",
     "customField": "Some value",
+    "Documentation in Release Notes": "https://www.xwiki.org/xwiki/bin/view/ReleaseNotes/",
     "summary": {
       "value": "Do that other thing",
       "location": "http://xwiki.com/id/3"

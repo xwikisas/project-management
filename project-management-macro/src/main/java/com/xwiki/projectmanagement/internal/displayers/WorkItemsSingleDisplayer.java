@@ -275,10 +275,23 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         if (name != null
             && this.localizationManager.getTranslation(getTranslationPrefix() + PREFIX_PROPERTY + property) == null)
         {
-            return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(), name,
-                Collections.emptyMap()));
+            return getTextBlocks(name);
         }
-        return getTranslationBlocks(PREFIX_PROPERTY + property);
+        Translation translation = getTranslation(PREFIX_PROPERTY + property);
+        if (translation == null) {
+            // A property without translation whose name is its id, such as an OpenProject custom field (identified
+            // by its name), is labelled by its id.
+            return getTextBlocks(property);
+        }
+        List<Block> blocks = new ArrayList<>();
+        blocks.add(translation.render());
+        return blocks;
+    }
+
+    private List<Block> getTextBlocks(String text)
+    {
+        return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(), text,
+            Collections.emptyMap()));
     }
 
     private List<Block> getTranslationBlocks(String key)
@@ -286,8 +299,7 @@ public class WorkItemsSingleDisplayer extends AbstractWorkItemsDisplayer
         Translation translation = getTranslation(key);
         if (translation == null) {
             // Show the key that was supposed to be used.
-            return new ArrayList<>(getPropertyDisplayerManager().displayProperty(String.class.getName(),
-                getTranslationPrefix() + key, Collections.emptyMap()));
+            return getTextBlocks(getTranslationPrefix() + key);
         }
         List<Block> blocks = new ArrayList<>();
         blocks.add(translation.render());

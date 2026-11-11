@@ -40,6 +40,10 @@
   font-size: 0.8em;
 }
 
+.work-item-page-displayer table {
+  width: 100%;
+}
+
 .work-item-page-displayer td {
   border: none;
 }
@@ -50,4 +54,8 @@
 
 .work-item-property-value {
   color: #555555;
+  /* Wrap the long values without spaces (e.g. URLs) so that they stay inside their column. Unlike break-word,
+     anywhere lets the table shrink to the width of its column. The word-break is for older browsers. */
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }

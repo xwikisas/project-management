@@ -3,10 +3,11 @@
 .input|xwiki/2.0
 .# Single displayer test - display the first work item of the sort order (identifier "3" comes before "WorkItem1",
 .# the first one of the client), which has a key, shown in the header instead of #<identifier>, and a property named
-.# by the Live Data configuration of its client, since it has no translation.
+.# by the Live Data configuration of its client, since it has no translation, and a property without translation
+.# whose name is its id (such as an OpenProject custom field), labelled by its id.
 .#-----------------------------------------------------
 {{test displayer="single" sort="identifier:asc"/}}
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
-<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>Do that other thing</p></div><div class="work-item-header-id"><p>Test work item <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span></p></div></div><div class="row"><div class="col-md-12"><p>Work item from project:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Custom field:</td><td class="work-item-property-value">Some value</td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">Description</div><p></p></div></div>
+<div class="work-item-page-displayer"><div class="work-item-header"><div class="work-item-header-name"><p>Do that other thing</p></div><div class="work-item-header-id"><p>Test work item <span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span></p></div></div><div class="row"><div class="col-md-12"><p>Work item from project:&nbsp;</p></div></div><div class="row"><div class="col-md-4 col-xs-12"><table><tr><td class="work-item-property-name">Documentation in Release Notes:</td><td class="work-item-property-value">https://www.xwiki.org/xwiki/bin/view/ReleaseNotes/</td></tr><tr><td class="work-item-property-name">Custom field:</td><td class="work-item-property-value">Some value</td></tr></table></div><div class="col-md-4 col-xs-12"><table></table></div><div class="col-md-4 col-xs-12"><table></table></div></div><div class="work-package-description"><div class="work-item-property-name">Description</div><p></p></div></div>
