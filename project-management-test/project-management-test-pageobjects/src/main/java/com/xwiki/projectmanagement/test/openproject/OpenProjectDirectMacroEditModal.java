@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.test.ui.TestUtils;
+
 /**
  * The edit modal of an OpenProject macro that has no page object of its own, e.g. the Subprojects macro.
  *
@@ -33,5 +36,18 @@ public class OpenProjectDirectMacroEditModal extends AbstractOpenProjectMacroEdi
     public OpenProjectDirectMacroEditModal()
     {
         waitUntilReady();
+    }
+
+    /**
+     * Edit the given page with the WYSIWYG editor and open the edit modal of the macro it holds (or insert the given
+     * macro, if the page holds none).
+     *
+     * @param setup the test setup
+     * @param docRef the edited page
+     * @param macroName the pretty name of the macro, as it is displayed in the macro selector
+     */
+    public OpenProjectDirectMacroEditModal(TestUtils setup, DocumentReference docRef, String macroName)
+    {
+        super(setup, docRef, macroName, 1);
     }
 }

@@ -72,7 +72,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         ViewPage page = setup.gotoPage(docRef);
         this.editPage = page.editWYSIWYG();
         new CKEditor("content").waitToLoad();
-        MacroDialogSelectModal selectModal = openMacroSelectModal(setup);
+        MacroDialogSelectModal selectModal = openMacroSelectModal();
         // CKEditor opens the macro selector, or directly the edit modal of the macro at the caret position.
         By editModal = By.cssSelector(".macro-editor-modal .macro-name");
         By selectorModal = By.cssSelector(".macro-selector-modal");
@@ -347,17 +347,35 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         });
     }
 
-    private MacroDialogSelectModal openMacroSelectModal(TestUtils setup)
+    /**
+     * Close this modal without applying its changes, then open the edit modal of the same macro again, in the same
+     * editor.
+     *
+     * @return this object, modelling the modal opened again
+     * @since 1.4.0
+     */
+    public AbstractOpenProjectMacroEditModal cancelAndEditAgain()
     {
-        setup.getDriver().findElement(By.xpath("//a[contains(@class, 'cke_button') and contains(@title, 'Insert')]"))
+        closeSuggestDropdowns();
+        getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-header .close")).click();
+        getDriver().waitUntilElementDisappears(By.cssSelector(".macro-editor-modal"));
+        // The edited macro stays selected in the editor, so inserting a macro opens its edit modal.
+        openMacroSelectModal();
+        waitUntilReady();
+        return this;
+    }
+
+    private MacroDialogSelectModal openMacroSelectModal()
+    {
+        getDriver().findElement(By.xpath("//a[contains(@class, 'cke_button') and contains(@title, 'Insert')]"))
             .click();
-        setup.getDriver().waitUntilElementIsVisible(By.className("cke_panel_frame"));
-        WebElement panelIframe = setup.getDriver().findElement(By.className("cke_panel_frame"));
-        setup.getDriver().switchTo().frame(panelIframe);
-        setup.getDriver()
+        getDriver().waitUntilElementIsVisible(By.className("cke_panel_frame"));
+        WebElement panelIframe = getDriver().findElement(By.className("cke_panel_frame"));
+        getDriver().switchTo().frame(panelIframe);
+        getDriver()
             .findElement(By.xpath("//span[@class='cke_menubutton_label' and contains(text(), 'Other Macros')]"))
             .click();
-        setup.getDriver().switchTo().defaultContent();
+        getDriver().switchTo().defaultContent();
         return new MacroDialogSelectModal();
     }
 }
