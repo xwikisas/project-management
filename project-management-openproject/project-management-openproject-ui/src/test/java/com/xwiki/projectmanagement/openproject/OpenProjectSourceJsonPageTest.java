@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.inject.Named;
@@ -146,6 +147,25 @@ class OpenProjectSourceJsonPageTest extends PageTest
         assertEquals(CONNECTION_NAME, actions.selectFirst(".delete-button").attr("data-connection-name"));
         // The current user hasn't authorized the connection.
         assertEquals(1, actions.select(".op-auth-button").size(), actions.html());
+    }
+
+    @Test
+    void actionIconsHaveAnAccessibleName() throws Exception
+    {
+        JSONObject row = renderConnectionRow(connection -> {
+            connection.setStringValue("connectionName", "main");
+            connection.setStringValue("serverURL", "https://op.example.org");
+        });
+
+        Document actions = Jsoup.parseBodyFragment(row.getString("actions"));
+        Map<String, String> labels = Map.of(".edit-button", "openproject.config.action.edit",
+            ".delete-button", "openproject.config.action.delete",
+            ".op-auth-button", "openproject.config.action.authorize");
+        labels.forEach((button, label) -> {
+            Element action = actions.selectFirst(button);
+            assertEquals(label, action.attr("aria-label"), actions.html());
+            assertEquals(label, action.attr("title"), actions.html());
+        });
     }
 
     @Test
