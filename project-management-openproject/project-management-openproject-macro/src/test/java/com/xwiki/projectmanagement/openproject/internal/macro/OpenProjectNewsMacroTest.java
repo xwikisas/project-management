@@ -108,6 +108,18 @@ class OpenProjectNewsMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void filtersOnAProjectIdentifierMadeOfNonASCIIDigits() throws Exception
+    {
+        // OpenProject accepts only ASCII digits as project id: the other digits are resolved as an identifier.
+        this.parameters.setProject("\u0661\u0662");
+        resolveProject("\u0661\u0662", 12);
+        when(this.apiClient.getNews(null, 2, "[{\"project_id\":{\"operator\":\"=\",\"values\":[\"12\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(), 1, 2, 0));
+
+        assertEquals("No news found.\n", text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void translatesTheTexts() throws Exception
     {
         usePseudoTranslations();
