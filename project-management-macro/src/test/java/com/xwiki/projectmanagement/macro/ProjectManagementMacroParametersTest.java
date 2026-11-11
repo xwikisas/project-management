@@ -70,8 +70,8 @@ class ProjectManagementMacroParametersTest
             assertThrows(IllegalArgumentException.class, () -> this.parameters.setWorkItemsDisplayer("html"));
 
         assertEquals("Unknown displayer [html]. Allowed values are liveData, liveDataCards, workItemsSingle, "
-            + "workItemInline, workItemsList, workItemsEnum. Use the displayer parameter (table, cards, single, inline, "
-            + "list, enum) instead.", exception.getMessage());
+            + "workItemInline, workItemsList, workItemsEnum. Use the displayer parameter (table, cards, single, "
+            + "inline, list, enum) instead.", exception.getMessage());
     }
 
     @Test
