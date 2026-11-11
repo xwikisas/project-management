@@ -142,6 +142,20 @@ class CalendarEventConverterTest
         assertEquals(day(2026, 3, 10), event.getEnd());
     }
 
+    @Test
+    void convertSingleDayDatesWithoutTime()
+    {
+        // A work item starting and ending on the same day is an all-day event on that day.
+        WorkItem workItem = createWorkItem("1", day(2026, 11, 24));
+        workItem.setDueDate(day(2026, 11, 24));
+
+        CalendarEvent event = this.converter.convert(workItem);
+
+        assertTrue(event.isAllDay());
+        assertEquals(day(2026, 11, 24), event.getStart());
+        assertEquals(day(2026, 11, 25), event.getEnd());
+    }
+
     private static Date day(int year, int month, int day)
     {
         return Date.from(LocalDate.of(year, month, day).atStartOfDay(ZoneId.systemDefault()).toInstant());

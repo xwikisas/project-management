@@ -290,6 +290,26 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getWorkPackagesWithMilestone() throws Exception
+    {
+        // A milestone has a single date instead of a start date and a due date.
+        when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
+            .replaceFirst("\"startDate\": \"2025-08-13\",", "\"date\": \"2025-08-21\",")
+            .replaceFirst("\"dueDate\": \"2025-08-19\",", ""));
+
+        List<WorkPackage> workPackages = openProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, "", "").getItems();
+
+        Date milestoneDate = new GregorianCalendar(2025, GregorianCalendar.AUGUST, 21).getTime();
+        assertEquals(milestoneDate, workPackages.get(0).getStartDate());
+        assertEquals(milestoneDate, workPackages.get(0).getDueDate());
+        // The other work packages keep their start and due dates.
+        assertEquals(new GregorianCalendar(2025, GregorianCalendar.AUGUST, 13).getTime(),
+            workPackages.get(1).getStartDate());
+        assertEquals(new GregorianCalendar(2025, GregorianCalendar.AUGUST, 19).getTime(),
+            workPackages.get(1).getDueDate());
+    }
+
+    @Test
     void getWorkPackagesIgnoresAnInvalidCreationDate() throws Exception
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getWorkPackagesValidResponse()
