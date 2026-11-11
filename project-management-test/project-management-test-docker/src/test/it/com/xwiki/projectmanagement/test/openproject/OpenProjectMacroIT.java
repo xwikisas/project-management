@@ -111,6 +111,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
     private static final String PROPERTIES_PARAMETER = "properties";
 
+    private static final String LIMIT_PARAMETER = "limit";
+
     private static final String INPLACE_EDITOR = "InplaceWorkPackagesEditor";
 
     private static final String INPLACE_EDITOR_PASSWORD = "pass";
@@ -155,12 +157,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
         macroModal.clickMore();
         assertTrue(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
-        // The inline displayer also displays the first work package only, with properties of its own.
-        macroModal.selectDisplayer("Single inline item");
-        assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
-        macroModal.selectDisplayer("Single item");
-        // Assert that "sort", "offset", "limit", "properties" params are hidden.
-        assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
+        assertTrue(macroModal.isMacroParameterDisplayed(LIMIT_PARAMETER));
+        // The single and inline displayers display the first work package only, with properties of their own: the
+        // sort and the offset still choose which work package comes first.
+        for (String displayer : List.of("Single inline item", "Single item")) {
+            macroModal.selectDisplayer(displayer);
+            assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER), displayer);
+            assertFalse(macroModal.isMacroParameterDisplayed(LIMIT_PARAMETER), displayer);
+            assertTrue(macroModal.isMacroParameterDisplayed("sort"), displayer);
+            assertTrue(macroModal.isMacroParameterDisplayed("offset"), displayer);
+        }
         macroModal.clickSubmit();
 
         wysiwygEditPage.clickSaveAndView();
@@ -198,7 +204,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
         WYSIWYGEditPage editPage = modal.getEditPage();
         modal.clickMore();
-        // Assert that "sort", "offset", "limit", "properties" params are still hidden.
+        // Assert that the "limit" and "properties" params are still hidden.
         assertFalse(modal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
         modal.selectDisplayer("Live Data table");
         modal = new OpenProjectMacroEditModal();
