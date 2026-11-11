@@ -45,7 +45,6 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -111,19 +110,9 @@ public class OpenProjectProjectDetailsMacro
         MacroTransformationContext context, OpenProjectApiClient apiClient, String instance)
         throws MacroExecutionException
     {
-        Project project = fetchProject(apiClient, getProjectId(parameters.getProject()));
+        Project project = getProject(parameters.getProject(), apiClient);
         return Collections.singletonList(
             new GroupBlock(buildProjectDetailsBlocks(project, parameters.getProperties()), Collections.emptyMap()));
-    }
-
-    private Project fetchProject(OpenProjectApiClient apiClient, Integer projectId) throws MacroExecutionException
-    {
-        try {
-            return apiClient.getProject(projectId);
-        } catch (ProjectManagementException e) {
-            throw new MacroExecutionException(
-                String.format("Failed to retrieve project [%s] from OpenProject.", projectId), e);
-        }
     }
 
     private List<Block> buildProjectDetailsBlocks(Project project, List<OpenProjectProjectDetailsProperty> properties)

@@ -117,6 +117,16 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void displaysTheProjectOfAnIdentifier() throws Exception
+    {
+        mockAlpha();
+        this.parameters.setProject("alpha");
+        this.parameters.setProperties(List.of(OpenProjectProjectDetailsProperty.ID));
+
+        assertEquals("ID: 7\n", text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void displaysTheSelectedPropertiesInTheirOrder() throws Exception
     {
         mockAlpha();
@@ -153,7 +163,7 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
         project.setSelf(new Linkable(" ", SERVER_URL + "/projects/alpha"));
         project.setDescription("");
         project.setDescriptionHtml("");
-        when(this.apiClient.getProject(7)).thenReturn(project);
+        when(this.apiClient.getProject("7")).thenReturn(project);
         this.parameters.setProperties(List.of(OpenProjectProjectDetailsProperty.values()));
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
@@ -189,6 +199,7 @@ class OpenProjectProjectDetailsMacroTest extends AbstractDirectMacroTest
         project.setCreatedAt(date(2026, 1, 2));
         when(this.displayerManager.displayProperty(WorkItem.KEY_DESCRIPTION, DESCRIPTION_HTML, Map.of()))
             .thenReturn(List.of(DESCRIPTION_PARAGRAPH));
-        when(this.apiClient.getProject(7)).thenReturn(project);
+        when(this.apiClient.getProject("7")).thenReturn(project);
+        when(this.apiClient.getProject("alpha")).thenReturn(project);
     }
 }

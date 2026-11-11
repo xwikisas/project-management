@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.net.HttpURLConnection;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -40,6 +41,7 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
@@ -50,13 +52,13 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectMembersMa
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSubprojectsMacroParameters;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -138,12 +140,17 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
                 "Failed to retrieve projects from OpenProject."),
             macro("subprojects", test -> test.subprojectsMacro,
                 withProject(new OpenProjectSubprojectsMacroParameters(), "5"),
-                (FailingCall) (client, cause) -> when(client.getProject(anyInt())).thenThrow(cause),
+                (FailingCall) (client, cause) -> {
+                    Project project = new Project();
+                    project.setId(5);
+                    when(client.getProject("5")).thenReturn(project);
+                    when(client.getProjects(any(), any(), anyString())).thenThrow(cause);
+                },
                 "Failed to retrieve subprojects for project [5]."),
             macro("project details", test -> test.projectDetailsMacro,
                 withProject(new OpenProjectProjectDetailsMacroParameters(), "7"),
-                (FailingCall) (client, cause) -> when(client.getProject(anyInt())).thenThrow(cause),
-                "Failed to retrieve project [7] from OpenProject."),
+                (FailingCall) (client, cause) -> when(client.getProject("7")).thenThrow(cause),
+                "Failed to retrieve the project [7] from OpenProject."),
             macro("members", test -> test.membersMacro,
                 withProject(new OpenProjectProjectMembersMacroParameters(), "12"),
                 (FailingCall) (client, cause) -> when(client.getMemberships(any(), any(), anyString()))
@@ -200,10 +207,15 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
         verifyNoInteractions(this.apiClient);
     }
 
-    static Stream<Arguments> macrosOfAProjectId()
+    static Stream<Arguments> macrosOfAProject()
     {
         String project = "xwiki-platform";
         return Stream.of(
+            macro("news", test -> test.newsMacro, withProject(new OpenProjectNewsMacroParameters(), project), project),
+            macro("members", test -> test.membersMacro,
+                withProject(new OpenProjectProjectMembersMacroParameters(), project), project),
+            macro("spent time", test -> test.spentTimeMacro,
+                withProject(new OpenProjectSpentTimeMacroParameters(), project), project),
             macro("subprojects", test -> test.subprojectsMacro,
                 withProject(new OpenProjectSubprojectsMacroParameters(), project), project),
             macro("project details", test -> test.projectDetailsMacro,
@@ -211,17 +223,22 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
     }
 
     @ParameterizedTest
-    @MethodSource("macrosOfAProjectId")
+    @MethodSource("macrosOfAProject")
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    void failsWhenTheProjectIsNotAnId(Function<DirectMacrosContractTest, AbstractOpenProjectDirectMacro> macro,
-        OpenProjectInstanceHolder parameters, String project)
+    void failsWhenTheProjectDoesNotExist(Function<DirectMacrosContractTest, AbstractOpenProjectDirectMacro> macro,
+        OpenProjectInstanceHolder parameters, String project) throws Exception
     {
+        // OpenProject answers 404 both for the projects that don't exist and for those the user can't see.
+        WorkItemRetrievalException cause =
+            new WorkItemRetrievalException("Not found", HttpURLConnection.HTTP_NOT_FOUND);
+        when(this.apiClient.getProject(project)).thenThrow(cause);
+
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> macro.apply(this).execute(parameters, "", this.context));
 
-        assertEquals(String.format("The project [%s] is not a valid OpenProject project id.", project),
-            exception.getMessage());
-        verifyNoInteractions(this.apiClient);
+        assertEquals(String.format("The OpenProject project [%s] doesn't exist or you are not allowed to view it.",
+            project), exception.getMessage());
+        assertSame(cause, exception.getCause());
     }
 
     static Stream<Arguments> macrosAcceptingTheDashboardProject()

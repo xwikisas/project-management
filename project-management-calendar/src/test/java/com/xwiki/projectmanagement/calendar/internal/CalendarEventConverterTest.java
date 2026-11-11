@@ -20,6 +20,8 @@
 package com.xwiki.projectmanagement.calendar.internal;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -112,6 +114,36 @@ class CalendarEventConverterTest
         assertTrue(event.isAllDay());
         assertEquals("1", event.getId());
         assertEquals("workItem", event.getMeta().get("entity-type"));
+    }
+
+    @Test
+    void convertDatesWithoutTime()
+    {
+        // E.g. the dates of the OpenProject work packages, which have no time.
+        WorkItem workItem = createWorkItem("1", day(2026, 3, 9));
+        workItem.setDueDate(day(2026, 3, 11));
+
+        CalendarEvent event = this.converter.convert(workItem);
+
+        // An all-day event covering the due date too: its end is exclusive.
+        assertTrue(event.isAllDay());
+        assertEquals(day(2026, 3, 9), event.getStart());
+        assertEquals(day(2026, 3, 12), event.getEnd());
+    }
+
+    @Test
+    void convertStartDateWithoutTimeAndWithoutDueDate()
+    {
+        CalendarEvent event = this.converter.convert(createWorkItem("1", day(2026, 3, 9)));
+
+        assertTrue(event.isAllDay());
+        assertEquals(day(2026, 3, 9), event.getStart());
+        assertEquals(day(2026, 3, 10), event.getEnd());
+    }
+
+    private static Date day(int year, int month, int day)
+    {
+        return Date.from(LocalDate.of(year, month, day).atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
     @Test

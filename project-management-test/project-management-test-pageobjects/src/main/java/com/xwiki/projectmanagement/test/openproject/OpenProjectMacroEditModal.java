@@ -36,8 +36,8 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
 {
     private static final String MACRO_NAME = "OpenProject";
 
-    // The macros having "OpenProject" in their name or description, i.e. all of them except the completion rate one.
-    private static final int EXPECTED_MACRO_COUNT = 11;
+    // The macros having "OpenProject" in their name or description, i.e. all of them.
+    private static final int EXPECTED_MACRO_COUNT = 12;
 
     /**
      * Model an edit modal that is already opened.
