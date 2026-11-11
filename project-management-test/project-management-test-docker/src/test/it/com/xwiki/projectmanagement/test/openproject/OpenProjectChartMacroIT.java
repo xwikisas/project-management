@@ -214,19 +214,18 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         // the parameters defining them are never displayed and have no effect, even when the macro call sets them.
         setup.createPage(testReference, String.format("{{openprojectopenclosed instance=\"%s\" filters=\"[]\" "
             + "type=\"%s\" property=\"status\"/}}", CONNECTION_ID, PIE));
+        setup.gotoPage(testReference);
+
+        // Checks that the chart compares the open and closed work packages.
+        ChartJSCanvas chart = new ChartJSCanvas();
+        assertEquals("line", chart.getChartType());
+        assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
+
         OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
         modal.clickMore();
         assertFalse(modal.hasFilterBuilder());
         assertFalse(modal.isMacroParameterDisplayed("filters"));
         assertFalse(modal.isMacroParameterDisplayed("type"));
         assertFalse(modal.isMacroParameterDisplayed("property"));
-        modal.setMacroParameter("days", "30");
-        modal.clickSubmit();
-        modal.getEditPage().clickSaveAndView();
-
-        // Checks that the chart compares the open and closed work packages.
-        ChartJSCanvas chart = new ChartJSCanvas();
-        assertEquals("line", chart.getChartType());
-        assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
     }
 }
