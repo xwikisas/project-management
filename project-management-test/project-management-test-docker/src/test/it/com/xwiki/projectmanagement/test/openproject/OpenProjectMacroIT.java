@@ -51,6 +51,7 @@ import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -579,6 +580,46 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         editPage.clickSaveAndView();
         // The editor may escape more characters of the value (e.g. the closing braces): compare the unescaped values.
         assertEquals(unescape(filters), getMacroParameter(getContent(setup, testReference), "filters"));
+    }
+
+    @Test
+    @Order(13)
+    void editMacroWithDisplayerAndDeprecatedDisplayer(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // The displayer parameter takes precedence over the deprecated workItemsDisplayer one: the editor shows it and
+        // keeps it, and drops the deprecated parameter.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" "
+            + "id=\"editMacroWithDisplayerAndDeprecatedDisplayer\" workItemsDisplayer=\"workItemsList\" "
+            + "displayer=\"cards\" limit=\"3\"/}}", CONNECTION_ID));
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        assertEquals("Cards", modal.getSelectedDisplayer());
+
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        String content = getContent(setup, testReference);
+        assertEquals("cards", getMacroParameter(content, "displayer"));
+        assertNull(getMacroParameter(content, "workItemsDisplayer"));
+    }
+
+    @Test
+    @Order(14)
+    void editMacroWithDeprecatedDisplayer(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // Without the displayer parameter, the editor shows the deprecated workItemsDisplayer one as the displayer, and
+        // replaces it on save.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" "
+            + "id=\"editMacroWithDeprecatedDisplayer\" workItemsDisplayer=\"workItemsList\" limit=\"3\"/}}",
+            CONNECTION_ID));
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        assertEquals("List", modal.getSelectedDisplayer());
+
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        String content = getContent(setup, testReference);
+        assertEquals("list", getMacroParameter(content, "displayer"));
+        assertNull(getMacroParameter(content, "workItemsDisplayer"));
     }
 
     // The unescaped value of a parameter of the first macro of the given wiki syntax, null when missing.

@@ -33,15 +33,26 @@ require(['jquery'], function ($) {
     workItemsList: 'list',
     workItemsEnum: 'enum'
   };
+  // Whether the edited macro call sets the displayer parameter. The displayer select can't tell, since it always has a
+  // value (the default one when the parameter is missing), so look at the macro call the macro editor was opened with.
+  let hasDisplayerParameter = function (displayerSelect) {
+    let input = displayerSelect.closest('.modal').data('input') || {};
+    let parameters = (input.macroCall && input.macroCall.parameters) || {};
+    return Object.keys(parameters).some(key => key.toLowerCase() === 'displayer');
+  };
   // Edit a macro using the deprecated parameter with the displayer one, so that the displayer chosen in the editor,
-  // the default one included, isn't overridden by the deprecated parameter left in the macro.
+  // the default one included, isn't overridden by the deprecated parameter left in the macro. The displayer parameter
+  // takes precedence over the deprecated one, so the deprecated value is used only when the macro call has no displayer
+  // parameter.
   let migrateLegacyDisplayer = function () {
     let legacyInput = $('.macro-editor :input[name="workItemsDisplayer"]');
     let displayerSelect = $('.macro-editor select[name="displayer"]');
     let legacyValue = Object.keys(legacyDisplayers).find(key => key.toLowerCase() ===
       (legacyInput.val() || '').toLowerCase());
     if (legacyValue && displayerSelect.length > 0) {
-      displayerSelect.val(legacyDisplayers[legacyValue]);
+      if (!hasDisplayerParameter(displayerSelect)) {
+        displayerSelect.val(legacyDisplayers[legacyValue]);
+      }
       legacyInput.val('');
     }
   };
