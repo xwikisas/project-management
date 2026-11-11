@@ -19,6 +19,11 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebElement;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 
@@ -43,5 +48,17 @@ public class OpenProjectOpenClosedMacroEditModal extends AbstractOpenProjectMacr
     public OpenProjectOpenClosedMacroEditModal(TestUtils setup, DocumentReference docRef)
     {
         super(setup, docRef, MACRO_NAME, EXPECTED_MACRO_COUNT);
+    }
+
+    /**
+     * @return the names of the options of the Chart Options field, once they are loaded
+     * @since 1.4.0
+     */
+    public List<String> getChartOptionNames()
+    {
+        By optionNames = By.cssSelector(".macro-editor-modal .proj-manag-chart-type-param-name");
+        getDriver().waitUntilCondition(driver -> !getDriver().findElementsWithoutWaiting(optionNames).isEmpty());
+        return getDriver().findElementsWithoutWaiting(optionNames).stream().map(WebElement::getText)
+            .collect(Collectors.toList());
     }
 }
