@@ -92,7 +92,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
      */
     public OpenProjectCalendarMacro()
     {
-        super("OpenProject Calendar", "Display OpenProject events as a calendar",
+        super("OpenProject - Calendar", "Display OpenProject events as a calendar",
             OpenProjectCalendarMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
 

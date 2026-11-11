@@ -61,7 +61,7 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
      */
     public OpenProjectOpenClosedMacro()
     {
-        super("OpenProject Open v Closed work packages",
+        super("OpenProject - Open vs. Closed Work Packages",
             "Display a chart comparing the open work packages against the closed work packages.",
             OpenProjectOpenClosedMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));

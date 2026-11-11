@@ -71,7 +71,7 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
      */
     public OpenProjectChartMacro()
     {
-        super("OpenProject Chart Macro", "desc", OpenProjectChartMacroParameters.class);
+        super("OpenProject - Chart", "desc", OpenProjectChartMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
 
     }

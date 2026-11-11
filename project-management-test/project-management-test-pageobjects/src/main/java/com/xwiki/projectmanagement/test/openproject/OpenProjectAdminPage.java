@@ -43,7 +43,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
 
     private static final String SECTION_ID = "OpenProject";
 
-    private static final String CONNECTION_NAME_COLUMN = "Connection name";
+    private static final String CONNECTION_NAME_COLUMN = "Connection Name";
 
     private static final String CONFIGURATION_CLASS = "OpenProject.Code.OpenProjectConfigurationClass";
 
@@ -361,7 +361,7 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
         ld.waitUntilReady();
         for (int i = 1; i <= ld.countRows(); i++) {
             if (name.equals(ld.getCell("Preset Name", i).getText())) {
-                return ld.getCell("Chart preset?", i).getText();
+                return ld.getCell("Chart Preset?", i).getText();
             }
         }
         return null;

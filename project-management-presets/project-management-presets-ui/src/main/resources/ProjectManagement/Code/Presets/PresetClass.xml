@@ -69,7 +69,7 @@
       <name>filter</name>
       <number>3</number>
       <picker>1</picker>
-      <prettyName>Filter value</prettyName>
+      <prettyName>Filter Value</prettyName>
       <restricted>0</restricted>
       <rows>20</rows>
       <size>20</size>
@@ -101,7 +101,7 @@
       <hint/>
       <name>isMultiple</name>
       <number>5</number>
-      <prettyName>Has multiple filters?</prettyName>
+      <prettyName>Has Multiple Filters?</prettyName>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
       <validationRegExp/>
