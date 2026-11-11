@@ -42,12 +42,12 @@ public class PresetViewPage extends ViewPage
     }
 
     /**
-     * @return {@code true} if the preset is meant for chart macros, as displayed by the "For Charts?" field
+     * @return {@code true} if the preset is meant for chart macros, as displayed by the "Chart Preset?" field
      */
     public boolean isChartPreset()
     {
         String value = getDriver().findElement(
-            By.xpath("//div[@id='xwikicontent']//dt[normalize-space() = 'For Charts?']/following-sibling::dd[1]"))
+            By.xpath("//div[@id='xwikicontent']//dt[normalize-space() = 'Chart Preset?']/following-sibling::dd[1]"))
             .getText().trim();
         return "Yes".equals(value);
     }

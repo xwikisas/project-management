@@ -106,7 +106,7 @@
         <hint/>
         <name>isMultiple</name>
         <number>5</number>
-        <prettyName>Has Multiple Filters?</prettyName>
+        <prettyName>Chart Preset?</prettyName>
         <unmodifiable>0</unmodifiable>
         <validationMessage/>
         <validationRegExp/>

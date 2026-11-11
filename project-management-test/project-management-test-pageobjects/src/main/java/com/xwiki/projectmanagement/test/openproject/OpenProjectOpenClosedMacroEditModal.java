@@ -23,7 +23,7 @@ import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 
 /**
- * Models the edit modal of the OpenProject Open vs Closed Work Packages macro.
+ * Models the edit modal of the OpenProject - Open vs. Closed Work Packages macro.
  *
  * @version $Id$
  * @since 1.3.0-rc-2
@@ -35,7 +35,7 @@ public class OpenProjectOpenClosedMacroEditModal extends AbstractOpenProjectMacr
     private static final int EXPECTED_MACRO_COUNT = 1;
 
     /**
-     * Insert an Open vs Closed Work Packages macro in the given page and wait for its edit modal to be displayed.
+     * Insert an OpenProject - Open vs. Closed Work Packages macro in the given page and wait for its edit modal to be displayed.
      *
      * @param setup the test setup.
      * @param docRef the page in which the macro will be inserted.
