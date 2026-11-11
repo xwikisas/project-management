@@ -138,9 +138,11 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public boolean isMacroParameterDisplayed(String name)
     {
+        // Look at the whole parameter (its name, description and field), since the input of some fields is hidden and
+        // replaced by a widget (e.g. a suggest input).
         return getDriver().findElementsWithoutWaiting(By.cssSelector(
-            String.format("[class*=-editor-modal] .macro-parameter-field input[name='%s'],select[name='%s']", name,
-                name))).stream().anyMatch(WebElement::isDisplayed);
+            String.format("[class*=-editor-modal] .macro-parameter[data-id='%s']", name))).stream()
+            .anyMatch(WebElement::isDisplayed);
     }
 
     /**

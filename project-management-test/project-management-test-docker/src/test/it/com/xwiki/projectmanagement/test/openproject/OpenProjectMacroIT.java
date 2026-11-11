@@ -154,6 +154,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WYSIWYGEditPage wysiwygEditPage = macroModal.getEditPage();
 
         macroModal.clickMore();
+        assertTrue(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
+        // The inline displayer also displays the first work package only, with properties of its own.
+        macroModal.selectDisplayer("Single inline item");
+        assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
         macroModal.selectDisplayer("Single item");
         // Assert that "sort", "offset", "limit", "properties" params are hidden.
         assertFalse(macroModal.isMacroParameterDisplayed(PROPERTIES_PARAMETER));
