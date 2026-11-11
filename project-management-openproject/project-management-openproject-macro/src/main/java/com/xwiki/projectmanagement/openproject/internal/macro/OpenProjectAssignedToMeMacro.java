@@ -53,7 +53,7 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
      */
     public OpenProjectAssignedToMeMacro()
     {
-        super("OpenProject Assigned to Me",
+        super("OpenProject - Assigned to Me",
             "Retrieve work packages from OpenProject assigned to the current user.",
             OpenProjectAssignedToMeMacroParameters.class);
     }
