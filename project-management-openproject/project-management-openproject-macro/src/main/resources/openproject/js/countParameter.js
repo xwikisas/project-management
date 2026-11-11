@@ -35,9 +35,10 @@ require(['jquery'], function ($) {
     return value === undefined || value === null ? undefined : String(value);
   };
 
-  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it empty,
-  // and its tab when it holds no other visible field, activating the first visible tab if it was the active one (the
-  // macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
+  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it
+  // empty, and its tab when it holds no other visible field, activating the first visible tab if it was the active one
+  // (the macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
+  // Keep in sync with the copy in project-management-macro's js/projectmanagement/macro/displayerParameter.js.
   let hideParameter = function (input) {
     let tabPanel = input.closest('.macro-parameter').addClass('hidden').closest('.tab-pane');
     while (tabPanel.length > 0 && tabPanel.find('.macro-parameter').not('.hidden').length === 0) {
