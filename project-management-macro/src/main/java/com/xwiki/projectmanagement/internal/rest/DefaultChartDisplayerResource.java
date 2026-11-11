@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.rest;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -54,6 +55,11 @@ public class DefaultChartDisplayerResource extends XWikiResource implements Char
 {
     private static final String TRANSLATION_KEY_FORMAT = "projectmanagement.chart.%s.parameter.%s";
 
+    /**
+     * The labels of the values of a parameter are shared by the chart types, like the values.
+     */
+    private static final String VALUE_TRANSLATION_KEY_FORMAT = "projectmanagement.chart.parameter.%s.value.%s";
+
     @Inject
     private ComponentManager componentManager;
 
@@ -70,7 +76,9 @@ public class DefaultChartDisplayerResource extends XWikiResource implements Char
             for (Map.Entry<String, Object> parameter : chartDisplayer.getParameterTypeTemplate().entrySet()) {
                 ChartDisplayerParameterInfo parameterInfo = new ChartDisplayerParameterInfo();
                 parameterInfo.setId(parameter.getKey());
-                parameterInfo.setValues(chartDisplayer.getParameterTypeValues().get(parameter.getKey()));
+                List<String> values = chartDisplayer.getParameterTypeValues().get(parameter.getKey());
+                parameterInfo.setValues(values);
+                parameterInfo.setValueLabels(getValueLabels(parameter.getKey(), values));
                 parameterInfo.setMultiple(parameter.getValue() instanceof Collection);
                 String labelTranslation =
                     l10n.getTranslationPlain(String.format(TRANSLATION_KEY_FORMAT, type, parameter.getKey()));
@@ -85,5 +93,18 @@ public class DefaultChartDisplayerResource extends XWikiResource implements Char
         } catch (ComponentLookupException e) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
+    }
+
+    private Map<String, String> getValueLabels(String parameter, List<String> values)
+    {
+        if (values == null) {
+            return null;
+        }
+        Map<String, String> valueLabels = new LinkedHashMap<>();
+        for (String value : values) {
+            String label = l10n.getTranslationPlain(String.format(VALUE_TRANSLATION_KEY_FORMAT, parameter, value));
+            valueLabels.put(value, label != null ? label : value);
+        }
+        return valueLabels;
     }
 }

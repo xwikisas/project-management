@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.chart.model;
 
 import java.util.List;
+import java.util.Map;
 
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 
@@ -38,6 +39,8 @@ public class ChartDisplayerParameterInfo
     private String description;
 
     private List<String> values;
+
+    private Map<String, String> valueLabels;
 
     private boolean multiple;
 
@@ -104,6 +107,25 @@ public class ChartDisplayerParameterInfo
     public void setValues(List<String> values)
     {
         this.values = values;
+    }
+
+    /**
+     * @return the labels displayed for the {@link #getValues() values} of the parameter, by value (a value without
+     *     label is displayed as is)
+     * @since 1.4.0
+     */
+    public Map<String, String> getValueLabels()
+    {
+        return valueLabels;
+    }
+
+    /**
+     * @param valueLabels see {@link #getValueLabels()}.
+     * @since 1.4.0
+     */
+    public void setValueLabels(Map<String, String> valueLabels)
+    {
+        this.valueLabels = valueLabels;
     }
 
     /**

@@ -33,11 +33,13 @@ import org.xwiki.edit.test.po.InplaceEditablePage;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
+import org.xwiki.test.ui.po.editor.WikiEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
@@ -102,6 +104,9 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
         modal.setChartType(PIE);
+        // The chart options display translated values.
+        assertThat(modal.getChartOptionChoices("period"), containsInAnyOrder("Hourly", "Daily", "Monthly", "Yearly"));
+        assertThat(modal.getChartOptionChoices("metric"), containsInAnyOrder("Count", "Cumulative"));
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
         assertEquals(PIE, new ChartJSCanvas().getChartType());
@@ -115,6 +120,19 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
             modal.getEditPage().clickSaveAndView();
             assertEquals(step[1], new ChartJSCanvas().getChartType());
         }
+
+        // The chart options of an existing call display the translated value, and the call keeps the value.
+        setup.createPage(testReference, String.format(
+            "{{openprojectchart instance=\"%s\" typeParams=\"{~\"period~\":~\"DAILY~\"}\"/}}", CONNECTION_ID));
+        modal = new OpenProjectChartMacroEditModal(setup, testReference);
+        modal.clickMore();
+        assertEquals("Daily", modal.getChartOptionSelectedValue("period"));
+        modal.clickSubmit();
+        modal.getEditPage().clickSaveAndView();
+        setup.gotoPage(testReference, "edit", "editor=wiki");
+        String content = new WikiEditPage().getContent();
+        assertThat(content, containsString("DAILY"));
+        assertThat(content, not(containsString("Daily")));
     }
 
     @Test
