@@ -61,7 +61,8 @@ public class OpenProjectCreateWorkPackageMacro extends AbstractMacro<OpenProject
      */
     public OpenProjectCreateWorkPackageMacro()
     {
-        super("OpenProject Create Work Package", "Easily create a new work package in OpenProject directly from XWiki.",
+        super("OpenProject - Create Work Package",
+            "Easily create a new work package in OpenProject directly from XWiki.",
             OpenProjectCreateWorkPackageMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
 

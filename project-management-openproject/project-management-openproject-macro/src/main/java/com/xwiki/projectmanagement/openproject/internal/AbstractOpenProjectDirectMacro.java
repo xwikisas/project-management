@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
@@ -244,20 +245,32 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     }
 
     /**
-     * @param project the project parameter of the macro
-     * @return the OpenProject id of the project
-     * @throws MacroExecutionException if the project is not an OpenProject project id, e.g. when it is empty or when
-     *     the selected dashboard project couldn't be resolved
+     * @param project the project parameter of the macro, i.e. the id or the identifier of an OpenProject project
+     * @param apiClient the client used to resolve the identifier of the project
+     * @return the OpenProject id of the project, as expected by the filters of the OpenProject API; the project is
+     *     returned as is, without requesting OpenProject, when it is already an id
+     * @throws MacroExecutionException if the project couldn't be resolved, e.g. when it doesn't exist or when the
+     *     selected dashboard project couldn't be resolved
+     * @since 1.4.0
      */
-    protected int getProjectId(String project) throws MacroExecutionException
+    protected String getProjectId(String project, OpenProjectApiClient apiClient) throws MacroExecutionException
     {
         checkDashboardProject(project);
-        try {
-            return Integer.parseInt(project);
-        } catch (NumberFormatException e) {
-            throw new MacroExecutionException(
-                String.format("The project [%s] is not a valid OpenProject project id.", project));
-        }
+        return OpenProjectProjectResolver.getProjectId(project, apiClient);
+    }
+
+    /**
+     * @param project the project parameter of the macro, i.e. the id or the identifier of an OpenProject project
+     * @param apiClient the client used to retrieve the project
+     * @return the OpenProject project
+     * @throws MacroExecutionException if the project couldn't be retrieved, e.g. when it doesn't exist or when the
+     *     selected dashboard project couldn't be resolved
+     * @since 1.4.0
+     */
+    protected Project getProject(String project, OpenProjectApiClient apiClient) throws MacroExecutionException
+    {
+        checkDashboardProject(project);
+        return OpenProjectProjectResolver.getProject(project, apiClient);
     }
 
     /**

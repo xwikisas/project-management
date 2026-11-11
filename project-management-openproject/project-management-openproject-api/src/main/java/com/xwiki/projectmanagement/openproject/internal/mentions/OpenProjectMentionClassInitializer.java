@@ -73,7 +73,7 @@ public class OpenProjectMentionClassInitializer extends AbstractMandatoryClassIn
     @Override
     protected void createClass(BaseClass xclass)
     {
-        xclass.addTextField(PROP_WORK_PACKAGE_ID, "Identifier of the WorkPackage", 20);
-        xclass.addTextField(PROP_INSTANCE, "The name of the configured OpenProject instance", 20);
+        xclass.addTextField(PROP_WORK_PACKAGE_ID, "Work Package ID", 20);
+        xclass.addTextField(PROP_INSTANCE, "OpenProject Instance", 20);
     }
 }

@@ -46,6 +46,7 @@ import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
+import com.xwiki.projectmanagement.openproject.model.Project;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -111,6 +112,21 @@ abstract class AbstractDirectMacroTest
     {
         when(this.l10n.getTranslationPlain(anyString()))
             .thenAnswer(invocation -> "[" + invocation.getArgument(0) + "]");
+    }
+
+    /**
+     * Make OpenProject find a project by its identifier.
+     *
+     * @param identifier the identifier of the project
+     * @param id the id of the project
+     * @return the project
+     */
+    protected Project resolveProject(String identifier, int id) throws Exception
+    {
+        Project project = new Project();
+        project.setId(id);
+        when(this.apiClient.getProject(identifier)).thenReturn(project);
+        return project;
     }
 
     /**

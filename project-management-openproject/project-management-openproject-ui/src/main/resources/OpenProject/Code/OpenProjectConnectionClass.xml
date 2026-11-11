@@ -56,7 +56,7 @@
       <multiSelect>0</multiSelect>
       <name>accessMode</name>
       <number>6</number>
-      <prettyName>Access mode</prettyName>
+      <prettyName>Access Mode</prettyName>
       <relationalStorage>0</relationalStorage>
       <separator> </separator>
       <separators>|, </separators>
@@ -72,7 +72,7 @@
       <name>clientId</name>
       <number>3</number>
       <picker>1</picker>
-      <prettyName>Client Id</prettyName>
+      <prettyName>Client ID</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
@@ -116,7 +116,7 @@
       <name>instanceId</name>
       <number>5</number>
       <picker>1</picker>
-      <prettyName>Instance Id</prettyName>
+      <prettyName>Instance ID</prettyName>
       <size>30</size>
       <unmodifiable>0</unmodifiable>
       <validationMessage/>
