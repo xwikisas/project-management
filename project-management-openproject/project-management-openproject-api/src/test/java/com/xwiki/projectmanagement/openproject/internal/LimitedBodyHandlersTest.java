@@ -52,6 +52,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -206,7 +207,8 @@ class LimitedBodyHandlersTest
         ExecutionException exception =
             assertThrows(ExecutionException.class, () -> response.get(TIMEOUT.toSeconds(), TimeUnit.SECONDS));
 
-        assertTrue(exception.getCause() instanceof HttpTimeoutException);
+        HttpTimeoutException timeout = assertInstanceOf(HttpTimeoutException.class, exception.getCause());
+        assertEquals("The response of the OpenProject API was not fully received in time", timeout.getMessage());
     }
 
     @ParameterizedTest
@@ -245,7 +247,7 @@ class LimitedBodyHandlersTest
             }
         });
         future.orTimeout(0, TimeUnit.MILLISECONDS);
-        blocked.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+        assertTrue(blocked.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS));
     }
 
     private HttpRequest request(String path)
