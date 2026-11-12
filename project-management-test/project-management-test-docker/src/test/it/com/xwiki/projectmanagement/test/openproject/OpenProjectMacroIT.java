@@ -381,7 +381,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
             assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
         } finally {
-            setup.loginAsSuperAdmin();
+            switchToSuperAdmin(setup);
             OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
         }
     }

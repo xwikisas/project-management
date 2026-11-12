@@ -222,7 +222,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
             new InplaceEditablePage().editInplace().saveAndView();
             assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
         } finally {
-            setup.loginAsSuperAdmin();
+            switchToSuperAdmin(setup);
             OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
         }
     }

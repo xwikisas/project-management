@@ -267,12 +267,12 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
             List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
             assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
 
-            setup.loginAsSuperAdmin();
+            switchToSuperAdmin(setup);
             setup.gotoPage(editorPage);
             errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
             assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
         } finally {
-            setup.loginAsSuperAdmin();
+            switchToSuperAdmin(setup);
             OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
         }
     }

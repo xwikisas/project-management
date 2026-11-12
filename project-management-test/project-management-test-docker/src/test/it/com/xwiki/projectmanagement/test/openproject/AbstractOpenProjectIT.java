@@ -32,6 +32,7 @@ import javax.naming.OperationNotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.EntityReference;
@@ -95,6 +96,37 @@ public abstract class AbstractOpenProjectIT
     {
         setup.loginAsSuperAdmin();
         this.openProject = OpenProjectFixture.ensureReady(setup, testConfiguration);
+    }
+
+    /**
+     * Start each test as superadmin, whoever the previous test left logged in when it failed before switching back.
+     *
+     * @param setup the test setup
+     */
+    @BeforeEach
+    void startAsSuperAdmin(TestUtils setup)
+    {
+        // Doesn't load any page when superadmin is already logged in.
+        setup.loginAsSuperAdmin();
+    }
+
+    /**
+     * Log in as superadmin after a test logged in as another user.
+     * <p>
+     * {@link TestUtils#loginAsSuperAdmin()} logs in on the session of the current user, which XWiki invalidates. A
+     * request of the current page that the server handles after the login, with the cookies of the current user (e.g.
+     * a Live Data or avatar request, or the unlock beacon of the in-place editor), is then authenticated again from
+     * these cookies, in a new session whose cookie replaces the one of superadmin: the browser stays logged in as the
+     * current user. Dropping the cookies first makes the login start a new session, and leaves the session of the
+     * current user valid for its pending requests, which then don't change the session cookie.
+     *
+     * @param setup the test setup
+     */
+    protected static void switchToSuperAdmin(TestUtils setup)
+    {
+        // Also reloads the current page as guest, so that the login isn't skipped because the page displays superadmin.
+        setup.forceGuestUser();
+        setup.loginAsSuperAdmin();
     }
 
     /**
