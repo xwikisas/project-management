@@ -142,6 +142,8 @@ final class LimitedBodyHandlers
     {
         private final int maxBytes;
 
+        private final long deadline;
+
         private final CompletableFuture<byte[]> result = new CompletableFuture<>();
 
         private final CompletionStage<byte[]> body;
@@ -155,6 +157,7 @@ final class LimitedBodyHandlers
         LimitedBodySubscriber(int maxBytes, long deadline, OptionalLong contentLength)
         {
             this.maxBytes = maxBytes;
+            this.deadline = deadline;
             if (contentLength.isPresent() && contentLength.getAsLong() > maxBytes) {
                 // Fail without reading the body. The subscription is cancelled as soon as it's received.
                 this.buffer = new byte[0];
@@ -164,9 +167,14 @@ final class LimitedBodyHandlers
                 this.buffer = new byte[(int) contentLength.orElse(Math.min(DEFAULT_BUFFER_SIZE, maxBytes))];
             }
             long remaining = deadline - System.nanoTime();
-            long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(remaining);
-            // The scheduled timeout is cancelled as soon as the result is completed.
-            this.result.orTimeout(Math.max(timeoutMillis, 0), TimeUnit.MILLISECONDS);
+            if (remaining <= 0) {
+                // Fail right away rather than through a scheduled timeout, which could fire after the body is read.
+                this.result.completeExceptionally(new TimeoutException());
+            } else {
+                // The scheduled timeout is cancelled as soon as the result is completed. It can fire late, so the
+                // deadline is also checked once the body is received.
+                this.result.orTimeout(TimeUnit.NANOSECONDS.toMillis(remaining), TimeUnit.MILLISECONDS);
+            }
             this.result.whenComplete((bytes, error) -> {
                 if (error != null) {
                     cancelSubscription();
@@ -235,6 +243,11 @@ final class LimitedBodyHandlers
         public void onComplete()
         {
             if (this.result.isDone()) {
+                return;
+            }
+            if (System.nanoTime() - this.deadline >= 0) {
+                this.buffer = null;
+                this.result.completeExceptionally(new TimeoutException());
                 return;
             }
             byte[] bytes =

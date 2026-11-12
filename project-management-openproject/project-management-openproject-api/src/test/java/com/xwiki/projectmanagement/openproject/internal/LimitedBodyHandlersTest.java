@@ -27,12 +27,15 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -64,6 +67,8 @@ class LimitedBodyHandlersTest
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
 
     private final CountDownLatch releaseSlowBody = new CountDownLatch(1);
+
+    private final CountDownLatch releaseTimeouts = new CountDownLatch(1);
 
     private HttpServer server;
 
@@ -117,6 +122,7 @@ class LimitedBodyHandlersTest
     void tearDown()
     {
         this.releaseSlowBody.countDown();
+        this.releaseTimeouts.countDown();
         this.server.stop(0);
     }
 
@@ -168,10 +174,39 @@ class LimitedBodyHandlersTest
     }
 
     @Test
-    void ofStringFailsWhenTheDeadlineIsExceededBeforeTheResponse()
+    void ofStringFailsWhenTheDeadlineIsExceededBeforeTheResponse() throws Exception
     {
-        assertThrows(HttpTimeoutException.class,
+        blockTimeouts();
+
+        HttpTimeoutException exception = assertThrows(HttpTimeoutException.class,
             () -> HTTP_CLIENT.send(request("/latin1"), LimitedBodyHandlers.ofString(1000, Duration.ZERO)));
+
+        assertEquals("The response of the OpenProject API was not fully received in time", exception.getMessage());
+    }
+
+    @Test
+    void ofByteArrayFailsWhenTheDeadlineIsExceededBeforeTheResponse() throws Exception
+    {
+        blockTimeouts();
+
+        assertThrows(HttpTimeoutException.class,
+            () -> HTTP_CLIENT.send(request("/fixed"), LimitedBodyHandlers.ofByteArray(1000, Duration.ZERO)));
+    }
+
+    @Test
+    void ofStringFailsWhenTheBodyIsReceivedAfterTheDeadline() throws Exception
+    {
+        blockTimeouts();
+        CompletableFuture<HttpResponse<String>> response =
+            HTTP_CLIENT.sendAsync(request("/slow"), LimitedBodyHandlers.ofString(1000, Duration.ofMillis(500)));
+        // Let the deadline pass before sending the end of the body.
+        Thread.sleep(600);
+        this.releaseSlowBody.countDown();
+
+        ExecutionException exception =
+            assertThrows(ExecutionException.class, () -> response.get(TIMEOUT.toSeconds(), TimeUnit.SECONDS));
+
+        assertTrue(exception.getCause() instanceof HttpTimeoutException);
     }
 
     @ParameterizedTest
@@ -190,6 +225,27 @@ class LimitedBodyHandlersTest
 
         assertEquals(expectedCharset,
             LimitedBodyHandlers.getCharset(HttpHeaders.of(values, (name, value) -> true)).name());
+    }
+
+    /**
+     * Blocks the thread that fires the timeouts of {@link CompletableFuture#orTimeout(long, TimeUnit)} until the end of
+     * the test, as it can be when the machine is busy, so that the deadline is checked without relying on it.
+     */
+    private void blockTimeouts() throws InterruptedException
+    {
+        CountDownLatch blocked = new CountDownLatch(1);
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        // The callback is registered before the timeout so that it runs on the thread firing the timeout.
+        future.whenComplete((result, error) -> {
+            blocked.countDown();
+            try {
+                this.releaseTimeouts.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        future.orTimeout(0, TimeUnit.MILLISECONDS);
+        blocked.await(TIMEOUT.toSeconds(), TimeUnit.SECONDS);
     }
 
     private HttpRequest request(String path)
