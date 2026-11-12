@@ -216,15 +216,10 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         // without reloading the page. The "Edit" button opens the in-place editor for the users preferring the WYSIWYG
         // editor, who see the public work packages when they haven't connected their OpenProject account.
         setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
-        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
-        try {
-            setup.loginAndGotoPage(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
-            new InplaceEditablePage().editInplace().saveAndView();
-            assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
-        } finally {
-            setup.loginAsSuperAdmin();
-            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
-        }
+        enablePublicData(setup);
+        switchUser(setup, INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
+        new InplaceEditablePage().editInplace().saveAndView();
+        assertEquals(Map.of(NEW, (long) newCount), new ChartJSCanvas().getValues());
     }
 
     @Test
