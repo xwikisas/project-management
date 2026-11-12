@@ -250,31 +250,26 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         setup.setRights(presetReference, "", "XWiki.XWikiGuest,XWiki." + userName, "view", false);
         setup.createPage(adminPage, macro);
 
-        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
-        try {
-            // Guests see the result of the preset used on a page saved by someone who can view it.
-            setup.forceGuestUser();
-            setup.gotoPage(adminPage);
-            OpenProjectMacroElement guestMacro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
-            assertEquals(String.format("Entries 1 - %d out of %d", Math.min(25, newCount), newCount),
-                getPaginationEntriesText(guestMacro));
-            List<String> statuses = guestMacro.getColumnValues("Status");
-            statuses.forEach(status -> assertEquals(newStatus, status.toLowerCase(), statuses.toString()));
+        enablePublicData(setup);
+        // Guests see the result of the preset used on a page saved by someone who can view it.
+        setup.forceGuestUser();
+        setup.gotoPage(adminPage);
+        OpenProjectMacroElement guestMacro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(25, newCount), newCount),
+            getPaginationEntriesText(guestMacro));
+        List<String> statuses = guestMacro.getColumnValues("Status");
+        statuses.forEach(status -> assertEquals(newStatus, status.toLowerCase(), statuses.toString()));
 
-            // The preset is not used on a page saved by someone who can't view it, whoever views the page.
-            setup.login(userName, "pass");
-            setup.createPage(editorPage, macro);
-            List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
-            assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
+        // The preset is not used on a page saved by someone who can't view it, whoever views the page.
+        setup.login(userName, "pass");
+        setup.createPage(editorPage, macro);
+        List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
+        assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
 
-            switchToSuperAdmin(setup);
-            setup.gotoPage(editorPage);
-            errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
-            assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
-        } finally {
-            switchToSuperAdmin(setup);
-            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
-        }
+        switchToSuperAdmin(setup);
+        setup.gotoPage(editorPage);
+        errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
+        assertThat(errors.get(0), containsString(String.format("There is no preset with id [%s].", presetId)));
     }
 
     private static void assertSubjectsContain(TableLayoutElement ld, String text)

@@ -361,29 +361,23 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertTrue(new ViewPageWithOpenProjectMacro().isConnectWarningDisplayed());
 
         setup.loginAsSuperAdmin();
-        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
-        try {
-            setup.forceGuestUser();
-            setup.gotoPage(testReference);
-            TableLayoutElement ld =
-                new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
-            assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
-            // The type is displayed in upper case.
-            assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
+        enablePublicData(setup);
+        setup.forceGuestUser();
+        setup.gotoPage(testReference);
+        TableLayoutElement ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+        assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
+        // The type is displayed in upper case.
+        assertEquals("task", ld.getCell("Type", 1).getText().toLowerCase());
 
-            // The work packages are displayed again when the page is saved with the in-place editor, which renders
-            // the content again without reloading the page. The "Edit" button opens the in-place editor for the users
-            // preferring the WYSIWYG editor, who see the public work packages without an OpenProject account.
-            setup.loginAsSuperAdmin();
-            setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
-            setup.loginAndGotoPage(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
-            new InplaceEditablePage().editInplace().saveAndView();
-            ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
-            assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
-        } finally {
-            switchToSuperAdmin(setup);
-            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
-        }
+        // The work packages are displayed again when the page is saved with the in-place editor, which renders the
+        // content again without reloading the page. The "Edit" button opens the in-place editor for the users
+        // preferring the WYSIWYG editor, who see the public work packages without an OpenProject account.
+        setup.loginAsSuperAdmin();
+        setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
+        switchUser(setup, INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
+        new InplaceEditablePage().editInplace().saveAndView();
+        ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+        assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
     }
 
     @Test

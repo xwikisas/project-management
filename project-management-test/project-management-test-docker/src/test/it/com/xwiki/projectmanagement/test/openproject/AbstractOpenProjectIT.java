@@ -31,6 +31,7 @@ import java.util.Map;
 import javax.naming.OperationNotSupportedException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.xwiki.livedata.test.po.TableLayoutElement;
@@ -89,7 +90,14 @@ public abstract class AbstractOpenProjectIT
      */
     protected static final List<String> CONNECTIONS_SPACE = List.of("OpenProject", "Code", "OpenProjectConfigurations");
 
+    private static final String SUPER_ADMIN = TestUtils.SUPER_ADMIN_CREDENTIALS.getUserName();
+
     protected OpenProjectInstance openProject;
+
+    /**
+     * Whether the current test enabled the public data of the connection, see {@link #enablePublicData(TestUtils)}.
+     */
+    private boolean publicDataEnabled;
 
     @BeforeAll
     void setUpOpenProject(TestUtils setup, TestConfiguration testConfiguration) throws Exception
@@ -106,27 +114,77 @@ public abstract class AbstractOpenProjectIT
     @BeforeEach
     void startAsSuperAdmin(TestUtils setup)
     {
-        // Doesn't load any page when superadmin is already logged in.
-        setup.loginAsSuperAdmin();
+        String displayedUser = setup.getLoggedInUserName();
+        if (displayedUser != null && !SUPER_ADMIN.equals(displayedUser)) {
+            switchToSuperAdmin(setup);
+        } else {
+            // Doesn't load any page when the current page displays superadmin.
+            setup.loginAsSuperAdmin();
+        }
     }
 
     /**
-     * Log in as superadmin after a test logged in as another user.
+     * Restore the access mode of the connection after a test that enabled the public data with
+     * {@link #enablePublicData(TestUtils)}, whether it passed or not. Unlike a {@code finally} block, a failure here
+     * doesn't hide the failure of the test, and the screenshot and video of a failing test are taken before.
+     *
+     * @param setup the test setup
+     */
+    @AfterEach
+    void restoreAccessMode(TestUtils setup)
+    {
+        if (this.publicDataEnabled) {
+            // The test instance is shared by all the tests of the class.
+            this.publicDataEnabled = false;
+            switchToSuperAdmin(setup);
+            OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "USER_ACCOUNTS");
+        }
+    }
+
+    /**
+     * Let the users who aren't connected to OpenProject see its public data through the shared connection, until the
+     * end of the current test.
+     *
+     * @param setup the test setup
+     */
+    protected void enablePublicData(TestUtils setup)
+    {
+        OpenProjectAdminPage.gotoPage().setAccessMode(CONNECTION_ID, "PUBLIC_DATA_AND_USER_ACCOUNTS");
+        this.publicDataEnabled = true;
+    }
+
+    /**
+     * Log in as another user, whoever is logged in.
      * <p>
-     * {@link TestUtils#loginAsSuperAdmin()} logs in on the session of the current user, which XWiki invalidates. A
-     * request of the current page that the server handles after the login, with the cookies of the current user (e.g.
-     * a Live Data or avatar request, or the unlock beacon of the in-place editor), is then authenticated again from
-     * these cookies, in a new session whose cookie replaces the one of superadmin: the browser stays logged in as the
-     * current user. Dropping the cookies first makes the login start a new session, and leaves the session of the
-     * current user valid for its pending requests, which then don't change the session cookie.
+     * {@link TestUtils#loginAndGotoPage(String, String, String)} logs in on the session of the current user, which
+     * XWiki invalidates. A request of the current page that the server handles after the login, with the cookies of the
+     * current user (e.g. a Live Data or avatar request, or the unlock beacon of the in-place editor), is then
+     * authenticated again from these cookies, in a new session whose cookie replaces the one of the new user: the
+     * browser stays logged in as the current user. Dropping the cookies first makes the login start a new session, and
+     * leaves the session of the current user valid for its pending requests, which then don't change the session
+     * cookie.
+     *
+     * @param setup the test setup
+     * @param username the user to log in
+     * @param password the password of the user
+     * @param pageURL the page to go to after logging in, or {@code null} for a page that loads fast
+     */
+    protected static void switchUser(TestUtils setup, String username, String password, String pageURL)
+    {
+        // Also reloads the current page as guest, so that the login isn't skipped because the page displays the user.
+        setup.forceGuestUser();
+        setup.loginAndGotoPage(username, password, pageURL);
+    }
+
+    /**
+     * Log in as superadmin after a test logged in as another user, see
+     * {@link #switchUser(TestUtils, String, String, String)}.
      *
      * @param setup the test setup
      */
     protected static void switchToSuperAdmin(TestUtils setup)
     {
-        // Also reloads the current page as guest, so that the login isn't skipped because the page displays superadmin.
-        setup.forceGuestUser();
-        setup.loginAsSuperAdmin();
+        switchUser(setup, SUPER_ADMIN, TestUtils.SUPER_ADMIN_CREDENTIALS.getPassword(), null);
     }
 
     /**
