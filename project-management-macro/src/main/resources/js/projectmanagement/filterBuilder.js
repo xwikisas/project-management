@@ -47,6 +47,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     if (window.FilterBuilder && window.FilterBuilder.instances.has(element[0])) {
       return;
     }
+    // A copy of a builder, e.g. a new series, loads its own properties.
+    element.removeClass('proj-manag-properties-loading');
     let builder = {
       constraintBuilder: '',
       addButton: '',
@@ -373,8 +375,14 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     /*
      * Replaces the properties that can be filtered on, e.g. by the properties of the instance of the client chosen in
      * the macro editor. The rows already added are kept, and the pending filters on the new properties are added.
+     *
+     * @param properties the new properties
+     * @param redisplayRows whether the rows already added are displayed again, e.g. when the user chooses another
+     *   instance: they take the new definition of their property, e.g. the values that their value field suggests,
+     *   which come from the chosen instance. A row whose property isn't part of the new properties, e.g. a custom field
+     *   of the previous instance, no longer suggests values. The values of the rows are kept.
      */
-    let setProperties = function (properties) {
+    let setProperties = function (properties, redisplayRows) {
       properties.forEach(property => {
         let previous = builder.cfg.find(i => i.id == property.id);
         if (previous && previous.valueDisplayer) {
@@ -392,6 +400,19 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       properties.forEach(property => {
         builder.addButton.append($('<option></option>').attr('value', property.id).text(property.name || property.id));
       });
+      if (redisplayRows) {
+        getRows().each(function () {
+          let row = $(this);
+          let values = getRowValues(row);
+          let property = properties.find(i => i.id == row.find('.proj-manag-constraint-name').val());
+          if (!property) {
+            property = $.extend(true, {}, getRowProperty(row));
+            delete property.filter.searchURL;
+          }
+          row.data('property', property);
+          displayValue(row, values, false);
+        });
+      }
       let pending = builder.pending;
       builder.pending = [];
       pending.forEach(filter => addFilter(filter));
@@ -400,8 +421,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     /*
      * Loads the properties that can be filtered on for the given parameters of the livedata source, e.g. the instance
      * of the client.
+     *
+     * @param sourceParameters the parameters of the livedata source
+     * @param redisplayRows whether the rows already added are displayed again with the new properties, see
+     *   setProperties
      */
-    let setSourceParameters = function (sourceParameters) {
+    let setSourceParameters = function (sourceParameters, redisplayRows) {
       let request = ++builder.propertiesRequest;
       let url = new XWiki.Document(XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL('get',
         $.param({
@@ -410,13 +435,19 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
           client: builder.constraintBuilder.attr('data-client'),
           sourceParameters: JSON.stringify(sourceParameters || {})
         }));
+      // Marks the builder while its properties are loading.
+      builder.constraintBuilder.addClass('proj-manag-properties-loading');
       return $.getJSON(url).then(function (properties) {
         // Only the properties of the last parameters are used.
         if (request === builder.propertiesRequest && Array.isArray(properties) && properties.length > 0) {
-          setProperties(properties);
+          setProperties(properties, redisplayRows);
         }
       }).catch(function () {
         console.error(`Failed to load the properties to filter on from [${url}].`);
+      }).then(function () {
+        if (request === builder.propertiesRequest) {
+          builder.constraintBuilder.removeClass('proj-manag-properties-loading');
+        }
       });
     };
     let setTitle = function (newTitle) {

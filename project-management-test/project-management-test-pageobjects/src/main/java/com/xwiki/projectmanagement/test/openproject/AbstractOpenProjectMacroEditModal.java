@@ -51,6 +51,10 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final String WIDGET_WRAPPER = "[data-cke-widget-wrapper]";
 
+    private static final By PROPERTIES_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-properties-loading");
+
+    private static final By NO_CONNECTION_HINT = By.cssSelector(".macro-editor-modal .op-filters-no-connection");
+
     private WYSIWYGEditPage editPage;
 
     protected AbstractOpenProjectMacroEditModal()
@@ -116,6 +120,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     public FilterBuilderParameter getFilterBuilder()
     {
         selectParameterTab("filters");
+        // The filters reload their properties when the modal is opened with a connection, or when it's changed.
+        getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
         return new FilterBuilderParameter();
     }
 
@@ -209,7 +215,35 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         // It's the last parameter, so it can be out of view.
         getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
         new Select(input).selectByValue(connectionId);
+        // The filters load the properties of the chosen connection, and their values are suggested from it.
+        getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
         return this;
+    }
+
+    /**
+     * Wait for the message telling to choose a connection to get suggestions for the filter values, displayed when the
+     * macro has no connection and there is no default one.
+     *
+     * @return the message
+     * @since 1.4.0
+     */
+    public String getFiltersNoConnectionHint()
+    {
+        selectParameterTab("filters");
+        WebElement hint = getDriver().findElementWithoutWaitingWithoutScrolling(NO_CONNECTION_HINT);
+        getDriver().waitUntilCondition(driver -> hint.isDisplayed());
+        return hint.getText();
+    }
+
+    /**
+     * @return {@code true} if the message telling to choose a connection to get suggestions for the filter values is
+     *     displayed
+     * @since 1.4.0
+     */
+    public boolean isFiltersNoConnectionHintDisplayed()
+    {
+        selectParameterTab("filters");
+        return isDisplayed(NO_CONNECTION_HINT);
     }
 
     /**
