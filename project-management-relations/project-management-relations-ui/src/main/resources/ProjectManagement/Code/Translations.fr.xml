@@ -40,7 +40,7 @@
 
 projectmanagement.relations.relation.add.title=Créer une nouvelle relation
 projectmanagement.relations.relation.add.label=Ajouter une nouvelle relation
-projectmanagement.relations.relation.add.placeholder=Choisissez le client de gestion de projet...
+projectmanagement.relations.relation.add.placeholder=Choisir le client de gestion de projet...
 projectmanagement.relations.relation.edit=Relation de la page avec le client {0}.
 
 projectmanagement.relations.client.id.name=ID du client de gestion de projet
