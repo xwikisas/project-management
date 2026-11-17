@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -70,6 +71,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -173,6 +175,21 @@ class DefaultOpenProjectMacroInsertResourceTest
         assertEquals(currentUser, page.getAuthors().getOriginalMetadataAuthor());
         assertEquals("Inserted OpenProject mention.", page.getComment());
         assertTrue(page.isMinorEdit());
+    }
+
+    @Test
+    void insertIntoPageIgnoresAStaleCachedPage() throws Exception
+    {
+        // The document cache still holds a version of the page older than the one saved in the database.
+        XWikiDocument stalePage = getPage().clone();
+        stalePage.setContent("Stale content");
+        doReturn(stalePage).when(this.oldcore.getSpyXWiki()).getDocument(eq(PAGE), any(XWikiContext.class));
+
+        Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
+
+        assertEquals(200, response.getStatus());
+        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n",
+            this.oldcore.getDocuments().get(new DocumentReference(PAGE, Locale.ROOT)).getContent());
     }
 
     @Test

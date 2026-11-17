@@ -42,8 +42,8 @@ import com.xpn.xwiki.doc.XWikiDocument;
  * {@link #unlock(DocumentReference) unlock} it.
  *
  * @version $Id$
- * @since 1.4.0
  * @since 1.3.1
+ * @since 1.4.0
  */
 @Component(roles = DocumentModificationLock.class)
 @Singleton
