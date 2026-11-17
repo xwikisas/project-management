@@ -23,9 +23,6 @@ package com.xwiki.projectmanagement.openproject.internal.rest;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Pattern;
 
 import javax.inject.Inject;
@@ -60,6 +57,7 @@ import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.doc.XWikiLock;
 import com.xwiki.commons.document.MacroUtils;
+import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 import com.xwiki.projectmanagement.openproject.rest.OpenProjectMacroInsertResource;
 
@@ -131,17 +129,6 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
         {
             return foundLine;
         }
-    }
-
-    /**
-     * The lock of a document, with the number of threads holding it or waiting for it, accessed only from the atomic
-     * operations of the lock map.
-     */
-    static final class DocumentLock
-    {
-        private final ReentrantLock lock = new ReentrantLock();
-
-        private int users;
     }
 
     class FoundLine
@@ -229,7 +216,8 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
     @Named("document")
     private UserReferenceResolver<DocumentReference> userReferenceResolver;
 
-    private final ConcurrentMap<DocumentReference, DocumentLock> documentLocks = new ConcurrentHashMap<>();
+    @Inject
+    private DocumentModificationLock documentModificationLock;
 
     @Override
     public Response insetIntoPage(String wikiName, String spaces, String pageName, MacroInsertion macroInsertion)
@@ -240,11 +228,11 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
             if (!authorizationManager.hasAccess(Right.EDIT, documentReference)) {
                 return Response.status(Response.Status.UNAUTHORIZED).build();
             }
-            DocumentLock lock = acquireLock(documentReference);
+            this.documentModificationLock.lock(documentReference);
             try {
-                // Load the document once the lock is taken, so that it includes the insertions done concurrently, and
-                // work on a copy of the cached document.
-                XWikiDocument document = context.getWiki().getDocument(documentReference, context).clone();
+                // Load the document only once the lock is held, so that the content saved by a concurrent
+                // modification of the page is not overwritten.
+                XWikiDocument document = this.documentModificationLock.loadLatestDocument(documentReference);
 
                 maybeEarlyExit(document, macroInsertion);
 
@@ -263,32 +251,13 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
                     context.getWiki().saveDocument(document, "Inserted OpenProject mention.", true, context);
                 }
             } finally {
-                releaseLock(documentReference, lock);
+                this.documentModificationLock.unlock(documentReference);
             }
         } catch (XWikiRestException | XWikiException | MissingParserException | ParseException
                  | ComponentLookupException e) {
             throw new RuntimeException(e);
         }
         return Response.ok().build();
-    }
-
-    private DocumentLock acquireLock(DocumentReference documentReference)
-    {
-        // Count the threads using the lock, atomically, so that it's removed only when no thread is about to take it.
-        DocumentLock lock = this.documentLocks.compute(documentReference, (reference, currentLock) -> {
-            DocumentLock documentLock = currentLock != null ? currentLock : new DocumentLock();
-            documentLock.users++;
-            return documentLock;
-        });
-        lock.lock.lock();
-        return lock;
-    }
-
-    private void releaseLock(DocumentReference documentReference, DocumentLock lock)
-    {
-        lock.lock.unlock();
-        this.documentLocks.computeIfPresent(documentReference,
-            (reference, documentLock) -> --documentLock.users == 0 ? null : documentLock);
     }
 
     private void setAuthors(XWikiDocument document, XWikiContext context)
