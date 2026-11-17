@@ -18,5 +18,9 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #set ($clientId = 'openproject')
+## Displayed by the JavaScript code when the macro has no connection and there is no default one: the values of the
+## filters can't be suggested without a connection.
+<div class="box infomessage op-filters-no-connection hidden">$escapetool.xml(
+  $services.localization.render('openproject.filters.noConnection.hint'))</div>
 #template('html_displayer/projectmanagementfilter/edit.vm')
 #set ($discard = $xwiki.jsrx.use('openproject/js/filters.js', {'minify': true}))

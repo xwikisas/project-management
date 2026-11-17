@@ -336,6 +336,25 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
             assertThat(warnings.get(0), containsString(CONNECTION_ID));
             assertThat(warnings.get(0), containsString(thirdConnection));
 
+            // Without a connection, the values of the filters can't be suggested: the macro editor tells to choose a
+            // connection, and choosing one makes the filters already added suggest its values.
+            OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+            modal.clickMore();
+            assertEquals("No connection is chosen and there is no default connection: choose a connection in the "
+                + "Connection tab to get suggestions for the filter values.", modal.getFiltersNoConnectionHint());
+            FilterBuilderFilter statusFilter = modal.getFilterBuilder().addFilter("status");
+            modal.selectInstance(CONNECTION_ID);
+            assertFalse(modal.isFiltersNoConnectionHintDisplayed());
+            statusFilter = modal.getFilterBuilder().getFilters().get(0);
+            statusFilter.setSuggestValue("New");
+            assertEquals(List.of("New"), statusFilter.getSuggestValues());
+            modal.clickSubmit();
+            modal.getEditPage().clickSaveAndView();
+            // The macro displays the work packages of the chosen connection, matching its filter.
+            page = new ViewPageWithOpenProjectMacro();
+            assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
+            assertEquals(List.of(), page.getWarnings());
+
             // When a single connection would remain, the macros would use it.
             adminPage = OpenProjectAdminPage.gotoPage();
             adminPage.setDefaultConnection(thirdConnection);
