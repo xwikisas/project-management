@@ -25,6 +25,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebElement;
 import org.xwiki.test.ui.po.InlinePage;
+import org.xwiki.test.ui.po.ViewPage;
 
 /**
  * Models the edit mode of a filter preset page.
@@ -38,6 +39,10 @@ public class PresetEditPage extends InlinePage
 
     private static final By FILTER_VALUES =
         By.cssSelector(".project-management-filters input.proj-manag-constraint-value");
+
+    private static final By OPEN_SUGGESTIONS = By.className("selectize-dropdown");
+
+    private static final By NO_DEFAULT_CONNECTION_HINT = By.className("proj-manag-no-default-instance");
 
     /**
      * Wait for the preset form and its filter builders to be ready.
@@ -62,6 +67,17 @@ public class PresetEditPage extends InlinePage
     public String getPresetId()
     {
         return getDriver().findElement(By.id(FIELD_PREFIX + "id")).getDomProperty("value");
+    }
+
+    /**
+     * @return the message telling to choose a default connection to get suggestions for the filter values, displayed
+     *     when there is no default connection, or an empty string when it isn't displayed
+     * @since 1.4.0
+     */
+    public String getFiltersNoDefaultConnectionHint()
+    {
+        return getDriver().findElementsWithoutWaiting(NO_DEFAULT_CONNECTION_HINT).stream()
+            .filter(WebElement::isDisplayed).map(WebElement::getText).findFirst().orElse("");
     }
 
     /**
@@ -102,6 +118,16 @@ public class PresetEditPage extends InlinePage
         });
         clickSaveAndView(true);
         return new PresetViewPage();
+    }
+
+    @Override
+    public <T extends ViewPage> T clickCancel()
+    {
+        // The suggestions of a list filter stay displayed after a value is picked, and can cover the buttons.
+        getDriver().switchTo().activeElement().sendKeys(Keys.ESCAPE);
+        getDriver().waitUntilCondition(driver -> getDriver().findElementsWithoutWaiting(OPEN_SUGGESTIONS).stream()
+            .noneMatch(WebElement::isDisplayed));
+        return super.clickCancel();
     }
 
     /**

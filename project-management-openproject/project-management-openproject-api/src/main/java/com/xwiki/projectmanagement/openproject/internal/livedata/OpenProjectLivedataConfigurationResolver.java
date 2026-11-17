@@ -42,6 +42,7 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
+import org.xwiki.livedata.LiveDataQuery;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -71,6 +72,8 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
     private static final String SOURCE_PARAMS_INSTANCE = "instance";
 
     private static final String SOURCE_PARAMS_DEFAULT_INSTANCE = "defaultInstance";
+
+    private static final String PLACEHOLDER_INSTANCE = "{instance}";
 
     @Inject
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
@@ -112,7 +115,11 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
 
             String instance = getInstance(input);
             maybeAddFieldProperties(configuration, instance);
-            maybeUpdateSearchURL(configuration, instance);
+            boolean defaultInstanceAsked = isDefaultInstanceAsked(input);
+            maybeUpdateSearchURL(configuration, instance, defaultInstanceAsked);
+            if (defaultInstanceAsked) {
+                setResolvedInstance(configuration, instance);
+            }
             return configuration;
         } catch (IOException | LiveDataException e) {
             logger.error("Could not read the livedata configuration of the OpenProject client.", e);
@@ -159,27 +166,43 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         }
     }
 
-    private void maybeUpdateSearchURL(LiveDataConfiguration configuration, String instance)
+    /**
+     * Updates the URLs from which the list filters get their suggestions. When the default connection is asked for but
+     * there is none, the suggestions that depend on the connection can't be requested: their URL is removed, so that
+     * the filters only propose the typed values instead of requesting suggestions that fail.
+     */
+    private void maybeUpdateSearchURL(LiveDataConfiguration configuration, String instance,
+        boolean defaultInstanceAsked)
     {
         if (configuration.getMeta() == null || configuration.getMeta().getPropertyDescriptors() == null) {
             return;
         }
         String wiki = getWiki();
+        boolean withoutInstance = defaultInstanceAsked && StringUtils.isBlank(instance);
         for (LiveDataPropertyDescriptor propertyDescriptor : configuration.getMeta().getPropertyDescriptors()) {
             if (propertyDescriptor.getFilter() == null || !"list".equals(propertyDescriptor.getFilter().getId())) {
                 continue;
             }
             String searchURL = (String) propertyDescriptor.getFilter().getParameters().get(FILTER_KEY_SEARCHURL);
-            if (searchURL == null || searchURL.isEmpty()) {
+            if (StringUtils.isEmpty(searchURL)) {
                 continue;
             }
-            searchURL = searchURL.replace("{wikiName}", PathSegmentEncoder.encode(wiki));
-            if (instance != null && !instance.isEmpty()) {
-                searchURL = searchURL.replace("{instance}", PathSegmentEncoder.encode(instance));
+            if (withoutInstance && searchURL.contains(PLACEHOLDER_INSTANCE)) {
+                propertyDescriptor.getFilter().getParameters().remove(FILTER_KEY_SEARCHURL);
+            } else {
+                propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL,
+                    resolveSearchURL(searchURL, wiki, instance));
             }
-            searchURL = getContextPath() + searchURL;
-            propertyDescriptor.getFilter().getParameters().put(FILTER_KEY_SEARCHURL, searchURL);
         }
+    }
+
+    private String resolveSearchURL(String searchURL, String wiki, String instance)
+    {
+        String resolved = searchURL.replace("{wikiName}", PathSegmentEncoder.encode(wiki));
+        if (instance != null && !instance.isEmpty()) {
+            resolved = resolved.replace(PLACEHOLDER_INSTANCE, PathSegmentEncoder.encode(instance));
+        }
+        return getContextPath() + resolved;
     }
 
     /**
@@ -191,19 +214,47 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
      */
     private String getInstance(LiveDataConfiguration input)
     {
-        Map<String, Object> parameters = input.getQuery() != null && input.getQuery().getSource() != null
-            ? input.getQuery().getSource().getParameters() : null;
+        Map<String, Object> parameters = getSourceParameters(input);
         if (parameters == null) {
             return null;
         }
         String instance = (String) parameters.get(SOURCE_PARAMS_INSTANCE);
-        if (StringUtils.isBlank(instance)
-            && Boolean.parseBoolean(String.valueOf(parameters.get(SOURCE_PARAMS_DEFAULT_INSTANCE))))
-        {
+        if (StringUtils.isBlank(instance) && isDefaultInstanceAsked(input)) {
             OpenProjectConnection defaultConnection = this.openProjectConfiguration.getDefaultConnection();
             instance = defaultConnection != null ? defaultConnection.getConnectionName() : null;
         }
         return instance;
+    }
+
+    private boolean isDefaultInstanceAsked(LiveDataConfiguration input)
+    {
+        Map<String, Object> parameters = getSourceParameters(input);
+        return parameters != null && StringUtils.isBlank((String) parameters.get(SOURCE_PARAMS_INSTANCE))
+            && Boolean.parseBoolean(String.valueOf(parameters.get(SOURCE_PARAMS_DEFAULT_INSTANCE)));
+    }
+
+    private Map<String, Object> getSourceParameters(LiveDataConfiguration input)
+    {
+        return input.getQuery() != null && input.getQuery().getSource() != null
+            ? input.getQuery().getSource().getParameters() : null;
+    }
+
+    /**
+     * Tells which connection the configuration was resolved for when the default connection was asked for, e.g. so that
+     * the preset editor can tell when there is no default connection to suggest the values of its filters.
+     */
+    private void setResolvedInstance(LiveDataConfiguration configuration, String instance)
+    {
+        if (StringUtils.isBlank(instance)) {
+            return;
+        }
+        if (configuration.getQuery() == null) {
+            configuration.setQuery(new LiveDataQuery());
+        }
+        if (configuration.getQuery().getSource() == null) {
+            configuration.getQuery().setSource(new LiveDataQuery.Source());
+        }
+        configuration.getQuery().getSource().setParameter(SOURCE_PARAMS_INSTANCE, instance);
     }
 
     private String getWiki()
