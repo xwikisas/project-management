@@ -32,6 +32,7 @@ import com.xwiki.projectmanagement.test.openproject.OpenProjectDashboardIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectLinkSearchIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectMacroIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectPresetIT;
+import com.xwiki.projectmanagement.test.openproject.OpenProjectSpaceIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectSubwikiIT;
 import com.xwiki.projectmanagement.test.openproject.OpenProjectWorkPackageKeysIT;
 
@@ -102,6 +103,12 @@ public class AllIT
     @Nested
     @DisplayName("OpenProject in a subwiki")
     class NestedOpenProjectSubwikiIT extends OpenProjectSubwikiIT
+    {
+    }
+
+    @Nested
+    @DisplayName("OpenProject space")
+    class NestedOpenProjectSpaceIT extends OpenProjectSpaceIT
     {
     }
 }
