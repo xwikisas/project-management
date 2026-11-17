@@ -153,8 +153,11 @@
         }
         return pageRelation;
       })
-      .fail(function () {
-        pageRelation = {};
+      .fail(function (xhr) {
+        // The page has no relation. Other failures aren't cached, so that the next call tries again.
+        if (xhr.status === 404) {
+          pageRelation = {};
+        }
       })
       .always(function () {
         loadingPromise = null;

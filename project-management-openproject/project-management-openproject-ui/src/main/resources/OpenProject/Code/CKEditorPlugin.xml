@@ -36,7 +36,20 @@
   <minorEdit>false</minorEdit>
   <syntaxId>xwiki/2.1</syntaxId>
   <hidden>true</hidden>
-  <content>Hello there</content>
+  <content>{{velocity}}
+## The configuration that the JavaScript of this page needs at runtime, which can't be rendered in the JavaScript
+## because it is cached by the browser.
+#if ($xcontext.action == 'get')
+  ## The default connection is only given to the users who can edit the document whose editor needs it.
+  #set ($documentReference = $services.model.resolveDocument("$!request.document"))
+  #set ($documentName = $services.model.serialize($documentReference, 'default'))
+  #set ($defaultConnection = '')
+  #if ("$!request.document" != '' &amp;&amp; $xwiki.hasAccessLevel('edit', $xcontext.user, $documentName))
+    #set ($defaultConnection = "$!services.openproject.getDefaultConnectionName()")
+  #end
+  #jsonResponse({'defaultConnection': $defaultConnection})
+#end
+{{/velocity}}</content>
   <object>
     <name>OpenProject.Code.CKEditorPlugin</name>
     <number>0</number>
@@ -131,8 +144,15 @@
       XWiki.EntityType.DOCUMENT, XWiki.currentDocument.documentReference)).getURL('jsx', 'r=1')
   }
 });
-require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromise, $, pageRelation) {
-  const search = function (text, callback, instance) {
+define('openproject.ckeditor.workPackageSearch', {
+  prefix: 'openproject.ckeditor.workPackageSearch.',
+  keys: ['noConnection', 'connectionError']
+});
+require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.ckeditor.workPackageSearch'],
+    function (ckeditorPromise, $, pageRelation, l10n) {
+  // The instance parameter of the inserted macros is left out when the work packages come from the default connection,
+  // so that the macros follow the default connection, as when they are inserted from the macro dialog.
+  const search = function (text, callback, instance, isDefaultConnection) {
     let cfg = { query: { filters: [{ property: "summary", constraints: [{ operator: "contains", value: text }] }] } };
     const searchURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/openproject/workitems';
     $.getJSON(searchURL, { instance: instance, filter: JSON.stringify(cfg)})
@@ -155,7 +175,7 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
                   name: 'openproject',
                   inline: 'enforce',
                   parameters: {
-                    instance: instance,
+                    ...(isDefaultConnection ? {} : {instance}),
                     identifier: wp.identifier.value,
                     displayer: 'inline'
                   }
@@ -202,19 +222,79 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
     }
     return markerPromise;
   };
+  let defaultConnectionPromise;
+  // The default connection is resolved by the server (e.g. it is the only connection when there is a single one). It is
+  // fetched at runtime (once per page load), from the content of this page, because the skin extension is cached by the
+  // browser.
+  const getDefaultConnection = function () {
+    if (!defaultConnectionPromise) {
+      const pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
+        XWiki.currentDocument.documentReference);
+      // The default connection is only given to the users who can edit the current document.
+      const url = new XWiki.Document(pluginReference).getURL('get', $.param({
+        outputSyntax: 'plain',
+        document: XWiki.Model.serialize(XWiki.currentDocument.documentReference)
+      }));
+      defaultConnectionPromise = Promise.resolve($.getJSON(url))
+        .then(config =&gt; typeof config?.defaultConnection === 'string' ? config.defaultConnection : '')
+        .catch(error =&gt; {
+          // The failure isn't cached, so that the next search tries again.
+          defaultConnectionPromise = null;
+          throw error;
+        });
+    }
+    return defaultConnectionPromise;
+  };
+  // The work packages are searched in the OpenProject connection of the page relation (e.g. the pages of an OpenProject
+  // space), or else in the default connection. The promise is rejected when the connection can't be determined.
+  const getConnection = function () {
+    return Promise.resolve(pageRelation.get())
+      .catch(xhr =&gt; {
+        // The page has no relation. The other failures are reported, without falling back to the default connection.
+        if (xhr?.status === 404) {
+          return null;
+        }
+        throw xhr;
+      })
+      .then(relation =&gt; {
+        const instance = relation?.clientParams?.instance;
+        if (typeof instance === 'string' &amp;&amp; instance.trim()) {
+          return {instance};
+        }
+        return getDefaultConnection()
+          .then(defaultConnection =&gt; defaultConnection ? {instance: defaultConnection, isDefault: true} : null);
+      });
+  };
+  // The entry displayed instead of the work packages when there's no connection to search them in, or when it can't be
+  // determined. Selecting it inserts nothing.
+  const getHintItem = function (key) {
+    return {
+      id: 'openproject-work-package-search-' + key,
+      label: l10n.get(key),
+      hint: true
+    };
+  };
   ckeditorPromise.then(ckeditor =&gt; {
+    const hintItemTemplate = new ckeditor.template(
+      `&lt;li data-id="{id}" class="ckeditor-autocomplete-item openproject-work-package-search-hint"
+          aria-disabled="true"&gt;
+        &lt;div class="ckeditor-autocomplete-item-head"&gt;
+          &lt;span class="ckeditor-autocomplete-item-label text-muted" style="white-space: normal;"&gt;{label}&lt;/span&gt;
+        &lt;/div&gt;
+      &lt;/li&gt;`);
+
     function getOpenProjectPluginCfg(marker) {
       return {
         dataCallback: function (options, callback) {
           // Remove the marker prefix and replace non-breaking space.
           const text = options.query.substring(marker.length).replaceAll('\u00A0', ' ');
-          pageRelation.get().done(function (relation) {
-            if (!relation || !relation.clientParams || !relation.clientParams.instance) {
-              console.warn('There is no instance stored in the page relation.');
-              return;
+          getConnection().then(connection =&gt; {
+            if (connection) {
+              search(text, callback, connection.instance, connection.isDefault);
+            } else {
+              callback([getHintItem('noConnection')]);
             }
-            search(text, callback, relation.clientParams.instance);
-          });
+          }, () =&gt; callback([getHintItem('connectionError')]));
         },
         marker: marker,
         minChars: 3,
@@ -256,9 +336,38 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation'], function (ckeditorPromi
 
     function maybeEnableOpenProjectPlugin(editor) {
       return Promise.all([waitForEditorReady(editor), getMarker()]).then(([editor, marker]) =&gt; {
-        new CKEDITOR.plugins.AdvancedAutoComplete(editor, getOpenProjectPluginCfg(marker));
+        const autoComplete = new ckeditor.plugins.AdvancedAutoComplete(editor, getOpenProjectPluginCfg(marker));
+        supportHintItems(autoComplete);
         return editor;
       });
+    }
+
+    // The entries displayed instead of the work packages are displayed differently, and selecting them (with the
+    // keyboard or the mouse) only closes the autocomplete panel, keeping the typed text.
+    function supportHintItems(autoComplete) {
+      const commit = autoComplete.commit;
+      autoComplete.commit = function (itemId) {
+        const selectedItemId = itemId ?? this.model.selectedItemId;
+        if (selectedItemId != null &amp;&amp; this.model.getItemById(selectedItemId)?.hint) {
+          this.close();
+        } else {
+          return commit.apply(this, arguments);
+        }
+      };
+      const view = autoComplete.view;
+      const createItem = view.createItem;
+      view.createItem = function (item) {
+        if (!item.hint) {
+          return createItem.apply(this, arguments);
+        }
+        const itemTemplate = this.itemTemplate;
+        try {
+          this.itemTemplate = hintItemTemplate;
+          return createItem.apply(this, arguments);
+        } finally {
+          this.itemTemplate = itemTemplate;
+        }
+      };
     }
 
     function waitForEditorReady(editor) {

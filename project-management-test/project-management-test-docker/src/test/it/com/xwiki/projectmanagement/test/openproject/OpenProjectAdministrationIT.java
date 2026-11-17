@@ -368,10 +368,4 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
             resetDefaultConnection(setup);
         }
     }
-
-    private static void resetDefaultConnection(TestUtils setup)
-    {
-        setup.updateObject(List.of("OpenProject", "Code"), "OpenProjectConfiguration",
-            "OpenProject.Code.OpenProjectConfigurationClass", 0, "defaultConnection", "");
-    }
 }

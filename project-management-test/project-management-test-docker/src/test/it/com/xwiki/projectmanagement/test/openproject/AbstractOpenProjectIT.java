@@ -258,6 +258,17 @@ public abstract class AbstractOpenProjectIT
         }
     }
 
+    /**
+     * Clear the default connection, which then is the only connection when there's a single one.
+     *
+     * @param setup the test setup
+     */
+    protected static void resetDefaultConnection(TestUtils setup)
+    {
+        setup.updateObject(List.of("OpenProject", "Code"), "OpenProjectConfiguration",
+            "OpenProject.Code.OpenProjectConfigurationClass", 0, "defaultConnection", "");
+    }
+
     protected static TableLayoutElement saveAndGetFirstOPMacro(WYSIWYGEditPage editPage)
         throws OperationNotSupportedException
     {
