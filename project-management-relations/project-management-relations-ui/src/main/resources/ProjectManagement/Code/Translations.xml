@@ -40,7 +40,7 @@
 
 projectmanagement.relations.relation.add.title=Create a New Relation
 projectmanagement.relations.relation.add.label=Add new relation
-projectmanagement.relations.relation.add.placeholder=Set the project management client..
+projectmanagement.relations.relation.add.placeholder=Set the project management client...
 projectmanagement.relations.relation.edit=Page relation of the {0} client.
 
 projectmanagement.relations.client.id.name=Project Management Client ID
