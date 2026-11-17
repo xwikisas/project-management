@@ -60,6 +60,22 @@ public class OpenProjectRichTextArea
     }
 
     /**
+     * Select an entry of the work package search: type the query, select the entry in the autocomplete dropdown and
+     * wait for the dropdown to be closed.
+     *
+     * @param query the text to type, starting with the work package search marker
+     * @param label the label of the entry to select in the autocomplete dropdown
+     */
+    public void selectWorkPackageSearchEntry(String query, String label)
+    {
+        this.textArea.sendKeys(query);
+        AutocompleteDropdown dropdown = new AutocompleteDropdown();
+        dropdown.waitForItemSelected(query, label);
+        this.textArea.sendKeys(Keys.ENTER);
+        dropdown.waitForItemSubmitted();
+    }
+
+    /**
      * Insert a macro through the quick actions: type a slash followed by the query, select the macro in the
      * autocomplete dropdown and wait for its edit modal to be displayed.
      *

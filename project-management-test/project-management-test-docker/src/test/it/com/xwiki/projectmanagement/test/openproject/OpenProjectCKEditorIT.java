@@ -24,6 +24,7 @@ import java.util.List;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.ckeditor.test.po.CKEditor;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -55,12 +56,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 )
 public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 {
+    private static final String MARKER = "!!";
+
+    private static final String SUBJECT = "Send invitation to speakers";
+
     @Test
     @Order(1)
     void insertInlineWorkPackageWithConfiguredMarker(TestUtils setup, TestReference testReference)
     {
-        String marker = "!!";
-        OpenProjectAdminPage.gotoPage().setWorkPackageSearchMarker(marker);
+        OpenProjectAdminPage.gotoPage().setWorkPackageSearchMarker(MARKER);
 
         // The work package search uses the OpenProject instance from the page relation.
         setup.deletePage(testReference);
@@ -70,15 +74,14 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wysiwyg");
         WYSIWYGEditPage editPage = new WYSIWYGEditPage();
-        String subject = "Send invitation to speakers";
         new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
-            .insertWorkPackage(marker + "speakers", subject);
+            .insertWorkPackage(MARKER + "speakers", SUBJECT);
         editPage.clickSaveAndView();
 
         // The work package is displayed inline: its identifier, linking to OpenProject, followed by its subject.
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(1, macros.size());
-        assertEquals(subject, macros.get(0).getInlineWorkPackageSummary());
+        assertEquals(SUBJECT, macros.get(0).getInlineWorkPackageSummary());
         List<String> links = macros.get(0).getWorkPackageLinks();
         assertEquals(1, links.size(), links.toString());
         assertThat(links.get(0), startsWith("#"));
@@ -88,11 +91,59 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         assertThat(content, startsWith("{{openproject "));
         assertThat(content, containsString(String.format("instance=\"%s\"", CONNECTION_ID)));
         assertThat(content, containsString("displayer=\"inline\""));
-        assertThat(content, not(containsString(marker)));
+        assertThat(content, not(containsString(MARKER)));
     }
 
     @Test
     @Order(2)
+    void insertInlineWorkPackageWithDefaultConnection(TestUtils setup, TestReference testReference) throws Exception
+    {
+        // On a page that isn't linked to an OpenProject project, the work packages are searched in the default
+        // connection, which is the only connection.
+        resetDefaultConnection(setup);
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "");
+        setup.gotoPage(testReference, "edit", "editor=wysiwyg");
+        WYSIWYGEditPage editPage = new WYSIWYGEditPage();
+        new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+            .insertWorkPackage(MARKER + "speakers", SUBJECT);
+        editPage.clickSaveAndView();
+
+        List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        assertEquals(SUBJECT, macros.get(0).getInlineWorkPackageSummary());
+        // The inserted macro doesn't set its connection, so that it follows the default connection.
+        setup.gotoPage(testReference, "edit", "editor=wiki");
+        String content = new WikiEditPage().getContent();
+        assertThat(content, startsWith("{{openproject "));
+        assertThat(content, not(containsString("instance=")));
+
+        // With several connections and no default one, the search tells what to do, and its entry inserts nothing.
+        DocumentReference otherReference = getConnectionReference("CKEditorOtherConnection");
+        try {
+            saveConnection(setup, otherReference, "other");
+            resetDefaultConnection(setup);
+            setup.deletePage(testReference);
+            setup.createPage(testReference, "");
+            setup.gotoPage(testReference, "edit", "editor=wysiwyg");
+            editPage = new WYSIWYGEditPage();
+            new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+                .selectWorkPackageSearchEntry(MARKER + "speakers", "No OpenProject connection to search: link this "
+                    + "page to an OpenProject project, or ask an administrator to choose a default connection.");
+            editPage.clickSaveAndView();
+
+            setup.gotoPage(testReference, "edit", "editor=wiki");
+            content = new WikiEditPage().getContent();
+            assertThat(content, containsString(MARKER + "speakers"));
+            assertThat(content, not(containsString("{{openproject")));
+        } finally {
+            deleteConnection(setup, otherReference);
+            resetDefaultConnection(setup);
+        }
+    }
+
+    @Test
+    @Order(3)
     void insertMacroWithQuickAction(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -120,7 +171,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     void editProjectMacroTwice(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -137,7 +188,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     void editMacroWithDeprecatedCount(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
