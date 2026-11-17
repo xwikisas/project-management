@@ -127,6 +127,19 @@
 #end
 &lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.filter'))&lt;/dt&gt;
 &lt;dd&gt;
+  ## When the client has no default instance (e.g. no default OpenProject connection), the values of the filters can't
+  ## be suggested: the client tells what to do, if it has instances.
+  #if (!$opts.readonly)
+    #set ($noDefaultInstanceHintKey = "${client}.presets.filter.noDefaultInstance.hint")
+    #if ($services.localization.get($noDefaultInstanceHintKey))
+      #set ($clientCfg = $services.projectmanagement.livedata.getLivedataConfiguration($client,
+        $opts.sourceParameters))
+      #if ("$!clientCfg" != '' &amp;&amp; "$!clientCfg.query.source.parameters.instance" == '')
+        &lt;div class="box infomessage proj-manag-no-default-instance"&gt;$escapetool.xml(
+          $services.localization.render($noDefaultInstanceHintKey))&lt;/div&gt;
+      #end
+    #end
+  #end
   &lt;div class="project-management-filters"$seriesTitleAttribute&gt;
   #filterBuilder($opts)
   &lt;/div&gt;

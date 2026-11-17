@@ -355,6 +355,24 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
             assertFalse(page.getOpenProjectMacros().get(0).waitForLiveDataRows().isEmpty());
             assertEquals(List.of(), page.getWarnings());
 
+            // A preset isn't tied to a connection: its filters suggest the values of the default connection. Without
+            // one, the preset editor tells to choose one.
+            String presetName = "Default connection preset";
+            PresetEditPage presetPage = OpenProjectAdminPage.gotoPage().clickCreatePreset().setName(presetName)
+                .setChartPreset(false).create();
+            assertEquals("There is no default connection: choose one in the OpenProject administration to get "
+                + "suggestions for the filter values.", presetPage.getFiltersNoDefaultConnectionHint());
+            presetPage.clickCancel();
+            adminPage = OpenProjectAdminPage.gotoPage();
+            adminPage.setDefaultConnection(CONNECTION_ID);
+            presetPage = OpenProjectAdminPage.gotoPage().clickCreatePreset().setName(presetName)
+                .setChartPreset(false).create();
+            assertEquals("", presetPage.getFiltersNoDefaultConnectionHint());
+            FilterBuilderFilter presetStatusFilter =
+                presetPage.getFilterBuilders().get(0).addFilter("status").setSuggestValue("New");
+            assertEquals(List.of("New"), presetStatusFilter.getSuggestValues());
+            presetPage.clickCancel();
+
             // When a single connection would remain, the macros would use it.
             adminPage = OpenProjectAdminPage.gotoPage();
             adminPage.setDefaultConnection(thirdConnection);

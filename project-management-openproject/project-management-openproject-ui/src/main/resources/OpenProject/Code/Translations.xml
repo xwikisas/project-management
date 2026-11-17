@@ -198,6 +198,7 @@ openproject.config.presets.title=Filter Presets
 openproject.presets.name=Preset Name
 openproject.presets.isMultiple=Chart Preset?
 openproject.presets._actions=Actions
+openproject.presets.filter.noDefaultInstance.hint=There is no default connection: choose one in the OpenProject administration to get suggestions for the filter values.
 openproject.userprofile.menu=OpenProject
 openproject.userprofile.title=OpenProject Accounts
 openproject.userprofile.description=Connect your OpenProject account to see, in this wiki, the OpenProject data that your account can access. Without connecting it, you only see the public data of the connections that show it, if any.

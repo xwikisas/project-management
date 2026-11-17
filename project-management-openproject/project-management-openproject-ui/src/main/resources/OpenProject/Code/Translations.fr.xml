@@ -198,6 +198,7 @@ openproject.config.presets.title=Présélection de filtres
 openproject.presets.name=Nom de la présélection
 openproject.presets.isMultiple=Préfiltre pour la macro chart ?
 openproject.presets._actions=Actions
+openproject.presets.filter.noDefaultInstance.hint=Il n'y a pas de connexion par défaut : choisissez-en une dans l'administration OpenProject pour obtenir des suggestions pour les valeurs des filtres.
 openproject.userprofile.menu=OpenProject
 openproject.userprofile.title=Comptes OpenProject
 openproject.userprofile.description=Connectez votre compte OpenProject pour voir, dans ce wiki, les données OpenProject auxquelles votre compte a accès. Sans le connecter, vous ne voyez que les données publiques des connexions qui les affichent, le cas échéant.

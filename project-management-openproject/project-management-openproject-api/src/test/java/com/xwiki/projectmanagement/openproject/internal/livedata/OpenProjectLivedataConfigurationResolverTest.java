@@ -155,6 +155,63 @@ class OpenProjectLivedataConfigurationResolverTest
             new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
         assertEquals("/rest/wikis/wiki/openproject/instance/myInstance/suggest/versions?search={encodedQuery}",
             descriptors.get(0).getFilter().getParameters().get("searchURL"));
+        // The preset editor can tell which connection suggests the values.
+        assertEquals(INSTANCE, configuration.getQuery().getSource().getParameters().get("instance"));
+    }
+
+    @Test
+    void resolveWithoutInstanceNorDefaultConnectionWhenTheDefaultOneIsAsked() throws Exception
+    {
+        // The filters of a preset can't get suggestions when there is no default connection: they don't request them.
+        mockSuggestedProperties();
+
+        LiveDataConfiguration input = getInput(null);
+        input.getQuery().getSource().setParameter("defaultInstance", true);
+        LiveDataConfiguration configuration = this.resolver.resolve(input);
+
+        List<LiveDataPropertyDescriptor> descriptors =
+            new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
+        assertNull(descriptors.get(0).getFilter().getParameters().get("searchURL"));
+        // The suggestions that don't depend on the connection are kept.
+        assertEquals("/rest/wikis/wiki/other?search={encodedQuery}",
+            descriptors.get(1).getFilter().getParameters().get("searchURL"));
+        assertNull(configuration.getQuery());
+    }
+
+    @Test
+    void resolveWithoutInstanceKeepsTheSuggestionURLsToComplete() throws Exception
+    {
+        // The macro editor completes the URLs with the connection chosen in it.
+        mockSuggestedProperties();
+
+        LiveDataConfiguration configuration = this.resolver.resolve(getInput(null));
+
+        assertEquals("/rest/wikis/wiki/openproject/instance/{instance}/suggest/statuses?search={encodedQuery}",
+            configuration.getMeta().getPropertyDescriptors().iterator().next().getFilter().getParameters()
+                .get("searchURL"));
+    }
+
+    private void mockSuggestedProperties() throws Exception
+    {
+        when(this.stringLiveDataConfigResolver.resolve(anyString())).thenAnswer(invocation -> {
+            LiveDataConfiguration configuration = new LiveDataConfiguration();
+            configuration.setMeta(new LiveDataMeta());
+            configuration.getMeta().setPropertyDescriptors(new ArrayList<>(List.of(
+                getListProperty("status", "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses"
+                    + "?search={encodedQuery}"),
+                getListProperty("other", "/rest/wikis/{wikiName}/other?search={encodedQuery}"))));
+            return configuration;
+        });
+    }
+
+    private static LiveDataPropertyDescriptor getListProperty(String id, String searchURL)
+    {
+        LiveDataPropertyDescriptor property = new LiveDataPropertyDescriptor();
+        property.setId(id);
+        LiveDataPropertyDescriptor.FilterDescriptor filter = new LiveDataPropertyDescriptor.FilterDescriptor("list");
+        filter.setParameter("searchURL", searchURL);
+        property.setFilter(filter);
+        return property;
     }
 
     private void mockTargetVersionsField() throws Exception
