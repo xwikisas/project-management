@@ -24,6 +24,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -35,6 +40,7 @@ import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.parser.ContentParser;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -48,12 +54,14 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.commons.document.MacroBlockFinder;
+import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_INSTANCE;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_WORK_PACKAGE_ID;
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.REFERENCE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
@@ -69,6 +77,7 @@ import static org.mockito.Mockito.when;
  */
 @OldcoreTest
 @ReferenceComponentList
+@ComponentList(DocumentModificationLock.class)
 class OpenProjectMentionTaskTest
 {
     private static final DocumentReference PAGE = new DocumentReference("xwiki", "Space", "Page");
@@ -99,6 +108,13 @@ class OpenProjectMentionTaskTest
     void setUp() throws Exception
     {
         when(this.contentParser.parse(any(), any(), any())).thenReturn(new XDOM(List.of()));
+        // The database store returns a new instance of the document, not the one held by the document cache.
+        doAnswer(invocation -> {
+            XWikiDocument document = invocation.getArgument(0);
+            XWikiDocument savedDocument =
+                this.oldcore.getDocuments().get(document.getDocumentReferenceWithLocale());
+            return savedDocument != null ? savedDocument.clone() : document;
+        }).when(this.oldcore.getMockStore()).loadXWikiDoc(any(XWikiDocument.class), any(XWikiContext.class));
         // Record whether the page is saved while the task is executing, so that listeners can ignore this save.
         doAnswer(invocation -> {
             this.executingFlagWhenSaving =
@@ -300,6 +316,36 @@ class OpenProjectMentionTaskTest
         // The cached page isn't modified by the failed save.
         assertEquals(List.of("34@test"), getStoredMentions());
         assertNull(this.oldcore.getXWikiContext().get(OpenProjectMentionTask.TASK_EXECUTING_KEY));
+    }
+
+    @Test
+    void waitsForTheConcurrentModificationOfThePage() throws Exception
+    {
+        savePage();
+        withMacros(macro("12", INSTANCE));
+        DocumentModificationLock lock = this.oldcore.getMocker().getInstance(DocumentModificationLock.class);
+        ExecutorService otherThread = Executors.newSingleThreadExecutor();
+        try {
+            // A macro is being inserted in the page.
+            lock.lock(PAGE);
+            Future<?> taskExecution = otherThread.submit(() -> {
+                this.task.consume(PAGE, "1.1");
+                return null;
+            });
+            assertThrows(TimeoutException.class, () -> taskExecution.get(200, TimeUnit.MILLISECONDS));
+            XWikiDocument page = getPage().clone();
+            page.setContent("inserted macro");
+            this.oldcore.getSpyXWiki().saveDocument(page, this.oldcore.getXWikiContext());
+            lock.unlock(PAGE);
+
+            taskExecution.get(10, TimeUnit.SECONDS);
+        } finally {
+            otherThread.shutdownNow();
+        }
+
+        // The mentions are saved without reverting the inserted macro.
+        assertEquals("inserted macro", getPage().getContent());
+        assertEquals(List.of("12@test"), getStoredMentions());
     }
 
     /**

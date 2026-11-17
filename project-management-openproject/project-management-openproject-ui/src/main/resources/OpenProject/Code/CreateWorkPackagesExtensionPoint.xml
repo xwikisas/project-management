@@ -982,35 +982,83 @@ require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function 
     notification.element.down('.xnotification').textContent = text;
     return notification;
   };
+  // Whether at least one macro was inserted, so the page has to be reloaded to display it.
   let shouldReload = false;
-  let makeRequest = function (url, data, notification, forceReload) {
+  // The insertions are sent one after the other: when work packages are created from a table, each of them modifies
+  // the same page.
+  let insertQueue = Promise.resolve();
+  // The answer to the question asked when the page is locked, so that it's asked only once for all the rows of a
+  // creation.
+  let forceWhenLocked;
+  let makeRequest = function (url, data, notification, forceReload, onComplete) {
+    if (forceWhenLocked) {
+      data.force = true;
+    }
     $.ajax({
       url: url,
       type: "POST",
       contentType: "application/json",
-      data: JSON.stringify(data)
+      data: JSON.stringify(data),
+      // Don't let a request that never ends block the next insertions and the reload of the page.
+      timeout: 60000
     })
       .done(function () {
         shouldReload = true;
+        try {
+          notification.replace(createNotification(l10n.get('done'), 'done'));
+        } finally {
+          onComplete();
+        }
         if (forceReload) {
           window.location.reload();
         }
-        notification.replace(createNotification(l10n.get('done'), 'done'));
       })
       .fail(function (xhr) {
-        if (xhr.status == 423 &amp;&amp; confirm(l10n.get('lockedConfirm'))) {
-          data.force = true;
-          makeRequest(url, data, notification, forceReload);
-          return;
+        let retry = false;
+        try {
+          if (xhr.status == 423 &amp;&amp; !data.force) {
+            if (forceWhenLocked === undefined) {
+              forceWhenLocked = confirm(l10n.get('lockedConfirm'));
+            }
+            retry = forceWhenLocked;
+          }
+          if (!retry) {
+            notification.replace(createNotification(l10n.get('error'), 'error'));
+          }
+        } finally {
+          if (retry) {
+            sendRequest(url, data, notification, forceReload, onComplete);
+          } else {
+            onComplete();
+          }
         }
-        shouldReload = false;
-        notification.replace(createNotification(l10n.get('error'), 'error'));
       });
   };
-  $(document).on('hidden.bs.modal', '#create-work-packages-modal', function () {
-    if (shouldReload) {
-      window.location.reload();
+  // Sends the request, making sure that onComplete is called even if the request can't be sent.
+  let sendRequest = function (url, data, notification, forceReload, onComplete) {
+    try {
+      makeRequest(url, data, notification, forceReload, onComplete);
+    } catch (e) {
+      console.error(e);
+      onComplete();
     }
+  };
+  let insertMacro = function (url, data, notification, forceReload) {
+    insertQueue = insertQueue.then(function () {
+      return new Promise(function (resolve) {
+        sendRequest(url, data, notification, forceReload, resolve);
+      });
+    });
+  };
+  $(document).on('hidden.bs.modal', '#create-work-packages-modal', function () {
+    // Wait for the pending insertions, otherwise reloading the page would cancel them.
+    insertQueue.then(function () {
+      // Ask again whether to insert in a locked page the next time work packages are created.
+      forceWhenLocked = undefined;
+      if (shouldReload) {
+        window.location.reload();
+      }
+    });
   });
   window.openProjectEvents = window.openProjectEvents || new EventTarget();
   window.openProjectEvents.addEventListener('op-creation-success', function (event) {
@@ -1061,7 +1109,7 @@ require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function 
     };
     let notification = createNotification(l10n.get('inProgress'), 'inprogress');
     notification.show();
-    makeRequest(url, data, notification, !(event.detail.batch == true));
+    insertMacro(url, data, notification, !(event.detail.batch == true));
 
   });
 });</code>

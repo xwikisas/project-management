@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.rest;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -39,6 +40,7 @@ import org.xwiki.rendering.block.XDOM;
 import org.xwiki.rendering.parser.ContentParser;
 import org.xwiki.rendering.syntax.Syntax;
 import org.xwiki.security.authorization.Right;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -54,6 +56,7 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.commons.document.MacroUtils;
+import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,6 +70,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -77,6 +82,7 @@ import static org.mockito.Mockito.when;
  */
 @OldcoreTest
 @ReferenceComponentList
+@ComponentList(DocumentModificationLock.class)
 class DefaultOpenProjectMacroInsertResourceTest
 {
     private static final DocumentReference PAGE = new DocumentReference("xwiki", List.of("Space"), "Page");
@@ -112,6 +118,13 @@ class DefaultOpenProjectMacroInsertResourceTest
         XWikiContext context = this.oldcore.getXWikiContext();
         context.setUserReference(CURRENT_USER);
         when(this.oldcore.getMockContextualAuthorizationManager().hasAccess(Right.EDIT, PAGE)).thenReturn(true);
+        // The database store returns a new instance of the document, not the one held by the document cache.
+        doAnswer(invocation -> {
+            XWikiDocument document = invocation.getArgument(0);
+            XWikiDocument savedDocument =
+                this.oldcore.getDocuments().get(document.getDocumentReferenceWithLocale());
+            return savedDocument != null ? savedDocument.clone() : document;
+        }).when(this.oldcore.getMockStore()).loadXWikiDoc(any(XWikiDocument.class), any(XWikiContext.class));
 
         // The page was last saved by another user.
         XWikiDocument page = new XWikiDocument(PAGE);
@@ -162,6 +175,21 @@ class DefaultOpenProjectMacroInsertResourceTest
         assertEquals(currentUser, page.getAuthors().getOriginalMetadataAuthor());
         assertEquals("Inserted OpenProject mention.", page.getComment());
         assertTrue(page.isMinorEdit());
+    }
+
+    @Test
+    void insertIntoPageIgnoresAStaleCachedPage() throws Exception
+    {
+        // The document cache still holds a version of the page older than the one saved in the database.
+        XWikiDocument stalePage = getPage().clone();
+        stalePage.setContent("Stale content");
+        doReturn(stalePage).when(this.oldcore.getSpyXWiki()).getDocument(eq(PAGE), any(XWikiContext.class));
+
+        Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
+
+        assertEquals(200, response.getStatus());
+        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n",
+            this.oldcore.getDocuments().get(new DocumentReference(PAGE, Locale.ROOT)).getContent());
     }
 
     @Test
