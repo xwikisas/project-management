@@ -148,10 +148,15 @@ require(['jquery', 'xwiki-l10n!openproject.relations'], function ($, l10n) {
       let newVal = JSON.stringify(result);
       root.find('dd :input').val(newVal);
       root.find('dd :input').trigger('change');
-      root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property .selectized').each(function () {
+      // Reset the pickers, so that they make their requests with the new parameters (recent XWiki versions use Tom
+      // Select instead of Selectize).
+      root.closest('.proj-manag-relation').data('params', result).find('.proj-manag-relation-property')
+          .find('.selectized, .tomselected').each(function () {
         let input = $(this);
         let selectize = input[0].selectize || input[0].tomselect;
         selectize.destroy();
+        // The project or work package chosen with the previous connection doesn't apply to the new one.
+        input.val('');
         input.focus();
       });
     };
