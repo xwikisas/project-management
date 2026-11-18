@@ -30,6 +30,8 @@ import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -258,8 +260,10 @@ class OpenProjectWorkItemFieldsTest
         }
         assertEquals(List.of("contains:e-mail"), getConstraints(mappedFilters.get(3)));
         assertEquals(List.of("contains:PROJ-42", "contains:PROJ-43"), getConstraints(mappedFilters.get(6)));
-        assertEquals("[{\"typeahead\":{\"operator\":\"**\",\"values\":[\"PROJ-42\"]}}]",
-            OpenProjectFilterHandler.convertFilters(mappedFilters.subList(0, 1)));
+        // Compared as JSON trees, since the order of the fields of a JSON object isn't fixed.
+        ObjectMapper mapper = new ObjectMapper();
+        assertEquals(mapper.readTree("[{\"typeahead\":{\"operator\":\"**\",\"values\":[\"PROJ-42\"]}}]"),
+            mapper.readTree(OpenProjectFilterHandler.convertFilters(mappedFilters.subList(0, 1))));
     }
 
     @Test
