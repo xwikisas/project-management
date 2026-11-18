@@ -24,10 +24,11 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -218,7 +219,9 @@ public class OpenProjectSpentTimeMacro
 
     private Map<Date, List<TimeEntry>> groupByDate(List<TimeEntry> entries)
     {
-        Map<Date, List<TimeEntry>> byDate = new LinkedHashMap<>();
+        // The most recent day first, whatever the order in which the time entries are returned. The entries of the
+        // same day keep their order.
+        Map<Date, List<TimeEntry>> byDate = new TreeMap<>(Comparator.reverseOrder());
         for (TimeEntry entry : entries) {
             byDate.computeIfAbsent(entry.getSpentOn(), k -> new ArrayList<>()).add(entry);
         }

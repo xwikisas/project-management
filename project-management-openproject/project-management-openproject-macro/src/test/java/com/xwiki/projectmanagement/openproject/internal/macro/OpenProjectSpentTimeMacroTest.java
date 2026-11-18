@@ -142,8 +142,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
-        // Invalid durations count as 0 hours, the entries of the same day are grouped in the order of the first
-        // entry of each day.
+        // Invalid durations count as 0 hours, the entries of the same day are grouped.
         assertEquals("Total: " + hours(3.5) + " h\n"
             + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
             + "2026-03-02|||" + hours(3.5) + "|\n"
@@ -156,6 +155,28 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         assertEquals("Alpha -> " + SERVER_URL + "/projects/alpha", links.get(0));
         assertEquals("#1 Fix -> " + SERVER_URL + "/work_packages/1", links.get(1));
         assertEquals("View project dashboard -> " + SERVER_URL + "/projects/12", links.get(links.size() - 1));
+    }
+
+    @Test
+    void listsTheDaysInDateOrderWhateverTheOrderOfTheTimeEntries() throws Exception
+    {
+        // OpenProject returns the most recently logged time entries first, whatever the day the time was spent on.
+        when(this.apiClient.getTimeEntries(any(), any(), anyString())).thenReturn(new PaginatedResult<>(List.of(
+            entry(date(2026, 3, 8), "PT1H", "Third", null),
+            entry(date(2026, 3, 9), "PT2H", "Second", null),
+            entry(date(2026, 3, 7), "PT3H", "First", null),
+            entry(date(2026, 3, 9), "PT4H", "Second again", null)), 1, 10, 4));
+
+        assertEquals("Total: " + hours(10) + " h\n"
+            + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
+            + "2026-03-09|||" + hours(6) + "|\n"
+            + "-|Alpha / #1 Fix|Second|" + hours(2) + "|\n"
+            + "-|Alpha / #1 Fix|Second again|" + hours(4) + "|\n"
+            + "2026-03-08|||" + hours(1) + "|\n"
+            + "-|Alpha / #1 Fix|Third|" + hours(1) + "|\n"
+            + "2026-03-07|||" + hours(3) + "|\n"
+            + "-|Alpha / #1 Fix|First|" + hours(3) + "|\n"
+            + "View time entries\n", text(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test
