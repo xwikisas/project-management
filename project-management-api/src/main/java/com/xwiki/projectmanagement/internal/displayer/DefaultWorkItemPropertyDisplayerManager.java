@@ -122,5 +122,9 @@ public class DefaultWorkItemPropertyDisplayerManager implements WorkItemProperty
         displayers.put(LIST_DISPLAYER, propertyDisplayer);
         String format = wikiConfigSource.getProperty("dateformat", DatePropertyDisplayer.DEFAULT_DATE_FORMAT);
         displayers.put(Date.class.getName(), new DatePropertyDisplayer(plainParser, format));
+        // The start and due dates are days: their time (midnight) is meaningless, so it's not displayed.
+        WorkItemPropertyDisplayer dayDisplayer = DatePropertyDisplayer.forDays(plainParser, format);
+        displayers.put(WorkItem.KEY_START_DATE, dayDisplayer);
+        displayers.put(WorkItem.KEY_DUE_DATE, dayDisplayer);
     }
 }

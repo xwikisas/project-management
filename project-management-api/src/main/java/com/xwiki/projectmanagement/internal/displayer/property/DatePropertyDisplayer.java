@@ -48,11 +48,25 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
      */
     public static final String DEFAULT_DATE_FORMAT = "dd/MM/yyyy HH:mm:ss";
 
+    /**
+     * The format of a day, used when no day format can be derived from the configured date format.
+     */
+    public static final String DEFAULT_DAY_FORMAT = "dd/MM/yyyy";
+
+    /**
+     * The pattern letters of the time of the day and of the time zone.
+     */
+    private static final String TIME_LETTERS = "aHkKhmsSzZX";
+
+    private static final char QUOTE = '\'';
+
     private final Logger logger = LoggerFactory.getLogger(DatePropertyDisplayer.class);
 
     private final Parser parser;
 
     private SimpleDateFormat dateFormatter;
+
+    private boolean dayOnly;
 
     /**
      * @param parser used to parse the serialized date value as a list of blocks.
@@ -77,25 +91,115 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         }
     }
 
+    /**
+     * Creates a displayer of the dates that have no meaningful time, e.g. the due date of a work item, which would
+     * otherwise be displayed at midnight: it displays them without the time fields of the given format, nor of the
+     * {@code format} parameter.
+     *
+     * @param parser used to parse the serialized date value as a list of blocks
+     * @param dateFormat the format of the dates, from which the time fields are removed
+     * @return the displayer
+     * @see #toDayFormat(String)
+     */
+    public static DatePropertyDisplayer forDays(Parser parser, String dateFormat)
+    {
+        DatePropertyDisplayer displayer = new DatePropertyDisplayer(parser, toDayFormat(dateFormat));
+        displayer.dayOnly = true;
+        return displayer;
+    }
+
+    /**
+     * Derives the format of a day from a date format, by removing its time and time zone fields, with the separators
+     * preceding them, e.g. {@code dd/MM/yyyy} from {@code dd/MM/yyyy HH:mm:ss}, or {@code EEE, d MMM yyyy} from
+     * {@code EEE, d MMM yyyy HH:mm z}. It's used to display the dates that have no meaningful time, e.g. the due date
+     * of a work item, which would otherwise be displayed at midnight.
+     *
+     * @param dateFormat a {@link SimpleDateFormat} pattern
+     * @return the pattern without the time fields, or {@link #DEFAULT_DAY_FORMAT} when the given pattern is invalid
+     *     or has no day field
+     */
+    public static String toDayFormat(String dateFormat)
+    {
+        if (dateFormat == null) {
+            return DEFAULT_DAY_FORMAT;
+        }
+        try {
+            new SimpleDateFormat(dateFormat);
+        } catch (IllegalArgumentException e) {
+            return DEFAULT_DAY_FORMAT;
+        }
+        StringBuilder dayFormat = new StringBuilder();
+        // The separators (literals) met since the last field, kept only between two day fields. A time field drops
+        // the ones preceding it, so that e.g. the " 'at' " of "yyyy-MM-dd 'at' HH:mm, EEEE" is dropped but not the
+        // following ", ".
+        StringBuilder separators = new StringBuilder();
+        int start = 0;
+        while (start < dateFormat.length()) {
+            char first = dateFormat.charAt(start);
+            int end = getTokenEnd(dateFormat, start);
+            String token = dateFormat.substring(start, end);
+            if (!isPatternLetter(first)) {
+                separators.append(token);
+            } else if (TIME_LETTERS.indexOf(first) >= 0) {
+                separators.setLength(0);
+            } else {
+                if (dayFormat.length() > 0) {
+                    dayFormat.append(separators);
+                }
+                dayFormat.append(token);
+                separators.setLength(0);
+            }
+            start = end;
+        }
+        return dayFormat.length() > 0 ? dayFormat.toString() : DEFAULT_DAY_FORMAT;
+    }
+
+    /**
+     * @return the end of the token starting at the given index: a quoted literal, a field (a run of the same pattern
+     *     letter) or a single unquoted literal character
+     */
+    private static int getTokenEnd(String format, int start)
+    {
+        char first = format.charAt(start);
+        int end = start + 1;
+        if (first == QUOTE) {
+            while (end < format.length()) {
+                if (format.charAt(end) != QUOTE) {
+                    end++;
+                } else if (end + 1 < format.length() && format.charAt(end + 1) == QUOTE) {
+                    // An escaped quote inside a quoted literal.
+                    end += 2;
+                } else {
+                    return end + 1;
+                }
+            }
+        } else if (isPatternLetter(first)) {
+            while (end < format.length() && format.charAt(end) == first) {
+                end++;
+            }
+        }
+        return end;
+    }
+
+    /**
+     * @return whether the given character is reserved as a pattern letter, the other letters (e.g. accented ones)
+     *     being literals
+     */
+    private static boolean isPatternLetter(char character)
+    {
+        return (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z');
+    }
+
     @Override
     public List<Block> display(Object property, Map<String, Object> params)
     {
         if (property == null) {
             return Collections.emptyList();
         }
-        Date dateVal = (Date) property;
-        SimpleDateFormat formatter = dateFormatter;
-
-        Object paramsFormat = params.get("format");
-        if (paramsFormat != null && !paramsFormat.toString().isEmpty()) {
-            try {
-                formatter = new SimpleDateFormat(paramsFormat.toString());
-            } catch (IllegalArgumentException e) {
-                formatter = dateFormatter;
-            }
+        if (!(property instanceof Date)) {
+            return new StringPropertyDisplayer(parser).display(property, params);
         }
-
-        String formattedDate = formatter.format(dateVal);
+        String formattedDate = format((Date) property, params);
         try {
             return parser.parse(new StringReader(formattedDate)).getChildren();
         } catch (ParseException e) {
@@ -103,5 +207,23 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
                 ExceptionUtils.getRootCauseMessage(e));
             return Collections.emptyList();
         }
+    }
+
+    private String format(Date date, Map<String, Object> params)
+    {
+        SimpleDateFormat formatter = dateFormatter;
+
+        Object paramsFormat = params.get("format");
+        if (paramsFormat != null && !paramsFormat.toString().isEmpty()) {
+            try {
+                formatter = new SimpleDateFormat(paramsFormat.toString());
+                if (dayOnly) {
+                    formatter = new SimpleDateFormat(toDayFormat(paramsFormat.toString()));
+                }
+            } catch (IllegalArgumentException e) {
+                formatter = dateFormatter;
+            }
+        }
+        return formatter.format(date);
     }
 }

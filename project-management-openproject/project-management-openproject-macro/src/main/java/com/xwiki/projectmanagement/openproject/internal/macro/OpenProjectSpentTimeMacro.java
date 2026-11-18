@@ -52,6 +52,7 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.internal.displayer.property.DatePropertyDisplayer;
 import com.xwiki.projectmanagement.internal.utility.TableBuilder;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -208,8 +209,9 @@ public class OpenProjectSpentTimeMacro
             .newCell(List.of(buildHeader("hours")));
 
         Map<Date, List<TimeEntry>> byDate = groupByDate(entries);
+        // The time entries are logged on a day, at no meaningful time.
         String dateFormat = wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy");
-        SimpleDateFormat sdf = new SimpleDateFormat(dateFormat);
+        SimpleDateFormat sdf = new SimpleDateFormat(DatePropertyDisplayer.toDayFormat(dateFormat));
 
         for (Map.Entry<Date, List<TimeEntry>> dateGroup : byDate.entrySet()) {
             Date date = dateGroup.getKey();

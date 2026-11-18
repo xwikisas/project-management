@@ -81,7 +81,7 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     @BeforeComponent
     void beforeComponent()
     {
-        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy HH:mm:ss")).thenReturn("yyyy-MM-dd");
+        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy HH:mm:ss")).thenReturn("yyyy-MM-dd HH:mm");
     }
 
     @BeforeEach
@@ -109,6 +109,9 @@ class DefaultWorkItemPropertyDisplayerManagerTest
             this.manager.getDisplayerForProperty(WorkItem.KEY_LABELS));
         assertInstanceOf(StringPropertyDisplayer.class, this.manager.getDisplayerForProperty(String.class.getName()));
         assertInstanceOf(DatePropertyDisplayer.class, this.manager.getDisplayerForProperty(Date.class.getName()));
+        assertInstanceOf(DatePropertyDisplayer.class, this.manager.getDisplayerForProperty(WorkItem.KEY_START_DATE));
+        assertSame(this.manager.getDisplayerForProperty(WorkItem.KEY_START_DATE),
+            this.manager.getDisplayerForProperty(WorkItem.KEY_DUE_DATE));
         assertNull(this.manager.getDisplayerForProperty("unknown"));
     }
 
@@ -146,13 +149,33 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     @Test
     void displayWithTheDisplayerOfTheValueType()
     {
-        Date date = new GregorianCalendar(2024, Calendar.MARCH, 15).getTime();
+        Date date = new GregorianCalendar(2024, Calendar.MARCH, 15, 15, 5).getTime();
 
         // The date format comes from the wiki configuration.
-        assertParagraphWord("2024-03-15", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, date, Map.of()));
-        assertParagraphWord("15/03", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, date,
+        assertParagraphWord("2024-03-15 15:05",
+            this.manager.displayProperty(WorkItem.KEY_CREATION_DATE, date, Map.of()));
+        assertParagraphWord("15/03", this.manager.displayProperty(WorkItem.KEY_CREATION_DATE, date,
             Map.of("format", "dd/MM")));
         assertWord("text", this.manager.displayProperty(WorkItem.KEY_DESCRIPTION, "text", Map.of()));
+    }
+
+    @Test
+    void displayTheStartAndDueDatesWithoutTime()
+    {
+        // A day, parsed at midnight.
+        Date day = new GregorianCalendar(2026, Calendar.OCTOBER, 29).getTime();
+
+        // The time fields are removed from the date format of the wiki configuration.
+        assertParagraphWord("2026-10-29", this.manager.displayProperty(WorkItem.KEY_START_DATE, day, Map.of()));
+        assertParagraphWord("2026-10-29", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, day, Map.of()));
+        assertParagraphWord("2026-10-29 00:00",
+            this.manager.displayProperty(WorkItem.KEY_UPDATE_DATE, day, Map.of()));
+        // The format parameter still applies, without its time fields.
+        assertParagraphWord("29/10", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, day,
+            Map.of("format", "dd/MM HH:mm")));
+        // A value that isn't a date is displayed as text.
+        assertWord("next week",
+            this.manager.displayProperty(WorkItem.KEY_DUE_DATE, "next week", Map.of()));
     }
 
     @Test

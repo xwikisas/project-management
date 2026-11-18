@@ -217,6 +217,18 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void displaysTheDaysWithoutTheTimeOfTheWikiDateFormat() throws Exception
+    {
+        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy")).thenReturn("dd/MM/yyyy HH:mm");
+
+        assertEquals("Total: " + hours(1) + " h\n"
+            + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
+            + "09/03/2026|||" + hours(1) + "|\n"
+            + "-|Alpha / #1 Fix|Matching|" + hours(1) + "|\n"
+            + "View time entries\n", executeWithFilters("[" + spentOn("2026-03-03", "2026-03-10") + "]"));
+    }
+
+    @Test
     void displaysOnlyTheProjectOfTimeLoggedWithoutWorkPackage() throws Exception
     {
         // A time entry logged on the project itself, as returned by OpenProject: its work package link is null.

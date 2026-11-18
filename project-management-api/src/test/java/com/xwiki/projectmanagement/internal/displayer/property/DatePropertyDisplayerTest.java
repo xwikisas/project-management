@@ -29,12 +29,15 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.xwiki.rendering.parser.ParseException;
 import org.xwiki.rendering.parser.Parser;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 
 import static com.xwiki.projectmanagement.internal.displayer.DisplayerTestUtils.assertParagraphWord;
+import static com.xwiki.projectmanagement.internal.displayer.DisplayerTestUtils.assertWord;
 import static com.xwiki.projectmanagement.internal.displayer.DisplayerTestUtils.mockPlainParser;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -132,5 +135,65 @@ class DatePropertyDisplayerTest
         params.put(FORMAT, null);
 
         assertParagraphWord("2024-03-15", displayer.display(this.date, params));
+    }
+
+    @Test
+    void displayAValueThatIsNotADate()
+    {
+        assertWord("tomorrow", new DatePropertyDisplayer(this.parser).display("tomorrow", Map.of()));
+    }
+
+    @Test
+    void displayADayWithTheDayFormatOfTheDefaultFormat()
+    {
+        Date day = new GregorianCalendar(2026, Calendar.OCTOBER, 29).getTime();
+        String dayFormat = DatePropertyDisplayer.toDayFormat(DatePropertyDisplayer.DEFAULT_DATE_FORMAT);
+        DatePropertyDisplayer displayer = new DatePropertyDisplayer(this.parser, dayFormat);
+
+        assertParagraphWord("29/10/2026", displayer.display(day, Map.of()));
+    }
+
+    @Test
+    void displayADayWithTheFormatParameter()
+    {
+        Date day = new GregorianCalendar(2026, Calendar.OCTOBER, 29).getTime();
+        DatePropertyDisplayer displayer = DatePropertyDisplayer.forDays(this.parser, "yyyy-MM-dd HH:mm");
+
+        assertParagraphWord("2026-10-29", displayer.display(day, Map.of()));
+        // The time fields of the format parameter are removed too.
+        assertParagraphWord("29.10.2026", displayer.display(day, Map.of(FORMAT, "dd.MM.yyyy HH:mm")));
+        // An invalid format parameter is ignored.
+        assertParagraphWord("2026-10-29", displayer.display(day, Map.of(FORMAT, "invalid")));
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', quoteCharacter = '"', value = {
+        "dd/MM/yyyy HH:mm:ss | dd/MM/yyyy",
+        "yyyy/MM/dd HH:mm | yyyy/MM/dd",
+        "MM/dd/yyyy h:mm a | MM/dd/yyyy",
+        "dd/MM/yyyy | dd/MM/yyyy",
+        "EEE, d MMM yyyy HH:mm:ss Z | EEE, d MMM yyyy",
+        "yyyy-MM-dd'T'HH:mm:ss.SSSXXX | yyyy-MM-dd",
+        "HH:mm dd/MM/yyyy | dd/MM/yyyy",
+        "dd/MM HH:mm yyyy | dd/MM yyyy",
+        "yyyy-MM-dd 'at' HH:mm, EEEE | yyyy-MM-dd, EEEE",
+        "'Day' dd 'of' MMMM ''yy | dd 'of' MMMM ''yy",
+        "'it''s' d MMM 'at' h | d MMM",
+        "dd/MM/yyyy à HH:mm | dd/MM/yyyy",
+        "EEEE d MMMM yyyy à HH'h'mm | EEEE d MMMM yyyy",
+        "HH:mm:ss | dd/MM/yyyy",
+        "invalid | dd/MM/yyyy",
+        "'unterminated | dd/MM/yyyy",
+        "'' | dd/MM/yyyy"
+    })
+    void toDayFormat(String dateFormat, String expectedDayFormat)
+    {
+        assertEquals(expectedDayFormat, DatePropertyDisplayer.toDayFormat(dateFormat));
+    }
+
+    @Test
+    void toDayFormatOfNull()
+    {
+        assertEquals(DatePropertyDisplayer.DEFAULT_DAY_FORMAT, DatePropertyDisplayer.toDayFormat(null));
     }
 }
