@@ -114,7 +114,10 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
 
     /**
      * Removes from the query the properties without descriptor (e.g. a typo in the properties parameter of a macro),
-     * since Live Data fails to display when a property of the query has no descriptor.
+     * since Live Data fails to display when a property of the query has no descriptor. When every property is unknown,
+     * the table has no columns. The removed properties are logged at debug level only, since valid properties are
+     * also unknown when the client can't provide their descriptors (e.g. the custom fields of an OpenProject instance
+     * that the current user can't access).
      */
     private void removeUnknownProperties(LiveDataConfiguration config)
     {
@@ -135,7 +138,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             }
         }
         if (!unknownProperties.isEmpty()) {
-            this.logger.warn("Ignoring the unknown work item properties {} of the Live Data [{}].", unknownProperties,
+            this.logger.debug("Ignoring the unknown work item properties {} of the Live Data [{}].", unknownProperties,
                 config.getId());
             query.setProperties(properties);
         }

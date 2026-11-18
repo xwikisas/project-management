@@ -80,7 +80,7 @@ class ProjectManagementConfigurationResolverTest
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
 
     @RegisterExtension
-    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.DEBUG);
 
     @BeforeEach
     void setUp() throws Exception
