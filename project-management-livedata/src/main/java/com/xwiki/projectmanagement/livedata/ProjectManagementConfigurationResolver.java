@@ -26,10 +26,11 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -46,6 +47,7 @@ import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataMeta;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.livedata.internal.JSONMerge;
@@ -110,60 +112,103 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             mergedConfig = this.jsonMerge.merge(defaultConfig, input);
         }
         removeUnknownProperties(mergedConfig);
+        addMissingSortAndFilterDescriptors(mergedConfig);
         return translate(mergedConfig);
     }
 
     /**
-     * Removes from the query the properties, sort entries and filters on properties without descriptor (e.g. a typo
-     * in the properties, sort or filters parameter of a macro), since Live Data fails to display them (the columns,
-     * and the sort and filter panels, need the descriptor of their property). When every property is unknown, the
-     * table has no columns. A sort or filter on an unknown property would make the client fail anyway (e.g.
-     * OpenProject rejects the query, and no work item is displayed). The removed entries are logged at debug level
-     * only, since valid properties are also unknown when the client can't provide their descriptors (e.g. the custom
-     * fields of an OpenProject instance that the current user can't access).
+     * Removes from the query the properties without descriptor (e.g. a typo in the properties parameter of a macro),
+     * since Live Data fails to display when a property of the query has no descriptor. When every property is unknown,
+     * the table has no columns. The removed properties are logged at debug level only, since valid properties are
+     * also unknown when the client can't provide their descriptors (e.g. the custom fields of an OpenProject instance
+     * that the current user can't access).
      */
     private void removeUnknownProperties(LiveDataConfiguration config)
+    {
+        LiveDataQuery query = config.getQuery();
+        if (query == null || query.getProperties() == null || query.getProperties().isEmpty()) {
+            return;
+        }
+        Set<String> knownProperties = getKnownProperties(config);
+        List<String> properties = new ArrayList<>();
+        List<String> unknownProperties = new ArrayList<>();
+        for (String property : query.getProperties()) {
+            if (knownProperties.contains(property)) {
+                properties.add(property);
+            } else {
+                unknownProperties.add(property);
+            }
+        }
+        if (!unknownProperties.isEmpty()) {
+            this.logger.debug("Ignoring the unknown work item properties {} of the Live Data [{}].", unknownProperties,
+                config.getId());
+            query.setProperties(properties);
+        }
+    }
+
+    /**
+     * Adds a descriptor to the properties that are sorted or filtered without having one, since the Live Data sort and
+     * filter panels fail to display a sort or filter entry on a property without descriptor. Such a property isn't
+     * necessarily unknown to the client: it can be the name the client gives to the property (e.g. an OpenProject
+     * column, such as {@code updatedAt}), or a property whose descriptor the client couldn't provide (e.g. a custom
+     * field of an OpenProject instance that couldn't be reached). So the sort and filter entries are kept, and left to
+     * the client, and the added descriptor only names the property after its id. It isn't displayed as a column, since
+     * the properties without descriptor are removed from the displayed properties.
+     */
+    private void addMissingSortAndFilterDescriptors(LiveDataConfiguration config)
     {
         LiveDataQuery query = config.getQuery();
         if (query == null) {
             return;
         }
-        Set<String> knownProperties = config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
-            ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
-            .collect(Collectors.toSet());
-        if (query.getProperties() != null) {
-            query.setProperties(removeUnknown(query.getProperties(), Function.identity(), knownProperties,
-                "properties", config));
-        }
+        Map<String, LiveDataPropertyDescriptor> missingDescriptors = new LinkedHashMap<>();
+        Set<String> knownProperties = getKnownProperties(config);
         if (query.getSort() != null) {
-            query.setSort(removeUnknown(query.getSort(), LiveDataQuery.SortEntry::getProperty, knownProperties,
-                "sort", config));
-        }
-        if (query.getFilters() != null) {
-            query.setFilters(removeUnknown(query.getFilters(), LiveDataQuery.Filter::getProperty, knownProperties,
-                "filters", config));
-        }
-    }
-
-    private <T> List<T> removeUnknown(List<T> entries, Function<T, String> getProperty, Set<String> knownProperties,
-        String kind, LiveDataConfiguration config)
-    {
-        List<T> knownEntries = new ArrayList<>();
-        List<String> unknownProperties = new ArrayList<>();
-        for (T entry : entries) {
-            String property = getProperty.apply(entry);
-            if (knownProperties.contains(property)) {
-                knownEntries.add(entry);
-            } else {
-                unknownProperties.add(property);
+            for (LiveDataQuery.SortEntry sortEntry : query.getSort()) {
+                addMissingDescriptor(sortEntry.getProperty(), knownProperties, missingDescriptors)
+                    .ifPresent(descriptor -> descriptor.setSortable(true));
             }
         }
-        if (unknownProperties.isEmpty()) {
-            return entries;
+        if (query.getFilters() != null) {
+            for (LiveDataQuery.Filter filter : query.getFilters()) {
+                addMissingDescriptor(filter.getProperty(), knownProperties, missingDescriptors)
+                    .ifPresent(descriptor -> descriptor.setFilterable(true));
+            }
         }
-        this.logger.debug("Ignoring the unknown work item properties {} in the {} of the Live Data [{}].",
-            unknownProperties, kind, config.getId());
-        return knownEntries;
+        if (missingDescriptors.isEmpty()) {
+            return;
+        }
+        if (config.getMeta() == null) {
+            config.setMeta(new LiveDataMeta());
+        }
+        List<LiveDataPropertyDescriptor> descriptors = config.getMeta().getPropertyDescriptors() == null
+            ? new ArrayList<>() : new ArrayList<>(config.getMeta().getPropertyDescriptors());
+        descriptors.addAll(missingDescriptors.values());
+        config.getMeta().setPropertyDescriptors(descriptors);
+        this.logger.debug("Adding a descriptor to the work item properties {} sorted or filtered in the Live Data "
+            + "[{}], which have none.", missingDescriptors.keySet(), config.getId());
+    }
+
+    private static Optional<LiveDataPropertyDescriptor> addMissingDescriptor(String property,
+        Set<String> knownProperties, Map<String, LiveDataPropertyDescriptor> missingDescriptors)
+    {
+        if (property == null || knownProperties.contains(property)) {
+            return Optional.empty();
+        }
+        return Optional.of(missingDescriptors.computeIfAbsent(property, id -> {
+            LiveDataPropertyDescriptor descriptor = new LiveDataPropertyDescriptor();
+            descriptor.setId(id);
+            descriptor.setName(id);
+            descriptor.setVisible(false);
+            return descriptor;
+        }));
+    }
+
+    private static Set<String> getKnownProperties(LiveDataConfiguration config)
+    {
+        return config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
+            ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
+            .collect(Collectors.toSet());
     }
 
     private LiveDataConfiguration getDefaultConfiguration()

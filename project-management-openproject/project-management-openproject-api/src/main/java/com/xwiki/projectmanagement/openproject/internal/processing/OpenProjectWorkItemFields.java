@@ -28,7 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -113,6 +115,14 @@ public final class OpenProjectWorkItemFields
         WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE, WorkItem.KEY_CREATOR, WorkItem.KEY_REPORTER,
         WorkItem.KEY_ASSIGNEES, WorkItem.KEY_PRIORITY, WorkItem.KEY_PROJECT, WorkItem.KEY_STATUS);
 
+    /**
+     * The generic work item properties that OpenProject can sort on, their OpenProject columns, and the OpenProject
+     * fields already exposed through the generic properties (e.g. {@code assignee}).
+     */
+    private static final Set<String> SORTABLE_COLUMNS = Stream.of(SORTABLE_PROPERTIES.stream(),
+        SORTABLE_PROPERTIES.stream().map(OpenProjectMapper::mapLivedataProperty), MAPPED_FIELDS.stream())
+        .flatMap(Function.identity()).collect(Collectors.toSet());
+
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectWorkItemFields.class);
 
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
@@ -148,14 +158,28 @@ public final class OpenProjectWorkItemFields
     private final Map<String, WorkPackageField> mappedFields = new HashMap<>();
 
     /**
+     * The keys of the fields of the instance that can be sorted.
+     */
+    private final Set<String> sortableFieldKeys = new HashSet<>();
+
+    /**
+     * Whether the fields of the instance are known, i.e. whether they could be retrieved.
+     */
+    private final boolean known;
+
+    /**
      * Creates the work item properties exposing the given fields.
      *
      * @param workPackageFields the fields of the work packages of an OpenProject instance
      */
     public OpenProjectWorkItemFields(List<WorkPackageField> workPackageFields)
     {
+        this.known = !workPackageFields.isEmpty();
         List<WorkPackageField> customFields = new ArrayList<>();
         for (WorkPackageField field : workPackageFields) {
+            if (field.isSortable()) {
+                this.sortableFieldKeys.add(field.getKey());
+            }
             if (field.isCustomField()) {
                 customFields.add(field);
             } else if (TARGET_VERSION_FIELDS.contains(field.getKey())) {
@@ -319,10 +343,10 @@ public final class OpenProjectWorkItemFields
 
     /**
      * Rewrites the sort entries on the properties exposing the fields of this instance into sort entries on the
-     * matching OpenProject columns. The sort entries on fields that can't be sorted are dropped, as well as the sort
-     * entries on unknown properties (e.g. a typo in the sort parameter of a macro), which OpenProject rejects, failing
-     * the whole request. A sort entry can also name a field by its OpenProject key (e.g. {@code subject} or
-     * {@code customField3}).
+     * matching OpenProject columns. The sort entries on fields that can't be sorted are dropped. When the fields of the
+     * instance are known, the sort entries on unknown properties (e.g. a typo in the sort parameter of a macro) are
+     * dropped too, since OpenProject rejects them, failing the whole request. A sort entry can also name an
+     * OpenProject column (e.g. {@code updatedAt} or {@code customField3}).
      *
      * @param sortEntries the sort entries on the work item properties
      * @return the rewritten sort entries
@@ -347,14 +371,13 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
-     * @return whether the property is a generic work item property that OpenProject sorts on, or the OpenProject key
-     *     of a column (of a generic property or of a field of this instance)
+     * @return whether the property is a generic work item property that OpenProject sorts on, or an OpenProject
+     *     column (of a generic property or of a field of this instance), or whether this can't be known, since the
+     *     fields of the instance couldn't be retrieved
      */
     private boolean isSortableColumn(String property)
     {
-        return SORTABLE_PROPERTIES.contains(property)
-            || SORTABLE_PROPERTIES.stream().map(OpenProjectMapper::mapLivedataProperty).anyMatch(property::equals)
-            || this.fields.values().stream().anyMatch(field -> field.isSortable() && field.getKey().equals(property));
+        return !this.known || SORTABLE_COLUMNS.contains(property) || this.sortableFieldKeys.contains(property);
     }
 
     private static List<Linkable> toLinkables(Object value)

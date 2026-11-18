@@ -286,13 +286,30 @@ class OpenProjectWorkItemFieldsTest
     {
         List<LiveDataQuery.SortEntry> mappedSortEntries = this.fields.mapSortEntries(List.of(
             new LiveDataQuery.SortEntry("identifier.value", false), new LiveDataQuery.SortEntry("status", true),
+            new LiveDataQuery.SortEntry("updatedAt", true), new LiveDataQuery.SortEntry("assignee", false),
             new LiveDataQuery.SortEntry("subject", false), new LiveDataQuery.SortEntry("customField3", false),
             new LiveDataQuery.SortEntry("unknown", true), new LiveDataQuery.SortEntry("spentTime", false)));
 
         // OpenProject rejects a sort on an unknown column, failing the whole request. The generic properties, and the
         // OpenProject columns of the generic properties and of the sortable fields, are kept.
-        assertEquals(List.of("status", "subject", "customField3"), mappedSortEntries.stream()
-            .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
+        assertEquals(List.of("status", "updatedAt", "assignee", "subject", "customField3"),
+            getProperties(mappedSortEntries));
+    }
+
+    @Test
+    void mapSortEntriesWithUnknownFields()
+    {
+        List<LiveDataQuery.SortEntry> sortEntries = List.of(new LiveDataQuery.SortEntry("identifier.value", false),
+            new LiveDataQuery.SortEntry("version", true), new LiveDataQuery.SortEntry("summary", false));
+
+        // The fields of the instance couldn't be retrieved: the unknown properties may be columns of the instance.
+        assertEquals(List.of("identifier.value", "version", "summary"),
+            getProperties(OpenProjectWorkItemFields.empty().mapSortEntries(sortEntries)));
+    }
+
+    private static List<String> getProperties(List<LiveDataQuery.SortEntry> sortEntries)
+    {
+        return sortEntries.stream().map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList());
     }
 
     private static List<Object> getValues(LiveDataQuery.Filter filter)
