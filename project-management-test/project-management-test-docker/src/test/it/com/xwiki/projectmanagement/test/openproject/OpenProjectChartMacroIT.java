@@ -94,6 +94,8 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         assertThat(chart.getLabels(), hasItems(NEW, IN_PROGRESS, CLOSED));
         // The legend would only name the single series of bars, which has no name.
         assertFalse(chart.isLegendDisplayed());
+        // The bars are proportional to their values: the smallest one isn't displayed as an empty bar.
+        assertEquals(Double.valueOf(0), chart.getValueAxisMinimum());
     }
 
     @Test
@@ -237,6 +239,7 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         assertEquals("line", chart.getChartType());
         assertThat(chart.getDatasetLabels(), containsInAnyOrder("Open", CLOSED));
         assertTrue(chart.isLegendDisplayed());
+        assertEquals(Double.valueOf(0), chart.getValueAxisMinimum());
 
         OpenProjectOpenClosedMacroEditModal modal = new OpenProjectOpenClosedMacroEditModal(setup, testReference);
         modal.clickMore();
