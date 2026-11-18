@@ -21,7 +21,6 @@ package com.xwiki.projectmanagement.internal.displayers;
  */
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -38,8 +37,6 @@ import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.SpaceBlock;
-import org.xwiki.rendering.block.SpecialSymbolBlock;
-import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.listener.reference.ResourceReference;
 import org.xwiki.rendering.listener.reference.ResourceType;
@@ -125,10 +122,10 @@ public class WorkItemInlineDisplayer extends AbstractWorkItemsDisplayer
 
     private void addIdentifierLink(List<Block> children, WorkItem workItem)
     {
-        String value = workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER);
-        String location = workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER);
-        if (value != null) {
-            List<Block> label = Arrays.asList(new SpecialSymbolBlock('#'), new WordBlock(value));
+        // The key of the work item when it has one (e.g. PROJ-123), like the other displayers, else #<identifier>.
+        List<Block> label = getIdentifierLabelBlocks(workItem);
+        if (!label.isEmpty()) {
+            String location = workItem.getLinkableLocation(WorkItem.KEY_IDENTIFIER);
             Map<String, String> parameters = Collections.singletonMap(ATTRIBUTE_CLASS, "text-primary");
             // Don't link to nowhere when the work item has no location.
             if (StringUtils.isEmpty(location)) {
