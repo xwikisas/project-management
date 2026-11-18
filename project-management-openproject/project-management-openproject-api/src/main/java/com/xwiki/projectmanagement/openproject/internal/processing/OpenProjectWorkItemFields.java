@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
@@ -102,6 +103,22 @@ public final class OpenProjectWorkItemFields
         FIELD_TARGET_VERSIONS, "observedInVersions", "budget", "sharedWithUsers", "projectPhase");
 
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
+
+    /**
+     * The OpenProject filter used by its own work package pickers, which matches the work packages whose subject
+     * contains the text, or whose key starts with it on the instances using project-based semantic identifiers.
+     */
+    private static final String TYPEAHEAD_FILTER = "typeahead";
+
+    private static final String TYPEAHEAD_OPERATOR = "**";
+
+    private static final String CONTAINS_OPERATOR = "contains";
+
+    /**
+     * A work package key (e.g. {@code PROJ-42}), or the beginning of one up to its dash (e.g. {@code PROJ-}), as typed
+     * when searching a work package.
+     */
+    private static final Pattern WORK_PACKAGE_KEY_SEARCH = Pattern.compile("[A-Za-z][A-Za-z0-9_]*-\\d*");
 
     private static final OpenProjectWorkItemFields EMPTY = new OpenProjectWorkItemFields(Collections.emptyList());
 
@@ -252,7 +269,10 @@ public final class OpenProjectWorkItemFields
         Map<String, List<String>> versionIdsByName = null;
         for (LiveDataQuery.Filter filter : filters) {
             WorkPackageField field = this.fields.get(filter.getProperty());
-            if (field == null) {
+            if (isWorkPackageKeySearch(filter)) {
+                mappedFilters.add(new LiveDataQuery.Filter(TYPEAHEAD_FILTER, TYPEAHEAD_OPERATOR,
+                    ((String) filter.getConstraints().get(0).getValue()).trim()));
+            } else if (field == null) {
                 mappedFilters.add(mapGenericPropertyFilter(filter));
             } else {
                 boolean isVersion = VERSION_FILTER_VALUE_TYPE.equals(field.getFilterValueType());
@@ -263,6 +283,23 @@ public final class OpenProjectWorkItemFields
             }
         }
         return mappedFilters;
+    }
+
+    /**
+     * A search of the work packages whose summary contains a work package key (e.g. {@code PROJ-42}) is meant to find
+     * the work package with this key: the subject filter of OpenProject only matches the subject, so the search is
+     * done with the filter of the OpenProject work package pickers, which also matches the keys (by prefix, e.g.
+     * {@code PROJ-4} matches {@code PROJ-42}). On the instances identifying the work packages by their id, it matches
+     * the same work packages as the subject filter, the text containing no space.
+     */
+    private static boolean isWorkPackageKeySearch(LiveDataQuery.Filter filter)
+    {
+        if (!WorkItem.KEY_SUMMARY.equals(filter.getProperty()) || filter.getConstraints().size() != 1) {
+            return false;
+        }
+        LiveDataQuery.Constraint constraint = filter.getConstraints().get(0);
+        return CONTAINS_OPERATOR.equals(constraint.getOperator()) && constraint.getValue() instanceof String
+            && WORK_PACKAGE_KEY_SEARCH.matcher(((String) constraint.getValue()).trim()).matches();
     }
 
     /**

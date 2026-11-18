@@ -231,6 +231,34 @@ class OpenProjectWorkItemFieldsTest
     }
 
     @Test
+    void mapFiltersSearchingWorkPackageKeys() throws Exception
+    {
+        LiveDataQuery.Filter partialKey = new LiveDataQuery.Filter("summary", "contains", "proj-");
+        LiveDataQuery.Filter text = new LiveDataQuery.Filter("summary", "contains", "PROJ 42");
+        LiveDataQuery.Filter excludedKey = new LiveDataQuery.Filter("summary", "equals", "PROJ-42");
+        LiveDataQuery.Filter severalKeys = new LiveDataQuery.Filter("summary", "contains", "PROJ-42");
+        severalKeys.getConstraints().add(new LiveDataQuery.Constraint("PROJ-43", "contains"));
+
+        List<LiveDataQuery.Filter> mappedFilters = this.fields.mapFilters(List.of(
+            new LiveDataQuery.Filter("summary", "contains", " PROJ-42 "), partialKey, text, excludedKey, severalKeys),
+            this.client);
+
+        // A key, or the beginning of one, is searched with the filter of the OpenProject work package pickers, which
+        // matches the keys as well as the subjects.
+        assertEquals("typeahead", mappedFilters.get(0).getProperty());
+        assertEquals(List.of("**:PROJ-42"), getConstraints(mappedFilters.get(0)));
+        assertEquals("typeahead", mappedFilters.get(1).getProperty());
+        assertEquals(List.of("**:proj-"), getConstraints(mappedFilters.get(1)));
+        // The other searches stay searches of the summary.
+        assertEquals("summary", mappedFilters.get(2).getProperty());
+        assertEquals("summary", mappedFilters.get(3).getProperty());
+        assertEquals("summary", mappedFilters.get(4).getProperty());
+        assertEquals(List.of("contains:PROJ-42", "contains:PROJ-43"), getConstraints(mappedFilters.get(4)));
+        assertEquals("[{\"typeahead\":{\"operator\":\"**\",\"values\":[\"PROJ-42\"]}}]",
+            OpenProjectFilterHandler.convertFilters(mappedFilters.subList(0, 1)));
+    }
+
+    @Test
     void mapSortEntries()
     {
         LiveDataQuery.SortEntry summary = new LiveDataQuery.SortEntry("summary", false);

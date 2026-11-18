@@ -31,11 +31,13 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.xwiki.ckeditor.test.po.CKEditor;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
+import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -144,6 +146,31 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         assertEquals(keys, enumeration.getWorkPackageLinks());
         assertEquals(closedDisplayed.stream().map(OpenProjectWorkPackageKeysIT::getKey).collect(Collectors.toList()),
             enumeration.getClosedWorkPackages());
+    }
+
+    @Test
+    @Order(2)
+    void insertWorkPackageFromItsKey(TestUtils setup, TestReference testReference) throws Exception
+    {
+        JsonNode workPackage = getWorkPackages("1").get(1);
+        OpenProjectAdminPage.gotoPage().setWorkPackageSearchMarker("#");
+
+        // The work package search uses the OpenProject instance from the page relation.
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "");
+        setup.addObject(testReference, "ProjectManagement.Code.RelationClass", "client", "openproject",
+            "clientParams", String.format("{\"instance\":\"%s\"}", CONNECTION_ID));
+
+        // The work package is found from its key, which its subject doesn't contain.
+        setup.gotoPage(testReference, "edit", "editor=wysiwyg");
+        WYSIWYGEditPage editPage = new WYSIWYGEditPage();
+        new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+            .insertWorkPackage("#" + getKey(workPackage), workPackage.get("subject").asText());
+        editPage.clickSaveAndView();
+
+        List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
+        assertEquals(1, macros.size());
+        assertEquals(workPackage.get("subject").asText(), macros.get(0).getInlineWorkPackageSummary());
     }
 
     /**
