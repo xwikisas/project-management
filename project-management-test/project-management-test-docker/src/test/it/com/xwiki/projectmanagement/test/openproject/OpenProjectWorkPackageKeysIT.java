@@ -171,6 +171,8 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(1, macros.size());
         assertEquals(workPackage.get("subject").asText(), macros.get(0).getInlineWorkPackageSummary());
+        // The work package is displayed by its key, not by its id.
+        assertEquals(List.of(getKey(workPackage)), macros.get(0).getWorkPackageLinks());
     }
 
     /**

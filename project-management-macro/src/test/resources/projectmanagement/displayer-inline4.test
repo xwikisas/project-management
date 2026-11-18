@@ -4,7 +4,7 @@
 .# Inline displayer test - display a work item that has a key (e.g. a project-based identifier), shown instead of
 .# #<identifier> and linked to its location.
 .#-----------------------------------------------------
-See {{test displayer="inline" sort="identifier:asc"/}}.
+See {{test displayer="inline" filters="{~"query~":{~"filters~":[{~"property~":~"identifier~",~"constraints~":[{~"operator~":~"equals~",~"value~":~"3~"}]}]}}"/}}.
 .#-----------------------------------------------------
 .expect|xhtml/1.0
 .#-----------------------------------------------------
