@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -113,35 +114,56 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
     }
 
     /**
-     * Removes from the query the properties without descriptor (e.g. a typo in the properties parameter of a macro),
-     * since Live Data fails to display when a property of the query has no descriptor. When every property is unknown,
-     * the table has no columns. The removed properties are logged at debug level only, since valid properties are
-     * also unknown when the client can't provide their descriptors (e.g. the custom fields of an OpenProject instance
-     * that the current user can't access).
+     * Removes from the query the properties, sort entries and filters on properties without descriptor (e.g. a typo
+     * in the properties, sort or filters parameter of a macro), since Live Data fails to display them (the columns,
+     * and the sort and filter panels, need the descriptor of their property). When every property is unknown, the
+     * table has no columns. A sort or filter on an unknown property would make the client fail anyway (e.g.
+     * OpenProject rejects the query, and no work item is displayed). The removed entries are logged at debug level
+     * only, since valid properties are also unknown when the client can't provide their descriptors (e.g. the custom
+     * fields of an OpenProject instance that the current user can't access).
      */
     private void removeUnknownProperties(LiveDataConfiguration config)
     {
         LiveDataQuery query = config.getQuery();
-        if (query == null || query.getProperties() == null || query.getProperties().isEmpty()) {
+        if (query == null) {
             return;
         }
         Set<String> knownProperties = config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
             ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
             .collect(Collectors.toSet());
-        List<String> properties = new ArrayList<>();
+        if (query.getProperties() != null) {
+            query.setProperties(removeUnknown(query.getProperties(), Function.identity(), knownProperties,
+                "properties", config));
+        }
+        if (query.getSort() != null) {
+            query.setSort(removeUnknown(query.getSort(), LiveDataQuery.SortEntry::getProperty, knownProperties,
+                "sort", config));
+        }
+        if (query.getFilters() != null) {
+            query.setFilters(removeUnknown(query.getFilters(), LiveDataQuery.Filter::getProperty, knownProperties,
+                "filters", config));
+        }
+    }
+
+    private <T> List<T> removeUnknown(List<T> entries, Function<T, String> getProperty, Set<String> knownProperties,
+        String kind, LiveDataConfiguration config)
+    {
+        List<T> knownEntries = new ArrayList<>();
         List<String> unknownProperties = new ArrayList<>();
-        for (String property : query.getProperties()) {
+        for (T entry : entries) {
+            String property = getProperty.apply(entry);
             if (knownProperties.contains(property)) {
-                properties.add(property);
+                knownEntries.add(entry);
             } else {
                 unknownProperties.add(property);
             }
         }
-        if (!unknownProperties.isEmpty()) {
-            this.logger.debug("Ignoring the unknown work item properties {} of the Live Data [{}].", unknownProperties,
-                config.getId());
-            query.setProperties(properties);
+        if (unknownProperties.isEmpty()) {
+            return entries;
         }
+        this.logger.debug("Ignoring the unknown work item properties {} in the {} of the Live Data [{}].",
+            unknownProperties, kind, config.getId());
+        return knownEntries;
     }
 
     private LiveDataConfiguration getDefaultConfiguration()

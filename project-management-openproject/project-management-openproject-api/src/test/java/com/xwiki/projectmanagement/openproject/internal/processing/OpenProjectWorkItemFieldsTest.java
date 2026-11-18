@@ -281,6 +281,20 @@ class OpenProjectWorkItemFieldsTest
         assertTrue(mappedSortEntries.get(1).isDescending());
     }
 
+    @Test
+    void mapSortEntriesDropsTheUnknownProperties()
+    {
+        List<LiveDataQuery.SortEntry> mappedSortEntries = this.fields.mapSortEntries(List.of(
+            new LiveDataQuery.SortEntry("identifier.value", false), new LiveDataQuery.SortEntry("status", true),
+            new LiveDataQuery.SortEntry("subject", false), new LiveDataQuery.SortEntry("customField3", false),
+            new LiveDataQuery.SortEntry("unknown", true), new LiveDataQuery.SortEntry("spentTime", false)));
+
+        // OpenProject rejects a sort on an unknown column, failing the whole request. The generic properties, and the
+        // OpenProject columns of the generic properties and of the sortable fields, are kept.
+        assertEquals(List.of("status", "subject", "customField3"), mappedSortEntries.stream()
+            .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
+    }
+
     private static List<Object> getValues(LiveDataQuery.Filter filter)
     {
         return filter.getConstraints().stream().map(LiveDataQuery.Constraint::getValue).collect(Collectors.toList());

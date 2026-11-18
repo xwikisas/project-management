@@ -170,8 +170,8 @@ class ProjectManagementConfigurationResolverTest
 
         // Live Data fails to display a property without descriptor: only the generic and client properties are kept.
         assertEquals(List.of(STATUS, CUSTOM), result.getQuery().getProperties());
-        assertEquals("Ignoring the unknown work item properties [identifier.value, summary.value] of the Live Data "
-            + "[myLiveData].", this.logCapture.getMessage(0));
+        assertEquals("Ignoring the unknown work item properties [identifier.value, summary.value] in the properties "
+            + "of the Live Data [myLiveData].", this.logCapture.getMessage(0));
     }
 
     @Test
@@ -179,10 +179,37 @@ class ProjectManagementConfigurationResolverTest
     {
         LiveDataConfiguration input = configuration(Map.of());
         input.getQuery().setProperties(List.of(DUE_DATE, STATUS));
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry(STATUS, true)));
+        input.getQuery().setFilters(List.of(new LiveDataQuery.Filter(DUE_DATE, "before", "2026-11-18")));
 
         LiveDataConfiguration result = this.configurationResolver.resolve(input);
 
         assertEquals(List.of(DUE_DATE, STATUS), result.getQuery().getProperties());
+        assertEquals(List.of("status:desc"), describeSort(result));
+        assertEquals(List.of(DUE_DATE), describeFilters(result));
+    }
+
+    @Test
+    void resolveRemovesTheSortEntriesAndFiltersWithoutDescriptor() throws Exception
+    {
+        LiveDataConfiguration clientConfig = configuration(Map.of(), CUSTOM);
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT));
+        input.setId("myLiveData");
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry("identifier.value", false),
+            new LiveDataQuery.SortEntry(CUSTOM, true), new LiveDataQuery.SortEntry(DUE_DATE, false)));
+        input.getQuery().setFilters(List.of(new LiveDataQuery.Filter(STATUS, "equals", "New"),
+            new LiveDataQuery.Filter("unknown", "equals", "value")));
+        registerClientConfiguration(input, clientConfig);
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // The Live Data sort and filter panels fail to display an entry on a property without descriptor.
+        assertEquals(List.of("custom:desc", "dueDate:asc"), describeSort(result));
+        assertEquals(List.of(STATUS), describeFilters(result));
+        assertEquals("Ignoring the unknown work item properties [identifier.value] in the sort of the Live Data "
+            + "[myLiveData].", this.logCapture.getMessage(0));
+        assertEquals("Ignoring the unknown work item properties [unknown] in the filters of the Live Data "
+            + "[myLiveData].", this.logCapture.getMessage(1));
     }
 
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
@@ -212,6 +239,19 @@ class ProjectManagementConfigurationResolverTest
             configuration.getMeta().setPropertyDescriptors(properties);
         }
         return configuration;
+    }
+
+    private static List<String> describeSort(LiveDataConfiguration configuration)
+    {
+        return configuration.getQuery().getSort().stream()
+            .map(sortEntry -> sortEntry.getProperty() + (sortEntry.isDescending() ? ":desc" : ":asc"))
+            .collect(Collectors.toList());
+    }
+
+    private static List<String> describeFilters(LiveDataConfiguration configuration)
+    {
+        return configuration.getQuery().getFilters().stream().map(LiveDataQuery.Filter::getProperty)
+            .collect(Collectors.toList());
     }
 
     private static List<String> describe(LiveDataConfiguration configuration)
