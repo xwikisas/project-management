@@ -64,6 +64,8 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
 
     private static final Linkable PROJECT = new Linkable("Alpha", SERVER_URL + "/projects/alpha");
 
+    private static final String SORT_BY = "[[\"spent_on\",\"desc\"],[\"id\",\"desc\"]]";
+
     private static final String PROJECT_FILTER = "{\"project\":{\"operator\":\"=\",\"values\":[\"12\"]}}";
 
     @InjectMockComponents
@@ -79,7 +81,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     {
         this.parameters.setInstance("main");
         this.parameters.setLimit(10);
-        when(this.apiClient.getTimeEntries(any(), any(), anyString()))
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(), 1, 10, 0));
         // It's already 2026-03-10 in Paris.
         when(this.clockProvider.get())
@@ -111,8 +113,9 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
      */
     private String executeWithFilters(String filters) throws Exception
     {
-        when(this.apiClient.getTimeEntries(isNull(), eq(10), eq(filters))).thenReturn(new PaginatedResult<>(
-            List.of(entry(date(2026, 3, 9), "PT1H", "Matching", null)), 1, 10, 1));
+        when(this.apiClient.getTimeEntries(isNull(), eq(10), eq(filters), eq(SORT_BY)))
+            .thenReturn(new PaginatedResult<>(
+                List.of(entry(date(2026, 3, 9), "PT1H", "Matching", null)), 1, 10, 1));
         return text(this.macro.execute(this.parameters, "", this.context));
     }
 
@@ -135,10 +138,11 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         this.parameters.setProject("12");
         Date firstDay = date(2026, 3, 2);
         Date secondDay = date(2026, 3, 1);
-        when(this.apiClient.getTimeEntries(any(), any(), anyString())).thenReturn(new PaginatedResult<>(List.of(
-            entry(firstDay, "PT1H30M", "Review", new Linkable("Development", SERVER_URL + "/activities/1")),
-            entry(secondDay, "invalid", null, new Linkable(" ", "")),
-            entry(firstDay, "PT2H", null, null)), 1, 10, 3));
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(
+                entry(firstDay, "PT1H30M", "Review", new Linkable("Development", SERVER_URL + "/activities/1")),
+                entry(secondDay, "invalid", null, new Linkable(" ", "")),
+                entry(firstDay, "PT2H", null, null)), 1, 10, 3));
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
@@ -161,11 +165,12 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     void listsTheDaysInDateOrderWhateverTheOrderOfTheTimeEntries() throws Exception
     {
         // OpenProject returns the most recently logged time entries first, whatever the day the time was spent on.
-        when(this.apiClient.getTimeEntries(any(), any(), anyString())).thenReturn(new PaginatedResult<>(List.of(
-            entry(date(2026, 3, 8), "PT1H", "Third", null),
-            entry(date(2026, 3, 9), "PT2H", "Second", null),
-            entry(date(2026, 3, 7), "PT3H", "First", null),
-            entry(date(2026, 3, 9), "PT4H", "Second again", null)), 1, 10, 4));
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(
+                entry(date(2026, 3, 8), "PT1H", "Third", null),
+                entry(date(2026, 3, 9), "PT2H", "Second", null),
+                entry(date(2026, 3, 7), "PT3H", "First", null),
+                entry(date(2026, 3, 9), "PT4H", "Second again", null)), 1, 10, 4));
 
         assertEquals("Total: " + hours(10) + " h\n"
             + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
@@ -180,6 +185,38 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void requestsTheTimeEntriesOfTheMostRecentDaysFirst() throws Exception
+    {
+        // The limit must drop the time entries of the oldest days, not the oldest logged time entries.
+        when(this.apiClient.getTimeEntries(isNull(), eq(10), anyString(), eq(SORT_BY)))
+            .thenReturn(new PaginatedResult<>(
+                List.of(entry(date(2026, 3, 9), "PT1H", "Matching", null)), 1, 10, 1));
+
+        assertEquals(matchingEntry() + "View time entries\n",
+            text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
+    void saysWhenSomeTimeEntriesAreNotDisplayed() throws Exception
+    {
+        this.parameters.setLimit(2);
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString())).thenReturn(new PaginatedResult<>(
+            List.of(entry(date(2026, 3, 9), "PT1H", "Second", null), entry(date(2026, 3, 8), "PT2H", "First", null)),
+            1, 2, 40));
+        when(this.l10n.getTranslationPlain("openproject.openproject-spent-time.partial", 2, 40))
+            .thenReturn("Only 2 of 40 time entries");
+
+        assertEquals("Only 2 of 40 time entries\n"
+            + "Total: " + hours(3) + " h\n"
+            + "ACTIVITY|LOGGED FOR|COMMENT|HOURS|\n"
+            + "2026-03-09|||" + hours(1) + "|\n"
+            + "-|Alpha / #1 Fix|Second|" + hours(1) + "|\n"
+            + "2026-03-08|||" + hours(2) + "|\n"
+            + "-|Alpha / #1 Fix|First|" + hours(2) + "|\n"
+            + "View time entries\n", text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void displaysOnlyTheProjectOfTimeLoggedWithoutWorkPackage() throws Exception
     {
         // A time entry logged on the project itself, as returned by OpenProject: its work package link is null.
@@ -187,7 +224,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
             + "\"hours\":\"PT1H\",\"comment\":{\"raw\":\"Planning\"},\"_links\":{"
             + "\"activity\":{\"href\":null},\"workPackage\":{\"href\":null},"
             + "\"project\":{\"href\":\"" + SERVER_URL + "/projects/alpha\",\"title\":\"Alpha\"}}}"));
-        when(this.apiClient.getTimeEntries(any(), any(), anyString()))
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString()))
             .thenReturn(new PaginatedResult<>(List.of(entry), 1, 10, 1));
 
         List<Block> result = this.macro.execute(this.parameters, "", this.context);

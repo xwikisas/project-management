@@ -395,10 +395,10 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters, String sortBy)
         throws ProjectManagementException
     {
-        return client.getTimeEntries(offset, pageSize, filters);
+        return client.getTimeEntries(offset, pageSize, filters, sortBy);
     }
 
     @Override

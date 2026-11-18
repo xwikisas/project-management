@@ -505,6 +505,26 @@ public interface OpenProjectApiClient
     default PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
         throws ProjectManagementException
     {
+        return getTimeEntries(offset, pageSize, filters, "");
+    }
+
+    /**
+     * Retrieves a sorted, paginated list of time entries from the current OpenProject configuration.
+     *
+     * @param offset the offset from which to start retrieving time entries.
+     * @param pageSize the maximum number of time entries to retrieve.
+     * @param filters a JSON-formatted string representing filter criteria (e.g. filtering by project and date range).
+     * @param sortBy a JSON-formatted string representing the sort criteria, in the format of the {@code sortBy}
+     *     parameter of OpenProject (e.g. {@code [["spent_on","desc"],["id","desc"]]}), or an empty string to keep
+     *     the default order of OpenProject (the most recently created time entries first)
+     * @return a {@link PaginatedResult} containing the list of {@link TimeEntry} and pagination metadata, with the
+     *     total number of time entries matching the filters
+     * @throws ProjectManagementException if some error was encountered while trying to retrieve the time entries.
+     * @since 1.4.1
+     */
+    default PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters, String sortBy)
+        throws ProjectManagementException
+    {
         throw new UnsupportedOperationException(
             "Retrieving time entries is not supported by this client implementation.");
     }

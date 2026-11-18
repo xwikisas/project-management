@@ -208,13 +208,14 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
     /**
      * @param key the translation key of a text displayed by the macro
+     * @param parameters the values of the parameters of the translation
      * @return the translation of the key in the current locale, as plain text, or the key itself when it has no
      *     translation
      * @since 1.4.0
      */
-    protected String translate(String key)
+    protected String translate(String key, Object... parameters)
     {
-        String translation = this.l10n.getTranslationPlain(key);
+        String translation = this.l10n.getTranslationPlain(key, parameters);
         return translation != null ? translation : key;
     }
 
