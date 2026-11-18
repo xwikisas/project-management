@@ -179,6 +179,21 @@ class DefaultWorkItemPropertyDisplayerManagerTest
     }
 
     @Test
+    void displayDatesWithTheCurrentDateFormat()
+    {
+        Date date = new GregorianCalendar(2024, Calendar.MARCH, 15, 15, 5).getTime();
+        assertParagraphWord("2024-03-15 15:05",
+            this.manager.displayProperty(WorkItem.KEY_CREATION_DATE, date, Map.of()));
+
+        // e.g. the preference was changed, or the current wiki is a subwiki with its own date format.
+        when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy HH:mm:ss")).thenReturn("dd.MM.yyyy HH:mm");
+
+        assertParagraphWord("15.03.2024 15:05",
+            this.manager.displayProperty(WorkItem.KEY_CREATION_DATE, date, Map.of()));
+        assertParagraphWord("15.03.2024", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, date, Map.of()));
+    }
+
+    @Test
     void displayLinkableValues()
     {
         // Any map holding the linkable keys is displayed as a link, whatever the displayer of the property.

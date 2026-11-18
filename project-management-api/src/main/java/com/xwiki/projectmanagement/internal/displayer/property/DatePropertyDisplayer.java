@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
@@ -64,7 +65,11 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
 
     private final Parser parser;
 
-    private SimpleDateFormat dateFormatter;
+    /**
+     * Provides the format of the dates, called at each display so that a change of the configured format is taken
+     * into account.
+     */
+    private final Supplier<String> dateFormat;
 
     private boolean dayOnly;
 
@@ -73,8 +78,7 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
      */
     public DatePropertyDisplayer(Parser parser)
     {
-        this.parser = parser;
-        dateFormatter = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
+        this(parser, DEFAULT_DATE_FORMAT);
     }
 
     /**
@@ -83,12 +87,18 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
      */
     public DatePropertyDisplayer(Parser parser, String dateFormat)
     {
-        this(parser);
-        try {
-            dateFormatter = new SimpleDateFormat(dateFormat);
-        } catch (IllegalArgumentException ignored) {
-            dateFormatter = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
-        }
+        this(parser, () -> dateFormat);
+    }
+
+    /**
+     * @param parser used to parse the serialized date value as a list of blocks
+     * @param dateFormat provides the format that should be used to serialize the date, called at each display, e.g.
+     *     to use the current date format preference of the current wiki
+     */
+    public DatePropertyDisplayer(Parser parser, Supplier<String> dateFormat)
+    {
+        this.parser = parser;
+        this.dateFormat = dateFormat;
     }
 
     /**
@@ -103,7 +113,20 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
      */
     public static DatePropertyDisplayer forDays(Parser parser, String dateFormat)
     {
-        DatePropertyDisplayer displayer = new DatePropertyDisplayer(parser, toDayFormat(dateFormat));
+        return forDays(parser, () -> dateFormat);
+    }
+
+    /**
+     * Same as {@link #forDays(Parser, String)}, with a format read at each display.
+     *
+     * @param parser used to parse the serialized date value as a list of blocks
+     * @param dateFormat provides the format of the dates, from which the time fields are removed, called at each
+     *     display
+     * @return the displayer
+     */
+    public static DatePropertyDisplayer forDays(Parser parser, Supplier<String> dateFormat)
+    {
+        DatePropertyDisplayer displayer = new DatePropertyDisplayer(parser, dateFormat);
         displayer.dayOnly = true;
         return displayer;
     }
@@ -211,19 +234,35 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
 
     private String format(Date date, Map<String, Object> params)
     {
-        SimpleDateFormat formatter = dateFormatter;
-
+        // SimpleDateFormat isn't thread-safe, so a new one is created for each display.
+        SimpleDateFormat formatter = null;
         Object paramsFormat = params.get("format");
         if (paramsFormat != null && !paramsFormat.toString().isEmpty()) {
-            try {
-                formatter = new SimpleDateFormat(paramsFormat.toString());
-                if (dayOnly) {
-                    formatter = new SimpleDateFormat(toDayFormat(paramsFormat.toString()));
-                }
-            } catch (IllegalArgumentException e) {
-                formatter = dateFormatter;
-            }
+            formatter = createFormatter(paramsFormat.toString());
+        }
+        if (formatter == null) {
+            formatter = createFormatter(this.dateFormat.get());
+        }
+        if (formatter == null) {
+            formatter = new SimpleDateFormat(this.dayOnly ? DEFAULT_DAY_FORMAT : DEFAULT_DATE_FORMAT);
         }
         return formatter.format(date);
+    }
+
+    /**
+     * @return a formatter for the given pattern, without its time fields when displaying days, or {@code null} when
+     *     the pattern is missing or invalid
+     */
+    private SimpleDateFormat createFormatter(String pattern)
+    {
+        if (pattern == null) {
+            return null;
+        }
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat(pattern);
+            return this.dayOnly ? new SimpleDateFormat(toDayFormat(pattern)) : formatter;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

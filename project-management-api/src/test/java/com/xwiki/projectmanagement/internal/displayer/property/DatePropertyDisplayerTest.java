@@ -166,6 +166,16 @@ class DatePropertyDisplayerTest
         assertParagraphWord("2026-10-29", displayer.display(day, Map.of(FORMAT, "invalid")));
     }
 
+    @Test
+    void displayADayWithAnInvalidOrMissingFormat()
+    {
+        Date day = new GregorianCalendar(2026, Calendar.OCTOBER, 29).getTime();
+
+        assertParagraphWord("29/10/2026", DatePropertyDisplayer.forDays(this.parser, "invalid").display(day, Map.of()));
+        assertParagraphWord("29/10/2026",
+            DatePropertyDisplayer.forDays(this.parser, () -> null).display(day, Map.of()));
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = '|', quoteCharacter = '"', value = {
         "dd/MM/yyyy HH:mm:ss | dd/MM/yyyy",
