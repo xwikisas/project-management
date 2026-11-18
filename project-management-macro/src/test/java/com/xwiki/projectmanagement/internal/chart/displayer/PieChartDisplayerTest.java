@@ -59,9 +59,9 @@ import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for {@link PieChartDisplayer} and the common code of {@link AbstractChartJSDisplayer}, also checked with
- * the {@link BarChartDisplayer} where the chart types differ. The displayer and the components it uses are the real
- * ones, except for the macro content parser, so that the test checks the wiki syntax actually generated for the chart,
- * parsed by the real XWiki 2.1 parser.
+ * the {@link BarChartDisplayer} and the {@link LineChartDisplayer} where the chart types differ. The displayer and the
+ * components it uses are the real ones, except for the macro content parser, so that the test checks the wiki syntax
+ * actually generated for the chart, parsed by the real XWiki 2.1 parser.
  *
  * @version $Id$
  */
@@ -73,6 +73,10 @@ class PieChartDisplayerTest
 
     private static final String NEW = "New";
 
+    private static final String OPTIONS = "options";
+
+    private static final String VALUE_AXIS_FROM_ZERO = "\"scales\":{\"yAxes\":[{\"ticks\":{\"beginAtZero\":true}}]}";
+
     @MockComponent
     private MacroContentParser contentParser;
 
@@ -83,6 +87,10 @@ class PieChartDisplayerTest
     @Inject
     @Named("bar")
     private ChartTypeDisplayer barDisplayer;
+
+    @Inject
+    @Named("line")
+    private ChartTypeDisplayer lineDisplayer;
 
     @Inject
     @Named("xwiki/2.1")
@@ -113,17 +121,37 @@ class PieChartDisplayerTest
 
         // The legend of a bar chart displays the names of the datasets: a single dataset without name has none.
         MacroBlock chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of(), Map.of()));
-        assertEquals(Map.of("type", "bar", "options", "{\"legend\":{\"display\":false}}"), chart.getParameters());
+        assertEquals(Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + VALUE_AXIS_FROM_ZERO + "}"),
+            chart.getParameters());
         assertEquals("", new ObjectMapper().readTree(chart.getContent()).path("datasets").path(0).path("label")
             .asText(null));
 
         // A named dataset keeps its legend.
         chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of("Mine"), Map.of()));
-        assertEquals(Map.of("type", "bar"), chart.getParameters());
+        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), chart.getParameters());
 
         // The legend of a pie chart displays the slices.
         JsonNode data = getChartData(datasets, List.of(), Map.of());
         assertEquals("", data.path("datasets").path(0).path("label").asText(null));
+    }
+
+    @Test
+    void startsTheValueAxisOfTheBarAndLineChartsAtZero() throws Exception
+    {
+        // Without it, Chart.js 2 starts the axis at the smallest count, displaying its bars as empty.
+        List<Map<String, Long>> counts = List.of(Map.of(NEW, 2L, DONE, 11L));
+        List<String> labels = List.of("Mine");
+
+        MacroBlock bar = getChartMacroBlock(
+            ((AbstractChartJSDisplayer) this.barDisplayer).getChartMacroFromCounts(counts, labels, Map.of()));
+        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), bar.getParameters());
+        MacroBlock line = getChartMacroBlock(
+            ((AbstractChartJSDisplayer) this.lineDisplayer).getChartMacroFromCounts(counts, labels, Map.of()));
+        assertEquals(Map.of("type", "line", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), line.getParameters());
+
+        // A pie chart has no value axis.
+        assertEquals(Map.of("type", "pie"),
+            getChartMacroBlock(getDisplayer().getChartMacroFromCounts(counts, labels, Map.of())).getParameters());
     }
 
     @Test

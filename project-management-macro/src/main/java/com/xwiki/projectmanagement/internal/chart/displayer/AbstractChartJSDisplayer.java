@@ -97,6 +97,8 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     private static final String UNSET = "UNSET";
 
+    private static final ObjectMapper OPTIONS_MAPPER = new ObjectMapper();
+
     /**
      * The chart data is passed as the content of the chartjs macro, written in wiki syntax and then parsed: the curly
      * brackets of the values (e.g. labels) are escaped so that they can't end the macro content.
@@ -193,15 +195,30 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             WikiPrinter wikiPrinter = new DefaultWikiPrinter();
             Map<String, String> chartParameters = new LinkedHashMap<>();
             chartParameters.put("type", getChartType());
-            if (isSingleUnlabeledDataset(counts, labels) && isLegendOfDatasets()) {
-                // The legend would only display the missing name of the single dataset.
-                chartParameters.put("options", "{\"legend\":{\"display\":false}}");
+            Map<String, Object> options = getOptions(counts, labels);
+            if (!options.isEmpty()) {
+                chartParameters.put("options", OPTIONS_MAPPER.writeValueAsString(options));
             }
             renderer.render(new MacroBlock("chartjs", chartParameters, data, false), wikiPrinter);
             return wikiPrinter.toString();
         } catch (JsonProcessingException e) {
             throw new MacroExecutionException("Failed to generate the data for the ChartJS macro.", e);
         }
+    }
+
+    private Map<String, Object> getOptions(List<Map<String, Long>> counts, List<String> labels)
+    {
+        Map<String, Object> options = new LinkedHashMap<>();
+        if (isSingleUnlabeledDataset(counts, labels) && isLegendOfDatasets()) {
+            // The legend would only display the missing name of the single dataset.
+            options.put("legend", Map.of("display", false));
+        }
+        if (hasValueAxis()) {
+            // Chart.js 2 (used by the Chart.js macro) starts the value axis at the smallest value by default, which
+            // displays the smallest values as empty bars and makes the heights not proportional to the values.
+            options.put("scales", Map.of("yAxes", List.of(Map.of("ticks", Map.of("beginAtZero", true)))));
+        }
+        return options;
     }
 
     @SuppressWarnings("unchecked")
@@ -265,6 +282,15 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
     protected boolean isLegendOfDatasets()
     {
         return true;
+    }
+
+    /**
+     * @return {@code true} if the chart displays the values along a vertical axis (for example a bar chart), which
+     *     then starts at 0, {@code false} otherwise (for example a pie chart)
+     */
+    protected boolean hasValueAxis()
+    {
+        return false;
     }
 
     /**

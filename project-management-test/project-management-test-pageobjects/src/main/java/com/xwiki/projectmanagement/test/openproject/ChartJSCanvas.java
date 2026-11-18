@@ -116,6 +116,20 @@ public class ChartJSCanvas extends BaseElement
     }
 
     /**
+     * Returns the smallest value of the vertical value axis of the drawn chart, for example {@code 0} for a bar chart
+     * whose axis starts at 0, as computed by Chart.js from the data and the options of the chart.
+     *
+     * @return the minimum of the first vertical axis of the chart, or {@code null} if the chart has none (for example
+     *     a pie chart)
+     * @since 1.4.1
+     */
+    public Double getValueAxisMinimum()
+    {
+        Object minimum = this.chart.get("valueAxisMin");
+        return minimum instanceof Number ? ((Number) minimum).doubleValue() : null;
+    }
+
+    /**
      * @return the number of datasets that the chart is displaying
      * @since 1.3.0-rc-2
      */
@@ -140,7 +154,10 @@ public class ChartJSCanvas extends BaseElement
         return (Map<String, Object>) getDriver().executeAsyncScript("const [canvas, done] = arguments;"
             + "require(['chart'], Chart => {"
             + "  const chart = Object.values(Chart.instances || {}).find(instance => instance.canvas === canvas);"
+            + "  const valueAxis = Object.values(chart && chart.scales || {})"
+            + "    .find(scale => typeof scale.isHorizontal === 'function' && !scale.isHorizontal());"
             + "  done(chart ? {type: chart.config.type, labels: chart.data.labels || [],"
+            + "    valueAxisMin: valueAxis ? valueAxis.min : null,"
             + "    legend: !chart.options.legend || chart.options.legend.display !== false,"
             + "    datasets: chart.data.datasets.map(dataset => ({label: dataset.label, data: dataset.data}))} : null);"
             + "}, () => done(null));", this.canvas);
