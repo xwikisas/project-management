@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.xwiki.component.util.DefaultParameterizedType;
 import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
@@ -35,6 +36,8 @@ import org.xwiki.livedata.LiveDataMeta;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.test.LogLevel;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -75,6 +78,9 @@ class ProjectManagementConfigurationResolverTest
 
     @MockComponent
     private LiveDataConfigurationResolver<String> stringLiveDataConfigResolver;
+
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @BeforeEach
     void setUp() throws Exception
@@ -149,6 +155,34 @@ class ProjectManagementConfigurationResolverTest
         assertEquals("default", parameters.get("b"));
         assertEquals("input", parameters.get("c"));
         assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)"), describe(result));
+    }
+
+    @Test
+    void resolveRemovesThePropertiesWithoutDescriptor() throws Exception
+    {
+        LiveDataConfiguration clientConfig = configuration(Map.of(), CUSTOM);
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT));
+        input.setId("myLiveData");
+        input.getQuery().setProperties(List.of("identifier.value", STATUS, "summary.value", CUSTOM));
+        registerClientConfiguration(input, clientConfig);
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // Live Data fails to display a property without descriptor: only the generic and client properties are kept.
+        assertEquals(List.of(STATUS, CUSTOM), result.getQuery().getProperties());
+        assertEquals("Ignoring the unknown work item properties [identifier.value, summary.value] of the Live Data "
+            + "[myLiveData].", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void resolveKeepsTheKnownProperties() throws Exception
+    {
+        LiveDataConfiguration input = configuration(Map.of());
+        input.getQuery().setProperties(List.of(DUE_DATE, STATUS));
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        assertEquals(List.of(DUE_DATE, STATUS), result.getQuery().getProperties());
     }
 
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
