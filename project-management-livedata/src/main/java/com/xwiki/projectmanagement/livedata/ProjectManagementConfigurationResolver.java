@@ -26,8 +26,10 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,6 +47,7 @@ import org.xwiki.livedata.LiveDataActionDescriptor;
 import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
+import org.xwiki.livedata.LiveDataMeta;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.livedata.internal.JSONMerge;
@@ -109,6 +112,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             mergedConfig = this.jsonMerge.merge(defaultConfig, input);
         }
         removeUnknownProperties(mergedConfig);
+        addMissingSortAndFilterDescriptors(mergedConfig);
         return translate(mergedConfig);
     }
 
@@ -125,9 +129,7 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         if (query == null || query.getProperties() == null || query.getProperties().isEmpty()) {
             return;
         }
-        Set<String> knownProperties = config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
-            ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
-            .collect(Collectors.toSet());
+        Set<String> knownProperties = getKnownProperties(config);
         List<String> properties = new ArrayList<>();
         List<String> unknownProperties = new ArrayList<>();
         for (String property : query.getProperties()) {
@@ -142,6 +144,71 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
                 config.getId());
             query.setProperties(properties);
         }
+    }
+
+    /**
+     * Adds a descriptor to the properties that are sorted or filtered without having one, since the Live Data sort and
+     * filter panels fail to display a sort or filter entry on a property without descriptor. Such a property isn't
+     * necessarily unknown to the client: it can be the name the client gives to the property (e.g. an OpenProject
+     * column, such as {@code updatedAt}), or a property whose descriptor the client couldn't provide (e.g. a custom
+     * field of an OpenProject instance that couldn't be reached). So the sort and filter entries are kept, and left to
+     * the client, and the added descriptor only names the property after its id. It isn't displayed as a column, since
+     * the properties without descriptor are removed from the displayed properties.
+     */
+    private void addMissingSortAndFilterDescriptors(LiveDataConfiguration config)
+    {
+        LiveDataQuery query = config.getQuery();
+        if (query == null) {
+            return;
+        }
+        Map<String, LiveDataPropertyDescriptor> missingDescriptors = new LinkedHashMap<>();
+        Set<String> knownProperties = getKnownProperties(config);
+        if (query.getSort() != null) {
+            for (LiveDataQuery.SortEntry sortEntry : query.getSort()) {
+                addMissingDescriptor(sortEntry.getProperty(), knownProperties, missingDescriptors)
+                    .ifPresent(descriptor -> descriptor.setSortable(true));
+            }
+        }
+        if (query.getFilters() != null) {
+            for (LiveDataQuery.Filter filter : query.getFilters()) {
+                addMissingDescriptor(filter.getProperty(), knownProperties, missingDescriptors)
+                    .ifPresent(descriptor -> descriptor.setFilterable(true));
+            }
+        }
+        if (missingDescriptors.isEmpty()) {
+            return;
+        }
+        if (config.getMeta() == null) {
+            config.setMeta(new LiveDataMeta());
+        }
+        List<LiveDataPropertyDescriptor> descriptors = config.getMeta().getPropertyDescriptors() == null
+            ? new ArrayList<>() : new ArrayList<>(config.getMeta().getPropertyDescriptors());
+        descriptors.addAll(missingDescriptors.values());
+        config.getMeta().setPropertyDescriptors(descriptors);
+        this.logger.debug("Adding a descriptor to the work item properties {} sorted or filtered in the Live Data "
+            + "[{}], which have none.", missingDescriptors.keySet(), config.getId());
+    }
+
+    private static Optional<LiveDataPropertyDescriptor> addMissingDescriptor(String property,
+        Set<String> knownProperties, Map<String, LiveDataPropertyDescriptor> missingDescriptors)
+    {
+        if (property == null || knownProperties.contains(property)) {
+            return Optional.empty();
+        }
+        return Optional.of(missingDescriptors.computeIfAbsent(property, id -> {
+            LiveDataPropertyDescriptor descriptor = new LiveDataPropertyDescriptor();
+            descriptor.setId(id);
+            descriptor.setName(id);
+            descriptor.setVisible(false);
+            return descriptor;
+        }));
+    }
+
+    private static Set<String> getKnownProperties(LiveDataConfiguration config)
+    {
+        return config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
+            ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
+            .collect(Collectors.toSet());
     }
 
     private LiveDataConfiguration getDefaultConfiguration()

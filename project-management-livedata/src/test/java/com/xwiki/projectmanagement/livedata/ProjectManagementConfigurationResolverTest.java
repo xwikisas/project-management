@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -66,6 +67,10 @@ class ProjectManagementConfigurationResolverTest
     private static final String DUE_DATE = "dueDate";
 
     private static final String CUSTOM = "custom";
+
+    private static final String UPDATED_AT = "updatedAt";
+
+    private static final String TARGET_VERSION = "targetVersion";
 
     @InjectMockComponents
     private ProjectManagementConfigurationResolver configurationResolver;
@@ -183,6 +188,55 @@ class ProjectManagementConfigurationResolverTest
         LiveDataConfiguration result = this.configurationResolver.resolve(input);
 
         assertEquals(List.of(DUE_DATE, STATUS), result.getQuery().getProperties());
+    }
+
+    @Test
+    void resolveAddsADescriptorToTheSortedAndFilteredPropertiesWithoutOne() throws Exception
+    {
+        LiveDataConfiguration clientConfig = configuration(Map.of(), CUSTOM);
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT));
+        input.setId("myLiveData");
+        input.getQuery().setProperties(List.of(STATUS, CUSTOM));
+        // An OpenProject column, and a field whose descriptor the client couldn't provide.
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry(UPDATED_AT, true),
+            new LiveDataQuery.SortEntry(STATUS, false)));
+        input.getQuery().setFilters(List.of(new LiveDataQuery.Filter(TARGET_VERSION, "=", "2.0"),
+            new LiveDataQuery.Filter(CUSTOM, "equals", "value"), new LiveDataQuery.Filter(UPDATED_AT, "<>d", "")));
+        registerClientConfiguration(input, clientConfig);
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // The sort and filter entries are left to the client.
+        assertEquals(List.of(UPDATED_AT, STATUS), result.getQuery().getSort().stream()
+            .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
+        assertEquals(List.of(TARGET_VERSION, CUSTOM, UPDATED_AT), result.getQuery().getFilters().stream()
+            .map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
+        // The Live Data sort and filter panels fail to display an entry on a property without descriptor.
+        assertEquals(List.of("custom: custom (null)", "status: Status (null)", "dueDate: Due date (The due date)",
+            "updatedAt: updatedAt (null)", "targetVersion: targetVersion (null)"), describe(result));
+        Map<String, LiveDataPropertyDescriptor> descriptors = result.getMeta().getPropertyDescriptors().stream()
+            .collect(Collectors.toMap(LiveDataPropertyDescriptor::getId, Function.identity()));
+        LiveDataPropertyDescriptor updatedAt = descriptors.get(UPDATED_AT);
+        assertEquals(List.of(false, true, true),
+            List.of(updatedAt.isVisible(), updatedAt.isSortable(), updatedAt.isFilterable()));
+        LiveDataPropertyDescriptor targetVersion = descriptors.get(TARGET_VERSION);
+        assertEquals(List.of(false, true), List.of(targetVersion.isVisible(), targetVersion.isFilterable()));
+        assertNull(targetVersion.isSortable());
+        assertEquals(List.of(STATUS, CUSTOM), result.getQuery().getProperties());
+        assertEquals("Adding a descriptor to the work item properties [updatedAt, targetVersion] sorted or filtered "
+            + "in the Live Data [myLiveData], which have none.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void resolveWithSortAndFiltersOnKnownProperties() throws Exception
+    {
+        LiveDataConfiguration input = configuration(Map.of());
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry(STATUS, true)));
+        input.getQuery().setFilters(List.of(new LiveDataQuery.Filter(DUE_DATE, "before", "2026-11-18")));
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)"), describe(result));
     }
 
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
