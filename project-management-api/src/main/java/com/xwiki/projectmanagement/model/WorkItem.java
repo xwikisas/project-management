@@ -239,7 +239,8 @@ public class WorkItem extends HashMap<String, Object>
     }
 
     /**
-     * @return the date when this work item was marked, by some user/entity, as started.
+     * @return the date when this work item was marked, by some user/entity, as started. Only its day is meaningful:
+     *     it's displayed without time.
      */
     @JsonProperty(KEY_START_DATE)
     public Date getStartDate()
@@ -257,7 +258,8 @@ public class WorkItem extends HashMap<String, Object>
     }
 
     /**
-     * @return the date when this work item is expected to be finished, set as resolved.
+     * @return the date when this work item is expected to be finished, set as resolved. Only its day is meaningful:
+     *     it's displayed without time.
      */
     @JsonProperty(KEY_DUE_DATE)
     public Date getDueDate()
