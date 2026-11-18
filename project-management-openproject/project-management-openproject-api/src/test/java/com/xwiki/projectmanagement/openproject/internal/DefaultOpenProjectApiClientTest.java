@@ -70,6 +70,7 @@ import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
@@ -78,6 +79,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -521,6 +523,43 @@ class DefaultOpenProjectApiClientTest
         assertEquals(1, news.getItems().size());
         assertEquals(new Linkable("Third project", OPEN_PROJECT_CONNECTION_URL + "/projects/3"),
             news.getItems().get(0).getProjectLink());
+    }
+
+    @Test
+    void getTimeEntriesSortedWithTheirTotal() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\":40,\"count\":1,\"_embedded\":{\"elements\":[{\"id\":3,"
+            + "\"spentOn\":\"2026-03-09\",\"hours\":\"PT1H\",\"_links\":{"
+            + "\"workPackage\":{\"href\":\"/api/v3/work_packages/5\",\"title\":\"Fix\"},"
+            + "\"project\":{\"href\":\"/api/v3/projects/3\",\"title\":\"Alpha\"}}}]}}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        PaginatedResult<TimeEntry> timeEntries =
+            this.openProjectApiClient.getTimeEntries(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING);
+
+        verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        URI uri = captor.getValue().uri();
+        assertEquals("/api/v3/time_entries", uri.getPath());
+        assertThat(uri.getQuery(), containsString("filters=" + FILTERS_STRING));
+        assertThat(uri.getQuery(), containsString("sortBy=" + SORT_BY_STRING));
+        assertThat(uri.getQuery(), containsString("pageSize=" + PAGE_SIZE));
+        // The total counts all the time entries matching the filters, not only the returned ones.
+        assertEquals(40, timeEntries.getTotalItems());
+        assertEquals(1, timeEntries.getItems().size());
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/work_packages/5",
+            timeEntries.getItems().get(0).getWorkPackage().getLocation());
+    }
+
+    @Test
+    void getTimeEntriesWithoutSort() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\":0,\"count\":0,\"_embedded\":{\"elements\":[]}}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        assertEquals(List.of(), this.openProjectApiClient.getTimeEntries(OFFSET, PAGE_SIZE, FILTERS_STRING).getItems());
+
+        verify(this.client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertThat(captor.getValue().uri().getQuery(), not(containsString("sortBy")));
     }
 
     @Test

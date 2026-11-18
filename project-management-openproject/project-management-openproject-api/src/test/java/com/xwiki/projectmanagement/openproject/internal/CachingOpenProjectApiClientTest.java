@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -39,6 +40,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -256,6 +258,17 @@ class CachingOpenProjectApiClientTest
 
         assertEquals("location",
             this.cachingOpenProjectApiClient.getWorkPackagesLocation(PROJECT, FILTERS_STRING, SORT_BY_STRING));
+        verifyNoInteractions(this.cache);
+    }
+
+    @Test
+    void timeEntriesAreSortedAndNotCached() throws ProjectManagementException
+    {
+        PaginatedResult<TimeEntry> timeEntries = new PaginatedResult<>(List.of(new TimeEntry()), 0, 10, 40);
+        when(this.openProjectApiClient.getTimeEntries(0, 10, FILTERS_STRING, SORT_BY_STRING)).thenReturn(timeEntries);
+
+        assertSame(timeEntries,
+            this.cachingOpenProjectApiClient.getTimeEntries(0, 10, FILTERS_STRING, SORT_BY_STRING));
         verifyNoInteractions(this.cache);
     }
 

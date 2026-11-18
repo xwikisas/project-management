@@ -902,10 +902,12 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters)
+    public PaginatedResult<TimeEntry> getTimeEntries(Integer offset, Integer pageSize, String filters, String sortBy)
         throws ProjectManagementException
     {
-        JsonNode elements = getOpenProjectResponseEntities(API_URL_TIME_ENTRIES, offset, pageSize, filters, "", "");
+        JsonNode mainNode = getOpenProjectResponse(API_URL_TIME_ENTRIES, offset, pageSize, filters,
+            StringUtils.defaultString(sortBy), "");
+        JsonNode elements = mainNode.path(OP_RESPONSE_EMBEDDED).path(OP_RESPONSE_ELEMENTS);
 
         List<TimeEntry> entries = new ArrayList<>();
         for (JsonNode element : elements) {
@@ -918,7 +920,7 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
             entries.add(entry);
         }
 
-        return new PaginatedResult<>(entries, offset, pageSize, entries.size());
+        return new PaginatedResult<>(entries, offset, pageSize, getTotalNumberOfEntities(mainNode));
     }
 
     @Override

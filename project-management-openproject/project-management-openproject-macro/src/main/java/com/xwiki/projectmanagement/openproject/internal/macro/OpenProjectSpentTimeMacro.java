@@ -54,6 +54,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.internal.utility.TableBuilder;
 import com.xwiki.projectmanagement.model.Linkable;
+import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
@@ -83,6 +84,12 @@ public class OpenProjectSpentTimeMacro
 
     private static final String EMPTY_CELL_PLACEHOLDER = "-";
 
+    /**
+     * The most recent days first, so that the limit drops the time entries of the oldest days, and the time entries of
+     * the same day in a stable order.
+     */
+    private static final String SORT_BY = "[[\"spent_on\",\"desc\"],[\"id\",\"desc\"]]";
+
     @Inject
     @Named("wiki")
     private ConfigurationSource wikiConfigSource;
@@ -109,12 +116,13 @@ public class OpenProjectSpentTimeMacro
         String filters =
             buildFilters(hasProject ? getProjectId(parameters.getProject(), apiClient) : null, parameters.getDays());
 
-        List<TimeEntry> entries;
+        PaginatedResult<TimeEntry> result;
         try {
-            entries = apiClient.getTimeEntries(null, parameters.getLimit(), filters).getItems();
+            result = apiClient.getTimeEntries(null, parameters.getLimit(), filters, SORT_BY);
         } catch (ProjectManagementException e) {
             throw new MacroExecutionException("Failed to retrieve time entries from OpenProject.", e);
         }
+        List<TimeEntry> entries = result.getItems();
         if (entries.isEmpty()) {
             List<Block> warning = getEmptyAnonymousResultWarning(instance, context);
             if (!warning.isEmpty()) {
@@ -130,7 +138,8 @@ public class OpenProjectSpentTimeMacro
             : "openproject.openproject-spent-time.viewTimeEntries");
 
         return Collections.singletonList(
-            new GroupBlock(buildContent(entries, linkLabel, linkUrl), Collections.emptyMap()));
+            new GroupBlock(buildContent(entries, result.getTotalItems(), linkLabel, linkUrl),
+                Collections.emptyMap()));
     }
 
     private String buildFilters(String project, int days)
@@ -152,7 +161,8 @@ public class OpenProjectSpentTimeMacro
         return filterBuilder.build();
     }
 
-    private List<Block> buildContent(List<TimeEntry> entries, String linkLabel, String linkUrl)
+    private List<Block> buildContent(List<TimeEntry> entries, Integer totalEntries, String linkLabel,
+        String linkUrl)
     {
         List<Block> blocks = new ArrayList<>();
 
@@ -160,6 +170,12 @@ public class OpenProjectSpentTimeMacro
             blocks.add(new ParagraphBlock(List.of(new WordBlock(translate("openproject.openproject-spent-time.empty"))),
                 Collections.emptyMap()));
         } else {
+            if (totalEntries != null && totalEntries > entries.size()) {
+                // The totals only count the displayed time entries.
+                blocks.add(new ParagraphBlock(List.of(new WordBlock(
+                    translate(TRANSLATION_PREFIX + "partial", entries.size(), totalEntries)))));
+            }
+
             double totalHours = entries.stream().mapToDouble(e -> parseHours(e.getHours())).sum();
 
             Block totalLabel = new WordBlock(translate("openproject.openproject-spent-time.total") + " ");

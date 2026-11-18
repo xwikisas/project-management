@@ -159,7 +159,7 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
                     .thenThrow(cause),
                 "Failed to retrieve members for project [12]."),
             macro("spent time", test -> test.spentTimeMacro, new OpenProjectSpentTimeMacroParameters(),
-                (FailingCall) (client, cause) -> when(client.getTimeEntries(any(), any(), anyString()))
+                (FailingCall) (client, cause) -> when(client.getTimeEntries(any(), any(), anyString(), anyString()))
                     .thenThrow(cause),
                 "Failed to retrieve time entries from OpenProject."));
     }
@@ -255,7 +255,7 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
                     .thenThrow(cause)),
             macro("spent time", test -> test.spentTimeMacro,
                 withProject(new OpenProjectSpentTimeMacroParameters(), project),
-                (FailingCall) (client, cause) -> when(client.getTimeEntries(any(), any(), anyString()))
+                (FailingCall) (client, cause) -> when(client.getTimeEntries(any(), any(), anyString(), anyString()))
                     .thenThrow(cause)));
     }
 
