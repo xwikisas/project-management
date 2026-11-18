@@ -19,9 +19,12 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.TimeoutException;
 import org.xwiki.ckeditor.test.po.AutocompleteDropdown;
 import org.xwiki.ckeditor.test.po.RichTextAreaElement;
+import org.xwiki.test.ui.po.BaseElement;
 
 /**
  * The OpenProject features of the CKEditor rich text area.
@@ -29,7 +32,7 @@ import org.xwiki.ckeditor.test.po.RichTextAreaElement;
  * @version $Id$
  * @since 1.4.0
  */
-public class OpenProjectRichTextArea
+public class OpenProjectRichTextArea extends BaseElement
 {
     private final RichTextAreaElement textArea;
 
@@ -50,13 +53,60 @@ public class OpenProjectRichTextArea
      */
     public void insertWorkPackage(String query, String workPackage)
     {
-        this.textArea.sendKeys(query);
+        searchWorkPackage(query, query, workPackage);
+        insertSelectedWorkPackage();
+    }
+
+    /**
+     * Type some text in the work package search and wait for the given work package to be selected in the
+     * autocomplete dropdown.
+     *
+     * @param text the text to type, starting with the work package search marker when the search isn't started yet
+     * @param query the resulting query of the work package search, starting with the marker
+     * @param workPackage the subject of the work package expected to be selected in the autocomplete dropdown
+     * @since 1.4.1
+     */
+    public void searchWorkPackage(String text, String query, String workPackage)
+    {
+        this.textArea.sendKeys(text);
+        new AutocompleteDropdown().waitForItemSelected(query, workPackage);
+    }
+
+    /**
+     * Insert the work package selected in the autocomplete dropdown of the work package search and wait for the
+     * OpenProject macro to be inserted.
+     *
+     * @since 1.4.1
+     */
+    public void insertSelectedWorkPackage()
+    {
         AutocompleteDropdown dropdown = new AutocompleteDropdown();
-        dropdown.waitForItemSelected(query, workPackage);
         this.textArea.sendKeys(Keys.ENTER);
         dropdown.waitForItemSubmitted();
         // The macro is inserted asynchronously, after the autocomplete dropdown is closed.
         this.textArea.waitUntilContentContains("startmacro:openproject");
+    }
+
+    /**
+     * Delete the last characters of the work package search query, so that it gets shorter than the minimum length
+     * of the search, and wait for the autocomplete dropdown to be closed.
+     *
+     * @param count the number of characters to delete
+     * @return {@code true} if the autocomplete dropdown is closed, {@code false} if it is still opened after the wait
+     *     timeout
+     * @since 1.4.1
+     */
+    public boolean deleteWorkPackageSearchCharacters(int count)
+    {
+        for (int i = 0; i < count; i++) {
+            this.textArea.sendKeys(Keys.BACK_SPACE);
+        }
+        try {
+            getDriver().waitUntilElementDisappears(By.className("cke_autocomplete_opened"));
+            return true;
+        } catch (TimeoutException e) {
+            return false;
+        }
     }
 
     /**

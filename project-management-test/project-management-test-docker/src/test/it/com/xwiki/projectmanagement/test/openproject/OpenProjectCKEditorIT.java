@@ -74,8 +74,15 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
         setup.gotoPage(testReference, "edit", "editor=wysiwyg");
         WYSIWYGEditPage editPage = new WYSIWYGEditPage();
-        new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
-            .insertWorkPackage(MARKER + "speakers", SUBJECT);
+        OpenProjectRichTextArea textArea =
+            new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea());
+        textArea.searchWorkPackage(MARKER + "speakers", MARKER + "speakers", SUBJECT);
+        // The work packages are only searched from 3 characters typed after the marker: the search is closed when
+        // the query gets shorter, and opened again when it gets longer.
+        assertTrue(textArea.deleteWorkPackageSearchCharacters("eakers".length()),
+            "The work package search should be closed with fewer than 3 characters");
+        textArea.searchWorkPackage("eakers", MARKER + "speakers", SUBJECT);
+        textArea.insertSelectedWorkPackage();
         editPage.clickSaveAndView();
 
         // The work package is displayed inline: its identifier, linking to OpenProject, followed by its subject.

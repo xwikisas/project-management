@@ -195,6 +195,12 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
       });
   };
   const DEFAULT_MARKER = '#';
+  // The minimum number of characters to type after the marker for the work packages to be searched.
+  const MIN_CHARS = 3;
+  // The text to search, typed after the marker, with the non-breaking spaces replaced.
+  const getSearchText = function (query, marker) {
+    return query.substring(marker.length).replaceAll('\u00A0', ' ');
+  };
   // Same rule as the one enforced by the administration form: 1 to 5 non space characters, different from the markers
   // already used by the editor.
   const VALID_MARKER = /^(?!(@|\/|\[\[|\{\{|img::)$)\S{1,5}$/;
@@ -286,8 +292,7 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
     function getOpenProjectPluginCfg(marker) {
       return {
         dataCallback: function (options, callback) {
-          // Remove the marker prefix and replace non-breaking space.
-          const text = options.query.substring(marker.length).replaceAll('\u00A0', ' ');
+          const text = getSearchText(options.query, marker);
           getConnection().then(connection =&gt; {
             if (connection) {
               search(text, callback, connection.instance, connection.isDefault);
@@ -297,7 +302,8 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
           }, () =&gt; callback([getHintItem('connectionError')]));
         },
         marker: marker,
-        minChars: 3,
+        // Ignored by the AdvancedAutoComplete of the supported XWiki versions, see requireMinChars.
+        minChars: MIN_CHARS,
         itemsLimit: 10,
         itemTemplate:
           `&lt;li data-id="{id}" class="ckeditor-autocomplete-item"&gt;
@@ -337,9 +343,24 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
     function maybeEnableOpenProjectPlugin(editor) {
       return Promise.all([waitForEditorReady(editor), getMarker()]).then(([editor, marker]) =&gt; {
         const autoComplete = new ckeditor.plugins.AdvancedAutoComplete(editor, getOpenProjectPluginCfg(marker));
+        requireMinChars(autoComplete, marker);
         supportHintItems(autoComplete);
         return editor;
       });
+    }
+
+    // AdvancedAutoComplete ignores the minChars option: it matches the marker followed by 0 to 30 characters, so the
+    // work packages would be searched as soon as the marker is typed. The text typed after the marker isn't matched
+    // until it has MIN_CHARS characters, so that the autocomplete panel isn't opened, or is closed, and nothing is
+    // searched. The matching of AdvancedAutoComplete is kept otherwise, since it depends on the XWiki version (e.g.
+    // whether the marker has to follow a space).
+    function requireMinChars(autoComplete, marker) {
+      const textWatcher = autoComplete.textWatcher;
+      const matchText = textWatcher.callback;
+      textWatcher.callback = function () {
+        const match = matchText.apply(this, arguments);
+        return match &amp;&amp; getSearchText(match.text, marker).trim().length &gt;= MIN_CHARS ? match : null;
+      };
     }
 
     // The entries displayed instead of the work packages are displayed differently, and selecting them (with the
