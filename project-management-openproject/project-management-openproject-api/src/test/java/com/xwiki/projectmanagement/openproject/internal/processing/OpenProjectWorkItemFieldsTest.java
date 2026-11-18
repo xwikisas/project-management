@@ -235,12 +235,15 @@ class OpenProjectWorkItemFieldsTest
     {
         LiveDataQuery.Filter partialKey = new LiveDataQuery.Filter("summary", "contains", "proj-");
         LiveDataQuery.Filter text = new LiveDataQuery.Filter("summary", "contains", "PROJ 42");
+        LiveDataQuery.Filter dashedWord = new LiveDataQuery.Filter("summary", "contains", "e-mail");
+        LiveDataQuery.Filter notKey = new LiveDataQuery.Filter("summary", "contains", "PROJ-4a");
         LiveDataQuery.Filter excludedKey = new LiveDataQuery.Filter("summary", "equals", "PROJ-42");
         LiveDataQuery.Filter severalKeys = new LiveDataQuery.Filter("summary", "contains", "PROJ-42");
         severalKeys.getConstraints().add(new LiveDataQuery.Constraint("PROJ-43", "contains"));
 
         List<LiveDataQuery.Filter> mappedFilters = this.fields.mapFilters(List.of(
-            new LiveDataQuery.Filter("summary", "contains", " PROJ-42 "), partialKey, text, excludedKey, severalKeys),
+            new LiveDataQuery.Filter("summary", "contains", " PROJ-42 "), partialKey, text, dashedWord, notKey,
+            excludedKey, severalKeys),
             this.client);
 
         // A key, or the beginning of one, is searched with the filter of the OpenProject work package pickers, which
@@ -250,10 +253,11 @@ class OpenProjectWorkItemFieldsTest
         assertEquals("typeahead", mappedFilters.get(1).getProperty());
         assertEquals(List.of("**:proj-"), getConstraints(mappedFilters.get(1)));
         // The other searches stay searches of the summary.
-        assertEquals("summary", mappedFilters.get(2).getProperty());
-        assertEquals("summary", mappedFilters.get(3).getProperty());
-        assertEquals("summary", mappedFilters.get(4).getProperty());
-        assertEquals(List.of("contains:PROJ-42", "contains:PROJ-43"), getConstraints(mappedFilters.get(4)));
+        for (int i = 2; i < mappedFilters.size(); i++) {
+            assertEquals("summary", mappedFilters.get(i).getProperty());
+        }
+        assertEquals(List.of("contains:e-mail"), getConstraints(mappedFilters.get(3)));
+        assertEquals(List.of("contains:PROJ-42", "contains:PROJ-43"), getConstraints(mappedFilters.get(6)));
         assertEquals("[{\"typeahead\":{\"operator\":\"**\",\"values\":[\"PROJ-42\"]}}]",
             OpenProjectFilterHandler.convertFilters(mappedFilters.subList(0, 1)));
     }

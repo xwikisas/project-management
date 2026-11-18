@@ -105,8 +105,9 @@ public final class OpenProjectWorkItemFields
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
 
     /**
-     * The OpenProject filter used by its own work package pickers, which matches the work packages whose subject
-     * contains the text, or whose key starts with it on the instances using project-based semantic identifiers.
+     * The OpenProject filter used by its own work package pickers, which matches the work packages whose subject, or
+     * the name of whose project, type or status, contains the text, and, on the instances using project-based
+     * semantic identifiers, the work packages whose key starts with the text.
      */
     private static final String TYPEAHEAD_FILTER = "typeahead";
 
@@ -289,8 +290,9 @@ public final class OpenProjectWorkItemFields
      * A search of the work packages whose summary contains a work package key (e.g. {@code PROJ-42}) is meant to find
      * the work package with this key: the subject filter of OpenProject only matches the subject, so the search is
      * done with the filter of the OpenProject work package pickers, which also matches the keys (by prefix, e.g.
-     * {@code PROJ-4} matches {@code PROJ-42}). On the instances identifying the work packages by their id, it matches
-     * the same work packages as the subject filter, the text containing no space.
+     * {@code PROJ-4} matches {@code PROJ-42}). Besides the work packages whose subject contains the text, this filter
+     * also matches those whose project, type or status name contains it, which is unlikely for a text shaped like a
+     * key.
      */
     private static boolean isWorkPackageKeySearch(LiveDataQuery.Filter filter)
     {
