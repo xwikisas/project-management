@@ -66,6 +66,8 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
 
     private SimpleDateFormat dateFormatter;
 
+    private boolean dayOnly;
+
     /**
      * @param parser used to parse the serialized date value as a list of blocks.
      */
@@ -87,6 +89,23 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         } catch (IllegalArgumentException ignored) {
             dateFormatter = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
         }
+    }
+
+    /**
+     * Creates a displayer of the dates that have no meaningful time, e.g. the due date of a work item, which would
+     * otherwise be displayed at midnight: it displays them without the time fields of the given format, nor of the
+     * {@code format} parameter.
+     *
+     * @param parser used to parse the serialized date value as a list of blocks
+     * @param dateFormat the format of the dates, from which the time fields are removed
+     * @return the displayer
+     * @see #toDayFormat(String)
+     */
+    public static DatePropertyDisplayer forDays(Parser parser, String dateFormat)
+    {
+        DatePropertyDisplayer displayer = new DatePropertyDisplayer(parser, toDayFormat(dateFormat));
+        displayer.dayOnly = true;
+        return displayer;
     }
 
     /**
@@ -119,7 +138,7 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
             char first = dateFormat.charAt(start);
             int end = getTokenEnd(dateFormat, start);
             String token = dateFormat.substring(start, end);
-            if (!Character.isLetter(first)) {
+            if (!isPatternLetter(first)) {
                 separators.append(token);
             } else if (TIME_LETTERS.indexOf(first) >= 0) {
                 separators.setLength(0);
@@ -154,12 +173,21 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
                     return end + 1;
                 }
             }
-        } else if (Character.isLetter(first)) {
+        } else if (isPatternLetter(first)) {
             while (end < format.length() && format.charAt(end) == first) {
                 end++;
             }
         }
         return end;
+    }
+
+    /**
+     * @return whether the given character is reserved as a pattern letter, the other letters (e.g. accented ones)
+     *     being literals
+     */
+    private static boolean isPatternLetter(char character)
+    {
+        return (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z');
     }
 
     @Override
@@ -168,8 +196,10 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         if (property == null) {
             return Collections.emptyList();
         }
-        String formattedDate =
-            property instanceof Date ? format((Date) property, params) : String.valueOf(property);
+        if (!(property instanceof Date)) {
+            return new StringPropertyDisplayer(parser).display(property, params);
+        }
+        String formattedDate = format((Date) property, params);
         try {
             return parser.parse(new StringReader(formattedDate)).getChildren();
         } catch (ParseException e) {
@@ -187,6 +217,9 @@ public class DatePropertyDisplayer implements WorkItemPropertyDisplayer
         if (paramsFormat != null && !paramsFormat.toString().isEmpty()) {
             try {
                 formatter = new SimpleDateFormat(paramsFormat.toString());
+                if (dayOnly) {
+                    formatter = new SimpleDateFormat(toDayFormat(paramsFormat.toString()));
+                }
             } catch (IllegalArgumentException e) {
                 formatter = dateFormatter;
             }

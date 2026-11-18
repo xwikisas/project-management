@@ -170,11 +170,11 @@ class DefaultWorkItemPropertyDisplayerManagerTest
         assertParagraphWord("2026-10-29", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, day, Map.of()));
         assertParagraphWord("2026-10-29 00:00",
             this.manager.displayProperty(WorkItem.KEY_UPDATE_DATE, day, Map.of()));
-        // The format parameter still applies.
+        // The format parameter still applies, without its time fields.
         assertParagraphWord("29/10", this.manager.displayProperty(WorkItem.KEY_DUE_DATE, day,
-            Map.of("format", "dd/MM")));
-        // A value that isn't a date is displayed as it is.
-        assertParagraphWord("next week",
+            Map.of("format", "dd/MM HH:mm")));
+        // A value that isn't a date is displayed as text.
+        assertWord("next week",
             this.manager.displayProperty(WorkItem.KEY_DUE_DATE, "next week", Map.of()));
     }
 
