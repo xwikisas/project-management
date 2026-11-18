@@ -24,14 +24,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
@@ -41,6 +46,7 @@ import org.xwiki.livedata.LiveDataConfiguration;
 import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.livedata.internal.JSONMerge;
 import org.xwiki.localization.ContextualLocalizationManager;
 
@@ -60,6 +66,9 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
     private static final CharSequence PREFIX_ACTION = "action.";
 
     private static final String SUFFIX_HINT = ".hint";
+
+    @Inject
+    private Logger logger;
 
     @Inject
     private ContextualLocalizationManager l10n;
@@ -99,7 +108,40 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         } else {
             mergedConfig = this.jsonMerge.merge(defaultConfig, input);
         }
+        removeUnknownProperties(mergedConfig);
         return translate(mergedConfig);
+    }
+
+    /**
+     * Removes from the query the properties without descriptor (e.g. a typo in the properties parameter of a macro),
+     * since Live Data fails to display when a property of the query has no descriptor. When every property is unknown,
+     * the table has no columns. The removed properties are logged at debug level only, since valid properties are
+     * also unknown when the client can't provide their descriptors (e.g. the custom fields of an OpenProject instance
+     * that the current user can't access).
+     */
+    private void removeUnknownProperties(LiveDataConfiguration config)
+    {
+        LiveDataQuery query = config.getQuery();
+        if (query == null || query.getProperties() == null || query.getProperties().isEmpty()) {
+            return;
+        }
+        Set<String> knownProperties = config.getMeta() == null || config.getMeta().getPropertyDescriptors() == null
+            ? Set.of() : config.getMeta().getPropertyDescriptors().stream().map(LiveDataPropertyDescriptor::getId)
+            .collect(Collectors.toSet());
+        List<String> properties = new ArrayList<>();
+        List<String> unknownProperties = new ArrayList<>();
+        for (String property : query.getProperties()) {
+            if (knownProperties.contains(property)) {
+                properties.add(property);
+            } else {
+                unknownProperties.add(property);
+            }
+        }
+        if (!unknownProperties.isEmpty()) {
+            this.logger.debug("Ignoring the unknown work item properties {} of the Live Data [{}].", unknownProperties,
+                config.getId());
+            query.setProperties(properties);
+        }
     }
 
     private LiveDataConfiguration getDefaultConfiguration()
