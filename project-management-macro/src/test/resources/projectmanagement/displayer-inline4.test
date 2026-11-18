@@ -1,0 +1,11 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Inline displayer test - display a work item that has a key (e.g. a project-based identifier), shown instead of
+.# #<identifier> and linked to its location.
+.#-----------------------------------------------------
+See {{test displayer="inline" sort="identifier:asc"/}}.
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<p>See <span class="wikiexternallink"><a class="text-primary" href="http://xwiki.com/id/3">PROJ-3</a></span> <span class="text-muted work-package-inline-summary">Do that other thing</span>.</p>
