@@ -45,4 +45,10 @@ public class LineChartDisplayer extends AbstractChartJSDisplayer
     {
         return TYPE;
     }
+
+    @Override
+    protected boolean hasValueAxis()
+    {
+        return true;
+    }
 }

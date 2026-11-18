@@ -46,4 +46,10 @@ public class BarChartDisplayer extends AbstractChartJSDisplayer
     {
         return TYPE;
     }
+
+    @Override
+    protected boolean hasValueAxis()
+    {
+        return true;
+    }
 }
