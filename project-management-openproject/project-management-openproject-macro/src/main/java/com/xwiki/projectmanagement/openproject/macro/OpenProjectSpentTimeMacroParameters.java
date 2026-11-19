@@ -84,7 +84,8 @@ public class OpenProjectSpentTimeMacroParameters extends BaseDirectOpenProjectMa
     }
 
     /**
-     * @return the number of past days to include. A value of 0 means no date filter is applied.
+     * @return the number of days before today to include, in addition to today (e.g. 1 for yesterday and today);
+     *     0 means that no date filter is applied
      */
     public int getDays()
     {
