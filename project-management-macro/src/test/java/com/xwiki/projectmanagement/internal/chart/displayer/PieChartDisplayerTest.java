@@ -75,8 +75,11 @@ class PieChartDisplayerTest
 
     private static final String OPTIONS = "options";
 
-    private static final String VALUE_AXIS =
-        "\"scales\":{\"yAxes\":[{\"ticks\":{\"beginAtZero\":true,\"precision\":0}}]}";
+    private static final String Y_AXES = "\"yAxes\":[{\"ticks\":{\"beginAtZero\":true,\"precision\":0}}]";
+
+    private static final String VALUE_AXIS = "\"scales\":{" + Y_AXES + "}";
+
+    private static final String SINGLE_CATEGORY_AXES = "\"scales\":{\"xAxes\":[{\"offset\":true}]," + Y_AXES + "}";
 
     @MockComponent
     private MacroContentParser contentParser;
@@ -122,14 +125,15 @@ class PieChartDisplayerTest
 
         // The legend of a bar chart displays the names of the datasets: a single dataset without name has none.
         MacroBlock chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of(), Map.of()));
-        assertEquals(Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + VALUE_AXIS + "}"),
+        assertEquals(
+            Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + SINGLE_CATEGORY_AXES + "}"),
             chart.getParameters());
         assertEquals("", new ObjectMapper().readTree(chart.getContent()).path("datasets").path(0).path("label")
             .asText(null));
 
         // A named dataset keeps its legend.
         chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of("Mine"), Map.of()));
-        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS + "}"), chart.getParameters());
+        assertEquals(Map.of("type", "bar", OPTIONS, "{" + SINGLE_CATEGORY_AXES + "}"), chart.getParameters());
 
         // The legend of a pie chart displays the slices.
         JsonNode data = getChartData(datasets, List.of(), Map.of());
@@ -154,6 +158,26 @@ class PieChartDisplayerTest
         // A pie chart has no value axis.
         assertEquals(Map.of("type", "pie"),
             getChartMacroBlock(getDisplayer().getChartMacroFromCounts(counts, labels, Map.of())).getParameters());
+    }
+
+    @Test
+    void centresTheSingleCategoryOfTheLineChart() throws Exception
+    {
+        // Chart.js 2 draws the single value of a line chart on the value axis, in the corner of the chart.
+        List<Map<String, Long>> counts = List.of(Map.of(NEW, 2L));
+        List<String> labels = List.of("Mine");
+
+        MacroBlock line = getChartMacroBlock(
+            ((AbstractChartJSDisplayer) this.lineDisplayer).getChartMacroFromCounts(counts, labels, Map.of()));
+        assertEquals(Map.of("type", "line", OPTIONS, "{" + SINGLE_CATEGORY_AXES + "}"), line.getParameters());
+
+        // The work items without value are a category too.
+        Map<String, Long> unsetCounts = new HashMap<>();
+        unsetCounts.put(NEW, 2L);
+        unsetCounts.put(null, 1L);
+        line = getChartMacroBlock(((AbstractChartJSDisplayer) this.lineDisplayer)
+            .getChartMacroFromCounts(List.of(unsetCounts), labels, Map.of()));
+        assertEquals(Map.of("type", "line", OPTIONS, "{" + VALUE_AXIS + "}"), line.getParameters());
     }
 
     @Test

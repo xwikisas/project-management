@@ -195,7 +195,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             WikiPrinter wikiPrinter = new DefaultWikiPrinter();
             Map<String, String> chartParameters = new LinkedHashMap<>();
             chartParameters.put("type", getChartType());
-            Map<String, Object> options = getOptions(counts, labels);
+            Map<String, Object> options = getOptions(counts, labels, chartJSData.getLabels().size());
             if (!options.isEmpty()) {
                 chartParameters.put("options", OPTIONS_MAPPER.writeValueAsString(options));
             }
@@ -206,7 +206,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         }
     }
 
-    private Map<String, Object> getOptions(List<Map<String, Long>> counts, List<String> labels)
+    private Map<String, Object> getOptions(List<Map<String, Long>> counts, List<String> labels, int categoryCount)
     {
         Map<String, Object> options = new LinkedHashMap<>();
         if (isSingleUnlabeledDataset(counts, labels) && isLegendOfDatasets()) {
@@ -220,7 +220,14 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
             Map<String, Object> ticks = new LinkedHashMap<>();
             ticks.put("beginAtZero", true);
             ticks.put("precision", 0);
-            options.put("scales", Map.of("yAxes", List.of(Map.of("ticks", ticks))));
+            Map<String, Object> scales = new LinkedHashMap<>();
+            if (categoryCount == 1) {
+                // A line chart draws its single value on the value axis, as a lone dot in the corner of the chart:
+                // the offset centres it on the category axis, like the bars of a bar chart (offset by default).
+                scales.put("xAxes", List.of(Map.of("offset", true)));
+            }
+            scales.put("yAxes", List.of(Map.of("ticks", ticks)));
+            options.put("scales", scales);
         }
         return options;
     }
