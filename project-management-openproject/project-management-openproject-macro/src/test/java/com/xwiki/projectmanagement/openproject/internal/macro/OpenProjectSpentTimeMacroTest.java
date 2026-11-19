@@ -217,6 +217,19 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void saysInTheSingularWhenOnlyOneTimeEntryIsDisplayed() throws Exception
+    {
+        this.parameters.setLimit(1);
+        when(this.apiClient.getTimeEntries(any(), any(), anyString(), anyString())).thenReturn(
+            new PaginatedResult<>(List.of(entry(date(2026, 3, 9), "PT1H", "Matching", null)), 1, 1, 30));
+        when(this.l10n.getTranslationPlain("openproject.openproject-spent-time.partial.singular", 30))
+            .thenReturn("Only the most recent of 30 time entries");
+
+        assertEquals("Only the most recent of 30 time entries\n" + matchingEntry() + "View time entries\n",
+            text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @Test
     void displaysTheDaysWithoutTheTimeOfTheWikiDateFormat() throws Exception
     {
         when(this.wikiConfigSource.getProperty("dateformat", "dd/MM/yyyy")).thenReturn("dd/MM/yyyy HH:mm");

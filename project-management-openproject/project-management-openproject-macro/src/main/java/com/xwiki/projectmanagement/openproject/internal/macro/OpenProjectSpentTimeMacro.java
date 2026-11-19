@@ -173,8 +173,10 @@ public class OpenProjectSpentTimeMacro
         } else {
             if (totalEntries != null && totalEntries > entries.size()) {
                 // The totals only count the displayed time entries.
-                blocks.add(new ParagraphBlock(List.of(new WordBlock(
-                    translate(TRANSLATION_PREFIX + "partial", entries.size(), totalEntries)))));
+                String partial = entries.size() == 1
+                    ? translate(TRANSLATION_PREFIX + "partial.singular", totalEntries)
+                    : translate(TRANSLATION_PREFIX + "partial", entries.size(), totalEntries);
+                blocks.add(new ParagraphBlock(List.of(new WordBlock(partial))));
             }
 
             double totalHours = entries.stream().mapToDouble(e -> parseHours(e.getHours())).sum();
