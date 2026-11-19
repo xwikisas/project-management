@@ -239,6 +239,24 @@ class ProjectManagementConfigurationResolverTest
         assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)"), describe(result));
     }
 
+    @Test
+    void resolveNamesTheSortedAndFilteredPropertiesWithoutDescriptorAfterTheirId() throws Exception
+    {
+        LiveDataConfiguration input = configuration(Map.of());
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry("identifier.value", true)));
+        input.getQuery().setFilters(List.of(new LiveDataQuery.Filter("status.value", "equals", "New")));
+        when(this.l10n.getTranslationPlain("projectmanagement.property.identifier.value")).thenReturn("ID");
+        when(this.l10n.getTranslationPlain("projectmanagement.property.status.value")).thenReturn("Status");
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // Such a property isn't the property whose translation key it matches: it mustn't be shown as an "ID" sort.
+        assertEquals(List.of("status: Status (null)", "dueDate: Due date (The due date)",
+            "identifier.value: identifier.value (null)", "status.value: status.value (null)"), describe(result));
+        assertEquals("Adding a descriptor to the work item properties [identifier.value, status.value] sorted or "
+            + "filtered in the Live Data [null], which have none.", this.logCapture.getMessage(0));
+    }
+
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
         throws Exception
     {

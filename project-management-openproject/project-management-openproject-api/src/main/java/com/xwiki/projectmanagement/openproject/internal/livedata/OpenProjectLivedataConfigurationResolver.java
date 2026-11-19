@@ -22,9 +22,12 @@ package com.xwiki.projectmanagement.openproject.internal.livedata;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -114,7 +117,7 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             LiveDataConfiguration configuration = stringLiveDataConfigResolver.resolve(defaultConfigJSON);
 
             String instance = getInstance(input);
-            maybeAddFieldProperties(configuration, instance);
+            maybeAddFieldProperties(configuration, input, instance);
             boolean defaultInstanceAsked = isDefaultInstanceAsked(input);
             maybeUpdateSearchURL(configuration, instance, defaultInstanceAsked);
             if (defaultInstanceAsked) {
@@ -131,7 +134,8 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
      * Adds the properties exposing the work package fields of the instance that the generic properties don't cover,
      * such as the target version or the custom fields, since they depend on the instance.
      */
-    private void maybeAddFieldProperties(LiveDataConfiguration configuration, String instance)
+    private void maybeAddFieldProperties(LiveDataConfiguration configuration, LiveDataConfiguration input,
+        String instance)
     {
         if (StringUtils.isBlank(instance) || configuration.getMeta() == null
             || configuration.getMeta().getPropertyDescriptors() == null)
@@ -147,10 +151,38 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
             OpenProjectWorkItemFields fields = this.workPackageFieldsCache.getFields(instance, access);
             configuration.getMeta().getPropertyDescriptors().addAll(
                 WorkPackageFieldDescriptors.getDescriptors(fields, getMultiValueFields(instance, client, fields)));
+            moveTheIgnoredSortEntriesLast(input, fields);
         } catch (ProjectManagementException | UnsupportedOperationException e) {
             this.logger.warn("Failed to retrieve the work package fields of the OpenProject instance [{}]. "
                 + "Root cause: [{}]", instance, ExceptionUtils.getRootCauseMessage(e));
         }
+    }
+
+    /**
+     * Moves the sort entries that are ignored, since OpenProject can't sort on their property (e.g. a typo in the sort
+     * parameter of a macro), after the other ones. Live Data shows the direction of the first sort entry in the header
+     * of its column: it must be the first sort entry that is applied. The ignored sort entries are kept, so that the
+     * sort panel lists them and they can be removed. The input configuration is updated, since its query is merged
+     * over the configuration of the client.
+     */
+    private void moveTheIgnoredSortEntriesLast(LiveDataConfiguration input, OpenProjectWorkItemFields fields)
+    {
+        if (input.getQuery() == null || input.getQuery().getSort() == null) {
+            return;
+        }
+        List<LiveDataQuery.SortEntry> sortEntries = input.getQuery().getSort();
+        Map<Boolean, List<LiveDataQuery.SortEntry>> sortEntriesBySortable = sortEntries.stream()
+            .collect(Collectors.partitioningBy(sortEntry -> fields.isSortable(sortEntry.getProperty())));
+        List<LiveDataQuery.SortEntry> ignoredSortEntries = sortEntriesBySortable.get(false);
+        if (ignoredSortEntries.isEmpty()) {
+            return;
+        }
+        List<LiveDataQuery.SortEntry> reorderedSortEntries = new ArrayList<>(sortEntriesBySortable.get(true));
+        reorderedSortEntries.addAll(ignoredSortEntries);
+        input.getQuery().setSort(reorderedSortEntries);
+        this.logger.debug("Ignoring the sort on the work item properties {} of the Live Data [{}].",
+            ignoredSortEntries.stream().map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()),
+            input.getId());
     }
 
     private Set<String> getMultiValueFields(String instance, OpenProjectApiClient client,

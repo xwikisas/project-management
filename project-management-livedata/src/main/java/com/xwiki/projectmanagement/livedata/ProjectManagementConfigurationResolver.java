@@ -112,8 +112,12 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
             mergedConfig = this.jsonMerge.merge(defaultConfig, input);
         }
         removeUnknownProperties(mergedConfig);
-        addMissingSortAndFilterDescriptors(mergedConfig);
-        return translate(mergedConfig);
+        LiveDataConfiguration translatedConfig = translate(mergedConfig);
+        // The descriptors added to the sorted and filtered properties without one are named after their id,
+        // untranslated, so that a property named like a translation key (e.g. identifier.value) isn't taken for a
+        // known one.
+        addMissingSortAndFilterDescriptors(translatedConfig);
+        return translatedConfig;
     }
 
     /**

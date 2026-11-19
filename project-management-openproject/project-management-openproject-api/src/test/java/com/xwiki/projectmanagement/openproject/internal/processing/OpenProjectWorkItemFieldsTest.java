@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -294,6 +295,17 @@ class OpenProjectWorkItemFieldsTest
         // OpenProject columns of the generic properties and of the sortable fields, are kept.
         assertEquals(List.of("status", "updatedAt", "assignee", "subject", "customField3"),
             getProperties(mappedSortEntries));
+    }
+
+    @Test
+    void isSortable()
+    {
+        // The generic properties and OpenProject columns that can be sorted, as kept by mapSortEntries.
+        assertEquals(List.of(true, true, true, true, false, false, false, false),
+            Stream.of("summary", "updatedAt", "targetVersion", "customField3", "spentTime", "identifier.value",
+                "unknown", null).map(this.fields::isSortable).collect(Collectors.toList()));
+        // The fields of the instance couldn't be retrieved: an unknown property may be a column of the instance.
+        assertTrue(OpenProjectWorkItemFields.empty().isSortable("identifier.value"));
     }
 
     @Test
