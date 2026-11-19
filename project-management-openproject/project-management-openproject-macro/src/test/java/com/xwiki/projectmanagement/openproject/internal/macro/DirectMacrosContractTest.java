@@ -354,7 +354,7 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> macro.apply(this).execute(parameters, "", this.context));
 
-        assertEquals(String.format("The [%s] parameter must be a number greater than or equal to 1, but is [%s].",
+        assertEquals(String.format("The [%s] parameter must be a whole number greater than or equal to 1, but is [%s].",
             parameterName, value), exception.getMessage());
         verifyNoInteractions(this.apiClient);
     }
