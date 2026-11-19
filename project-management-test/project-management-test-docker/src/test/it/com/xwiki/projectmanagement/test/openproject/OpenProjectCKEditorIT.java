@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.junit.jupiter.api.Order;
@@ -59,6 +62,10 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     private static final String MARKER = "!!";
 
     private static final String SUBJECT = "Send invitation to speakers";
+
+    private static final String CKEDITOR_USER = "CKEditorUser";
+
+    private static final String CKEDITOR_USER_PASSWORD = "pass";
 
     @Test
     @Order(1)
@@ -186,6 +193,30 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
     @Test
     @Order(4)
+    void searchWorkPackageWithoutOpenProjectAccount(TestUtils setup, TestReference testReference) throws Exception
+    {
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "");
+        setup.addObject(testReference, "ProjectManagement.Code.RelationClass", "client", "openproject",
+            "clientParams", String.format("{\"instance\":\"%s\"}", CONNECTION_ID));
+        setup.createUser(CKEDITOR_USER, CKEDITOR_USER_PASSWORD, null);
+        String editURL = setup.getURL(testReference, "edit", "editor=wysiwyg");
+        switchUser(setup, CKEDITOR_USER, CKEDITOR_USER_PASSWORD, editURL);
+
+        // The user never connected their OpenProject account: the search tells them to, as the macros do, with a link
+        // that comes back to the page once the account is connected.
+        String link = new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
+            .searchWorkPackageMessage(MARKER + "speakers", "You need to be authenticated to OpenProject in order to "
+                + "view the work packages. Click here to authenticate.");
+        assertThat(link, containsString("/OpenProject/Code/RenewOAuthConnection"));
+        String decodedLink = URLDecoder.decode(link, StandardCharsets.UTF_8);
+        assertThat(decodedLink, containsString("connectionName=" + CONNECTION_ID));
+        assertThat(decodedLink, containsString("redirectUrl=" + new URL(setup.getURL(testReference)).getPath()));
+        new WYSIWYGEditPage().clickCancel();
+    }
+
+    @Test
+    @Order(5)
     void insertMacroWithQuickAction(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -213,7 +244,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     void editProjectMacroTwice(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -230,7 +261,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     void editMacroWithDeprecatedCount(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);

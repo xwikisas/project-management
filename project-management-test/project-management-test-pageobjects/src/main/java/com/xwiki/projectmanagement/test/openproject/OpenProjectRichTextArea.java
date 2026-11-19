@@ -24,6 +24,7 @@ import java.util.List;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.TimeoutException;
+import org.openqa.selenium.WebElement;
 import org.xwiki.ckeditor.test.po.AutocompleteDropdown;
 import org.xwiki.ckeditor.test.po.RichTextAreaElement;
 import org.xwiki.test.ui.po.BaseElement;
@@ -216,6 +217,25 @@ public class OpenProjectRichTextArea extends BaseElement
         dropdown.waitForItemSelected(query, label);
         this.textArea.sendKeys(Keys.ENTER);
         dropdown.waitForItemSubmitted();
+    }
+
+    /**
+     * Type the query of the work package search and wait for the given message to be displayed instead of the work
+     * packages.
+     *
+     * @param query the text to type, starting with the work package search marker
+     * @param message the text of the message expected in the autocomplete dropdown
+     * @return the URL of the link of the message (e.g. to connect an OpenProject account), or {@code null} if it has
+     *     none
+     * @since 1.4.1
+     */
+    public String searchWorkPackageMessage(String query, String message)
+    {
+        this.textArea.sendKeys(query);
+        new AutocompleteDropdown().waitForItemSelected(query, message);
+        List<WebElement> links = getDriver().findElementsWithoutWaiting(
+            By.cssSelector(".cke_autocomplete_opened .cke_autocomplete_selected a[href]"));
+        return links.isEmpty() ? null : links.get(0).getAttribute("href");
     }
 
     /**
