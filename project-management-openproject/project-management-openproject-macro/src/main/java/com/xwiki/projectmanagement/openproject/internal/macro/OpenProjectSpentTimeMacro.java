@@ -135,8 +135,9 @@ public class OpenProjectSpentTimeMacro
     }
 
     /**
-     * XWiki converts the value of a numeric macro parameter that isn't a number to 0 before the macro is executed,
-     * so an invalid value can only be told apart from 0 by its raw value.
+     * XWiki may convert the value of a numeric macro parameter that isn't a number to 0 before the macro is executed
+     * (depending on the context class loader, it can also fail with "Invalid macro parameters"), so an invalid value
+     * can only be told apart from 0 by its raw value.
      *
      * @param context the macro transformation context
      * @param name the name of a macro parameter, whatever its case
