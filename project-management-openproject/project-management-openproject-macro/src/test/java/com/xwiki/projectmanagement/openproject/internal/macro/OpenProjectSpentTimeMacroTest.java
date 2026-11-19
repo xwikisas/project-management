@@ -24,12 +24,17 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Provider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -46,10 +51,12 @@ import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroT
 import static com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils.text;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -214,6 +221,57 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
             + "2026-03-08|||" + hours(2) + "|\n"
             + "-|Alpha / #1 Fix|First|" + hours(2) + "|\n"
             + "View time entries\n", text(this.macro.execute(this.parameters, "", this.context)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, -1 })
+    void rejectsALimitLowerThanOne(int limit)
+    {
+        this.parameters.setLimit(limit);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The [limit] parameter must be a number greater than or equal to 1, but is [" + limit + "].",
+            exception.getMessage());
+        verifyNoInteractions(this.apiClient);
+    }
+
+    @Test
+    void rejectsALimitThatIsNotANumber()
+    {
+        // XWiki converts the value to 0 before executing the macro.
+        this.parameters.setLimit(0);
+        this.context.setCurrentMacroBlock(
+            new MacroBlock("openproject-spent-time", Map.of("Limit", "abc"), false));
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The [limit] parameter must be a number greater than or equal to 1, but is [abc].",
+            exception.getMessage());
+    }
+
+    @Test
+    void rejectsADeprecatedCountThatIsNotANumber()
+    {
+        this.parameters.setLimit(0);
+        this.context.setCurrentMacroBlock(new MacroBlock("openproject-spent-time", Map.of("count", "1.5"), false));
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The [count] parameter must be a number greater than or equal to 1, but is [1.5].",
+            exception.getMessage());
+    }
+
+    @Test
+    void acceptsAValidRawLimit() throws Exception
+    {
+        this.context.setCurrentMacroBlock(new MacroBlock("openproject-spent-time", Map.of("limit", " 10 "), false));
+
+        assertEquals("No time entries found.\nView time entries\n",
+            text(this.macro.execute(this.parameters, "", this.context)));
     }
 
     @Test

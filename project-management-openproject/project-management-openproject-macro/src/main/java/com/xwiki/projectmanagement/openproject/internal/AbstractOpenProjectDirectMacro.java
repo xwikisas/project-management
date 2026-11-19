@@ -112,6 +112,7 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
             return licenseBlock;
         }
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
+        checkParameters(parameters, context);
 
         String instanceToUse = parameters.getInstance();
 
@@ -148,6 +149,19 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         } catch (RenderingException | JobException e) {
             throw new MacroExecutionException("Failed to render the macro asynchronously.", e);
         }
+    }
+
+    /**
+     * Check the values of the macro parameters before anything is requested from OpenProject.
+     *
+     * @param parameters the macro parameters
+     * @param context the macro transformation context
+     * @throws MacroExecutionException if a parameter has an invalid value
+     * @since 1.4.1
+     */
+    protected void checkParameters(P parameters, MacroTransformationContext context) throws MacroExecutionException
+    {
+        // No check by default.
     }
 
     /**
