@@ -114,8 +114,9 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
     }
 
     /**
-     * @return the number of days that should encompass the chart, starting from today. The chart should display
-     *     workpackages from {today - n} to {today}, where {n} is this parameter.
+     * @return the number of days before today to include, in addition to today: the chart displays the work packages
+     *     created from the start of the day {@code today - n} to the end of today, where {@code n} is this parameter
+     *     (e.g. 1 for yesterday and today, 0 for today only)
      */
     public int getDays()
     {

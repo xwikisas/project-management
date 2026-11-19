@@ -53,6 +53,14 @@ class LastDaysPeriodTest
     }
 
     @Test
+    void coversOnlyTodayForZeroDays()
+    {
+        LastDaysPeriod period = new LastDaysPeriod(0, clock("2026-06-15T10:00:00Z", PARIS));
+
+        assertEquals("2026-06-15T00:00:00+02:00/2026-06-15T23:59:59.999999999+02:00", period.toDateTimeInterval());
+    }
+
+    @Test
     void usesTheDaysOfTheTimeZoneOfTheClock()
     {
         // It's already the next day in Paris.

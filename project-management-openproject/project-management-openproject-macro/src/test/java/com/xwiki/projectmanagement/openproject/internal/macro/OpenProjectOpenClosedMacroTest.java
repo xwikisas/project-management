@@ -39,6 +39,7 @@ import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
@@ -59,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -198,6 +200,38 @@ class OpenProjectOpenClosedMacroTest
             () -> this.macro.execute(parameters, "", this.context));
 
         assertEquals("Something went wrong", exception.getMessage());
+    }
+
+    @Test
+    void rejectsNegativeDays()
+    {
+        OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
+        parameters.setInstance("main");
+        parameters.setDays(-1);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(parameters, "", this.context));
+
+        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [-1].",
+            exception.getMessage());
+        verifyNoInteractions(this.projectManagementManager);
+    }
+
+    @Test
+    void rejectsDaysThatAreNotANumber()
+    {
+        OpenProjectOpenClosedMacroParameters parameters = new OpenProjectOpenClosedMacroParameters();
+        parameters.setInstance("main");
+        // XWiki converts the value to 0 before executing the macro, which would chart only today.
+        parameters.setDays(0);
+        this.context.setCurrentMacroBlock(new MacroBlock("openprojectopenclosed", Map.of("days", "abc"), false));
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(parameters, "", this.context));
+
+        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [abc].",
+            exception.getMessage());
+        verifyNoInteractions(this.projectManagementManager);
     }
 
     private static void assertChart(List<Block> chart, List<Block> result)

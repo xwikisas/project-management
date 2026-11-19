@@ -38,6 +38,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
@@ -71,6 +72,10 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     public List<Block> execute(OpenProjectChartMacroParameters parameters, String content,
         MacroTransformationContext context) throws MacroExecutionException
     {
+        if (parameters instanceof OpenProjectOpenClosedMacroParameters) {
+            MacroParameterChecker.checkNumber("days", ((OpenProjectOpenClosedMacroParameters) parameters).getDays(), 0,
+                context);
+        }
         // The chart always compares the open and the closed work packages by creation date: the parameters defining it
         // are forced, whatever the macro call says.
         OpenProjectOpenClosedMacroParameters defaults = new OpenProjectOpenClosedMacroParameters();
