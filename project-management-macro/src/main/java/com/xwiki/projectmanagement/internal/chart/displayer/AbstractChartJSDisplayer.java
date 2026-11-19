@@ -40,6 +40,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
@@ -97,6 +98,11 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     private static final String UNSET = "UNSET";
 
+    /**
+     * The default name of the datasets, also used by the macro editor for the series without name.
+     */
+    private static final String SERIES_TRANSLATION_KEY = "projectmanagement.macro.chart.series";
+
     private static final ObjectMapper OPTIONS_MAPPER = new ObjectMapper();
 
     /**
@@ -112,6 +118,9 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     @Inject
     private MacroContentParser contentParser;
+
+    @Inject
+    private ContextualLocalizationManager localizationManager;
 
     @Override
     public List<Block> execute(List<PaginatedResult<WorkItem>> workItems, String property, List<String> labels,
@@ -274,16 +283,27 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     private static boolean isSingleUnlabeledDataset(List<Map<String, Long>> counts, List<String> labels)
     {
-        return counts.size() == 1 && labels.isEmpty();
+        return counts.size() == 1 && isUnlabeled(labels, 0);
     }
 
-    private static String getDatasetLabel(List<Map<String, Long>> counts, List<String> labels, int index)
+    private static boolean isUnlabeled(List<String> labels, int index)
     {
-        if (labels.size() > index) {
+        return labels.size() <= index || StringUtils.isBlank(labels.get(index));
+    }
+
+    private String getDatasetLabel(List<Map<String, Long>> counts, List<String> labels, int index)
+    {
+        if (!isUnlabeled(labels, index)) {
             return labels.get(index);
         }
-        // A single dataset needs no name: it would only be displayed by the tooltips, before the values.
-        return isSingleUnlabeledDataset(counts, labels) ? "" : "Unlabeled";
+        if (isSingleUnlabeledDataset(counts, labels)) {
+            // A single dataset needs no name: it would only be displayed by the tooltips, before the values.
+            return "";
+        }
+        // The same default name as the one the macro editor displays for the series without name.
+        int number = index + 1;
+        String label = this.localizationManager.getTranslationPlain(SERIES_TRANSLATION_KEY, number);
+        return label != null ? label : "Series " + number;
     }
 
     /**

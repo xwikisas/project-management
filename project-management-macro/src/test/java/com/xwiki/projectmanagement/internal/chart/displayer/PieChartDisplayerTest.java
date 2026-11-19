@@ -31,7 +31,10 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.internal.DefaultContextualLocalizationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
@@ -66,7 +69,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@AllComponents(excludes = DefaultMacroContentParser.class)
+@AllComponents(excludes = { DefaultMacroContentParser.class, DefaultContextualLocalizationManager.class })
 class PieChartDisplayerTest
 {
     private static final String DONE = "Done";
@@ -81,8 +84,13 @@ class PieChartDisplayerTest
 
     private static final String SINGLE_CATEGORY_AXES = "\"scales\":{\"xAxes\":[{\"offset\":true}]," + Y_AXES + "}";
 
+    private static final String SERIES_KEY = "projectmanagement.macro.chart.series";
+
     @MockComponent
     private MacroContentParser contentParser;
+
+    @MockComponent
+    private ContextualLocalizationManager localizationManager;
 
     @Inject
     @Named("pie")
@@ -100,6 +108,13 @@ class PieChartDisplayerTest
     @Named("xwiki/2.1")
     private Parser parser;
 
+    @BeforeEach
+    void setUp()
+    {
+        when(this.localizationManager.getTranslationPlain(SERIES_KEY, 1)).thenReturn("Series 1");
+        when(this.localizationManager.getTranslationPlain(SERIES_KEY, 2)).thenReturn("Series 2");
+    }
+
     @Test
     void countsTheWorkItemsOfEachDatasetByValue() throws Exception
     {
@@ -113,8 +128,26 @@ class PieChartDisplayerTest
         assertEquals(List.of(DONE, NEW, "UNSET"), texts(data.path("labels")));
         assertEquals("Mine", data.path("datasets").path(0).path("label").asText());
         assertEquals(List.of("1", "2", "1"), texts(data.path("datasets").path(0).path("data")));
-        assertEquals("Unlabeled", data.path("datasets").path(1).path("label").asText());
+        assertEquals("Series 2", data.path("datasets").path(1).path("label").asText());
         assertEquals(List.of("1", "0"), texts(data.path("datasets").path(1).path("data")));
+    }
+
+    @Test
+    void namesTheDatasetsWithoutNameLikeTheMacroEditor() throws Exception
+    {
+        List<PaginatedResult<WorkItem>> datasets =
+            List.of(result(workItem(NEW)), result(workItem(DONE)), result(workItem(NEW)));
+        when(this.localizationManager.getTranslationPlain(SERIES_KEY, 3)).thenReturn("Serie 3");
+
+        // An empty name is a missing name, like in the macro editor, which displays the default name as placeholder.
+        JsonNode data = getChartData(datasets, List.of(" ", "Mine"), Map.of());
+
+        assertEquals(List.of("Series 1", "Mine", "Serie 3"), datasetLabels(data));
+
+        // Without translation, the default name is the English one.
+        when(this.localizationManager.getTranslationPlain(SERIES_KEY, 3)).thenReturn(null);
+        data = getChartData(datasets, List.of(), Map.of());
+        assertEquals(List.of("Series 1", "Series 2", "Series 3"), datasetLabels(data));
     }
 
     @Test
@@ -130,6 +163,12 @@ class PieChartDisplayerTest
             chart.getParameters());
         assertEquals("", new ObjectMapper().readTree(chart.getContent()).path("datasets").path(0).path("label")
             .asText(null));
+
+        // An empty name is a missing name.
+        chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of(""), Map.of()));
+        assertEquals(
+            Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + SINGLE_CATEGORY_AXES + "}"),
+            chart.getParameters());
 
         // A named dataset keeps its legend.
         chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of("Mine"), Map.of()));
@@ -388,6 +427,13 @@ class PieChartDisplayerTest
         WorkItem workItem = new WorkItem();
         workItem.setAssignees(List.of(assignees));
         return workItem;
+    }
+
+    private static List<String> datasetLabels(JsonNode data)
+    {
+        List<String> labels = new ArrayList<>();
+        data.path("datasets").forEach(dataset -> labels.add(dataset.path("label").asText()));
+        return labels;
     }
 
     private static List<String> texts(JsonNode array)
