@@ -257,6 +257,31 @@ class ProjectManagementConfigurationResolverTest
             + "filtered in the Live Data [null], which have none.", this.logCapture.getMessage(0));
     }
 
+    @Test
+    void resolveLetsTheClientUpdateTheInputQuery() throws Exception
+    {
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT));
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry(CUSTOM, false),
+            new LiveDataQuery.SortEntry(STATUS, true)));
+        // E.g. the OpenProject client moves the sort entries it can't apply last.
+        LiveDataConfigurationResolver<LiveDataConfiguration> clientResolver = configuration -> {
+            configuration.getQuery().setSort(List.of(configuration.getQuery().getSort().get(1),
+                configuration.getQuery().getSort().get(0)));
+            return configuration(Map.of());
+        };
+        this.componentManager.registerComponent(
+            new DefaultParameterizedType(null, LiveDataConfigurationResolver.class, LiveDataConfiguration.class),
+            CLIENT, clientResolver);
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // The input is merged after the client resolved its configuration from it.
+        assertEquals(List.of(STATUS, CUSTOM), result.getQuery().getSort().stream()
+            .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
+        assertEquals("Adding a descriptor to the work item properties [custom] sorted or filtered in the Live Data "
+            + "[null], which have none.", this.logCapture.getMessage(0));
+    }
+
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
         throws Exception
     {
