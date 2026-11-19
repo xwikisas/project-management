@@ -64,6 +64,14 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 @Singleton
 public class UserTokenChecker
 {
+    /**
+     * The translation key of the default warning displayed to the users who need to connect their OpenProject account
+     * to see the OpenProject data.
+     *
+     * @since 1.4.1
+     */
+    public static final String NOT_AUTHORIZED_HINT = "openproject.oauth.notauthorized.hint";
+
     private static final String CLASS = "class";
 
     private static final String ACCOUNT_REQUIRED = "openproject.oauth.accountrequired";
@@ -129,6 +137,26 @@ public class UserTokenChecker
     public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status, boolean requiresUserAccount,
         MacroTransformationContext context)
     {
+        return getWarningBlock(instance, status, requiresUserAccount, NOT_AUTHORIZED_HINT, context);
+    }
+
+    /**
+     * Same as {@link #getWarningBlock(String, OpenProjectAccessStatus, boolean, MacroTransformationContext)}, with a
+     * warning naming the data that the user can't see when they need to connect their OpenProject account.
+     *
+     * @param instance the identifier of a OpenProject instance, configured in the Admin Section.
+     * @param status how the current user reaches the given instance, when the caller has already resolved it.
+     * @param requiresUserAccount {@code true} when the data to display depends on the OpenProject account of the
+     *     current user
+     * @param notAuthorizedHint the translation key of the warning displayed when the user needs to connect their
+     *     OpenProject account, e.g. {@link #NOT_AUTHORIZED_HINT}
+     * @param context the macro transformation context.
+     * @return a warning block, to display instead of the OpenProject data
+     * @since 1.4.1
+     */
+    public List<Block> getWarningBlock(String instance, OpenProjectAccessStatus status, boolean requiresUserAccount,
+        String notAuthorizedHint, MacroTransformationContext context)
+    {
         if (status == OpenProjectAccessStatus.AUTHENTICATED
             || (status == OpenProjectAccessStatus.ANONYMOUS && !requiresUserAccount))
         {
@@ -148,7 +176,8 @@ public class UserTokenChecker
             // The connection only shows public data, but OpenProject didn't accept the anonymous requests.
             return getMessageBlock(instance, "openproject.oauth.publicdataunavailable", false, context);
         }
-        return getMessageBlock(instance, "openproject.oauth.notauthorized", userAccounts, context);
+        return getMessageBlock(instance, this.l10n.getTranslation(notAuthorizedHint).render(),
+            "openproject.oauth.notauthorized", context.isInline());
     }
 
     /**

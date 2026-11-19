@@ -200,6 +200,21 @@ class UserTokenCheckerTest
     }
 
     @Test
+    void warningWithTheGivenHintWhenNotConnected()
+    {
+        Block timeEntriesHint = new WordBlock("time entries hint");
+        mockTranslation("custom.hint", timeEntriesHint);
+
+        List<Block> result = this.checker.getWarningBlock(CONNECTION_NAME, OpenProjectAccessStatus.NOT_CONNECTED,
+            false, "custom.hint", this.macroContext);
+
+        List<Block> children = result.get(0).getChildren();
+        assertEquals(timeEntriesHint, children.get(0));
+        LinkBlock link = assertInstanceOf(LinkBlock.class, children.get(2));
+        assertEquals(List.of(this.linkLabel), link.getChildren());
+    }
+
+    @Test
     void warningWithoutConnectLinkForGuests()
     {
         when(this.xcontext.getUserReference()).thenReturn(null);
