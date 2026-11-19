@@ -51,6 +51,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectMembersMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.User;
 
@@ -78,6 +79,13 @@ public class OpenProjectProjectMembersMacro
         super("OpenProject - Project Members",
             "Displays the members of a specific project from a configured OpenProject instance, grouped by role.",
             OpenProjectProjectMembersMacroParameters.class);
+    }
+
+    @Override
+    protected void checkParameters(OpenProjectProjectMembersMacroParameters parameters,
+        MacroTransformationContext context) throws MacroExecutionException
+    {
+        MacroParameterChecker.checkLimit(parameters.getLimit(), context);
     }
 
     @Override

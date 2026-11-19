@@ -44,6 +44,7 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -69,6 +70,13 @@ public class OpenProjectProjectsMacro extends AbstractOpenProjectDirectMacro<Ope
             "List the latest projects from a configured OpenProject instance, based on user's OpenProject instance "
                 + "rights.",
             OpenProjectProjectsMacroParameters.class);
+    }
+
+    @Override
+    protected void checkParameters(OpenProjectProjectsMacroParameters parameters, MacroTransformationContext context)
+        throws MacroExecutionException
+    {
+        MacroParameterChecker.checkLimit(parameters.getLimit(), context);
     }
 
     @Override

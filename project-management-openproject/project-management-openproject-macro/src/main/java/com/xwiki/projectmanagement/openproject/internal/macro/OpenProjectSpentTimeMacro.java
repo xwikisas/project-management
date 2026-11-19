@@ -41,7 +41,6 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
-import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
@@ -60,6 +59,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
@@ -85,10 +85,6 @@ public class OpenProjectSpentTimeMacro
     private static final String TRANSLATION_PREFIX = "openproject.openproject-spent-time.";
 
     private static final String EMPTY_CELL_PLACEHOLDER = "-";
-
-    private static final String LIMIT_PARAMETER = "limit";
-
-    private static final String COUNT_PARAMETER = "count";
 
     private static final String DAYS_PARAMETER = "days";
 
@@ -119,51 +115,8 @@ public class OpenProjectSpentTimeMacro
     protected void checkParameters(OpenProjectSpentTimeMacroParameters parameters,
         MacroTransformationContext context) throws MacroExecutionException
     {
-        // The limit is taken from the deprecated count parameter when it isn't set.
-        String limitParameter =
-            getRawParameter(context, LIMIT_PARAMETER) == null && getRawParameter(context, COUNT_PARAMETER) != null
-                ? COUNT_PARAMETER : LIMIT_PARAMETER;
-        checkNumber(limitParameter, parameters.getLimit(), 1, context);
-        checkNumber(DAYS_PARAMETER, parameters.getDays(), 0, context);
-    }
-
-    private void checkNumber(String parameterName, int value, int minimum, MacroTransformationContext context)
-        throws MacroExecutionException
-    {
-        String rawValue = getRawParameter(context, parameterName);
-        if (value < minimum || (rawValue != null && !isInteger(rawValue))) {
-            throw new MacroExecutionException(String.format("The [%s] parameter must be a number greater than or"
-                + " equal to %d, but is [%s].", parameterName, minimum, rawValue != null ? rawValue : value));
-        }
-    }
-
-    /**
-     * XWiki may convert the value of a numeric macro parameter that isn't a number to 0 before the macro is executed
-     * (depending on the context class loader, it can also fail with "Invalid macro parameters"), so an invalid value
-     * can only be told apart from 0 by its raw value.
-     *
-     * @param context the macro transformation context
-     * @param name the name of a macro parameter, whatever its case
-     * @return the value of the parameter as written in the macro call, or {@code null} when it isn't set
-     */
-    private static String getRawParameter(MacroTransformationContext context, String name)
-    {
-        MacroBlock macroBlock = context.getCurrentMacroBlock();
-        if (macroBlock == null) {
-            return null;
-        }
-        return macroBlock.getParameters().entrySet().stream().filter(entry -> name.equalsIgnoreCase(entry.getKey()))
-            .map(Map.Entry::getValue).findFirst().orElse(null);
-    }
-
-    private static boolean isInteger(String value)
-    {
-        try {
-            Integer.parseInt(value.trim());
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
+        MacroParameterChecker.checkLimit(parameters.getLimit(), context);
+        MacroParameterChecker.checkNumber(DAYS_PARAMETER, parameters.getDays(), 0, context);
     }
 
     @Override
