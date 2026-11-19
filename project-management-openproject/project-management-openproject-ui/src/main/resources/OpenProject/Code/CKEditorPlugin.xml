@@ -197,6 +197,10 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
   const DEFAULT_MARKER = '#';
   // The minimum number of characters to type after the marker for the work packages to be searched.
   const MIN_CHARS = 3;
+  // A text that can be the beginning of a work package key (e.g. XWIKI-123), see OpenProjectWorkItemFields: a bare
+  // identifier, and an identifier followed by a dash and digits.
+  const IDENTIFIER = /^[A-Za-z][A-Za-z0-9_]*$/;
+  const KEY_BEGINNING = /^[A-Za-z][A-Za-z0-9_]*(-\d*)?$/;
   // The text to search, typed after the marker, with the non-breaking spaces replaced.
   const getSearchText = function (query, marker) {
     return query.substring(marker.length).replaceAll('\u00A0', ' ');
@@ -343,23 +347,95 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
     function maybeEnableOpenProjectPlugin(editor) {
       return Promise.all([waitForEditorReady(editor), getMarker()]).then(([editor, marker]) =&gt; {
         const autoComplete = new ckeditor.plugins.AdvancedAutoComplete(editor, getOpenProjectPluginCfg(marker));
-        requireMinChars(autoComplete, marker);
+        controlSearch(autoComplete, marker);
         supportHintItems(autoComplete);
         return editor;
       });
     }
 
-    // AdvancedAutoComplete ignores the minChars option: it matches the marker followed by 0 to 30 characters, so the
-    // work packages would be searched as soon as the marker is typed. The text typed after the marker isn't matched
-    // until it has MIN_CHARS characters, so that the autocomplete panel isn't opened, or is closed, and nothing is
-    // searched. The matching of AdvancedAutoComplete is kept otherwise, since it depends on the XWiki version (e.g.
-    // whether the marker has to follow a space).
-    function requireMinChars(autoComplete, marker) {
+    // Control when the work packages are searched, through the text watcher of the autocomplete, which matches the text
+    // typed after the marker, and its model, which searches the matched text:
+    // * AdvancedAutoComplete ignores the minChars option: it matches the marker followed by 0 to 30 characters, so the
+    //   work packages would be searched as soon as the marker is typed. The text typed after the marker isn't matched
+    //   until it has MIN_CHARS characters, so that the autocomplete panel isn't opened, or is closed, and nothing is
+    //   searched. The matching of AdvancedAutoComplete is kept otherwise, since it depends on the XWiki version (e.g.
+    //   whether the marker has to follow a space).
+    // * Once a search returned no work package, the text that extends its query isn't matched anymore, since the search
+    //   narrows as the query gets longer, so it can't match either (e.g. when the marker is followed by a sentence).
+    //   Except for a query that can still become a work package key (e.g. XWI, then XWIKI-123), which is searched in
+    //   the keys too, see isStoppedBy.
+    // * Escape stops the search, as long as the text is typed after the same marker.
+    // The search is stopped for one occurrence of the marker, identified by its position. It's forgotten when the text
+    // before the caret no longer ends with this marker followed by text (e.g. the marker is deleted, or the caret is
+    // moved elsewhere), so that typing the marker again searches again.
+    function controlSearch(autoComplete, marker) {
+      // The search stopped after a marker: its position, the beginning of the text typed after it whose search is
+      // stopped (empty when the search is stopped whatever the text), and the entries to display instead of searching
+      // (none when the autocomplete panel is closed).
+      let stoppedSearch = null;
+      const isAt = function (search, range) {
+        return search?.node === range.startContainer.$ &amp;&amp; search.offset === range.startOffset;
+      };
+      const isStoppedBy = function (search, text) {
+        // A text shaped like a work package key is searched in the keys, which a text without dash isn't, so the
+        // search of the beginning of a key (e.g. XWI for XWIKI-123) can return nothing while the key matches.
+        return search != null &amp;&amp; text.startsWith(search.text)
+          &amp;&amp; !(text !== search.text &amp;&amp; IDENTIFIER.test(search.text) &amp;&amp; KEY_BEGINNING.test(text));
+      };
+      const stopSearch = function (range, text, items) {
+        // A stopped search isn't replaced by one that it already stops (e.g. the late response of a search done before
+        // Escape was pressed).
+        if (!isAt(stoppedSearch, range) || !isStoppedBy(stoppedSearch, text)) {
+          stoppedSearch = {node: range.startContainer.$, offset: range.startOffset, text, items};
+        }
+      };
+
       const textWatcher = autoComplete.textWatcher;
       const matchText = textWatcher.callback;
       textWatcher.callback = function () {
         const match = matchText.apply(this, arguments);
-        return match &amp;&amp; getSearchText(match.text, marker).trim().length &gt;= MIN_CHARS ? match : null;
+        if (!match || !isAt(stoppedSearch, match.range)) {
+          // The marker of the stopped search was deleted, or the text is typed after another marker.
+          stoppedSearch = null;
+        }
+        const text = match ? getSearchText(match.text, marker) : '';
+        if (text.trim().length &lt; MIN_CHARS || (isStoppedBy(stoppedSearch, text) &amp;&amp; !stoppedSearch.items.length)) {
+          return null;
+        }
+        return match;
+      };
+
+      const model = autoComplete.model;
+      const dataCallback = model.dataCallback;
+      model.dataCallback = function (options, callback) {
+        const text = getSearchText(options.query, marker);
+        if (isStoppedBy(stoppedSearch, text)) {
+          // Display the entries of the stopped search again, without searching.
+          return callback(stoppedSearch.items);
+        }
+        // The marker position is taken before the search, since the user can keep typing while it's running.
+        const range = options.range;
+        const position = range &amp;&amp; {startContainer: range.startContainer, startOffset: range.startOffset};
+        return dataCallback.call(this, options, function (items) {
+          if (position &amp;&amp; Array.isArray(items) &amp;&amp; !items.length) {
+            stopSearch(position, text, []);
+          }
+          return callback.apply(this, arguments);
+        });
+      };
+
+      // The autocomplete only handles Escape when its panel is opened, and matches the text again at the next key, so
+      // the work packages would be searched again.
+      const onKeyDown = autoComplete.onKeyDown;
+      autoComplete.onKeyDown = function (event) {
+        if (event.data.getKey() === 27) {
+          const range = this.editor.getSelection()?.getRanges()[0];
+          const match = range &amp;&amp; matchText.call(textWatcher, range);
+          if (match) {
+            stopSearch(match.range, '', []);
+          }
+        }
+        return onKeyDown.apply(this, arguments);
       };
     }
 

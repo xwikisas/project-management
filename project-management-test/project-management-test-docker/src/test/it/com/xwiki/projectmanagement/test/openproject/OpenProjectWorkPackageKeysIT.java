@@ -164,8 +164,23 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         // The work package is found from its key, which its subject doesn't contain.
         setup.gotoPage(testReference, "edit", "editor=wysiwyg");
         WYSIWYGEditPage editPage = new WYSIWYGEditPage();
-        new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea())
-            .insertWorkPackage("#" + getKey(workPackage), workPackage.get("subject").asText());
+        OpenProjectRichTextArea textArea =
+            new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea());
+        String key = getKey(workPackage);
+        String subject = workPackage.get("subject").asText();
+        String projectKey = key.substring(0, key.indexOf('-'));
+        if (projectKey.length() >= 3) {
+            // The key is searched even after the search of its beginning without dash (e.g. XWI for XWIKI-123) found
+            // nothing, since such a text is only searched in the subjects. The keys of the demo projects can be too
+            // short to type such a beginning (the search starts from 3 characters).
+            textArea.recordWorkPackageSearches();
+            textArea.type("#" + projectKey);
+            textArea.waitForWorkPackageSearch(projectKey);
+            textArea.searchWorkPackage(key.substring(projectKey.length()), "#" + key, subject);
+            textArea.insertSelectedWorkPackage();
+        } else {
+            textArea.insertWorkPackage("#" + key, subject);
+        }
         editPage.clickSaveAndView();
 
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
