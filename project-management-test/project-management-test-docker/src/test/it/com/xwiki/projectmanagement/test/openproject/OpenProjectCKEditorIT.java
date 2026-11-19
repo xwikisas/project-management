@@ -211,7 +211,9 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         assertThat(link, containsString("/OpenProject/Code/RenewOAuthConnection"));
         String decodedLink = URLDecoder.decode(link, StandardCharsets.UTF_8);
         assertThat(decodedLink, containsString("connectionName=" + CONNECTION_ID));
-        assertThat(decodedLink, containsString("redirectUrl=" + new URL(setup.getURL(testReference)).getPath()));
+        // XWiki writes the URL of a space home page without its final "WebHome".
+        String pagePath = new URL(setup.getURL(testReference)).getPath().replaceFirst("WebHome$", "");
+        assertThat(decodedLink, containsString("redirectUrl=" + pagePath));
         new WYSIWYGEditPage().clickCancel();
     }
 
