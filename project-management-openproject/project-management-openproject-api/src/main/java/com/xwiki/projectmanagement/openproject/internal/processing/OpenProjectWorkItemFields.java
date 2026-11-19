@@ -356,18 +356,34 @@ public final class OpenProjectWorkItemFields
         List<LiveDataQuery.SortEntry> mappedSortEntries = new ArrayList<>();
         for (LiveDataQuery.SortEntry sortEntry : sortEntries) {
             WorkPackageField field = this.fields.get(sortEntry.getProperty());
-            if (field == null) {
-                if (isSortableColumn(sortEntry.getProperty())) {
-                    mappedSortEntries.add(sortEntry);
-                } else {
-                    LOGGER.debug("Ignoring the sort on the unknown work item property [{}].",
-                        sortEntry.getProperty());
-                }
-            } else if (field.isSortable()) {
+            if (!isSortable(sortEntry.getProperty())) {
+                LOGGER.debug("Ignoring the sort on the work item property [{}], which can't be sorted.",
+                    sortEntry.getProperty());
+            } else if (field == null) {
+                mappedSortEntries.add(sortEntry);
+            } else {
                 mappedSortEntries.add(new LiveDataQuery.SortEntry(field.getKey(), sortEntry.isDescending()));
             }
         }
         return mappedSortEntries;
+    }
+
+    /**
+     * Tells whether the work items can be sorted on a property, i.e. whether {@link #mapSortEntries(List)} keeps the
+     * sort entries on it.
+     *
+     * @param property a work item property, or an OpenProject column
+     * @return {@code true} if OpenProject can sort on the property, or if this can't be known, since the fields of the
+     *     instance couldn't be retrieved
+     * @since 1.4.1
+     */
+    public boolean isSortable(String property)
+    {
+        if (property == null) {
+            return false;
+        }
+        WorkPackageField field = this.fields.get(property);
+        return field == null ? isSortableColumn(property) : field.isSortable();
     }
 
     /**

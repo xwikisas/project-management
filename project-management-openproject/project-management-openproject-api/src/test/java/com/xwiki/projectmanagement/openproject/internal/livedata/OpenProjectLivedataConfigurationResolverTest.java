@@ -140,6 +140,24 @@ class OpenProjectLivedataConfigurationResolverTest
     }
 
     @Test
+    void resolveMovesTheIgnoredSortEntriesLast() throws Exception
+    {
+        mockTargetVersionsField();
+        LiveDataConfiguration input = getInput(INSTANCE);
+        input.setId("myLiveData");
+        input.getQuery().setSort(List.of(new LiveDataQuery.SortEntry("foo", false),
+            new LiveDataQuery.SortEntry("updateDate", true), new LiveDataQuery.SortEntry("targetVersion", false),
+            new LiveDataQuery.SortEntry("summary", false)));
+
+        this.resolver.resolve(input);
+
+        // Live Data shows the direction of the first sort entry in the header of its column: the sort entries that
+        // OpenProject can't apply (an unknown property, a field that can't be sorted) come after the applied ones.
+        assertEquals(List.of("updateDate", "summary", "foo", "targetVersion"), input.getQuery().getSort().stream()
+            .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
+    }
+
+    @Test
     void resolveWithoutInstanceUsesTheDefaultConnectionWhenAsked() throws Exception
     {
         // The filters of a preset are edited without a connection: they get the suggestions of the default one.
@@ -279,10 +297,16 @@ class OpenProjectLivedataConfigurationResolverTest
     void resolveWhenTheFieldsCantBeRetrieved() throws Exception
     {
         when(this.client.getWorkPackageFields()).thenThrow(new ProjectManagementException("Forbidden"));
+        LiveDataConfiguration input = getInput(INSTANCE);
+        List<LiveDataQuery.SortEntry> sort =
+            List.of(new LiveDataQuery.SortEntry("foo", false), new LiveDataQuery.SortEntry("updateDate", true));
+        input.getQuery().setSort(sort);
 
-        LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
+        LiveDataConfiguration configuration = this.resolver.resolve(input);
 
         assertEquals(0, configuration.getMeta().getPropertyDescriptors().size());
+        // The unknown property may be a field of the instance: the sort is left as it is.
+        assertEquals(sort, input.getQuery().getSort());
         assertEquals("Failed to retrieve the work package fields of the OpenProject instance [myInstance]. "
             + "Root cause: [ProjectManagementException: Forbidden]", this.logCapture.getMessage(0));
     }
