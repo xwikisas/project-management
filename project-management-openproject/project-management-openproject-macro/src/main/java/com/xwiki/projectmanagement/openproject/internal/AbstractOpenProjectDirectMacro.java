@@ -180,12 +180,12 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
 
     /**
      * @return the translation key of the warning displayed instead of the macro output when the current user needs to
-     *     connect their OpenProject account; by default, a warning about work packages
+     *     connect their OpenProject account; by default, a warning that doesn't name the OpenProject data
      * @since 1.4.1
      */
     protected String getNotAuthorizedHint()
     {
-        return UserTokenChecker.NOT_AUTHORIZED_HINT;
+        return "openproject.oauth.notauthorized.content.hint";
     }
 
     /**

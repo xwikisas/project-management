@@ -120,7 +120,7 @@ class AbstractOpenProjectDirectMacroTest
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
         List<Block> warningBlock = List.of(new WordBlock("warning"));
         when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.NOT_CONNECTED, false,
-            UserTokenChecker.NOT_AUTHORIZED_HINT, this.context))
+            "openproject.oauth.notauthorized.content.hint", this.context))
             .thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
@@ -135,7 +135,7 @@ class AbstractOpenProjectDirectMacroTest
     {
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
         when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.ANONYMOUS, false,
-            UserTokenChecker.NOT_AUTHORIZED_HINT, this.context))
+            "openproject.oauth.notauthorized.content.hint", this.context))
             .thenReturn(List.of());
         OpenProjectMacroTestUtils.executeSynchronously(this.asyncExecutor);
         when(this.apiClient.getProjects(null, 5, "")).thenReturn(new PaginatedResult<>(List.of(), 1, 5, 0));
