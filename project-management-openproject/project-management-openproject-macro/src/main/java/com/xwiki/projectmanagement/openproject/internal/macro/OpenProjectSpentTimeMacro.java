@@ -154,6 +154,12 @@ public class OpenProjectSpentTimeMacro
                 Collections.emptyMap()));
     }
 
+    @Override
+    protected String getNotAuthorizedHint()
+    {
+        return TRANSLATION_PREFIX + "notauthorized.hint";
+    }
+
     private String buildFilters(String project, int days)
     {
         boolean hasProject = project != null;

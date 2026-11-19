@@ -34,6 +34,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -43,6 +44,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSpentTimeMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 
@@ -407,6 +410,17 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     {
         // OpenProject usually hides the time entries from anonymous users, without failing.
         List<Block> warning = useAnonymousAccess(OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+
+        assertSame(warning, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void asksUsersToAuthenticateToViewTheTimeEntries() throws Exception
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
+        List<Block> warning = List.of(new WordBlock("authenticate"));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.NOT_CONNECTED, false,
+            "openproject.openproject-spent-time.notauthorized.hint", this.context)).thenReturn(warning);
 
         assertSame(warning, this.macro.execute(this.parameters, "", this.context));
     }

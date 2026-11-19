@@ -119,7 +119,8 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
         OpenProjectAccessResult access = openProjectAccess.resolve(instanceToUse);
         // The public data is displayed to the users who didn't connect their OpenProject account: the macros whose
         // data OpenProject hides from anonymous users ask them to connect it (see getEmptyAnonymousResultWarning).
-        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), false, context);
+        List<Block> warningBlock =
+            userTokenChecker.getWarningBlock(instanceToUse, access.getStatus(), false, getNotAuthorizedHint(), context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
@@ -175,6 +176,16 @@ public abstract class AbstractOpenProjectDirectMacro<P extends OpenProjectInstan
     protected String getMissingParameterHint(P parameters)
     {
         return null;
+    }
+
+    /**
+     * @return the translation key of the warning displayed instead of the macro output when the current user needs to
+     *     connect their OpenProject account; by default, a warning that doesn't name the OpenProject data
+     * @since 1.4.1
+     */
+    protected String getNotAuthorizedHint()
+    {
+        return "openproject.oauth.notauthorized.content.hint";
     }
 
     /**
