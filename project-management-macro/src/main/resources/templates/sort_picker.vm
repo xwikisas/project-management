@@ -30,16 +30,31 @@
   #set ($translationPrefix = "$!config.getQuery().getSource().getParameters().get('translationPrefix')")
   #set ($ascTranslation = $services.localization.render("projectmanagement.macro.sort.asc"))
   #set ($descTranslation = $services.localization.render("projectmanagement.macro.sort.desc"))
+  ## Only the properties the work items can be sorted on are proposed, as Live Data decides: from the sortable flag of
+  ## the property, or else from the one of its type.
+  #set ($sortableTypes = [])
+  #foreach ($propertyType in $config.getMeta().getPropertyTypes())
+    #if ($propertyType.sortable)
+      #set ($discard = $sortableTypes.add($propertyType.id))
+    #end
+  #end
   #set ($options = [])
   #foreach ($propertyDescriptor in $config.getMeta().getPropertyDescriptors())
-    #set ($discard = $options.add({
-      'name': "${propertyDescriptor.name} - ${ascTranslation}",
-      'value': "${propertyDescriptor.id}:asc"
-    }))
-    #set ($discard = $options.add({
-      'name': "${propertyDescriptor.name} - ${descTranslation}",
-      'value': "${propertyDescriptor.id}:desc"
-    }))
+    #if ("$!propertyDescriptor.sortable" == '')
+      #set ($sortable = $sortableTypes.contains($propertyDescriptor.type))
+    #else
+      #set ($sortable = $propertyDescriptor.sortable)
+    #end
+    #if ($sortable)
+      #set ($discard = $options.add({
+        'name': "${propertyDescriptor.name} - ${ascTranslation}",
+        'value': "${propertyDescriptor.id}:asc"
+      }))
+      #set ($discard = $options.add({
+        'name': "${propertyDescriptor.name} - ${descTranslation}",
+        'value': "${propertyDescriptor.id}:desc"
+      }))
+    #end
   #end
   #set ($parameters = {
     'multiple': 'multiple',
