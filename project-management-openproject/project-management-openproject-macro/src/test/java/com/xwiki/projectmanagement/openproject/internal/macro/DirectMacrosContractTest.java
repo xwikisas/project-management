@@ -24,6 +24,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -66,8 +68,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * The rules that all the macros extending {@link AbstractOpenProjectDirectMacro} follow for their project parameter
- * and for the errors of the OpenProject API.
+ * The rules that all the macros extending {@link AbstractOpenProjectDirectMacro} follow for their project parameter,
+ * their limit and the errors of the OpenProject API.
  *
  * @version $Id$
  */
@@ -301,6 +303,59 @@ class DirectMacrosContractTest extends AbstractDirectMacroTest
 
         assertEquals("The project selected on the OpenProject dashboard couldn't be resolved. Select a project "
             + "explicitly when the macro is not on the dashboard.", exception.getMessage());
+        verifyNoInteractions(this.apiClient);
+    }
+
+    static Stream<Arguments> invalidLimits()
+    {
+        // The limit once converted by XWiki, the parameter as written in the macro call (if any), and the parameter
+        // and the value named by the error.
+        String limit = "limit";
+        Object[][] invalidLimits = {
+            { 0, null, null, limit, "0" },
+            { -1, null, null, limit, "-1" },
+            // XWiki converts a value that isn't a number to 0 before executing the macro.
+            { 0, "Limit", "abc", limit, "abc" },
+            { 0, "count", "1.5", "count", "1.5" }
+        };
+        return Stream.of(invalidLimits).flatMap(invalidLimit -> {
+            int value = (int) invalidLimit[0];
+            Object[] others = { invalidLimit[1], invalidLimit[2], invalidLimit[3], invalidLimit[4] };
+            OpenProjectNewsMacroParameters news = new OpenProjectNewsMacroParameters();
+            news.setLimit(value);
+            OpenProjectProjectsMacroParameters projects = new OpenProjectProjectsMacroParameters();
+            projects.setLimit(value);
+            OpenProjectSubprojectsMacroParameters subprojects = new OpenProjectSubprojectsMacroParameters();
+            subprojects.setLimit(value);
+            OpenProjectProjectMembersMacroParameters members = new OpenProjectProjectMembersMacroParameters();
+            members.setLimit(value);
+            OpenProjectSpentTimeMacroParameters spentTime = new OpenProjectSpentTimeMacroParameters();
+            spentTime.setLimit(value);
+            String suffix = String.format(" (%s=%s)", invalidLimit[3], invalidLimit[4]);
+            return Stream.of(
+                macro("news" + suffix, test -> test.newsMacro, news, others),
+                macro("projects" + suffix, test -> test.projectsMacro, projects, others),
+                macro("subprojects" + suffix, test -> test.subprojectsMacro, withProject(subprojects, "5"), others),
+                macro("members" + suffix, test -> test.membersMacro, withProject(members, "12"), others),
+                macro("spent time" + suffix, test -> test.spentTimeMacro, spentTime, others));
+        });
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidLimits")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    void failsWhenTheLimitIsInvalid(Function<DirectMacrosContractTest, AbstractOpenProjectDirectMacro> macro,
+        OpenProjectInstanceHolder parameters, String rawName, String rawValue, String parameterName, String value)
+    {
+        if (rawName != null) {
+            this.context.setCurrentMacroBlock(new MacroBlock("macro", Map.of(rawName, rawValue), false));
+        }
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> macro.apply(this).execute(parameters, "", this.context));
+
+        assertEquals(String.format("The [%s] parameter must be a number greater than or equal to 1, but is [%s].",
+            parameterName, value), exception.getMessage());
         verifyNoInteractions(this.apiClient);
     }
 }

@@ -48,6 +48,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectNewsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.News;
 
@@ -78,6 +79,13 @@ public class OpenProjectNewsMacro extends AbstractOpenProjectDirectMacro<OpenPro
         super("OpenProject - Project News",
             "Retrieves and displays the latest news from a specific project on a configured OpenProject instance.",
             OpenProjectNewsMacroParameters.class);
+    }
+
+    @Override
+    protected void checkParameters(OpenProjectNewsMacroParameters parameters, MacroTransformationContext context)
+        throws MacroExecutionException
+    {
+        MacroParameterChecker.checkLimit(parameters.getLimit(), context);
     }
 
     @Override

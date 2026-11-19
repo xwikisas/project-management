@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.AbstractOpenProjectDirectMacro;
+import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectSubprojectsMacroParameters;
 import com.xwiki.projectmanagement.openproject.model.Project;
 
@@ -75,6 +76,13 @@ public class OpenProjectSubprojectsMacro extends AbstractOpenProjectDirectMacro<
         super("OpenProject - Subprojects",
             "Displays the subprojects of a specific project from a configured OpenProject instance.",
             OpenProjectSubprojectsMacroParameters.class);
+    }
+
+    @Override
+    protected void checkParameters(OpenProjectSubprojectsMacroParameters parameters, MacroTransformationContext context)
+        throws MacroExecutionException
+    {
+        MacroParameterChecker.checkLimit(parameters.getLimit(), context);
     }
 
     @Override
