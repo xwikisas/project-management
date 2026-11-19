@@ -266,6 +266,45 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
     }
 
     @Test
+    void rejectsNegativeDays()
+    {
+        this.parameters.setDays(-1);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [-1].",
+            exception.getMessage());
+        verifyNoInteractions(this.apiClient);
+    }
+
+    @Test
+    void rejectsDaysThatAreNotANumber()
+    {
+        // XWiki converts the value to 0 before executing the macro, which would display all the entries.
+        this.parameters.setDays(0);
+        this.context.setCurrentMacroBlock(new MacroBlock("openproject-spent-time", Map.of("DAYS", "abc"), false));
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [abc].",
+            exception.getMessage());
+        verifyNoInteractions(this.apiClient);
+    }
+
+    @Test
+    void coversTheGivenNumberOfDaysBeforeTodayAndToday() throws Exception
+    {
+        // Today is 2026-03-10 in Paris: 1 day before today is 2026-03-09.
+        this.parameters.setDays(1);
+        this.context.setCurrentMacroBlock(new MacroBlock("openproject-spent-time", Map.of("days", "1"), false));
+
+        assertEquals(matchingEntry() + "View time entries\n",
+            executeWithFilters("[" + spentOn("2026-03-09", "2026-03-10") + "]"));
+    }
+
+    @Test
     void acceptsAValidRawLimit() throws Exception
     {
         this.context.setCurrentMacroBlock(new MacroBlock("openproject-spent-time", Map.of("limit", " 10 "), false));

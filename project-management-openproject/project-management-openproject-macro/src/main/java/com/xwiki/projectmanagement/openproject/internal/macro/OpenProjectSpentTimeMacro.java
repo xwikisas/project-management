@@ -90,6 +90,8 @@ public class OpenProjectSpentTimeMacro
 
     private static final String COUNT_PARAMETER = "count";
 
+    private static final String DAYS_PARAMETER = "days";
+
     /**
      * The most recent days first, so that the limit drops the time entries of the oldest days, and the time entries of
      * the same day in a stable order.
@@ -122,6 +124,7 @@ public class OpenProjectSpentTimeMacro
             getRawParameter(context, LIMIT_PARAMETER) == null && getRawParameter(context, COUNT_PARAMETER) != null
                 ? COUNT_PARAMETER : LIMIT_PARAMETER;
         checkNumber(limitParameter, parameters.getLimit(), 1, context);
+        checkNumber(DAYS_PARAMETER, parameters.getDays(), 0, context);
     }
 
     private void checkNumber(String parameterName, int value, int minimum, MacroTransformationContext context)
