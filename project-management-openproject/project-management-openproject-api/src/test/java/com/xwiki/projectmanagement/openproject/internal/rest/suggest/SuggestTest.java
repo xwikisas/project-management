@@ -48,9 +48,11 @@ import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
+import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -367,7 +369,10 @@ class SuggestTest
     @Test
     void getSuggestionsForProjectSelectedByIdentifier() throws ProjectManagementException
     {
-        when(this.openProjectApiClient.getProject("demo-project")).thenReturn(createProject(3, "demo-project", "Demo"));
+        Project demo = createProject(3, "demo-project", "Demo");
+        when(this.openProjectApiClient.getProject("demo-project")).thenReturn(demo);
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("demo-project")))
+            .thenReturn(new PaginatedResult<>(List.of(demo), 0, 1, 1));
 
         // The picker retrieves the label of its value by searching the value.
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "demo-project", PAGE_SIZE,
@@ -378,11 +383,37 @@ class SuggestTest
             response.getEntity());
     }
 
+    @ParameterizedTest
+    @MethodSource("selectedProjects")
+    void getSuggestionsForProjectsWhenSearchingWithASelectedProject(String selectedItem)
+        throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProject(selectedItem)).thenReturn(createProject(3, "demo-project", "Demo"));
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("s")))
+            .thenReturn(new PaginatedResult<>(
+                List.of(createProject(4, "scrum", "Scrum"), createProject(3, "demo-project", "Demo")), 0, 2, 2));
+
+        // The pickers send their value along with the text typed by the user.
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "s", PAGE_SIZE, selectedItem);
+
+        // The selected project is suggested first, by the value of the picker, and only once.
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(List.of(Map.of("value", selectedItem, "label", "Demo", "url", "location3"),
+            Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+    }
+
+    private static Stream<String> selectedProjects()
+    {
+        return Stream.of("3", "demo-project");
+    }
+
     @Test
-    void getSuggestionsForProjectSelectedByUnknownIdentifier() throws ProjectManagementException
+    void getSuggestionsForProjectsWhenSelectedProjectIsNotFound() throws ProjectManagementException
     {
         when(this.openProjectApiClient.getProject("unknown"))
-            .thenThrow(new ProjectManagementException("Not found"));
+            .thenThrow(new WorkItemRetrievalException("Not found", 404));
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("unknown")))
+            .thenReturn(new PaginatedResult<>(List.of(), 0, 0, 0));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "unknown", PAGE_SIZE, "unknown");
 
@@ -391,19 +422,30 @@ class SuggestTest
     }
 
     @Test
-    void getSuggestionsForProjectsWhenSelectedByIdentifier() throws ProjectManagementException
+    void getSuggestionsForProjectsWhenSelectedProjectFails() throws ProjectManagementException
     {
-        when(this.openProjectApiClient.getProjects(eq(1), eq(PAGE_SIZE), anyString()))
-            .thenReturn(new PaginatedResult<>(
-                List.of(createProject(3, "demo-project", "Demo"), createProject(4, "scrum", "Scrum")), 0, 2, 2));
+        when(this.openProjectApiClient.getProject("demo-project"))
+            .thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
             "demo-project");
 
-        // The selected project keeps the value of the picker, so that it isn't suggested twice.
-        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3"),
-            Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the [projects] suggestions from the OpenProject instance [instance]. "
+            + "Root cause: [WorkItemRetrievalException: Unauthorized]", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getSuggestionsForProjectsWhenTheDashboardProjectIsSelected() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter(EMPTY_STRING)))
+            .thenReturn(new PaginatedResult<>(List.of(createProject(4, "scrum", "Scrum")), 0, 1, 1));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
+            "use_selected_dashboard_project");
+
+        assertEquals(List.of(Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+        verify(this.openProjectApiClient, never()).getProject(anyString());
     }
 
     @ParameterizedTest
@@ -414,8 +456,7 @@ class SuggestTest
         user.setId(1);
         user.setName("user");
         user.setSelf(new Linkable("1", "location"));
-        when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE,
-            "[{\"name\":{\"operator\":\"~\",\"values\":[\"searchstring\"]}}]"))
+        when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter(SEARCH_STRING.toLowerCase())))
             .thenReturn(new PaginatedResult<>(List.of(user), 0, 1, 1));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, PAGE_SIZE, selectedItem);
@@ -423,9 +464,46 @@ class SuggestTest
         verifySuccessResponse(response, List.of(user));
     }
 
+    @ParameterizedTest
+    @MethodSource("selectedItemsThatAreNotIds")
+    void getSuggestionsForWorkPackagesWhenSelectedItemIsNotAnId(String selectedItem) throws ProjectManagementException
+    {
+        String subjectFilter = "{\"subject\":{\"operator\":\"~\",\"values\":[\"searchstring\"]}}";
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE, "[" + subjectFilter + "]", EMPTY_STRING))
+            .thenReturn(new PaginatedResult<>(List.of(createWorkPackage(5, "Fifth")), 0, 1, 1));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, PAGE_SIZE, selectedItem);
+
+        assertEquals(List.of(Map.of("value", "5", "label", "5", "url", "location5", "hint", "Fifth")),
+            response.getEntity());
+    }
+
+    @ParameterizedTest
+    @MethodSource("selectedItemsThatAreNotIds")
+    void getSuggestionsForParentsWhenSelectedItemIsNotAnId(String selectedItem) throws ProjectManagementException
+    {
+        Type task = new Type();
+        task.setId(1);
+        when(this.openProjectApiClient.getTypes()).thenReturn(new PaginatedResult<>(List.of(task), 0, 1, 1));
+        when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
+            "[{\"type\":{\"operator\":\"=\",\"values\":[\"1\"]}},"
+                + "{\"subject\":{\"operator\":\"~\",\"values\":[\"searchstring\"]}}]", EMPTY_STRING))
+            .thenReturn(new PaginatedResult<>(List.of(createWorkPackage(5, "Fifth")), 0, 1, 1));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", SEARCH_STRING, PAGE_SIZE, selectedItem);
+
+        assertEquals(List.of(Map.of("value", "/api/v3/work_packages/5", "label", "#5: Fifth", "url", "location5",
+            "hint", "Fifth")), response.getEntity());
+    }
+
     private static Stream<String> selectedItemsThatAreNotIds()
     {
         return Stream.of("admin", "1,2", "99999999999", "4294967296");
+    }
+
+    private static String nameFilter(String search)
+    {
+        return new FilterBuilder().addFilter("name", FilterBuilder.Operator.CONTAINS, search).build();
     }
 
     private static Project createProject(int id, String identifier, String name)

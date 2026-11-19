@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,6 +48,7 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -54,6 +56,8 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
+
+import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
 /**
  * Rest endpoint that suggests ids based on some query string.
@@ -189,8 +193,7 @@ public class Suggest extends XWikiResource
                 response = getStatusesSuggestions(openProjectApiClient);
                 break;
             case PROJECTS:
-                response =
-                    getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedId, selectedItem);
+                response = getProjectsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedItem);
                 break;
             case TYPES:
                 response = getTypesSuggestions(openProjectApiClient);
@@ -288,39 +291,60 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getProjectsSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize, Integer selectedId, String selectedItem) throws ProjectManagementException
+        String searchString, int pageSize, String selectedItem) throws ProjectManagementException
     {
-        String filter = getSelectedIdFilter(selectedId, searchString);
-        if (StringUtils.isNotEmpty(filter)) {
-            return getSuggestions(openProjectApiClient.getProjects(1, pageSize, filter).getItems());
+        // The selected project is suggested first, whatever the search, so that the client always gets its label: the
+        // pickers send their value along with the text typed by the user. It keeps the value it is given (its id or its
+        // identifier) so that the client can match it with the value of its input, while the other projects are
+        // suggested by their id.
+        Project selectedProject = getSelectedProject(openProjectApiClient, selectedItem);
+        List<Map<String, String>> suggestions = new ArrayList<>();
+        if (selectedProject != null && pageSize > 0) {
+            suggestions.add(
+                createSuggestion(selectedItem, selectedProject.getName(), selectedProject.getSelf().getLocation()));
         }
-        boolean selectedIdentifier = selectedItem != null && PROJECT_IDENTIFIER_PATTERN.matcher(selectedItem).matches();
-        if (selectedIdentifier && StringUtils.isNotEmpty(searchString)) {
-            return getProjectByIdentifier(openProjectApiClient, selectedItem);
+        for (Project project : openProjectApiClient.getProjects(1, pageSize, buildFilter(NAME, searchString))
+            .getItems())
+        {
+            if (suggestions.size() < pageSize
+                && (selectedProject == null || !Objects.equals(selectedProject.getId(), project.getId())))
+            {
+                suggestions.add(
+                    createSuggestion(String.valueOf(project.getId()), project.getName(),
+                        project.getSelf().getLocation()));
+            }
         }
-        // The value of the selected project is kept as it is given, so that the client can match it with the value
-        // of its input, while the other projects are suggested by their id.
-        return openProjectApiClient.getProjects(1, pageSize, buildFilter(NAME, searchString)).getItems().stream()
-            .map(project -> createSuggestion(
-                selectedIdentifier && selectedItem.equals(project.getIdentifier()) ? selectedItem
-                    : String.valueOf(project.getId()),
-                project.getName(),
-                project.getSelf().getLocation()))
-            .collect(Collectors.toList());
+        return suggestions;
     }
 
-    private List<Map<String, String>> getProjectByIdentifier(OpenProjectApiClient openProjectApiClient,
-        String identifier)
+    /**
+     * @param selectedItem the id (for example {@code 3}) or the identifier (for example {@code demo-project}) of the
+     *     selected project, or any other value (for example the value of the "use the dashboard-selected project"
+     *     option), which is ignored
+     * @return the selected project, or {@code null} when there's none, or when it doesn't exist or isn't visible to
+     *     the current user
+     * @throws ProjectManagementException if OpenProject couldn't be reached or failed to answer
+     */
+    private Project getSelectedProject(OpenProjectApiClient openProjectApiClient, String selectedItem)
+        throws ProjectManagementException
     {
+        if (getSelectedId(selectedItem) == null && (selectedItem == null
+            || !PROJECT_IDENTIFIER_PATTERN.matcher(selectedItem).matches()
+            || USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(selectedItem)))
+        {
+            return null;
+        }
         try {
-            Project project = openProjectApiClient.getProject(identifier);
-            return List.of(createSuggestion(identifier, project.getName(), project.getSelf().getLocation()));
-        } catch (ProjectManagementException e) {
-            // The project may not exist anymore, or not be visible to the current user: the client keeps showing the
-            // identifier.
-            this.slf4Jlogger.debug("Failed to retrieve the project with identifier [{}]. Root cause: [{}]", identifier,
-                ExceptionUtils.getRootCauseMessage(e));
-            return Collections.emptyList();
+            return openProjectApiClient.getProject(selectedItem);
+        } catch (WorkItemRetrievalException e) {
+            // OpenProject answers 404 both for the projects that don't exist and for those the user can't see: the
+            // client keeps showing the value it has.
+            if (Integer.valueOf(HttpURLConnection.HTTP_NOT_FOUND).equals(e.getStatusCode())) {
+                this.slf4Jlogger.debug("Failed to retrieve the selected project [{}]. Root cause: [{}]", selectedItem,
+                    ExceptionUtils.getRootCauseMessage(e));
+                return null;
+            }
+            throw e;
         }
     }
 
