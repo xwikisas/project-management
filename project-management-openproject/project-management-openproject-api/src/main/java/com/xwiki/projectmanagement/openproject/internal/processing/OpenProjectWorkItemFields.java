@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xwiki.livedata.LiveDataQuery;
@@ -44,6 +43,7 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.WorkPackageFieldsResult;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
@@ -134,6 +134,10 @@ public final class OpenProjectWorkItemFields
         WorkItem.KEY_DATE_RANGE, WorkItem.KEY_PROGRESS, WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE,
         WorkItem.KEY_CREATOR, WorkItem.KEY_REPORTER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_PRIORITY,
         WorkItem.KEY_PROJECT, WorkItem.KEY_STATUS);
+
+    private static final String SUBPROJECT_FILTER = "subprojectId";
+
+    private static final Pattern CUSTOM_FIELD_FILTER = Pattern.compile("customField\\d+");
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectWorkItemFields.class);
 
@@ -243,23 +247,15 @@ public final class OpenProjectWorkItemFields
         if (workPackageFields == null || workPackageFields.getItems() == null) {
             return EMPTY;
         }
-        return new OpenProjectWorkItemFields(workPackageFields.getItems(), getFilters(client));
+        // The filters are known when the client reads them along with the fields.
+        List<String> filters = workPackageFields instanceof WorkPackageFieldsResult
+            ? ((WorkPackageFieldsResult) workPackageFields).getFilterKeys() : null;
+        return new OpenProjectWorkItemFields(workPackageFields.getItems(), filters);
     }
 
     private static Set<String> toFilterKeys(Collection<String> workPackageFilters)
     {
         return workPackageFilters == null || workPackageFilters.isEmpty() ? null : Set.copyOf(workPackageFilters);
-    }
-
-    private static List<String> getFilters(OpenProjectApiClient client)
-    {
-        try {
-            return client.getWorkPackageFilters();
-        } catch (ProjectManagementException | UnsupportedOperationException e) {
-            // The filters are then all sent to OpenProject, as they are.
-            LOGGER.debug("Failed to retrieve the work package filters: {}", ExceptionUtils.getRootCauseMessage(e));
-            return null;
-        }
     }
 
     /**
@@ -379,11 +375,22 @@ public final class OpenProjectWorkItemFields
      */
     private boolean isFilter(String property)
     {
-        if (this.filterKeys == null) {
+        if (this.filterKeys == null || isProjectFilter(property)) {
             return true;
         }
         return property != null && (FILTERABLE_PROPERTIES.contains(property) || this.filterKeys.contains(property)
             || this.filterKeys.contains(OpenProjectMapper.mapLivedataProperty(property)));
+    }
+
+    /**
+     * @return whether the property may be an OpenProject filter that the queries of some projects have, but that the
+     *     global queries, whose filters are known, don't: the subprojects filter, of the projects having subprojects,
+     *     and the custom fields referencing users or versions, filtered by key (e.g. {@code customField3})
+     */
+    private static boolean isProjectFilter(String property)
+    {
+        return property != null && (SUBPROJECT_FILTER.equals(property)
+            || CUSTOM_FIELD_FILTER.matcher(property).matches());
     }
 
     private void maybeAddGenericPropertyFilter(LiveDataQuery.Filter filter, List<LiveDataQuery.Filter> mappedFilters)

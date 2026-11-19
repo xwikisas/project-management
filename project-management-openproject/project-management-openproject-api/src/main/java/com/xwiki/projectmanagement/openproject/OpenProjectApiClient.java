@@ -20,7 +20,6 @@
 
 package com.xwiki.projectmanagement.openproject;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -337,20 +336,6 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Retrieving the work package fields is not supported by this client implementation.");
-    }
-
-    /**
-     * Retrieves the filters available to the global work package queries of the instance, custom fields included,
-     * some of which match no field (e.g. {@code subprojectId}).
-     *
-     * @return the keys of the filters (e.g. {@code status} or {@code customField3})
-     * @throws ProjectManagementException if some error was encountered while trying to retrieve the filters
-     * @since 1.4.1
-     */
-    default List<String> getWorkPackageFilters() throws ProjectManagementException
-    {
-        throw new UnsupportedOperationException(
-            "Retrieving the work package filters is not supported by this client implementation.");
     }
 
     /**

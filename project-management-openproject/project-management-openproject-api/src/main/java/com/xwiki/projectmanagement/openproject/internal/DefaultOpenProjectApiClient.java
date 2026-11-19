@@ -585,20 +585,10 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
     public PaginatedResult<WorkPackageField> getWorkPackageFields() throws ProjectManagementException
     {
         // The form of an empty query describes the columns and filters available to the global work package queries,
-        // custom fields included.
-        List<WorkPackageField> fields = WorkPackageFieldsParser.parseQueryForm(getEmptyQueryForm());
-        return new PaginatedResult<>(fields, 0, fields.size(), fields.size());
-    }
-
-    @Override
-    public List<String> getWorkPackageFilters() throws ProjectManagementException
-    {
-        return WorkPackageFieldsParser.parseQueryFilters(getEmptyQueryForm());
-    }
-
-    private JsonNode getEmptyQueryForm() throws ProjectManagementException
-    {
-        return getFormResponse(API_URL_FORM_QUERIES, "{}");
+        // custom fields included. The filters are read from the same response, since some of them match no field.
+        JsonNode form = getFormResponse(API_URL_FORM_QUERIES, "{}");
+        return new WorkPackageFieldsResult(WorkPackageFieldsParser.parseQueryForm(form),
+            WorkPackageFieldsParser.parseQueryFilters(form));
     }
 
     /**

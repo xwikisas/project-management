@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.WorkPackageFieldsResult;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
@@ -96,10 +97,14 @@ class OpenProjectWorkItemFieldsTest
             new PaginatedResult<>(List.of(field("category", "Category", null, null, true)), 0, 1, 1));
         assertEquals(List.of("category"),
             new ArrayList<>(OpenProjectWorkItemFields.of(this.client).getFields().keySet()));
-        // The filters of the instance are known.
-        when(this.client.getWorkPackageFilters()).thenReturn(List.of("subprojectId"));
-        assertEquals(List.of("subprojectId"), OpenProjectWorkItemFields.of(this.client).mapFilters(
-            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("subprojectId", "=", "1")),
+        // The filters of the instance are known when they are read along with the fields.
+        assertEquals(List.of("foo", "typeahead"), OpenProjectWorkItemFields.of(this.client).mapFilters(
+            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("typeahead", "**", "1")),
+            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
+        when(this.client.getWorkPackageFields()).thenReturn(new WorkPackageFieldsResult(
+            List.of(field("category", "Category", null, null, true)), List.of("typeahead")));
+        assertEquals(List.of("typeahead"), OpenProjectWorkItemFields.of(this.client).mapFilters(
+            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("typeahead", "**", "1")),
             this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
     }
 
@@ -109,16 +114,35 @@ class OpenProjectWorkItemFieldsTest
         OpenProjectWorkItemFields fieldsAndFilters = new OpenProjectWorkItemFields(
             List.of(field("status", "Status", "status", "[]Status", true),
                 field(TARGET_VERSIONS, "Target versions", "targetVersion", LIST_OF_VERSIONS, true)),
-            List.of("status", "subject", "id", "targetVersion", "subprojectId", "createdAt"));
+            // As listed by the query form of the global queries.
+            List.of("status", "subject", "id", "targetVersion", "createdAt", "typeahead"));
 
         List<LiveDataQuery.Filter> mappedFilters = fieldsAndFilters.mapFilters(Stream.of("foo", "identifier.value",
-            "summary", "labels", "subprojectId", "createdAt", "targetVersion", "status", "dueDate", "customField3")
+            "summary", "labels", "createdAt", "typeahead", "targetVersion", "status", "dueDate", "customFieldX")
             .map(property -> new LiveDataQuery.Filter(property, "equals", "x")).collect(Collectors.toList()),
             this.client);
 
         // OpenProject rejects a filter that doesn't exist, failing the whole request. The generic properties that
         // OpenProject filters on, the fields and the OpenProject filters of the instance are kept.
-        assertEquals(List.of("summary", "subprojectId", "createdAt", "targetVersion", "status", "dueDate"),
+        assertEquals(List.of("summary", "createdAt", "typeahead", "targetVersion", "status", "dueDate"),
+            mappedFilters.stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
+    }
+
+    @Test
+    void mapFiltersKeepsTheFiltersOfTheProjectQueries() throws Exception
+    {
+        OpenProjectWorkItemFields fieldsAndFilters =
+            new OpenProjectWorkItemFields(List.of(field("status", "Status", "status", "[]Status", true)),
+                List.of("status", "subject", "customField5"));
+
+        List<LiveDataQuery.Filter> mappedFilters = fieldsAndFilters.mapFilters(
+            Stream.of("subprojectId", "customField12", "customField5", "customField", "foo")
+                .map(property -> new LiveDataQuery.Filter(property, "=", "1")).collect(Collectors.toList()),
+            this.client);
+
+        // The global queries don't have the subprojects filter, nor the filters on the custom fields referencing
+        // users or versions, which the queries of a project can have.
+        assertEquals(List.of("subprojectId", "customField12", "customField5"),
             mappedFilters.stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
     }
 

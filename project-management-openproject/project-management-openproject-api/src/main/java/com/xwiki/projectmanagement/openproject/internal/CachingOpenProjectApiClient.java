@@ -334,13 +334,6 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     }
 
     @Override
-    public List<String> getWorkPackageFilters() throws ProjectManagementException
-    {
-        // Cached by WorkPackageFieldsCache, for all the users of the instance.
-        return client.getWorkPackageFilters();
-    }
-
-    @Override
     public Map<String, Boolean> getMultiValueWorkPackageFields(Set<String> fieldKeys)
         throws ProjectManagementException
     {

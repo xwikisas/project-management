@@ -148,7 +148,8 @@ class DefaultOpenProjectApiClientTest
     {
         mockWorkPackageFieldsResponses();
 
-        List<WorkPackageField> fields = openProjectApiClient.getWorkPackageFields().getItems();
+        PaginatedResult<WorkPackageField> result = openProjectApiClient.getWorkPackageFields();
+        List<WorkPackageField> fields = result.getItems();
 
         // A single request: the fields are needed for each request on work packages.
         ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
@@ -156,6 +157,11 @@ class DefaultOpenProjectApiClientTest
         HttpRequest formRequest = requestCaptor.getValue();
         assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/form", formRequest.uri().toString());
         assertEquals("POST", formRequest.method());
+
+        // The filters of the global work package queries are read from the same response.
+        assertEquals(List.of("customField5", "customField10", "customField20", "estimatedTime", "id", "responsible",
+            "subject", "targetVersion", "observedInVersion", "startDate"),
+            ((WorkPackageFieldsResult) result).getFilterKeys());
 
         // Only the columns holding a property are fields, not the relation columns.
         assertEquals(List.of("id", "subject", "responsible", "category", "targetVersions", "observedInVersions",
@@ -188,17 +194,6 @@ class DefaultOpenProjectApiClientTest
         WorkPackageField startDate = fields.get(7);
         assertEquals("[1]Date", startDate.getFilterValueType());
         assertTrue(startDate.getFilterOperators().containsAll(List.of("<t+", "=d", "<>d", "!*")));
-    }
-
-    @Test
-    void getWorkPackageFilters() throws Exception
-    {
-        mockWorkPackageFieldsResponses();
-
-        // The filters of the global work package queries, from the same request as the fields.
-        assertEquals(List.of("customField5", "customField10", "customField20", "estimatedTime", "id", "responsible",
-            "subject", "targetVersion", "observedInVersion", "startDate"),
-            openProjectApiClient.getWorkPackageFilters());
     }
 
     @Test
