@@ -422,9 +422,11 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
     //   Except for a query that can still become a work package key (e.g. XWI, then XWIKI-123), which is searched in
     //   the keys too, see isStoppedBy.
     // * Escape stops the search, as long as the text is typed after the same marker.
+    // * The text is matched from the last occurrence of the marker, since AdvancedAutoComplete matches it from the first
+    //   one of the 30 characters before the caret: the marker typed again on the same line starts a new search.
     // The search is stopped for one occurrence of the marker, identified by its position. It's forgotten when the text
-    // before the caret no longer ends with this marker followed by text (e.g. the marker is deleted, or the caret is
-    // moved elsewhere), so that typing the marker again searches again.
+    // before the caret no longer ends with this marker followed by text (e.g. the marker is deleted, the marker is
+    // typed again, or the caret is moved elsewhere), so that typing the marker again searches again.
     function controlSearch(autoComplete, marker) {
       // The search stopped after a marker: its position, the beginning of the text typed after it whose search is
       // stopped (empty when the search is stopped whatever the text), and the entries to display instead of searching
@@ -450,7 +452,18 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
       };
 
       const textWatcher = autoComplete.textWatcher;
-      const matchText = textWatcher.callback;
+      const matchFirstMarker = textWatcher.callback;
+      const matchText = function (range) {
+        const match = matchFirstMarker.apply(this, arguments);
+        if (!match || match.text.indexOf(marker, marker.length) &lt; 0) {
+          return match;
+        }
+        // Match the text typed after the last occurrence of the marker instead.
+        return ckeditor.plugins.textMatch.match(range, function (text, offset) {
+          const start = text.slice(0, offset).lastIndexOf(marker);
+          return start &lt; 0 ? null : {start, end: offset};
+        });
+      };
       textWatcher.callback = function () {
         const match = matchText.apply(this, arguments);
         if (!match || !isAt(stoppedSearch, match.range)) {

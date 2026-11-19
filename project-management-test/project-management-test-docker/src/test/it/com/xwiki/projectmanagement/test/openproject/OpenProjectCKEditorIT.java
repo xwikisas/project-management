@@ -178,12 +178,17 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         textArea.deleteCharacters(4);
         textArea.type("s");
         assertEquals(List.of("zzz", "zzs"), textArea.waitForWorkPackageSearch("zzs"));
+        // The marker typed again, on the same line, starts a new search.
+        textArea.type(" and " + MARKER + "zzu");
+        assertEquals(List.of("zzz", "zzs", "zzu"), textArea.waitForWorkPackageSearch("zzu"));
 
         // Escape stops the search, until the marker is typed again.
         textArea.newParagraph();
         textArea.searchWorkPackage(MARKER + "speakers", MARKER + "speakers", SUBJECT);
         textArea.closeWorkPackageSearch();
         textArea.type(" to");
+        textArea.searchWorkPackage(" and " + MARKER + "speakers", MARKER + "speakers", SUBJECT);
+        textArea.closeWorkPackageSearch();
         textArea.newParagraph();
         textArea.type(MARKER + "zzt");
         List<String> queries = textArea.waitForWorkPackageSearch("zzt");
