@@ -110,6 +110,7 @@ OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker=Raccourci
 OpenProject.Code.OpenProjectConfigurationClass_workPackageSearchMarker.hint=Les caractères à taper dans l'éditeur WYSIWYG, suivis d'au moins 3 caractères du sujet, pour rechercher un lot de travaux OpenProject et l'insérer en ligne. Les lots de travaux sont recherchés dans la connexion du projet OpenProject lié à la page, ou sinon dans la connexion par défaut. # par défaut.
 openproject.ckeditor.workPackageSearch.noConnection=Aucune connexion OpenProject dans laquelle rechercher : liez cette page à un projet OpenProject, ou demandez à un administrateur de choisir une connexion par défaut.
 openproject.ckeditor.workPackageSearch.connectionError=La connexion OpenProject dans laquelle rechercher n'a pas pu être déterminée. Réessayez plus tard.
+openproject.ckeditor.workPackageSearch.searchFailed=Les lots de travaux n'ont pas pu être recherchés dans OpenProject. Réessayez plus tard.
 openproject.config.publicData.title=Données publiques
 OpenProject.Code.OpenProjectConfigurationClass_publicDataCacheDuration=Validité du cache des données publiques
 OpenProject.Code.OpenProjectConfigurationClass_publicDataCacheDuration.hint=Le temps, en minutes, pendant lequel les données OpenProject affichées aux utilisateurs sans compte OpenProject sont conservées avant d'être de nouveau demandées à OpenProject. Le cache est effacé lorsqu'une connexion est enregistrée. Par défaut à 5.
