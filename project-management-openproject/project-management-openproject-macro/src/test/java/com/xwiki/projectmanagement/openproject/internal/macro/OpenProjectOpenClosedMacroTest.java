@@ -212,7 +212,7 @@ class OpenProjectOpenClosedMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(parameters, "", this.context));
 
-        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [-1].",
+        assertEquals("The [days] parameter must be a whole number greater than or equal to 0, but is [-1].",
             exception.getMessage());
         verifyNoInteractions(this.projectManagementManager);
     }
@@ -229,7 +229,7 @@ class OpenProjectOpenClosedMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(parameters, "", this.context));
 
-        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [abc].",
+        assertEquals("The [days] parameter must be a whole number greater than or equal to 0, but is [abc].",
             exception.getMessage());
         verifyNoInteractions(this.projectManagementManager);
     }

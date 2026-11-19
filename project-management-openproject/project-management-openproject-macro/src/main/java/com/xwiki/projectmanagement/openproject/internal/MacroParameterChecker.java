@@ -71,7 +71,7 @@ public final class MacroParameterChecker
     {
         String rawValue = getRawParameter(context, parameterName);
         if (value < minimum || (rawValue != null && !isInteger(rawValue))) {
-            throw new MacroExecutionException(String.format("The [%s] parameter must be a number greater than or"
+            throw new MacroExecutionException(String.format("The [%s] parameter must be a whole number greater than or"
                 + " equal to %d, but is [%s].", parameterName, minimum, rawValue != null ? rawValue : value));
         }
     }

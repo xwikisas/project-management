@@ -235,7 +235,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, "", this.context));
 
-        assertEquals("The [limit] parameter must be a number greater than or equal to 1, but is [" + limit + "].",
+        assertEquals("The [limit] parameter must be a whole number greater than or equal to 1, but is [" + limit + "].",
             exception.getMessage());
         verifyNoInteractions(this.apiClient);
     }
@@ -251,7 +251,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, "", this.context));
 
-        assertEquals("The [limit] parameter must be a number greater than or equal to 1, but is [abc].",
+        assertEquals("The [limit] parameter must be a whole number greater than or equal to 1, but is [abc].",
             exception.getMessage());
     }
 
@@ -264,7 +264,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, "", this.context));
 
-        assertEquals("The [count] parameter must be a number greater than or equal to 1, but is [1.5].",
+        assertEquals("The [count] parameter must be a whole number greater than or equal to 1, but is [1.5].",
             exception.getMessage());
     }
 
@@ -276,7 +276,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, "", this.context));
 
-        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [-1].",
+        assertEquals("The [days] parameter must be a whole number greater than or equal to 0, but is [-1].",
             exception.getMessage());
         verifyNoInteractions(this.apiClient);
     }
@@ -291,7 +291,7 @@ class OpenProjectSpentTimeMacroTest extends AbstractDirectMacroTest
         MacroExecutionException exception = assertThrows(MacroExecutionException.class,
             () -> this.macro.execute(this.parameters, "", this.context));
 
-        assertEquals("The [days] parameter must be a number greater than or equal to 0, but is [abc].",
+        assertEquals("The [days] parameter must be a whole number greater than or equal to 0, but is [abc].",
             exception.getMessage());
         verifyNoInteractions(this.apiClient);
     }
