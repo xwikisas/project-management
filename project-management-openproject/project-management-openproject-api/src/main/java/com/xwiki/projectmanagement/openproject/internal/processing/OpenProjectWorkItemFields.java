@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xwiki.livedata.LiveDataQuery;
@@ -123,6 +125,16 @@ public final class OpenProjectWorkItemFields
         SORTABLE_PROPERTIES.stream().map(OpenProjectMapper::mapLivedataProperty), MAPPED_FIELDS.stream())
         .flatMap(Function.identity()).collect(Collectors.toSet());
 
+    /**
+     * The generic work item properties that OpenProject can filter on (see {@link OpenProjectMapper#KEY_MAPPING} for
+     * the matching OpenProject filters).
+     */
+    private static final Set<String> FILTERABLE_PROPERTIES = Set.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_TYPE,
+        WorkItem.KEY_SUMMARY, WorkItem.KEY_DESCRIPTION, WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE,
+        WorkItem.KEY_DATE_RANGE, WorkItem.KEY_PROGRESS, WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE,
+        WorkItem.KEY_CREATOR, WorkItem.KEY_REPORTER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_PRIORITY,
+        WorkItem.KEY_PROJECT, WorkItem.KEY_STATUS);
+
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectWorkItemFields.class);
 
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
@@ -168,13 +180,32 @@ public final class OpenProjectWorkItemFields
     private final boolean known;
 
     /**
+     * The keys of the filters of the instance, or {@code null} if they are unknown, since they couldn't be retrieved.
+     */
+    private final Set<String> filterKeys;
+
+    /**
      * Creates the work item properties exposing the given fields.
      *
      * @param workPackageFields the fields of the work packages of an OpenProject instance
      */
     public OpenProjectWorkItemFields(List<WorkPackageField> workPackageFields)
     {
+        this(workPackageFields, null);
+    }
+
+    /**
+     * Creates the work item properties exposing the given fields.
+     *
+     * @param workPackageFields the fields of the work packages of an OpenProject instance
+     * @param workPackageFilters the keys of the filters available to the work package queries of the instance, or
+     *     {@code null} if they are unknown
+     * @since 1.4.1
+     */
+    public OpenProjectWorkItemFields(List<WorkPackageField> workPackageFields, Collection<String> workPackageFilters)
+    {
         this.known = !workPackageFields.isEmpty();
+        this.filterKeys = toFilterKeys(workPackageFilters);
         List<WorkPackageField> customFields = new ArrayList<>();
         for (WorkPackageField field : workPackageFields) {
             if (field.isSortable()) {
@@ -212,7 +243,23 @@ public final class OpenProjectWorkItemFields
         if (workPackageFields == null || workPackageFields.getItems() == null) {
             return EMPTY;
         }
-        return new OpenProjectWorkItemFields(workPackageFields.getItems());
+        return new OpenProjectWorkItemFields(workPackageFields.getItems(), getFilters(client));
+    }
+
+    private static Set<String> toFilterKeys(Collection<String> workPackageFilters)
+    {
+        return workPackageFilters == null || workPackageFilters.isEmpty() ? null : Set.copyOf(workPackageFilters);
+    }
+
+    private static List<String> getFilters(OpenProjectApiClient client)
+    {
+        try {
+            return client.getWorkPackageFilters();
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            // The filters are then all sent to OpenProject, as they are.
+            LOGGER.debug("Failed to retrieve the work package filters: {}", ExceptionUtils.getRootCauseMessage(e));
+            return null;
+        }
     }
 
     /**
@@ -291,9 +338,11 @@ public final class OpenProjectWorkItemFields
 
     /**
      * Rewrites the filters on the properties exposing the fields of this instance into filters on the matching
-     * OpenProject filters, the other filters being kept as they are. The versions can be referenced by name, e.g.
-     * {@code 1.2.3}: a name is replaced by the ids of all the versions with this name, which the other filters (e.g.
-     * on the project) can narrow down.
+     * OpenProject filters, the other filters being kept as they are. When the filters of the instance are known, the
+     * filters on properties that are neither generic work item properties nor OpenProject filters (e.g. a typo in the
+     * filters parameter of a macro) are dropped, since OpenProject rejects them, failing the whole request. The
+     * versions can be referenced by name, e.g. {@code 1.2.3}: a name is replaced by the ids of all the versions with
+     * this name, which the other filters (e.g. on the project) can narrow down.
      *
      * @param filters the filters on the work item properties
      * @param client the client used to resolve the names of the versions
@@ -311,7 +360,7 @@ public final class OpenProjectWorkItemFields
                 mappedFilters.add(new LiveDataQuery.Filter(TYPEAHEAD_FILTER, TYPEAHEAD_OPERATOR,
                     ((String) filter.getConstraints().get(0).getValue()).trim()));
             } else if (field == null) {
-                mappedFilters.add(mapGenericPropertyFilter(filter));
+                maybeAddGenericPropertyFilter(filter, mappedFilters);
             } else {
                 boolean isVersion = VERSION_FILTER_VALUE_TYPE.equals(field.getFilterValueType());
                 if (isVersion && versionIdsByName == null && hasVersionName(filter)) {
@@ -321,6 +370,29 @@ public final class OpenProjectWorkItemFields
             }
         }
         return mappedFilters;
+    }
+
+    /**
+     * @return whether the property is a generic work item property that OpenProject filters on, or an OpenProject
+     *     filter of the instance (e.g. {@code subprojectId}, {@code updatedAt} or {@code customField3}), or whether
+     *     this can't be known, since the filters of the instance couldn't be retrieved
+     */
+    private boolean isFilter(String property)
+    {
+        if (this.filterKeys == null) {
+            return true;
+        }
+        return property != null && (FILTERABLE_PROPERTIES.contains(property) || this.filterKeys.contains(property)
+            || this.filterKeys.contains(OpenProjectMapper.mapLivedataProperty(property)));
+    }
+
+    private void maybeAddGenericPropertyFilter(LiveDataQuery.Filter filter, List<LiveDataQuery.Filter> mappedFilters)
+    {
+        if (isFilter(filter.getProperty())) {
+            mappedFilters.add(mapGenericPropertyFilter(filter));
+        } else {
+            LOGGER.debug("Ignoring the filter on the unknown work item property [{}].", filter.getProperty());
+        }
     }
 
     /**

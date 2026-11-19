@@ -251,6 +251,14 @@ class CachingOpenProjectApiClientTest
     }
 
     @Test
+    void workPackageFiltersAreDelegated() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getWorkPackageFilters()).thenReturn(List.of("status", "subprojectId"));
+
+        assertEquals(List.of("status", "subprojectId"), this.cachingOpenProjectApiClient.getWorkPackageFilters());
+    }
+
+    @Test
     void workPackagesLocationIsNotCached()
     {
         when(this.openProjectApiClient.getWorkPackagesLocation(PROJECT, FILTERS_STRING, SORT_BY_STRING))

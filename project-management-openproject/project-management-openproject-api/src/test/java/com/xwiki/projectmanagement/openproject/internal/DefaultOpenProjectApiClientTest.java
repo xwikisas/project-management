@@ -191,6 +191,17 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getWorkPackageFilters() throws Exception
+    {
+        mockWorkPackageFieldsResponses();
+
+        // The filters of the global work package queries, from the same request as the fields.
+        assertEquals(List.of("customField5", "customField10", "customField20", "estimatedTime", "id", "responsible",
+            "subject", "targetVersion", "observedInVersion", "startDate"),
+            openProjectApiClient.getWorkPackageFilters());
+    }
+
+    @Test
     void getMultiValueWorkPackageFields() throws Exception
     {
         mockWorkPackageFieldsResponses();

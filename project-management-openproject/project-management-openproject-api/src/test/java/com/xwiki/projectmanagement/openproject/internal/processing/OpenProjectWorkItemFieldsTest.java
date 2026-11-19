@@ -96,6 +96,39 @@ class OpenProjectWorkItemFieldsTest
             new PaginatedResult<>(List.of(field("category", "Category", null, null, true)), 0, 1, 1));
         assertEquals(List.of("category"),
             new ArrayList<>(OpenProjectWorkItemFields.of(this.client).getFields().keySet()));
+        // The filters of the instance are known.
+        when(this.client.getWorkPackageFilters()).thenReturn(List.of("subprojectId"));
+        assertEquals(List.of("subprojectId"), OpenProjectWorkItemFields.of(this.client).mapFilters(
+            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("subprojectId", "=", "1")),
+            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
+    }
+
+    @Test
+    void mapFiltersDropsTheUnknownProperties() throws Exception
+    {
+        OpenProjectWorkItemFields fieldsAndFilters = new OpenProjectWorkItemFields(
+            List.of(field("status", "Status", "status", "[]Status", true),
+                field(TARGET_VERSIONS, "Target versions", "targetVersion", LIST_OF_VERSIONS, true)),
+            List.of("status", "subject", "id", "targetVersion", "subprojectId", "createdAt"));
+
+        List<LiveDataQuery.Filter> mappedFilters = fieldsAndFilters.mapFilters(Stream.of("foo", "identifier.value",
+            "summary", "labels", "subprojectId", "createdAt", "targetVersion", "status", "dueDate", "customField3")
+            .map(property -> new LiveDataQuery.Filter(property, "equals", "x")).collect(Collectors.toList()),
+            this.client);
+
+        // OpenProject rejects a filter that doesn't exist, failing the whole request. The generic properties that
+        // OpenProject filters on, the fields and the OpenProject filters of the instance are kept.
+        assertEquals(List.of("summary", "subprojectId", "createdAt", "targetVersion", "status", "dueDate"),
+            mappedFilters.stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
+    }
+
+    @Test
+    void mapFiltersWithUnknownFilters() throws Exception
+    {
+        // The filters of the instance couldn't be retrieved: an unknown property may be a filter of the instance.
+        assertEquals(List.of("foo", "customField3"), this.fields.mapFilters(
+            List.of(new LiveDataQuery.Filter("foo", "equals", "x"), new LiveDataQuery.Filter("customField3", "=", "1")),
+            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
     }
 
     @Test
