@@ -41,6 +41,7 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.LinkBlock;
+import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.SpaceBlock;
 import org.xwiki.rendering.block.SpecialSymbolBlock;
@@ -85,6 +86,10 @@ public class OpenProjectSpentTimeMacro
 
     private static final String EMPTY_CELL_PLACEHOLDER = "-";
 
+    private static final String LIMIT_PARAMETER = "limit";
+
+    private static final String COUNT_PARAMETER = "count";
+
     /**
      * The most recent days first, so that the limit drops the time entries of the oldest days, and the time entries of
      * the same day in a stable order.
@@ -106,6 +111,55 @@ public class OpenProjectSpentTimeMacro
         super("OpenProject - Spent Time",
             "Displays the time spent on a specific project on a configured OpenProject instance.",
             OpenProjectSpentTimeMacroParameters.class);
+    }
+
+    @Override
+    protected void checkParameters(OpenProjectSpentTimeMacroParameters parameters,
+        MacroTransformationContext context) throws MacroExecutionException
+    {
+        // The limit is taken from the deprecated count parameter when it isn't set.
+        String limitParameter =
+            getRawParameter(context, LIMIT_PARAMETER) == null && getRawParameter(context, COUNT_PARAMETER) != null
+                ? COUNT_PARAMETER : LIMIT_PARAMETER;
+        checkNumber(limitParameter, parameters.getLimit(), 1, context);
+    }
+
+    private void checkNumber(String parameterName, int value, int minimum, MacroTransformationContext context)
+        throws MacroExecutionException
+    {
+        String rawValue = getRawParameter(context, parameterName);
+        if (value < minimum || (rawValue != null && !isInteger(rawValue))) {
+            throw new MacroExecutionException(String.format("The [%s] parameter must be a number greater than or"
+                + " equal to %d, but is [%s].", parameterName, minimum, rawValue != null ? rawValue : value));
+        }
+    }
+
+    /**
+     * XWiki converts the value of a numeric macro parameter that isn't a number to 0 before the macro is executed,
+     * so an invalid value can only be told apart from 0 by its raw value.
+     *
+     * @param context the macro transformation context
+     * @param name the name of a macro parameter, whatever its case
+     * @return the value of the parameter as written in the macro call, or {@code null} when it isn't set
+     */
+    private static String getRawParameter(MacroTransformationContext context, String name)
+    {
+        MacroBlock macroBlock = context.getCurrentMacroBlock();
+        if (macroBlock == null) {
+            return null;
+        }
+        return macroBlock.getParameters().entrySet().stream().filter(entry -> name.equalsIgnoreCase(entry.getKey()))
+            .map(Map.Entry::getValue).findFirst().orElse(null);
+    }
+
+    private static boolean isInteger(String value)
+    {
+        try {
+            Integer.parseInt(value.trim());
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     @Override
