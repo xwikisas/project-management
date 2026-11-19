@@ -364,6 +364,80 @@ class SuggestTest
         verifySuccessResponse(response, List.of(version1));
     }
 
+    @Test
+    void getSuggestionsForProjectSelectedByIdentifier() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProject("demo-project")).thenReturn(createProject(3, "demo-project", "Demo"));
+
+        // The picker retrieves the label of its value by searching the value.
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "demo-project", PAGE_SIZE,
+            "demo-project");
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3")),
+            response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForProjectSelectedByUnknownIdentifier() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProject("unknown"))
+            .thenThrow(new ProjectManagementException("Not found"));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "unknown", PAGE_SIZE, "unknown");
+
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(List.of(), response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForProjectsWhenSelectedByIdentifier() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProjects(eq(1), eq(PAGE_SIZE), anyString()))
+            .thenReturn(new PaginatedResult<>(
+                List.of(createProject(3, "demo-project", "Demo"), createProject(4, "scrum", "Scrum")), 0, 2, 2));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
+            "demo-project");
+
+        // The selected project keeps the value of the picker, so that it isn't suggested twice.
+        assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+        assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3"),
+            Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+    }
+
+    @ParameterizedTest
+    @MethodSource("selectedItemsThatAreNotIds")
+    void getSuggestionsForUsersWhenSelectedItemIsNotAnId(String selectedItem) throws ProjectManagementException
+    {
+        User user = new User();
+        user.setId(1);
+        user.setName("user");
+        user.setSelf(new Linkable("1", "location"));
+        when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE,
+            "[{\"name\":{\"operator\":\"~\",\"values\":[\"searchstring\"]}}]"))
+            .thenReturn(new PaginatedResult<>(List.of(user), 0, 1, 1));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, PAGE_SIZE, selectedItem);
+
+        verifySuccessResponse(response, List.of(user));
+    }
+
+    private static Stream<String> selectedItemsThatAreNotIds()
+    {
+        return Stream.of("admin", "1,2", "99999999999", "4294967296");
+    }
+
+    private static Project createProject(int id, String identifier, String name)
+    {
+        Project project = new Project();
+        project.setId(id);
+        project.setIdentifier(identifier);
+        project.setName(name);
+        project.setSelf(new Linkable(name, "location" + id));
+        return project;
+    }
+
     private static WorkPackage createWorkPackage(int id, String subject)
     {
         WorkPackage workPackage = new WorkPackage();
