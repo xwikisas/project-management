@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.TimeoutException;
@@ -107,6 +109,97 @@ public class OpenProjectRichTextArea extends BaseElement
         } catch (TimeoutException e) {
             return false;
         }
+    }
+
+    /**
+     * Type some text in the rich text area, without waiting for anything.
+     *
+     * @param text the text to type
+     * @since 1.4.1
+     */
+    public void type(String text)
+    {
+        this.textArea.sendKeys(text);
+    }
+
+    /**
+     * Start a new paragraph, by pressing Enter.
+     *
+     * @since 1.4.1
+     */
+    public void newParagraph()
+    {
+        this.textArea.sendKeys(Keys.ENTER);
+    }
+
+    /**
+     * Delete the last typed characters, without waiting for anything.
+     *
+     * @param count the number of characters to delete
+     * @since 1.4.1
+     */
+    public void deleteCharacters(int count)
+    {
+        for (int i = 0; i < count; i++) {
+            this.textArea.sendKeys(Keys.BACK_SPACE);
+        }
+    }
+
+    /**
+     * Close the autocomplete dropdown of the work package search by pressing Escape, and wait for it to be closed.
+     *
+     * @since 1.4.1
+     */
+    public void closeWorkPackageSearch()
+    {
+        this.textArea.sendKeys(Keys.ESCAPE);
+        getDriver().waitUntilElementDisappears(By.className("cke_autocomplete_opened"));
+    }
+
+    /**
+     * Start recording the requests that the work package search sends to the server, until the page is reloaded.
+     *
+     * @since 1.4.1
+     * @see #waitForWorkPackageSearch(String)
+     */
+    public void recordWorkPackageSearches()
+    {
+        getDriver().executeScript(String.join("\n",
+            "if (!window.recordedWorkPackageSearches) {",
+            "  window.recordedWorkPackageSearches = [];",
+            "  const open = XMLHttpRequest.prototype.open;",
+            "  XMLHttpRequest.prototype.open = function (method, url) {",
+            "    const parsedURL = new URL(url, window.location.href);",
+            "    if (parsedURL.pathname.endsWith('/projectmanagement/openproject/workitems')) {",
+            "      const filter = JSON.parse(parsedURL.searchParams.get('filter'));",
+            "      const search = {query: filter.query.filters[0].constraints[0].value, done: false};",
+            "      window.recordedWorkPackageSearches.push(search);",
+            // The search is done once the editor handled its response, in callbacks that jQuery and the promises
+            // call asynchronously, after the response is loaded.
+            "      this.addEventListener('loadend', () => setTimeout(() => setTimeout(() => search.done = true)));",
+            "    }",
+            "    return open.apply(this, arguments);",
+            "  };",
+            "}"));
+    }
+
+    /**
+     * Wait for the last recorded work package search to be the given one, and to be done.
+     *
+     * @param query the query of the search to wait for, i.e. the text typed after the work package search marker
+     * @return the queries of the searches sent since {@link #recordWorkPackageSearches()} was called, in the order
+     *     they were sent
+     * @since 1.4.1
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> waitForWorkPackageSearch(String query)
+    {
+        getDriver().waitUntilCondition(driver -> Boolean.TRUE.equals(getDriver().executeScript(
+            "const searches = window.recordedWorkPackageSearches;"
+                + " const last = searches[searches.length - 1];"
+                + " return last !== undefined && last.query === arguments[0] && last.done;", query)));
+        return (List<String>) getDriver().executeScript(
+            "return window.recordedWorkPackageSearches.map(search => search.query);");
     }
 
     /**

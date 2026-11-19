@@ -151,6 +151,41 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
 
     @Test
     @Order(3)
+    void stopWorkPackageSearch(TestUtils setup, TestReference testReference)
+    {
+        setup.deletePage(testReference);
+        setup.createPage(testReference, "");
+        setup.addObject(testReference, "ProjectManagement.Code.RelationClass", "client", "openproject",
+            "clientParams", String.format("{\"instance\":\"%s\"}", CONNECTION_ID));
+        setup.gotoPage(testReference, "edit", "editor=wysiwyg");
+        OpenProjectRichTextArea textArea =
+            new OpenProjectRichTextArea(new CKEditor("content").waitToLoad().getRichTextArea());
+        textArea.recordWorkPackageSearches();
+
+        // No work package matches the query.
+        textArea.type(MARKER + "zzz");
+        assertEquals(List.of("zzz"), textArea.waitForWorkPackageSearch("zzz"));
+        // The text that extends a query without match isn't searched, since it can't match either.
+        textArea.type(" is");
+        // A query that doesn't extend it is searched.
+        textArea.deleteCharacters(4);
+        textArea.type("s");
+        assertEquals(List.of("zzz", "zzs"), textArea.waitForWorkPackageSearch("zzs"));
+
+        // Escape stops the search, until the marker is typed again.
+        textArea.newParagraph();
+        textArea.searchWorkPackage(MARKER + "speakers", MARKER + "speakers", SUBJECT);
+        textArea.closeWorkPackageSearch();
+        textArea.type(" to");
+        textArea.newParagraph();
+        textArea.type(MARKER + "zzt");
+        List<String> queries = textArea.waitForWorkPackageSearch("zzt");
+        assertTrue(queries.stream().noneMatch(query -> query.startsWith("speakers ")), queries.toString());
+        new WYSIWYGEditPage().clickCancel();
+    }
+
+    @Test
+    @Order(4)
     void insertMacroWithQuickAction(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -178,7 +213,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     void editProjectMacroTwice(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
@@ -195,7 +230,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     void editMacroWithDeprecatedCount(TestUtils setup, TestReference testReference)
     {
         setup.deletePage(testReference);
