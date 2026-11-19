@@ -75,7 +75,8 @@ class PieChartDisplayerTest
 
     private static final String OPTIONS = "options";
 
-    private static final String VALUE_AXIS_FROM_ZERO = "\"scales\":{\"yAxes\":[{\"ticks\":{\"beginAtZero\":true}}]}";
+    private static final String VALUE_AXIS =
+        "\"scales\":{\"yAxes\":[{\"ticks\":{\"beginAtZero\":true,\"precision\":0}}]}";
 
     @MockComponent
     private MacroContentParser contentParser;
@@ -121,14 +122,14 @@ class PieChartDisplayerTest
 
         // The legend of a bar chart displays the names of the datasets: a single dataset without name has none.
         MacroBlock chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of(), Map.of()));
-        assertEquals(Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + VALUE_AXIS_FROM_ZERO + "}"),
+        assertEquals(Map.of("type", "bar", OPTIONS, "{\"legend\":{\"display\":false}," + VALUE_AXIS + "}"),
             chart.getParameters());
         assertEquals("", new ObjectMapper().readTree(chart.getContent()).path("datasets").path(0).path("label")
             .asText(null));
 
         // A named dataset keeps its legend.
         chart = getChartMacroBlock(bar.getChartMacro(datasets, WorkItem.KEY_STATUS, List.of("Mine"), Map.of()));
-        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), chart.getParameters());
+        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS + "}"), chart.getParameters());
 
         // The legend of a pie chart displays the slices.
         JsonNode data = getChartData(datasets, List.of(), Map.of());
@@ -136,18 +137,19 @@ class PieChartDisplayerTest
     }
 
     @Test
-    void startsTheValueAxisOfTheBarAndLineChartsAtZero() throws Exception
+    void startsTheValueAxisOfTheBarAndLineChartsAtZeroWithIntegerTicks() throws Exception
     {
-        // Without it, Chart.js 2 starts the axis at the smallest count, displaying its bars as empty.
+        // Without it, Chart.js 2 starts the axis at the smallest count, displaying its bars as empty, and has ticks
+        // every 0.2 for small counts, which can only be integers.
         List<Map<String, Long>> counts = List.of(Map.of(NEW, 2L, DONE, 11L));
         List<String> labels = List.of("Mine");
 
         MacroBlock bar = getChartMacroBlock(
             ((AbstractChartJSDisplayer) this.barDisplayer).getChartMacroFromCounts(counts, labels, Map.of()));
-        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), bar.getParameters());
+        assertEquals(Map.of("type", "bar", OPTIONS, "{" + VALUE_AXIS + "}"), bar.getParameters());
         MacroBlock line = getChartMacroBlock(
             ((AbstractChartJSDisplayer) this.lineDisplayer).getChartMacroFromCounts(counts, labels, Map.of()));
-        assertEquals(Map.of("type", "line", OPTIONS, "{" + VALUE_AXIS_FROM_ZERO + "}"), line.getParameters());
+        assertEquals(Map.of("type", "line", OPTIONS, "{" + VALUE_AXIS + "}"), line.getParameters());
 
         // A pie chart has no value axis.
         assertEquals(Map.of("type", "pie"),
