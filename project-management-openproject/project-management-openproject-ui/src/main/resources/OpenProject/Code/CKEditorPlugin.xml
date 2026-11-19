@@ -39,7 +39,12 @@
   <content>{{velocity}}
 ## The configuration that the JavaScript of this page needs at runtime, which can't be rendered in the JavaScript
 ## because it is cached by the browser.
-#if ($xcontext.action == 'get')
+#if ($xcontext.action == 'get' &amp;&amp; "$!request.connection" != '')
+  ## The message telling the current user why they can't search the work packages of the given connection (e.g. they
+  ## must connect their OpenProject account), as displayed by the macros. Empty when they can read its data.
+  #set ($notAuthorizedMessage = "$!services.openproject.getNotAuthorizedMessage($request.connection, 'html/5.0')")
+  #jsonResponse({'notAuthorizedMessage': $notAuthorizedMessage})
+#elseif ($xcontext.action == 'get')
   ## The default connection is only given to the users who can edit the document whose editor needs it.
   #set ($documentReference = $services.model.resolveDocument("$!request.document"))
   #set ($documentName = $services.model.serialize($documentReference, 'default'))
@@ -146,7 +151,7 @@
 });
 define('openproject.ckeditor.workPackageSearch', {
   prefix: 'openproject.ckeditor.workPackageSearch.',
-  keys: ['noConnection', 'connectionError']
+  keys: ['noConnection', 'connectionError', 'searchFailed']
 });
 require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.ckeditor.workPackageSearch'],
     function (ckeditorPromise, $, pageRelation, l10n) {
@@ -155,44 +160,46 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
   const search = function (text, callback, instance, isDefaultConnection) {
     let cfg = { query: { filters: [{ property: "summary", constraints: [{ operator: "contains", value: text }] }] } };
     const searchURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/openproject/workitems';
-    $.getJSON(searchURL, { instance: instance, filter: JSON.stringify(cfg)})
+    Promise.resolve($.getJSON(searchURL, { instance: instance, filter: JSON.stringify(cfg)}))
       .then(function (results) {
-        if (Array.isArray(results.items)) {
-          results = results.items.map(wp =&gt; {
-            return {
-              id: wp.identifier.value,
-              value: wp.identifier.value,
-              label: wp.summary.value,
-              typebadge: wp.type,
-              projectbadge: wp.project.value,
-              // The selected text is replaced with nothing and then the macro is inserted, after the autocomplete
-              // panel is closed. Using a command instead of the outputTemplate also works on XWiki versions where
-              // AdvancedAutoComplete ignores the outputTemplate (e.g. 15.10). When the parent pom moves to XWiki
-              // 17.10.x, whose AdvancedAutoComplete uses the outputTemplate, the outputTemplate can be used instead.
-              command: {
-                name: 'xwiki-macro-insert',
-                data: {
-                  name: 'openproject',
-                  inline: 'enforce',
-                  parameters: {
-                    ...(isDefaultConnection ? {} : {instance}),
-                    identifier: wp.identifier.value,
-                    displayer: 'inline'
-                  }
+        if (!Array.isArray(results?.items)) {
+          return [];
+        }
+        return results.items.map(wp =&gt; {
+          return {
+            id: wp.identifier.value,
+            value: wp.identifier.value,
+            label: wp.summary.value,
+            typebadge: wp.type,
+            projectbadge: wp.project.value,
+            // The selected text is replaced with nothing and then the macro is inserted, after the autocomplete
+            // panel is closed. Using a command instead of the outputTemplate also works on XWiki versions where
+            // AdvancedAutoComplete ignores the outputTemplate (e.g. 15.10). When the parent pom moves to XWiki
+            // 17.10.x, whose AdvancedAutoComplete uses the outputTemplate, the outputTemplate can be used instead.
+            command: {
+              name: 'xwiki-macro-insert',
+              data: {
+                name: 'openproject',
+                inline: 'enforce',
+                parameters: {
+                  ...(isDefaultConnection ? {} : {instance}),
+                  identifier: wp.identifier.value,
+                  displayer: 'inline'
                 }
               }
-            };
-          });
-          callback(results);
-          return;
-        } else {
-          callback([]);
-        }
+            }
+          };
+        });
+      }, function (xhr) {
+        console.log(`Failed to search the work packages at [${searchURL}]: ${xhr?.status} ${xhr?.statusText}`);
+        return getFailureItems(instance);
       })
-      .catch(function (e) {
-        console.log(`error trying to retrieve selectize searchUrl ${searchURL} elements.` + e);
-        callback([]);
-      });
+      .catch(function (error) {
+        console.log(`Failed to read the work packages found at [${searchURL}]: ${error}`);
+        return getFailureItems(instance);
+      })
+      // Called once, outside of the promise chain, so that its own failures aren't taken for search failures.
+      .then(items =&gt; setTimeout(() =&gt; callback(items), 0));
   };
   const DEFAULT_MARKER = '#';
   // The minimum number of characters to type after the marker for the work packages to be searched.
@@ -283,6 +290,56 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
       label: l10n.get(key),
       hint: true
     };
+  };
+  // An entry displaying the given HTML message, rendered by the server. Its links are opened in a new tab, so that the
+  // edited content isn't lost, and the links to connect an OpenProject account come back to the edited page.
+  const getMessageItem = function (key, messageHTML) {
+    const message = $('&lt;div&gt;&lt;/div&gt;').html(messageHTML);
+    const content = message.children('.warningmessage').length ? message.children('.warningmessage') : message;
+    content.find('a[href]').each(function () {
+      const url = new URL(this.href, window.location.href);
+      if (url.searchParams.has('redirectUrl')) {
+        url.searchParams.set('redirectUrl', XWiki.currentDocument.getURL('view'));
+        this.href = url.toString();
+      }
+      this.target = '_blank';
+      this.rel = 'noopener';
+    });
+    return {
+      id: 'openproject-work-package-search-' + key,
+      label: content.text(),
+      html: content.html(),
+      hint: true
+    };
+  };
+  // The messages telling the current user why they can't search the work packages of a connection, as displayed by the
+  // macros (e.g. with a link to connect their OpenProject account), or an empty string if there's none, by connection
+  // name. They're rendered by the content of this page, since this skin extension is cached by the browser, and kept
+  // for the lifetime of the page, as the other configurations fetched at runtime.
+  const notAuthorizedMessages = {};
+  const getNotAuthorizedMessage = function (connection) {
+    if (!notAuthorizedMessages[connection]) {
+      const pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
+        XWiki.currentDocument.documentReference);
+      const url = new XWiki.Document(pluginReference).getURL('get', $.param({outputSyntax: 'plain', connection}));
+      notAuthorizedMessages[connection] = Promise.resolve($.getJSON(url))
+        .then(response =&gt; typeof response?.notAuthorizedMessage === 'string' ? response.notAuthorizedMessage : '')
+        .catch(error =&gt; {
+          // The failure isn't cached, so that the next search tries again.
+          delete notAuthorizedMessages[connection];
+          throw error;
+        });
+    }
+    return notAuthorizedMessages[connection];
+  };
+  // The entry displayed instead of the work packages when their search failed: the message of the macros when the
+  // current user can't read the data of the connection (e.g. they aren't connected to OpenProject, or the connection
+  // doesn't exist anymore), or else a generic message (e.g. the OpenProject server can't be reached).
+  const getFailureItems = function (connection) {
+    return getNotAuthorizedMessage(connection)
+      .then(message =&gt; message ? getMessageItem('notAuthorized', message) : getHintItem('searchFailed'))
+      .catch(() =&gt; getHintItem('searchFailed'))
+      .then(item =&gt; [{...item, failure: true}]);
   };
   ckeditorPromise.then(ckeditor =&gt; {
     const hintItemTemplate = new ckeditor.template(
@@ -378,9 +435,11 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
       };
       const isStoppedBy = function (search, text) {
         // A text shaped like a work package key is searched in the keys, which a text without dash isn't, so the
-        // search of the beginning of a key (e.g. XWI for XWIKI-123) can return nothing while the key matches.
+        // search of the beginning of a key (e.g. XWI for XWIKI-123) can return nothing while the key matches. A failed
+        // search fails for any text, though.
         return search != null &amp;&amp; text.startsWith(search.text)
-          &amp;&amp; !(text !== search.text &amp;&amp; IDENTIFIER.test(search.text) &amp;&amp; KEY_BEGINNING.test(text));
+          &amp;&amp; !(!search.items.length &amp;&amp; text !== search.text &amp;&amp; IDENTIFIER.test(search.text)
+            &amp;&amp; KEY_BEGINNING.test(text));
       };
       const stopSearch = function (range, text, items) {
         // A stopped search isn't replaced by one that it already stops (e.g. the late response of a search done before
@@ -419,6 +478,9 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
         return dataCallback.call(this, options, function (items) {
           if (position &amp;&amp; Array.isArray(items) &amp;&amp; !items.length) {
             stopSearch(position, text, []);
+          } else if (position &amp;&amp; Array.isArray(items) &amp;&amp; items.some(item =&gt; item.failure)) {
+            // The search would fail again, so its entry is displayed again for the text that extends the query.
+            stopSearch(position, text, items);
           }
           return callback.apply(this, arguments);
         });
@@ -458,12 +520,18 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
           return createItem.apply(this, arguments);
         }
         const itemTemplate = this.itemTemplate;
+        let element;
         try {
           this.itemTemplate = hintItemTemplate;
-          return createItem.apply(this, arguments);
+          element = createItem.apply(this, arguments);
         } finally {
           this.itemTemplate = itemTemplate;
         }
+        // The message rendered by the server, whose links can be clicked.
+        if (typeof item.html === 'string') {
+          element.findOne('.ckeditor-autocomplete-item-label').setHtml(item.html);
+        }
+        return element;
       };
     }
 
