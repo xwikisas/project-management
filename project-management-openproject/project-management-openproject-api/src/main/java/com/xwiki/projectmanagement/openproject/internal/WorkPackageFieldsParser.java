@@ -69,6 +69,8 @@ public final class WorkPackageFieldsParser
 
     private static final String TYPE = "type";
 
+    private static final String SCHEMA = "schema";
+
     private static final String PROPERTY_COLUMN_TYPE = "QueryColumn::Property";
 
     /**
@@ -101,7 +103,7 @@ public final class WorkPackageFieldsParser
      */
     public static List<WorkPackageField> parseQueryForm(JsonNode formNode)
     {
-        JsonNode schemaNode = formNode.path(EMBEDDED).path("schema");
+        JsonNode schemaNode = formNode.path(EMBEDDED).path(SCHEMA);
         Set<String> sortableKeys = getSortableKeys(schemaNode);
         Map<String, JsonNode> filterSchemas = getFilterSchemas(schemaNode);
 
@@ -119,6 +121,19 @@ public final class WorkPackageFieldsParser
             fields.add(field);
         }
         return fields;
+    }
+
+    /**
+     * Reads the filters that can be used in a work package query from the response to a query form request. Some of
+     * them match no field (e.g. {@code subprojectId} or {@code typeahead}).
+     *
+     * @param formNode the response of {@code POST /api/v3/queries/form}
+     * @return the keys of the filters (e.g. {@code status} or {@code customField3})
+     * @since 1.4.1
+     */
+    public static List<String> parseQueryFilters(JsonNode formNode)
+    {
+        return new ArrayList<>(getFilterSchemas(formNode.path(EMBEDDED).path(SCHEMA)).keySet());
     }
 
     /**
