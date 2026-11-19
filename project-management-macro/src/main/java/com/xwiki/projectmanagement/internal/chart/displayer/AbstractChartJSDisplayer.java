@@ -215,8 +215,12 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
         }
         if (hasValueAxis()) {
             // Chart.js 2 (used by the Chart.js macro) starts the value axis at the smallest value by default, which
-            // displays the smallest values as empty bars and makes the heights not proportional to the values.
-            options.put("scales", Map.of("yAxes", List.of(Map.of("ticks", Map.of("beginAtZero", true)))));
+            // displays the smallest values as empty bars and makes the heights not proportional to the values. The
+            // values are counts: the ticks are integers, instead of steps of 0.2 for small counts.
+            Map<String, Object> ticks = new LinkedHashMap<>();
+            ticks.put("beginAtZero", true);
+            ticks.put("precision", 0);
+            options.put("scales", Map.of("yAxes", List.of(Map.of("ticks", ticks))));
         }
         return options;
     }
@@ -286,7 +290,7 @@ public abstract class AbstractChartJSDisplayer implements ChartTypeDisplayer
 
     /**
      * @return {@code true} if the chart displays the values along a vertical axis (for example a bar chart), which
-     *     then starts at 0, {@code false} otherwise (for example a pie chart)
+     *     then starts at 0 and has integer ticks, {@code false} otherwise (for example a pie chart)
      */
     protected boolean hasValueAxis()
     {
