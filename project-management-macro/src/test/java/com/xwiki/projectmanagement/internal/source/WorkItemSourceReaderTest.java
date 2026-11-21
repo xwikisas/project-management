@@ -37,6 +37,7 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 import com.xwiki.projectmanagement.source.WorkItemSourceContext;
@@ -147,6 +148,114 @@ class WorkItemSourceReaderTest
     }
 
     @Test
+    void writesTheNamesAsTextWithoutNameResolver() throws Exception
+    {
+        when(this.source.read(eq("project = xwiki"), any()))
+            .thenReturn(WorkItemSelection.ofFilters(List.of(filter("project", new WorkItemName("xwiki")))));
+
+        WorkItemSourceResult result = this.reader.read(new WorkItemSourceRequest().content("project = xwiki"));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"xwiki\"}]}]}}", result.getFilters());
+    }
+
+    @Test
+    void resolvesTheNamesWithTheNameResolver() throws Exception
+    {
+        when(this.source.read(eq("project = xwiki AND status = 1"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(filter("project", new WorkItemName("xwiki")), filter("status", "1"))));
+        WorkItemNameResolver nameResolver = filters -> {
+            // The resolver gets the names, and the other values as they are.
+            assertEquals(new WorkItemName("xwiki"), filters.get(0).getConstraints().get(0).getValue());
+            assertEquals("1", filters.get(1).getConstraints().get(0).getValue());
+            return List.of(filter("project", "12"), filters.get(1));
+        };
+
+        WorkItemSourceResult result = this.reader.read(
+            new WorkItemSourceRequest().content("project = xwiki AND status = 1").nameResolver(nameResolver));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"12\"}]},{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]}]}}",
+            result.getFilters());
+    }
+
+    @Test
+    void doesNotResolveFiltersWithoutNamesOfAnotherSource() throws Exception
+    {
+        WorkItemSource filtersSource = mock(WorkItemSource.class);
+        when(this.componentManager.hasComponent(WorkItemSource.class, "filters")).thenReturn(true);
+        when(this.componentManager.getInstance(WorkItemSource.class, "filters")).thenReturn(filtersSource);
+        when(filtersSource.read(eq("{}"), any())).thenReturn(WorkItemSelection.ofFilters(statusFilter()));
+
+        WorkItemSourceResult result = this.reader.read(new WorkItemSourceRequest().source("filters").content("{}")
+            .nameResolver(filters -> {
+                throw new MacroExecutionException("Unexpected resolution");
+            }));
+
+        assertEquals("{\"query\":{\"filters\":[" + STATUS_FILTER + "]}}", result.getFilters());
+    }
+
+    @Test
+    void passesTheFiltersOfAQueryWithoutNamesToTheNameResolver() throws Exception
+    {
+        when(this.source.read(eq("colour = 1"), any()))
+            .thenReturn(WorkItemSelection.ofFilters(List.of(filter("colour", "1"))));
+        // The name resolver checks the properties of the query.
+        WorkItemSourceRequest request = new WorkItemSourceRequest().content("colour = 1").nameResolver(filters -> {
+            throw new MacroExecutionException("Unknown property [colour].");
+        });
+
+        assertEquals("Unknown property [colour].",
+            assertThrows(MacroExecutionException.class, () -> this.reader.read(request)).getMessage());
+    }
+
+    @Test
+    void combinesTheFiltersOnTheSameProperty() throws Exception
+    {
+        when(this.source.read(eq("query"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(filter("priority", new WorkItemName("High")), filter("status", "1"),
+                filter("priority", new WorkItemName("Low")))));
+        // The names are resolved before the filters are combined: two names of the same resource are the same value.
+        WorkItemNameResolver nameResolver = filters -> List.of(filter("priority", "9"), filters.get(1),
+            filter("priority", "9"));
+
+        WorkItemSourceResult result =
+            this.reader.read(new WorkItemSourceRequest().content("query").nameResolver(nameResolver));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"priority\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"9\"}]},{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]}]}}",
+            result.getFilters());
+    }
+
+    @Test
+    void failsWhenTheFiltersOnTheSamePropertyCantBeCombined() throws Exception
+    {
+        WorkItemSourceRequest request = new WorkItemSourceRequest().content("query");
+        when(this.source.read(eq("query"), any())).thenReturn(WorkItemSelection.ofFilters(List.of(
+            new LiveDataQuery.Filter("progress", ">=", "50"), new LiveDataQuery.Filter("progress", "<=", "80"))));
+
+        MacroExecutionException exception =
+            assertThrows(MacroExecutionException.class, () -> this.reader.read(request));
+
+        assertEquals("The conditions on [progress] can't be combined: only =, !=, IN and NOT IN conditions can be "
+            + "repeated on a property.", exception.getMessage());
+        assertNull(exception.getCause().getCause());
+    }
+
+    @Test
+    void failsWhenTheNameResolverFails() throws Exception
+    {
+        when(this.source.read(eq("project = foo"), any()))
+            .thenReturn(WorkItemSelection.ofFilters(List.of(filter("project", new WorkItemName("foo")))));
+        WorkItemSourceRequest request = new WorkItemSourceRequest().content("project = foo").nameResolver(filters -> {
+            throw new MacroExecutionException("Unknown project [foo]");
+        });
+
+        assertEquals("Unknown project [foo]",
+            assertThrows(MacroExecutionException.class, () -> this.reader.read(request)).getMessage());
+    }
+
+    @Test
     void createsASingleDatasetWithoutChartFilters() throws Exception
     {
         when(this.source.read(eq("status = 1"), any())).thenReturn(WorkItemSelection.ofFilters(statusFilter()));
@@ -230,5 +339,13 @@ class WorkItemSourceReaderTest
     private static List<LiveDataQuery.Filter> statusFilter()
     {
         return List.of(new LiveDataQuery.Filter("status", "equals", "1"));
+    }
+
+    private static LiveDataQuery.Filter filter(String property, Object value)
+    {
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+        filter.setProperty(property);
+        filter.getConstraints().add(new LiveDataQuery.Constraint(value, "="));
+        return filter;
     }
 }

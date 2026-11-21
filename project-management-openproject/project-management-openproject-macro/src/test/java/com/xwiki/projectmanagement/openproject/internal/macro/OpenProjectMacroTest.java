@@ -28,13 +28,10 @@ import javax.inject.Named;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
-import org.xwiki.localization.Translation;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -51,14 +48,14 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -67,6 +64,7 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectId
 import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,10 +72,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -88,7 +86,9 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(WorkItemSourceReader.class)
+// The saved query of the identifier is resolved with the mocked components (its cases are in
+// OpenProjectSavedQueryResolverTest).
+@ComponentList({ WorkItemSourceReader.class, OpenProjectSavedQueryResolver.class })
 class OpenProjectMacroTest
 {
     private static final String LIVE_DATA_DISPLAYER = "proj-manag-liveData";
@@ -108,11 +108,9 @@ class OpenProjectMacroTest
     @MockComponent
     private CurrentUserFilterDetector currentUserFilterDetector;
 
+    // Needed by the saved query resolver.
     @MockComponent
     private ContextualLocalizationManager l10n;
-
-    @Mock
-    private Translation translation;
 
     @MockComponent
     private StylingSetupManager stylingSetupManager;
@@ -125,6 +123,9 @@ class OpenProjectMacroTest
 
     @MockComponent
     private OpenProjectIdentifierResolver identifierResolver;
+
+    @MockComponent
+    private OpenProjectNameResolver nameResolver;
 
     @MockComponent
     @Named("ssrx")
@@ -227,79 +228,6 @@ class OpenProjectMacroTest
     }
 
     @Test
-    void asyncProcessParametersIgnoresIdentifiersThatAreNotSavedQueries()
-    {
-        this.parameters.setIdentifier("12");
-
-        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
-
-        assertNull(this.parameters.getSourceParameters());
-        verifyNoInteractions(this.openProjectAccess);
-    }
-
-    @Test
-    void asyncProcessParametersWithoutApiClient() throws Exception
-    {
-        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.notConnected());
-        this.parameters.setIdentifier("saved");
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-
-        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
-
-        assertNull(this.parameters.getSourceParameters());
-        verify(this.identifierResolver, never()).getSavedQueryResultsUrl(any(), any());
-    }
-
-    @Test
-    void asyncProcessParametersWhenTheSavedQueryCannotBeRetrieved() throws Exception
-    {
-        this.parameters.setIdentifier("saved");
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
-        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
-            .thenThrow(new ProjectManagementException("forbidden"));
-
-        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
-
-        assertNull(this.parameters.getSourceParameters());
-        assertEquals("Failed to retrieve the saved query [5] of the instance [main]. "
-            + "Cause: [ProjectManagementException: forbidden].", this.logCapture.getMessage(0));
-    }
-
-    @ParameterizedTest
-    @ValueSource(ints = { 403, 404 })
-    void asyncProcessParametersWarnsWhenTheSavedQueryIsNotFound(int statusCode) throws Exception
-    {
-        // OpenProject answers 404 for the saved queries that the user isn't allowed to see too.
-        this.parameters.setIdentifier("saved");
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.anonymous(this.apiClient));
-        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
-            .thenThrow(new WorkItemRetrievalException("Not found", statusCode));
-        Block message = new WordBlock("message");
-        when(this.l10n.getTranslation("openproject.savedQuery.unavailable")).thenReturn(this.translation);
-        when(this.translation.render("5")).thenReturn(message);
-        List<Block> warning = List.of(new WordBlock("warning"));
-        when(this.userTokenChecker.getWarningBlock("main", message, false)).thenReturn(warning);
-
-        assertSame(warning, this.macro.asyncProcessParameters(this.parameters, this.context));
-    }
-
-    @Test
-    void asyncProcessParametersDisplaysTheWorkItemsWhenTheSavedQueryFailsOtherwise() throws Exception
-    {
-        this.parameters.setIdentifier("saved");
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
-        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
-        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5"))
-            .thenThrow(new WorkItemRetrievalException("Server error", 500));
-
-        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
-        assertEquals("Failed to retrieve the saved query [5] of the instance [main]. "
-            + "Cause: [WorkItemRetrievalException: Server error].", this.logCapture.getMessage(0));
-    }
-
-    @Test
     void requiresAnAccountWhenTheFiltersUseTheCurrentUser() throws Exception
     {
         this.parameters.setPresetId("3");
@@ -368,7 +296,25 @@ class OpenProjectMacroTest
         assertSame(warningBlock, this.macro.execute(this.parameters, "assignee = me", this.context));
     }
 
-@Test
+    @Test
+    void resolvesTheNamesOfTheQueryInTheContent() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(source.read(eq("project = xwiki"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(new LiveDataQuery.Filter("project", "=", new WorkItemName("xwiki")))));
+        useSource("query", source);
+        when(this.nameResolver.resolve(eq("main"), anyList()))
+            .thenReturn(List.of(new LiveDataQuery.Filter("project", "=", "14")));
+
+        this.macro.execute(this.parameters, "project = xwiki", this.context);
+
+        // The displayers get the ids, and the names are resolved once: not when checking the current user filter.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"14\"}]}]}}", this.parameters.getFilters());
+        verify(this.nameResolver).resolve(eq("main"), anyList());
+    }
+
+    @Test
     void displaysTheSavedQueryLinkedInTheContent() throws Exception
     {
         useSource("openproject/url", new OpenProjectUrlWorkItemSource());
@@ -398,7 +344,7 @@ class OpenProjectMacroTest
         verifyNoInteractions(this.contextComponentManager);
     }
 
-        private void useSource(String hint, WorkItemSource source) throws Exception
+    private void useSource(String hint, WorkItemSource source) throws Exception
     {
         when(this.contextComponentManager.hasComponent(WorkItemSource.class, hint)).thenReturn(true);
         when(this.contextComponentManager.getInstance(WorkItemSource.class, hint)).thenReturn(source);

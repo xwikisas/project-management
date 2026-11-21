@@ -350,6 +350,29 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
+     * @param property a work item property, or an OpenProject filter
+     * @return whether the filters on the property are kept (see {@link OpenProjectFilterTranslator}): the property
+     *     exposes a field of this instance, or is a filter (see {@link #isFilter(String)})
+     */
+    boolean isFilteredProperty(String property)
+    {
+        return getField(property) != null || isFilter(property);
+    }
+
+    /**
+     * @param property a property that isn't filtered (see {@link #isFilteredProperty(String)}), for example
+     *     {@code STATUS}
+     * @return the filtered property having the same name ignoring the case, for example {@code status}, or
+     *     {@code null} if there is none
+     */
+    String getFilteredPropertyIgnoringCase(String property)
+    {
+        return Stream.of(FILTERABLE_PROPERTIES, this.fields.keySet(),
+                this.filterKeys == null ? Set.<String>of() : this.filterKeys)
+            .flatMap(Set::stream).filter(candidate -> candidate.equalsIgnoreCase(property)).findFirst().orElse(null);
+    }
+
+    /**
      * @return whether the property may be an OpenProject filter that the queries of some projects have, but that the
      *     global queries, whose filters are known, don't: the subprojects filter, of the projects having subprojects,
      *     and the custom fields referencing users or versions, filtered by key (e.g. {@code customField3})

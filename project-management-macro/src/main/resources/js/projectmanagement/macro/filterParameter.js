@@ -47,13 +47,246 @@ setTimeout(function () {
         }
         return cfgs.length === 1 && cfgs[0].query.filters.length > 0 ? JSON.stringify(cfgs[0]) : '';
       };
+      /*
+       * The filter builder of a macro having a content (the openproject and calendar macros) edits the filters as a
+       * query written in the macro content, read by the default "query" source, e.g. project = 12 AND status = open.
+       * The query is parsed back by the REST API, so that a single parser reads the queries. The series of a chart
+       * keep their filters in the filters parameter.
+       */
+      // The builder updates its filters by itself too, e.g. when the properties of the chosen instance are loaded,
+      // possibly before the query of the macro is read: the macro is only rewritten once the user edits the filters,
+      // that is once the user acts on the builder, or once its filters differ from the ones read from the macro (the
+      // events of some tools, e.g. a script or an assistive technology, being reported as untrusted).
+      let edited = false;
+      // The filters read from the macro, compared ignoring their order, or null while they're being read.
+      let readFilters = null;
+      let describeFilters = function (filters) {
+        return JSON.stringify(filters.map(filter => [String(filter.property), (filter.constraints || [])
+          .map(constraint => constraint.operator + ':' + constraint.value).sort()]).sort());
+      };
+      let setReadFilters = function (bld) {
+        readFilters = describeFilters(Object.values((bld && bld.getConstraints()) || {}));
+      };
+      // Listened to in the capture phase, before the handlers of the builder: removing a filter detaches its row,
+      // which would then no longer be found inside the builder.
+      ['click', 'keyup', 'change'].forEach(type => document.addEventListener(type, function (e) {
+        if (e.isTrusted && e.target instanceof Element
+            && e.target.closest('.proj-manag-constraint-builder, .daterangepicker')) {
+          edited = true;
+        }
+      }, true));
+      // The bounds that the "between" operator of the builder takes for the ranges of dates open on one side, which
+      // the query writes with a single comparison, e.g. dueDate >= 2026-11-01 (the same as in the OpenProject client).
+      const NO_LOWER_BOUND = '1970-01-01';
+      const NO_UPPER_BOUND = '3000-01-01';
+      const BARE_WORD = /^[^\s(),=!~<>"]+$/;
+      const DATE = /^\d{4}-\d{2}-\d{2}$/;
+      const KEYWORDS = ['and', 'or', 'not', 'in', 'all', 'is', 'empty', 'order'];
+      // The values read as keywords when they're not quoted: all the open or closed statuses, and the current user.
+      const VALUE_KEYWORDS = ['open', 'closed', 'me'];
+      let getMacroForm = function () {
+        return $('.proj-manag-filter[data-query]').closest('form, .macro-editor');
+      };
+      let getContentField = function () {
+        return getMacroForm().find('[name="$content"]');
+      };
+      let getSource = function () {
+        return String(getMacroForm().find('[name="source"]').val() || '').trim();
+      };
+      let isQueryMode = function () {
+        let contentField = getContentField();
+        // Without source, a content starting with a curly bracket is still the advanced Live Data configuration of
+        // the macro, passed to the Live Data: the builder then edits the filters parameter, as before.
+        return $('.proj-manag-filter[data-query]').length > 0 && contentField.length > 0
+          && !(getSource() === '' && String(contentField.val() || '').trim().startsWith('{'));
+      };
+      // The values of the query read as names, by property: a name made of digits is written back between quotes,
+      // so that it isn't read as an id.
+      let names = new Map();
+      let quote = function (text, forced) {
+        text = String(text);
+        if (!forced && BARE_WORD.test(text) && !KEYWORDS.includes(text.toLowerCase())) {
+          return text;
+        }
+        return '"' + text.replace(/["\\]/g, '\\$&') + '"';
+      };
+      // A value written unquoted is read as a date when it looks like a date, as an id when it's a number, and as a
+      // keyword when it's open, closed or me: a name looking so is quoted.
+      let quoteValue = function (property, value) {
+        let text = String(value);
+        let isName = names.has(property) && names.get(property).has(text);
+        return quote(value, DATE.test(text)
+          || (isName && (/^\d+$/.test(text) || VALUE_KEYWORDS.includes(text.toLowerCase()))));
+      };
+      let toDate = function (value) {
+        return String(value || '').substring(0, 10);
+      };
+      let listClause = function (filter, values, operator, keyword) {
+        let property = quote(filter.property);
+        let quoteFilterValue = value => quoteValue(filter.property, value);
+        return values.length === 1 && operator ? `${property} ${operator} ${quoteFilterValue(values[0])}`
+          : `${property} ${keyword} (${values.map(quoteFilterValue).join(', ')})`;
+      };
+      let toQuery = function (filters) {
+        let clauses = [];
+        filters.forEach(filter => {
+          let property = quote(filter.property);
+          let valuesByOperator = new Map();
+          (filter.constraints || []).forEach(constraint => {
+            let values = valuesByOperator.get(constraint.operator) || [];
+            values.push(constraint.value);
+            valuesByOperator.set(constraint.operator, values);
+          });
+          valuesByOperator.forEach((values, operator) => {
+            switch (operator) {
+              case '!':
+                clauses.push(listClause(filter, values, '!=', 'NOT IN'));
+                break;
+              case '&=':
+                clauses.push(listClause(filter, values, null, 'ALL IN'));
+                break;
+              case '~':
+              case '!~':
+              case '>=':
+              case '<=':
+                values.forEach(value => clauses.push(`${property} ${operator} ${quote(value)}`));
+                break;
+              case '*':
+                clauses.push(`${property} IS NOT EMPTY`);
+                break;
+              case '!*':
+                clauses.push(`${property} IS EMPTY`);
+                break;
+              case 'o':
+                clauses.push(`${property} = open`);
+                break;
+              case 'c':
+                clauses.push(`${property} = closed`);
+                break;
+              case 't':
+                clauses.push(`${property} = today()`);
+                break;
+              case 'w':
+                clauses.push(`${property} = thisWeek()`);
+                break;
+              case '=d':
+                values.forEach(value => clauses.push(`${property} = ${toDate(value)}`));
+                break;
+              case 'between':
+                values.forEach(value => {
+                  let bounds = String(value).split('/');
+                  let lower = toDate(bounds[0]);
+                  let upper = toDate(bounds.length > 1 ? bounds[1] : bounds[0]);
+                  if (lower && lower !== NO_LOWER_BOUND) {
+                    clauses.push(`${property} >= ${lower}`);
+                  }
+                  if (upper && upper !== NO_UPPER_BOUND) {
+                    clauses.push(`${property} <= ${upper}`);
+                  }
+                });
+                break;
+              default:
+                clauses.push(listClause(filter, values, '=', 'IN'));
+            }
+          });
+        });
+        return clauses.join(' AND ');
+      };
+      let writeQuery = function (filters) {
+        getContentField().val(toQuery(filters)).trigger('input').trigger('change');
+        // The query replaces the deprecated filters parameter and the content read by another source.
+        $('.proj-manag-filter[data-query]').val('');
+        if (!['', 'query'].includes(getSource())) {
+          getMacroForm().find('[name="source"]').val('').trigger('change');
+        }
+      };
+      // The builder only has the "between" operator for the ranges of dates.
+      let toBuilderConstraint = function (constraint) {
+        if (constraint.operator === 'after') {
+          return { operator: 'between', value: constraint.value + '/' + NO_UPPER_BOUND };
+        } else if (constraint.operator === 'before') {
+          return { operator: 'between', value: NO_LOWER_BOUND + '/' + constraint.value };
+        }
+        return constraint;
+      };
+      let showQueryWarning = function (bld, attribute, parameter) {
+        let template = $('.proj-manag-filter[data-query]').attr(attribute) || '{0}';
+        bld.element.before($('<div class="box warningmessage proj-manag-query-error"></div>')
+          .text(template.replace('{0}', () => parameter)));
+      };
+      let readQuery = function (bld) {
+        let query = String(getContentField().val() || '').trim();
+        if (!query) {
+          setReadFilters(bld);
+          return;
+        } else if (!['', 'query'].includes(getSource())) {
+          // Editing the filters replaces the content read by the other source.
+          showQueryWarning(bld, 'data-other-source', getSource());
+          setReadFilters(bld);
+          return;
+        }
+        // Marks the builder while the query is read.
+        bld.element.addClass('proj-manag-query-loading');
+        $.get(`${XWiki.contextPath}/rest/wikis/${encodeURIComponent(XWiki.currentWiki)}`
+          + '/projectmanagement/query/filters', { query: query }).always(function () {
+          bld.element.removeClass('proj-manag-query-loading');
+        }).done(function (data) {
+          (data.filters || []).forEach(filter => {
+            (filter.constraints || []).filter(constraint => constraint.name).forEach(constraint => {
+              names.set(filter.property, (names.get(filter.property) || new Set()).add(String(constraint.value)));
+            });
+            bld.addFilter({ property: filter.property,
+              constraints: (filter.constraints || []).map(toBuilderConstraint) });
+          });
+          setReadFilters(bld);
+        }).fail(function (response) {
+          showQueryWarning(bld, 'data-query-error',
+            (response.responseJSON && response.responseJSON.message) || response.statusText);
+          // Editing the filters replaces the query that can't be read.
+          setReadFilters(bld);
+        });
+      };
+      // The user edited the query in the content: the builder shows its filters again, without rewriting it.
+      let reloadQuery = function () {
+        let bld = builder.instances.values().next().value;
+        if (!bld || builder.instances.size > 1 || !isQueryMode()) {
+          return;
+        }
+        edited = false;
+        readFilters = null;
+        names.clear();
+        $('.proj-manag-query-error').remove();
+        bld.clear();
+        readQuery(bld);
+      };
+      document.addEventListener('change', function (e) {
+        if (e.isTrusted && e.target instanceof Element && e.target.matches('[name="$content"]')
+            && getContentField().is(e.target)) {
+          reloadQuery();
+        }
+      }, true);
+      // The macro editor of XWiki 17 opens on the tab of the optional parameters without group, which holds the macro
+      // content since it can't be put in a group. The filters are the main parameter of the macro: open on them,
+      // unless the content is read by a source that the builder doesn't edit (e.g. a list of work packages).
+      let showFiltersTab = function () {
+        if (['', 'query'].includes(getSource())) {
+          $('.macro-editor-modal a[role="tab"][aria-controls="macroParameterTreeNode-filters"]').first().tab('show');
+        }
+      };
       let updateFilterInput = function (e, constraints) {
         let livedataCfg = { query: { filters: [] } };
         for (key in constraints) {
           livedataCfg.query.filters.push(constraints[key]);
         }
         livedataCfgs.set(e.target, livedataCfg);
-        $('.proj-manag-filter').val(serializeFilters());
+        if (isQueryMode()) {
+          edited = edited || (readFilters !== null && describeFilters(livedataCfg.query.filters) !== readFilters);
+          if (edited) {
+            writeQuery(livedataCfg.query.filters);
+          }
+        } else {
+          $('.proj-manag-filter').val(serializeFilters());
+        }
       };
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         builderElem.on('constraintsUpdated', updateFilterInput);
@@ -67,6 +300,9 @@ setTimeout(function () {
       let initBuilder = function () {
         let initialFilter = $('.proj-manag-filter').val();
         if (!initialFilter) {
+          if (isQueryMode()) {
+            readQuery(builder.instances.values().next().value);
+          }
           return;
         }
         let filterCfgs = JSON.parse(initialFilter);
@@ -90,6 +326,8 @@ setTimeout(function () {
           // The builder groups the values of a filter into rows.
           filters.forEach(filter => bld.addFilter(filter));
         });
+        // The filters of the deprecated filters parameter, moved to a query in the content once they're edited.
+        setReadFilters(builder.instances.values().next().value);
 
       };
       let init = function () {
@@ -107,16 +345,23 @@ setTimeout(function () {
           i++;
         });
         initBuilder();
+        showFiltersTab();
       };
       $(document).on('click', '.project-management-new-dataset', function () {
         builder.newBuilder();
       });
+      // This script is loaded by the first macro editor displaying the filters, after the modal is shown.
       initBuilder();
+      showFiltersTab();
       $(document).on('hide.bs.modal', '.modal', function () {
         if ($('.proj-manag-filter').length <= 0) {
           return;
         }
         livedataCfgs.clear();
+        edited = false;
+        readFilters = null;
+        names.clear();
+        $('.proj-manag-query-error').remove();
         builder.instances.forEach(builder => builder.clean());
         builder.instances.clear();
         $('.proj-manag-constraint-builder').each(function () {

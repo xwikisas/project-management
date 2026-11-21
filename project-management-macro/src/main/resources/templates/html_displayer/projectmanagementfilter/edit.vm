@@ -28,4 +28,8 @@
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
   data-deps="$escapetool.xml($jsontool.serialize($deps))"
+  ## In a macro having a content, the filters are written as a query in the content (see filterParameter.js).
+  data-query="true"
+  data-query-error="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.queryNotEditable'))"
+  data-other-source="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.otherSource'))"
 />

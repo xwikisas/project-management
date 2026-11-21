@@ -58,6 +58,7 @@ import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -308,6 +309,22 @@ class AbstractProjectManagementCalendarMacroTest
         assertEquals(List.of("filters={\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":"
             + "[{\"operator\":\"=\",\"value\":\"1\"}]}]}}", "identifier=http://tool/list", EXTRA_PARAMETER),
             getQueryParameters(url));
+    }
+
+    @Test
+    void executeWithTheNamesOfTheQueryWrittenAsText() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "query")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "query")).thenReturn(source);
+        when(source.read(eq("project = xwiki"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(new LiveDataQuery.Filter("project", "=", new WorkItemName("xwiki")))));
+
+        URIBuilder url = new URIBuilder(execute("project = xwiki").getParameter(JSON));
+
+        // The calendar macros of the clients that don't resolve the names pass them as text.
+        assertEquals(List.of("filters={\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":"
+            + "[{\"operator\":\"=\",\"value\":\"xwiki\"}]}]}}", EXTRA_PARAMETER), getQueryParameters(url));
     }
 
     @Test

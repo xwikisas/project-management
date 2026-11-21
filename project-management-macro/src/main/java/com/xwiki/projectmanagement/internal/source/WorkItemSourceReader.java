@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.source;
  */
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,6 +46,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 import com.xwiki.projectmanagement.source.WorkItemSourceContext;
@@ -86,10 +88,12 @@ public class WorkItemSourceReader
     /**
      * @param request the macro reading its content
      * @return the work items selected by the macro: when the content is empty, its filters and identifier, unchanged;
-     *     otherwise, its filters combined with the filters read from the content, and the identifier read from the
-     *     content
-     * @throws MacroExecutionException if the source doesn't exist, if the content isn't valid for the source, or if
-     *     the content is used with a parameter it replaces
+     *     otherwise, its filters combined with the filters read from the content (whose names are resolved by the
+     *     name resolver of the request, if any, the names left being written as text, and whose filters on the same
+     *     property are combined into one), and the identifier read from the content
+     * @throws MacroExecutionException if the source doesn't exist, if the content isn't valid for the source, if
+     *     the content is used with a parameter it replaces, if the name resolver of the request rejects a property of a
+     *     query or fails to resolve a name, or if the filters on the same property can't be combined
      */
     public WorkItemSourceResult read(WorkItemSourceRequest request) throws MacroExecutionException
     {
@@ -112,7 +116,59 @@ public class WorkItemSourceReader
             identifier = String.join(",", selection.getIds());
         }
         String filters = request.isFiltersReplaced() ? null : request.getFilters();
-        return new WorkItemSourceResult(mergeFilters(filters, selection.getFilters()), identifier, clientScope);
+        return new WorkItemSourceResult(mergeFilters(filters, getFilters(request, source, selection)), identifier,
+            clientScope);
+    }
+
+    /**
+     * @return the filters of the selection, whose names are resolved by the name resolver of the request, if any, the
+     *     names left being written as text, and whose filters on the same property are combined into one
+     */
+    private static List<LiveDataQuery.Filter> getFilters(WorkItemSourceRequest request, String source,
+        WorkItemSelection selection) throws MacroExecutionException
+    {
+        List<LiveDataQuery.Filter> filters = selection.getFilters();
+        // The properties of a query are checked by the name resolver, even without names.
+        if (request.getNameResolver() != null && !filters.isEmpty()
+            && (DEFAULT_SOURCE.equals(source) || hasNames(filters)))
+        {
+            filters = request.getNameResolver().resolve(filters);
+        }
+        try {
+            return WorkItemFilterCombiner.combine(toText(filters));
+        } catch (WorkItemSourceException e) {
+            throw new MacroExecutionException(e.getMessage(), e);
+        }
+    }
+
+    private static boolean hasNames(List<LiveDataQuery.Filter> filters)
+    {
+        return filters.stream().flatMap(filter -> filter.getConstraints().stream())
+            .anyMatch(constraint -> constraint.getValue() instanceof WorkItemName);
+    }
+
+    /**
+     * @return the filters with the names left written as text, as in the filters parameter
+     */
+    private static List<LiveDataQuery.Filter> toText(List<LiveDataQuery.Filter> filters)
+    {
+        if (!hasNames(filters)) {
+            return filters;
+        }
+        List<LiveDataQuery.Filter> result = new ArrayList<>();
+        for (LiveDataQuery.Filter filter : filters) {
+            LiveDataQuery.Filter textFilter = new LiveDataQuery.Filter();
+            textFilter.setProperty(filter.getProperty());
+            textFilter.setMatchAll(filter.isMatchAll());
+            for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
+                Object value = constraint.getValue();
+                textFilter.getConstraints().add(new LiveDataQuery.Constraint(
+                    value instanceof WorkItemName ? ((WorkItemName) value).getName() : value,
+                    constraint.getOperator()));
+            }
+            result.add(textFilter);
+        }
+        return result;
     }
 
     private static void checkReplacedParameters(WorkItemSourceRequest request) throws MacroExecutionException
