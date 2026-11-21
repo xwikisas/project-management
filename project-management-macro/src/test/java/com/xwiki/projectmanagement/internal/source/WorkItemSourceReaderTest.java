@@ -35,6 +35,7 @@ import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 import com.xwiki.projectmanagement.source.WorkItemSourceContext;
@@ -145,6 +146,64 @@ class WorkItemSourceReaderTest
     }
 
     @Test
+    void writesTheNamesAsTextWithoutNameResolver() throws Exception
+    {
+        when(this.source.read(eq("project = xwiki"), any()))
+            .thenReturn(WorkItemSelection.ofFilters(List.of(filter("project", new WorkItemName("xwiki")))));
+
+        WorkItemSourceResult result = this.reader.read(new WorkItemSourceRequest().content("project = xwiki"));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"xwiki\"}]}]}}", result.getFilters());
+    }
+
+    @Test
+    void resolvesTheNamesWithTheNameResolver() throws Exception
+    {
+        when(this.source.read(eq("project = xwiki AND status = 1"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(filter("project", new WorkItemName("xwiki")), filter("status", "1"))));
+        WorkItemNameResolver nameResolver = filters -> {
+            // The resolver gets the names, and the other values as they are.
+            assertEquals(new WorkItemName("xwiki"), filters.get(0).getConstraints().get(0).getValue());
+            assertEquals("1", filters.get(1).getConstraints().get(0).getValue());
+            return List.of(filter("project", "12"), filters.get(1));
+        };
+
+        WorkItemSourceResult result = this.reader.read(
+            new WorkItemSourceRequest().content("project = xwiki AND status = 1").nameResolver(nameResolver));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"12\"}]},{\"property\":\"status\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]}]}}",
+            result.getFilters());
+    }
+
+    @Test
+    void doesNotResolveFiltersWithoutNames() throws Exception
+    {
+        when(this.source.read(eq("status = 1"), any())).thenReturn(WorkItemSelection.ofFilters(statusFilter()));
+
+        WorkItemSourceResult result = this.reader.read(new WorkItemSourceRequest().content("status = 1")
+            .nameResolver(filters -> {
+                throw new MacroExecutionException("Unexpected resolution");
+            }));
+
+        assertEquals("{\"query\":{\"filters\":[" + STATUS_FILTER + "]}}", result.getFilters());
+    }
+
+    @Test
+    void failsWhenTheNameResolverFails() throws Exception
+    {
+        when(this.source.read(eq("project = foo"), any()))
+            .thenReturn(WorkItemSelection.ofFilters(List.of(filter("project", new WorkItemName("foo")))));
+        WorkItemSourceRequest request = new WorkItemSourceRequest().content("project = foo").nameResolver(filters -> {
+            throw new MacroExecutionException("Unknown project [foo]");
+        });
+
+        assertEquals("Unknown project [foo]",
+            assertThrows(MacroExecutionException.class, () -> this.reader.read(request)).getMessage());
+    }
+
+    @Test
     void createsASingleDatasetWithoutChartFilters() throws Exception
     {
         when(this.source.read(eq("status = 1"), any())).thenReturn(WorkItemSelection.ofFilters(statusFilter()));
@@ -211,5 +270,13 @@ class WorkItemSourceReaderTest
     private static List<LiveDataQuery.Filter> statusFilter()
     {
         return List.of(new LiveDataQuery.Filter("status", "equals", "1"));
+    }
+
+    private static LiveDataQuery.Filter filter(String property, Object value)
+    {
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+        filter.setProperty(property);
+        filter.getConstraints().add(new LiveDataQuery.Constraint(value, "="));
+        return filter;
     }
 }

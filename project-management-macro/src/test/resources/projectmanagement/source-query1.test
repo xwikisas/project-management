@@ -1,0 +1,13 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Query source test - the default source: the macro content is a textual query, whose names are passed as text when
+.# the client doesn't resolve them.
+.#-----------------------------------------------------
+{{test displayer="list"}}
+type = "bug" AND identifier IN (WorkItem1, WorkItem2)
+{{/test}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<ul><li><del><span class="wikiexternallink"><a href="http://xwiki.com/id/1">#WorkItem1</a></span> Do this thing!</del></li></ul>

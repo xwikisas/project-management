@@ -36,11 +36,12 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.xwiki.projectmanagement.internal.source.WorkItemNameResolver;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
-import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
 
@@ -97,11 +98,11 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
     }
 
     @Override
-    protected WorkItemSourceResult readSource(OpenProjectChartMacroParameters parameters, String content)
-        throws MacroExecutionException
+    protected WorkItemSourceResult readSource(OpenProjectChartMacroParameters parameters, String content,
+        WorkItemNameResolver nameResolver) throws MacroExecutionException
     {
         // The compared work packages are fixed: the macro content is ignored.
-        return super.readSource(parameters, "");
+        return super.readSource(parameters, "", nameResolver);
     }
 
     @Override

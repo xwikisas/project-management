@@ -30,6 +30,7 @@ import javax.inject.Singleton;
 
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
@@ -46,6 +47,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
@@ -65,6 +67,9 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
 {
     private static final String CONTENT_DESCRIPTION =
         "The work packages to display, in the format chosen by the source parameter.";
+
+    @Inject
+    private OpenProjectNameResolver nameResolver;
 
     @Inject
     private LicenseChecker licenseChecker;
@@ -158,5 +163,12 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         String sprintColor = parameters.getSprintColor() == null ? "" : parameters.getSprintColor();
         return Map.of("instance", parameters.getInstance(), "sprint", hasSprint, "version", hasVersion, "versionColor",
             versionColor, "sprintColor", sprintColor);
+    }
+
+    @Override
+    protected List<LiveDataQuery.Filter> resolveNames(OpenProjectCalendarMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters) throws MacroExecutionException
+    {
+        return this.nameResolver.resolve(parameters.getInstance(), filters);
     }
 }
