@@ -90,7 +90,16 @@ class QueryWorkItemSourceTest
             Arguments.of("dueDate >= 2026-11-01", "dueDate: after 2026-11-01"),
             Arguments.of("dueDate < 2026-11-01", "dueDate: before 2026-10-31"),
             Arguments.of("dueDate = \"2026-11-21\"", "dueDate: = <2026-11-21>"),
-            Arguments.of("summary ~ 2026-11-21", "summary: ~ 2026-11-21")
+            Arguments.of("summary ~ 2026-11-21", "summary: ~ 2026-11-21"),
+            // A query written by the filter builder of the macro editor.
+            Arguments.of("project = 14 AND targetVersion IN (\"17\", 1.19) AND status NOT IN (1, 2) AND Labels ALL IN "
+                + "(ui, \"a b\") AND summary ~ \"say \\\"hi\\\"\" AND assignees IS NOT EMPTY AND status = open AND "
+                + "dueDate = today() AND startDate = 2026-11-21 AND updateDate >= 2026-11-01 AND updateDate <= "
+                + "2026-11-30 AND creationDate <= 2026-11-30 AND \"Observed in\" = \"2026-11-21\" AND type = \"and\"",
+                "project: = 14; targetVersion: = <17>, = <1.19>; status: ! 1, ! 2; Labels: &= <ui>, &= <a b>; "
+                    + "summary: ~ say \"hi\"; assignees: * ; status: o ; dueDate: t ; startDate: =d 2026-11-21; "
+                    + "updateDate: between 2026-11-01/2026-11-30; creationDate: before 2026-11-30; "
+                    + "Observed in: = <2026-11-21>; type: = <and>")
         );
     }
 

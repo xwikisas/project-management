@@ -258,7 +258,12 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
         assertEquals("Entries 1 - 3 out of 3", getPaginationEntriesText(macros.get(0)));
-        // Open modal and expect the builder to contain the added filters.
+        // The builder writes the filters as a query in the macro content, instead of the deprecated filters parameter.
+        String content = getContent(setup, testReference);
+        assertThat(content, containsString(String.format("assignees = %s AND summary ~ sp AND status IN (%s, %s)",
+            ADMIN_USER_ID, IN_PROGRESS_STATUS_ID, NEW_STATUS_ID)));
+        assertThat(content, not(containsString("filters=")));
+        // Open modal and expect the builder to contain the added filters, read from the query.
         modal = new OpenProjectMacroEditModal(setup, testReference);
         editPage = modal.getEditPage();
         filterBuilderParameter = modal.getFilterBuilder();
@@ -648,6 +653,31 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private static String unescape(String value)
     {
         return value.replaceAll("~(.)", "$1");
+    }
+
+    @Test
+    @Order(15)
+    void filterWithAQueryNamingTheValues(TestUtils setup, TestReference testReference) throws Exception
+    {
+        String filters = "[{\"project\":{\"operator\":\"=\",\"values\":[\"" + DEMO_PROJECT_ID + "\"]}},"
+            + TASKS_IN_PROGRESS_FILTERS.substring(1);
+        int total = this.openProject.getApiResource("/work_packages?pageSize=1&filters=" + encode(filters))
+            .get("total").asInt();
+        assertTrue(total > 0, "The demo project has no task in progress.");
+        // The names of the query are resolved into OpenProject ids; an unknown name is reported.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" id=\"query\"}}%n"
+            + "project = demo-project AND type = task AND status = \"In progress\"%n{{/openproject}}%n%n"
+            + "{{openproject instance=\"%s\" displayer=\"list\"}}%nstatus = \"No such status\"%n{{/openproject}}",
+            CONNECTION_ID, CONNECTION_ID));
+        setup.gotoPage(testReference);
+
+        ViewPageWithOpenProjectMacro page = new ViewPageWithOpenProjectMacro();
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(25, total), total),
+            getPaginationEntriesText(page.getOpenProjectMacros().get(0)));
+        List<String> errors = page.waitForMacroErrors(1);
+        assertEquals(1, errors.size());
+        assertThat(errors.get(0), containsString("The OpenProject status [No such status] of the filter on [status] "
+            + "doesn't exist or you are not allowed to view it."));
     }
 
     private static String getContent(TestUtils setup, TestReference testReference) throws Exception
