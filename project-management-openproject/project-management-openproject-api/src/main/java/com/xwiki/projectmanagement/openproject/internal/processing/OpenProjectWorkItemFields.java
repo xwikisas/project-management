@@ -44,7 +44,6 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.WorkPackageFieldsResult;
-import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -109,8 +108,8 @@ public final class OpenProjectWorkItemFields
         FIELD_TARGET_VERSIONS, "observedInVersions", "budget", "sharedWithUsers", "projectPhase");
 
     /**
-     * The generic work item properties that OpenProject can sort on (see {@link OpenProjectMapper#KEY_MAPPING} for the
-     * matching OpenProject columns).
+     * The generic work item properties that OpenProject can sort on (see
+     * {@link OpenProjectMapper#mapLivedataProperty(String)} for the matching OpenProject columns).
      */
     private static final Set<String> SORTABLE_PROPERTIES = Set.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_TYPE,
         WorkItem.KEY_SUMMARY, WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE, WorkItem.KEY_PROGRESS,
@@ -126,8 +125,8 @@ public final class OpenProjectWorkItemFields
         .flatMap(Function.identity()).collect(Collectors.toSet());
 
     /**
-     * The generic work item properties that OpenProject can filter on (see {@link OpenProjectMapper#KEY_MAPPING} for
-     * the matching OpenProject filters).
+     * The generic work item properties that OpenProject can filter on (see
+     * {@link OpenProjectMapper#mapLivedataProperty(String)} for the matching OpenProject filters).
      */
     private static final Set<String> FILTERABLE_PROPERTIES = Set.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_TYPE,
         WorkItem.KEY_SUMMARY, WorkItem.KEY_DESCRIPTION, WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE,
@@ -142,23 +141,6 @@ public final class OpenProjectWorkItemFields
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectWorkItemFields.class);
 
     private static final String LIST_VALUE_TYPE_PREFIX = "[]";
-
-    /**
-     * The OpenProject filter used by its own work package pickers, which matches the work packages whose subject, or
-     * the name of whose project, type or status, contains the text, and, on the instances using project-based
-     * semantic identifiers, the work packages whose key starts with the text.
-     */
-    private static final String TYPEAHEAD_FILTER = "typeahead";
-
-    private static final String TYPEAHEAD_OPERATOR = "**";
-
-    private static final String CONTAINS_OPERATOR = "contains";
-
-    /**
-     * A work package key (e.g. {@code PROJ-42}), or the beginning of one up to its dash (e.g. {@code PROJ-}), as typed
-     * when searching a work package.
-     */
-    private static final Pattern WORK_PACKAGE_KEY_SEARCH = Pattern.compile("[A-Za-z][A-Za-z0-9_]*-\\d*");
 
     private static final OpenProjectWorkItemFields EMPTY = new OpenProjectWorkItemFields(Collections.emptyList());
 
@@ -333,47 +315,32 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
-     * Rewrites the filters on the properties exposing the fields of this instance into filters on the matching
-     * OpenProject filters, the other filters being kept as they are. When the filters of the instance are known, the
-     * filters on properties that are neither generic work item properties nor OpenProject filters (e.g. a typo in the
-     * filters parameter of a macro) are dropped, since OpenProject rejects them, failing the whole request. The
-     * versions can be referenced by name, e.g. {@code 1.2.3}: a name is replaced by the ids of all the versions with
-     * this name, which the other filters (e.g. on the project) can narrow down.
-     *
-     * @param filters the filters on the work item properties
-     * @param client the client used to resolve the names of the versions
-     * @return the rewritten filters
-     * @throws ProjectManagementException if the versions couldn't be retrieved
+     * @param property the id of a work item property, for example {@code targetVersion}
+     * @return the field exposed by the property, or {@code null} if the property doesn't expose a field of this
+     *     instance, for example a generic work item property
      */
-    public List<LiveDataQuery.Filter> mapFilters(List<LiveDataQuery.Filter> filters, OpenProjectApiClient client)
-        throws ProjectManagementException
+    WorkPackageField getField(String property)
     {
-        List<LiveDataQuery.Filter> mappedFilters = new ArrayList<>();
-        Map<String, List<String>> versionIdsByName = null;
-        for (LiveDataQuery.Filter filter : filters) {
-            WorkPackageField field = this.fields.get(filter.getProperty());
-            if (isWorkPackageKeySearch(filter)) {
-                mappedFilters.add(new LiveDataQuery.Filter(TYPEAHEAD_FILTER, TYPEAHEAD_OPERATOR,
-                    ((String) filter.getConstraints().get(0).getValue()).trim()));
-            } else if (field == null) {
-                maybeAddGenericPropertyFilter(filter, mappedFilters);
-            } else {
-                boolean isVersion = VERSION_FILTER_VALUE_TYPE.equals(field.getFilterValueType());
-                if (isVersion && versionIdsByName == null && hasVersionName(filter)) {
-                    versionIdsByName = getVersionIdsByName(client);
-                }
-                mappedFilters.add(mapFilter(filter, field, isVersion ? versionIdsByName : null));
-            }
-        }
-        return mappedFilters;
+        return this.fields.get(property);
+    }
+
+    /**
+     * @param filterKey an OpenProject filter, for example {@code status}
+     * @return the field of this instance already exposed through a generic work item property whose OpenProject
+     *     filter is the given one, used to know which operators the filter supports, or {@code null} if unknown
+     */
+    WorkPackageField getMappedField(String filterKey)
+    {
+        return this.mappedFields.get(filterKey);
     }
 
     /**
      * @return whether the property is a generic work item property that OpenProject filters on, or an OpenProject
      *     filter of the instance (e.g. {@code subprojectId}, {@code updatedAt} or {@code customField3}), or whether
      *     this can't be known, since the filters of the instance couldn't be retrieved
+     * @param property a work item property, or an OpenProject filter
      */
-    private boolean isFilter(String property)
+    boolean isFilter(String property)
     {
         if (this.filterKeys == null || isProjectFilter(property)) {
             return true;
@@ -391,33 +358,6 @@ public final class OpenProjectWorkItemFields
     {
         return property != null && (SUBPROJECT_FILTER.equals(property)
             || CUSTOM_FIELD_FILTER.matcher(property).matches());
-    }
-
-    private void maybeAddGenericPropertyFilter(LiveDataQuery.Filter filter, List<LiveDataQuery.Filter> mappedFilters)
-    {
-        if (isFilter(filter.getProperty())) {
-            mappedFilters.add(mapGenericPropertyFilter(filter));
-        } else {
-            LOGGER.debug("Ignoring the filter on the unknown work item property [{}].", filter.getProperty());
-        }
-    }
-
-    /**
-     * A search of the work packages whose summary contains a work package key (e.g. {@code PROJ-42}) is meant to find
-     * the work package with this key: the subject filter of OpenProject only matches the subject, so the search is
-     * done with the filter of the OpenProject work package pickers, which also matches the keys (by prefix, e.g.
-     * {@code PROJ-4} matches {@code PROJ-42}). Besides the work packages whose subject contains the text, this filter
-     * also matches those whose project, type or status name contains it, which is unlikely for a text shaped like a
-     * key.
-     */
-    private static boolean isWorkPackageKeySearch(LiveDataQuery.Filter filter)
-    {
-        if (!WorkItem.KEY_SUMMARY.equals(filter.getProperty()) || filter.getConstraints().size() != 1) {
-            return false;
-        }
-        LiveDataQuery.Constraint constraint = filter.getConstraints().get(0);
-        return CONTAINS_OPERATOR.equals(constraint.getOperator()) && constraint.getValue() instanceof String
-            && WORK_PACKAGE_KEY_SEARCH.matcher(((String) constraint.getValue()).trim()).matches();
     }
 
     /**
@@ -496,83 +436,5 @@ public final class OpenProjectWorkItemFields
             return ((Linkable) value).getValue();
         }
         return String.valueOf(value);
-    }
-
-    /**
-     * Replaces the generic Live Data operators of a filter on a generic work item property (e.g. the status) by the
-     * OpenProject operators that the matching OpenProject filter supports. The filters on dates are converted later
-     * on, their values depending on the generic operator, as the filters on the properties without matching field.
-     */
-    private LiveDataQuery.Filter mapGenericPropertyFilter(LiveDataQuery.Filter filter)
-    {
-        WorkPackageField field = this.mappedFields.get(OpenProjectMapper.mapLivedataProperty(filter.getProperty()));
-        String filterType = field == null ? null : getFilterType(field);
-        if (filterType == null) {
-            return filter;
-        }
-        LiveDataQuery.Filter mappedFilter = new LiveDataQuery.Filter();
-        mappedFilter.setProperty(filter.getProperty());
-        mappedFilter.setMatchAll(filter.isMatchAll());
-        for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
-            LiveDataQuery.Constraint mappedConstraint = OpenProjectMapper.mapConstraint(filterType, constraint,
-                field.getFilterOperators(), filter.getProperty());
-            if (mappedConstraint != null) {
-                mappedFilter.getConstraints().add(mappedConstraint);
-            }
-        }
-        return mappedFilter;
-    }
-
-    private static LiveDataQuery.Filter mapFilter(LiveDataQuery.Filter filter, WorkPackageField field,
-        Map<String, List<String>> versionIdsByName)
-    {
-        LiveDataQuery.Filter mappedFilter = new LiveDataQuery.Filter();
-        mappedFilter.setProperty(StringUtils.defaultIfEmpty(field.getFilterKey(), field.getKey()));
-        mappedFilter.setMatchAll(filter.isMatchAll());
-        String filterType = getFilterType(field);
-        for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
-            LiveDataQuery.Constraint mappedConstraint = OpenProjectMapper.mapConstraint(filterType, constraint,
-                field.getFilterOperators(), filter.getProperty());
-            if (mappedConstraint == null) {
-                continue;
-            }
-            for (Object value : getValues(mappedConstraint.getValue(), versionIdsByName)) {
-                mappedFilter.getConstraints()
-                    .add(new LiveDataQuery.Constraint(value, mappedConstraint.getOperator()));
-            }
-        }
-        return mappedFilter;
-    }
-
-    private static boolean hasVersionName(LiveDataQuery.Filter filter)
-    {
-        return filter.getConstraints().stream().anyMatch(constraint -> constraint.getValue() instanceof String
-            && !((String) constraint.getValue()).isEmpty() && !StringUtils.isNumeric((String) constraint.getValue()));
-    }
-
-    private static List<Object> getValues(Object value, Map<String, List<String>> idsByName)
-    {
-        if (idsByName != null && value instanceof String && !StringUtils.isNumeric((String) value)) {
-            List<String> ids = idsByName.get(value);
-            if (ids != null) {
-                return new ArrayList<>(ids);
-            }
-        }
-        return Collections.singletonList(value);
-    }
-
-    private static Map<String, List<String>> getVersionIdsByName(OpenProjectApiClient client)
-        throws ProjectManagementException
-    {
-        PaginatedResult<Version> versions = client.getVersions();
-        if (versions == null || versions.getItems() == null) {
-            return Collections.emptyMap();
-        }
-        Set<String> seen = new HashSet<>();
-        return versions.getItems().stream()
-            .filter(version -> version.getId() != null && version.getName() != null
-                && seen.add(String.valueOf(version.getId())))
-            .collect(Collectors.groupingBy(Version::getName, LinkedHashMap::new,
-                Collectors.mapping(version -> String.valueOf(version.getId()), Collectors.toList())));
     }
 }
