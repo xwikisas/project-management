@@ -108,6 +108,8 @@ public class OpenProjectClient implements ProjectManagementClient
     private static final Pattern IDS_PATTERN =
         Pattern.compile(String.format("^\\s*%1$s(\\s*,\\s*%1$s)*\\s*$", ID_OR_KEY));
 
+    private static final Pattern ID_OR_KEY_PATTERN = Pattern.compile(String.format("^%s$", ID_OR_KEY));
+
     private static final Pattern IDS_SEPARATOR_PATTERN = Pattern.compile("\\s*,\\s*");
 
     /**
@@ -163,6 +165,16 @@ public class OpenProjectClient implements ProjectManagementClient
     private Logger logger;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * @param value a value listing a work package
+     * @return {@code true} if the value is the id (e.g. {@code 123}) or the key (e.g. {@code PROJ-123}) of a work
+     *     package, as the identifier of the macros lists them
+     */
+    public static boolean isWorkPackageIdOrKey(String value)
+    {
+        return value != null && ID_OR_KEY_PATTERN.matcher(value).matches();
+    }
 
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException, WorkItemRetrievalException

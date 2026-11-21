@@ -32,6 +32,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
@@ -40,6 +41,7 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -50,6 +52,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.web.XWikiRequest;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
@@ -59,7 +62,9 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
+import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
+import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -78,6 +83,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WorkItemSourceReader.class)
 class OpenProjectCalendarMacroTest
 {
     @InjectComponentManager
@@ -85,6 +91,10 @@ class OpenProjectCalendarMacroTest
 
     @InjectMockComponents
     private OpenProjectCalendarMacro macro;
+
+    @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
 
     @MockComponent
     private LicenseChecker licenseChecker;
@@ -253,5 +263,23 @@ class OpenProjectCalendarMacroTest
             .thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheLinkInTheContentUsesTheCurrentUser() throws Exception
+    {
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "openproject/url")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "openproject/url"))
+            .thenReturn(new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        when(this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier("http://op/wp?query_props=me"))
+            .thenReturn(true);
+        when(this.openProjectAccess.resolve("main"))
+            .thenReturn(OpenProjectAccessResult.anonymous(mock(OpenProjectApiClient.class)));
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.ANONYMOUS, true, this.context))
+            .thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "http://op/wp?query_props=me", this.context));
     }
 }

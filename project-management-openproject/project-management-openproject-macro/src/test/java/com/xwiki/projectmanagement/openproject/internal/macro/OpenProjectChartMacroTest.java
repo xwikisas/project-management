@@ -29,11 +29,13 @@ import javax.inject.Named;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -45,13 +47,16 @@ import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
+import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -71,6 +76,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WorkItemSourceReader.class)
 class OpenProjectChartMacroTest
 {
     private static final String OPENPROJECT = "openproject";
@@ -80,6 +86,10 @@ class OpenProjectChartMacroTest
 
     @InjectMockComponents
     private OpenProjectChartMacro macro;
+
+    @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
 
     @MockComponent
     private LicenseChecker licenseChecker;
@@ -205,5 +215,20 @@ class OpenProjectChartMacroTest
     {
         // The asynchronous executor wraps the result, so that it can be initialized after an asynchronous rendering.
         assertEquals(chart, result);
+    }
+
+    @Test
+    void requiresAnAccountWhenTheLinkInTheContentUsesTheCurrentUser() throws Exception
+    {
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "openproject/url")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "openproject/url"))
+            .thenReturn(new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        when(this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier("http://op/wp?query_props=me"))
+            .thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "http://op/wp?query_props=me", this.context));
     }
 }

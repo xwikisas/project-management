@@ -34,6 +34,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
@@ -42,6 +43,9 @@ import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
 import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
 import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceRequest;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 
 /**
  * Abstract calendar macro meant to be implemented by project management implementers. It constructs a REST URL pointing
@@ -68,6 +72,9 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
 
+    @Inject
+    private WorkItemSourceReader sourceReader;
+
     /**
      * Constructor.
      *
@@ -77,7 +84,20 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
      */
     public AbstractProjectManagementCalendarMacro(String name, String description, Class<?> clazz)
     {
-        super(name, description, clazz);
+        this(name, description, null, clazz);
+    }
+
+    /**
+     * @param name the name of the macro
+     * @param description the description of the macro
+     * @param contentDescriptor the description of the content of the macro, or {@code null} if it has no content
+     * @param clazz the class of the parameters bean
+     * @since 1.5.0
+     */
+    public AbstractProjectManagementCalendarMacro(String name, String description, ContentDescriptor contentDescriptor,
+        Class<?> clazz)
+    {
+        super(name, description, contentDescriptor, clazz);
     }
 
     @Override
@@ -90,18 +110,40 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     public List<Block> execute(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
+        // An invalid content is reported as is: its message tells the user what to fix.
+        WorkItemSourceResult source = readSource(parameters, content);
+        parameters.setFilters(source.getFilters());
         try {
             this.ssrx.use("projectmanagercalendar/css/parameters.css");
             // The preset filters have to be resolved before building the REST URL, which carries the filters.
             maybeSetPresetFilters(parameters);
             // We build the REST URL to the CalendarResource endpoint, then add it to the rendering of the calendar
             // macro.
-            URIBuilder uriBuilder = getUriBuilder(parameters);
+            URIBuilder uriBuilder = getUriBuilder(parameters, source);
             updateUrl(uriBuilder, parameters);
             return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);
         }
+    }
+
+    /**
+     * Read the content of the macro with the source chosen by its {@code source} parameter. This has no side effect:
+     * the extending classes can call it before executing the macro, e.g. to know whether the work items are filtered
+     * on the current user.
+     *
+     * @param parameters the parameters of the macro
+     * @param content the content of the macro
+     * @return the work items selected by the macro: its {@code filters} parameter when the content is empty,
+     *     otherwise the filters and the identifier read from the content
+     * @throws MacroExecutionException if the content can't be read, or if it is used together with the
+     *     {@code filters} parameter, which it replaces
+     * @since 1.5.0
+     */
+    protected WorkItemSourceResult readSource(T parameters, String content) throws MacroExecutionException
+    {
+        return this.sourceReader.read(new WorkItemSourceRequest().client(parameters.getClient()).content(content)
+            .source(parameters.getSource()).filters(parameters.getFilters(), true));
     }
 
     private void maybeSetPresetFilters(T parameters) throws MacroExecutionException
@@ -122,7 +164,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         return StringUtils.isEmpty(webAppPath) ? "" : SLASH + webAppPath;
     }
 
-    private URIBuilder getUriBuilder(T parameters)
+    private URIBuilder getUriBuilder(T parameters, WorkItemSourceResult source)
     {
         XWikiContext wikiContext = this.xcontextProvider.get();
         String contextPath = getContextPath(wikiContext);
@@ -138,6 +180,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         // Append client context parameters (e.g. "instance" for OpenProject).
         Map<String, Object> ctx = this.macroContext.getContext();
         ctx.forEach((key, value) -> uriBuilder.addParameter(key, value != null ? value.toString() : ""));
+        // The identifier and the other values read from the content, for the client.
+        source.getClientContext().forEach((key, value) -> uriBuilder.addParameter(key, String.valueOf(value)));
         if (parameters.getLimit() != null) {
             uriBuilder.addParameter("limit", parameters.getLimit().toString());
         }

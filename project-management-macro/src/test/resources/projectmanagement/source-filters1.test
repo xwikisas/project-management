@@ -1,0 +1,12 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# Filters source test - the macro content holds the filters, in the Live Data JSON format.
+.#-----------------------------------------------------
+{{test displayer="list" source="filters"}}
+{"query":{"filters":[{"property":"identifier","constraints":[{"value":"WorkItem2"}]}]}}
+{{/test}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<ul><li>#WorkItem2 Do this thing!</li></ul>

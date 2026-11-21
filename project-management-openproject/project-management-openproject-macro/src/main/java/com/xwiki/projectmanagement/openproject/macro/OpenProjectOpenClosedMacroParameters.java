@@ -62,6 +62,13 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
 
     @PropertyHidden
     @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
+    }
+
+    @PropertyHidden
+    @Override
     public void setProperty(String property)
     {
         super.setProperty(property);

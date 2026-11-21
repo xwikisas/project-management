@@ -24,6 +24,7 @@ import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
+import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.ProjectManagementChartType;
 import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
@@ -49,6 +50,8 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     private String property;
 
     private String filters;
+
+    private String source;
 
     private String datasetsLabels;
 
@@ -131,6 +134,29 @@ public class ProjectManagementChartMacroParameters implements ProjectManagementA
     public void setFilters(String filters)
     {
         this.filters = filters;
+    }
+
+    /**
+     * @return how the macro content selects the work items charted by all the datasets, i.e. the hint of a
+     *     {@link com.xwiki.projectmanagement.source.WorkItemSource} (e.g. {@code query}, {@code list}), or {@code null}
+     *     for the default source
+     * @since 1.5.0
+     */
+    @Unstable
+    public String getSource()
+    {
+        return this.source;
+    }
+
+    /**
+     * @param source see {@link #getSource()}
+     * @since 1.5.0
+     */
+    @Unstable
+    @PropertyGroup("filters")
+    public void setSource(String source)
+    {
+        this.source = source;
     }
 
     /**

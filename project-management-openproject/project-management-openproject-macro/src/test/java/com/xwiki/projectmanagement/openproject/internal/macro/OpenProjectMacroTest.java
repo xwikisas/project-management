@@ -32,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.localization.Translation;
 import org.xwiki.observation.ObservationManager;
@@ -44,6 +45,7 @@ import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.LogLevel;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -52,6 +54,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
@@ -61,7 +64,10 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
+import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -70,6 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -81,6 +88,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WorkItemSourceReader.class)
 class OpenProjectMacroTest
 {
     private static final String LIVE_DATA_DISPLAYER = "proj-manag-liveData";
@@ -130,6 +138,10 @@ class OpenProjectMacroTest
     private ComponentManager componentManager;
 
     @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
+
+    @MockComponent
     private ProjectManagementAsyncExecutor asyncExecutor;
 
     @Mock
@@ -167,7 +179,7 @@ class OpenProjectMacroTest
     {
         this.parameters.setIdentifier("query 5");
 
-        List<Block> result = this.macro.execute(this.parameters, "content", this.context);
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
 
         assertEquals(List.of(new GroupBlock(this.displayed, Map.of("class", "open-project-macro"))), result);
         assertEquals("projectmanagement", this.parameters.getSource());
@@ -308,5 +320,87 @@ class OpenProjectMacroTest
         when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "", this.context));
+    }
+
+    @Test
+    void displaysTheWorkPackagesOfTheLinkInTheContent() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+
+        this.macro.execute(this.parameters, " http://op/projects/demo/work_packages\n", this.context);
+
+        // The link is handled like the identifier parameter, and the displayers don't get the content.
+        assertEquals("http://op/projects/demo/work_packages", this.parameters.getIdentifier());
+        assertEquals("client=openproject&instance=main&identifier=http%3A%2F%2Fop%2Fprojects%2Fdemo%2Fwork_packages"
+            + "&translationPrefix=openproject.", this.parameters.getSourceParameters());
+        verify(this.asyncExecutor).execute(same(this.displayerMacro), same(this.parameters), eq(""),
+            same(this.context), any(), eq(false));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheLinkInTheContentUsesTheCurrentUser() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        when(this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier("http://op/wp?query_props=me"))
+            .thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "http://op/wp?query_props=me", this.context));
+    }
+
+    @Test
+    void requiresAnAccountWhenTheFiltersOfTheContentUseTheCurrentUser() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(source.read(eq("assignee = me"), any())).thenReturn(
+            WorkItemSelection.ofFilters(List.of(new LiveDataQuery.Filter("assignees", "=", "me"))));
+        useSource("query", source);
+        this.parameters.setPresetId("3");
+        when(this.currentUserFilterDetector.hasCurrentUserFilter("3",
+            "{\"query\":{\"filters\":[{\"property\":\"assignees\",\"constraints\":[{\"operator\":\"=\","
+                + "\"value\":\"me\"}]}]}}")).thenReturn(true);
+        List<Block> warningBlock = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
+
+        assertSame(warningBlock, this.macro.execute(this.parameters, "assignee = me", this.context));
+    }
+
+@Test
+    void displaysTheSavedQueryLinkedInTheContent() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        when(this.identifierResolver.getStandaloneQueryId("http://op/wp?query_id=5")).thenReturn("5");
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+
+        this.macro.execute(this.parameters, "http://op/wp?query_id=5", this.context);
+        // Called by the asynchronous renderer, with the parameters prepared by the macro execution.
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
+
+        assertTrue(this.parameters.getSourceParameters().endsWith("&savedQueryResultsUrl=results"));
+    }
+
+    @Test
+    void passesTheLiveDataConfigurationInTheContentToTheDisplayer() throws Exception
+    {
+        String configuration = "{\"query\":{\"sort\":[{\"property\":\"status\"}]}}";
+
+        this.macro.execute(this.parameters, configuration, this.context);
+
+        // Without source, a content holding a Live Data configuration is still passed to Live Data, as before the
+        // source parameter: no source is looked up.
+        verify(this.asyncExecutor).execute(same(this.displayerMacro), same(this.parameters), eq(configuration),
+            same(this.context), any(), eq(false));
+        verifyNoInteractions(this.contextComponentManager);
+    }
+
+        private void useSource(String hint, WorkItemSource source) throws Exception
+    {
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, hint)).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, hint)).thenReturn(source);
     }
 }

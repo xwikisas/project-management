@@ -80,6 +80,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
 
     private static final String NEW_STATUS_ID = "1";
 
+    private static final String SOURCE_PARAMETER = "source";
+
+    private static final String URL_SOURCE = "url";
+
     private static final String IN_PROGRESS_STATUS_ID = "7";
 
     private static final String ADMIN_USER_ID = "4";
@@ -292,10 +296,13 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         OpenProjectMacroEditModal macroModal = new OpenProjectMacroEditModal(setup, testReference);
         selectInstanceFromModal(macroModal, CONNECTION_ID);
         WYSIWYGEditPage editPage = macroModal.getEditPage();
-        // Create a filter.
+        // The link of an OpenProject list of work packages, read by the url source.
         macroModal.clickMore();
-        macroModal.setMacroParameter("identifier", getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages",
-            "asc", "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\""));
+        // The deprecated identifier parameter is only displayed when it's set.
+        assertFalse(macroModal.isMacroParameterDisplayed("identifier"));
+        macroModal.setMacroParameter(SOURCE_PARAMETER, URL_SOURCE);
+        macroModal.setContent(getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc",
+            "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\""));
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
@@ -303,7 +310,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // The tasks in progress of all the projects, the most recent first.
         macroModal = new OpenProjectMacroEditModal(setup, testReference);
         editPage = macroModal.getEditPage();
-        macroModal.setMacroParameter("identifier", getTasksInProgressUrl("/work_packages", "desc",
+        macroModal.setContent(getTasksInProgressUrl("/work_packages", "desc",
             "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\",\"project\""));
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
@@ -332,8 +339,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         selectInstanceFromModal(macroModal, CONNECTION_ID);
         WYSIWYGEditPage editPage = macroModal.getEditPage();
         macroModal.clickMore();
-        // The macro filters can't be combined with an identifier, so the filters are set from the livedata.
-        macroModal.setMacroParameter("identifier", savedQueryUrl);
+        // The macro filters can't be combined with a link, so the filters are set from the livedata.
+        macroModal.setMacroParameter(SOURCE_PARAMETER, URL_SOURCE);
+        macroModal.setContent(savedQueryUrl);
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(milestones.size(), ld.countRows());

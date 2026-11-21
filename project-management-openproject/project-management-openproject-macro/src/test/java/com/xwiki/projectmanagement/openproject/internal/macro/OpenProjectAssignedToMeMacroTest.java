@@ -35,6 +35,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
@@ -59,7 +60,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(PresetFiltersCombiner.class)
+@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class })
 class OpenProjectAssignedToMeMacroTest
 {
     private static final String STATUS_NEW =
@@ -132,17 +133,34 @@ class OpenProjectAssignedToMeMacroTest
                 + STATUS_NEW));
     }
 
+    @Test
+    void executeIgnoresTheContent() throws Exception
+    {
+        OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
+        parameters.setSource("list");
+
+        // The content doesn't replace the work packages assigned to the user.
+        assertEquals("{\"query\":{\"filters\":[" + STATUS_NEW + ',' + ASSIGNED_TO_ME + "]}}",
+            executeWithPreset(STATUS_NEW, parameters, "1, 2"));
+        assertNull(parameters.getIdentifier());
+    }
+
     private String executeWithPreset(String presetFilters) throws Exception
+    {
+        return executeWithPreset(presetFilters, new OpenProjectAssignedToMeMacroParameters(), "");
+    }
+
+    private String executeWithPreset(String presetFilters, OpenProjectAssignedToMeMacroParameters parameters,
+        String content) throws Exception
     {
         Preset preset = mock(Preset.class);
         when(preset.getFilter()).thenReturn("{\"query\":{\"filters\":[" + presetFilters + "]}}");
         when(this.presetsManager.getPreset(3)).thenReturn(preset);
         when(this.componentManager.getInstance(Macro.class, "proj-manag-liveData")).thenReturn(this.displayerMacro);
-        OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
         parameters.setInstance("main");
         parameters.setPresetId("3");
 
-        this.macro.execute(parameters, "", new MacroTransformationContext());
+        this.macro.execute(parameters, content, new MacroTransformationContext());
 
         return parameters.getFilters();
     }

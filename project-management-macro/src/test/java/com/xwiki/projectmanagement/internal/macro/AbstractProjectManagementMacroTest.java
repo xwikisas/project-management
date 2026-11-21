@@ -32,11 +32,13 @@ import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.internal.TestProjManagementMacro;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
@@ -58,6 +60,7 @@ import static org.mockito.Mockito.when;
  * @since 1.0-rc-4
  */
 @ComponentTest
+@ComponentList(WorkItemSourceReader.class)
 class AbstractProjectManagementMacroTest
 {
     @InjectMockComponents
@@ -99,10 +102,10 @@ class AbstractProjectManagementMacroTest
         when(componentManager.getInstance(Macro.class, WorkItemsDisplayer.SINGLE.getMacroHint())).thenReturn(
             displayerMacro);
         List<Block> expected = List.of(new WordBlock("rendered"));
-        when(asyncExecutor.execute(eq(displayerMacro), eq(params), eq("content"), eq(macroTransformationContext),
+        when(asyncExecutor.execute(eq(displayerMacro), eq(params), eq(""), eq(macroTransformationContext),
             any(), anyBoolean())).thenReturn(expected);
 
-        List<Block> result = abstractMacro.execute(params, "content", macroTransformationContext);
+        List<Block> result = abstractMacro.execute(params, "", macroTransformationContext);
 
         // The displayer named after the parameter value renders the work items, asynchronously.
         assertSame(expected, result);
