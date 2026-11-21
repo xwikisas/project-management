@@ -31,6 +31,7 @@ import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.internal.source.WorkItemNameResolver;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
@@ -61,11 +62,11 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
     }
 
     @Override
-    protected WorkItemSourceResult readSource(OpenProjectMacroParameters parameters, String content)
-        throws MacroExecutionException
+    protected WorkItemSourceResult readSource(OpenProjectMacroParameters parameters, String content,
+        WorkItemNameResolver nameResolver) throws MacroExecutionException
     {
         // The work packages assigned to the user are fixed: the macro content is ignored.
-        return super.readSource(parameters, "");
+        return super.readSource(parameters, "", nameResolver);
     }
 
     @Override

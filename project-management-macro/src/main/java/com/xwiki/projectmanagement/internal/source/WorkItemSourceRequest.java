@@ -40,6 +40,8 @@ public final class WorkItemSourceRequest
 
     private boolean filtersReplaced;
 
+    private WorkItemNameResolver nameResolver;
+
     /**
      * @param client the id of the client retrieving the work items, or {@code null}
      * @return this request
@@ -94,6 +96,17 @@ public final class WorkItemSourceRequest
         return this;
     }
 
+    /**
+     * @param nameResolver replaces the names written in the filters read from the content by ids, or {@code null} to
+     *     keep the names as text (for example when the macro only checks the filters before resolving them)
+     * @return this request
+     */
+    public WorkItemSourceRequest nameResolver(WorkItemNameResolver nameResolver)
+    {
+        this.nameResolver = nameResolver;
+        return this;
+    }
+
     String getClient()
     {
         return this.client;
@@ -122,5 +135,10 @@ public final class WorkItemSourceRequest
     boolean isFiltersReplaced()
     {
         return this.filtersReplaced;
+    }
+
+    WorkItemNameResolver getNameResolver()
+    {
+        return this.nameResolver;
     }
 }

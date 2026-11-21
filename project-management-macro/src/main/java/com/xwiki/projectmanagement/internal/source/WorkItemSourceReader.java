@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.internal.source;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 import com.xwiki.projectmanagement.source.WorkItemSourceContext;
@@ -84,10 +86,12 @@ public class WorkItemSourceReader
     /**
      * @param request the macro reading its content
      * @return the work items selected by the macro: when the content is empty, its filters and identifier, unchanged;
-     *     otherwise, its filters combined with the filters read from the content, and the identifier read from the
-     *     content
-     * @throws MacroExecutionException if the source doesn't exist, if the content isn't valid for the source, or if
-     *     the content is used with a parameter it replaces
+     *     otherwise, its filters combined with the filters read from the content (whose names are resolved by the
+     *     name resolver of the request, if any, the names left being written as text), and the identifier read from
+     *     the content
+     * @throws MacroExecutionException if the source doesn't exist, if the content isn't valid for the source, if
+     *     the content is used with a parameter it replaces, or if the name resolver of the request fails to resolve a
+     *     name
      */
     public WorkItemSourceResult read(WorkItemSourceRequest request) throws MacroExecutionException
     {
@@ -109,8 +113,42 @@ public class WorkItemSourceReader
         if (!selection.getIds().isEmpty()) {
             identifier = String.join(",", selection.getIds());
         }
+        List<LiveDataQuery.Filter> selectedFilters = selection.getFilters();
+        if (request.getNameResolver() != null && hasNames(selectedFilters)) {
+            selectedFilters = request.getNameResolver().resolve(selectedFilters);
+        }
         String filters = request.isFiltersReplaced() ? null : request.getFilters();
-        return new WorkItemSourceResult(mergeFilters(filters, selection.getFilters()), identifier, clientScope);
+        return new WorkItemSourceResult(mergeFilters(filters, toText(selectedFilters)), identifier, clientScope);
+    }
+
+    private static boolean hasNames(List<LiveDataQuery.Filter> filters)
+    {
+        return filters.stream().flatMap(filter -> filter.getConstraints().stream())
+            .anyMatch(constraint -> constraint.getValue() instanceof WorkItemName);
+    }
+
+    /**
+     * @return the filters with the names left written as text, as in the filters parameter
+     */
+    private static List<LiveDataQuery.Filter> toText(List<LiveDataQuery.Filter> filters)
+    {
+        if (!hasNames(filters)) {
+            return filters;
+        }
+        List<LiveDataQuery.Filter> result = new ArrayList<>();
+        for (LiveDataQuery.Filter filter : filters) {
+            LiveDataQuery.Filter textFilter = new LiveDataQuery.Filter();
+            textFilter.setProperty(filter.getProperty());
+            textFilter.setMatchAll(filter.isMatchAll());
+            for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
+                Object value = constraint.getValue();
+                textFilter.getConstraints().add(new LiveDataQuery.Constraint(
+                    value instanceof WorkItemName ? ((WorkItemName) value).getName() : value,
+                    constraint.getOperator()));
+            }
+            result.add(textFilter);
+        }
+        return result;
     }
 
     private static void checkReplacedParameters(WorkItemSourceRequest request) throws MacroExecutionException

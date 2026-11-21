@@ -14,3 +14,4 @@ com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner
 com.xwiki.projectmanagement.internal.source.FiltersWorkItemSource
 com.xwiki.projectmanagement.internal.source.ListWorkItemSource
 com.xwiki.projectmanagement.internal.source.WorkItemSourceReader
+com.xwiki.projectmanagement.internal.source.QueryWorkItemSource
