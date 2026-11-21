@@ -11,3 +11,6 @@ com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsListDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsEnumDisplayer
 com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner
+com.xwiki.projectmanagement.internal.source.FiltersWorkItemSource
+com.xwiki.projectmanagement.internal.source.ListWorkItemSource
+com.xwiki.projectmanagement.internal.source.WorkItemSourceReader

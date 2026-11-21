@@ -54,6 +54,7 @@ import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -87,7 +88,7 @@ import static org.mockito.Mockito.when;
 @OldcoreTest
 @ReferenceComponentList
 @ComponentList({ DefaultObservationManager.class, OpenProjectMacroDisplayListeners.class,
-    DefaultProjectManagementClientExecutionContext.class })
+    DefaultProjectManagementClientExecutionContext.class, WorkItemSourceReader.class })
 class OpenProjectMacrosOnTheDashboardTest
 {
     private static final String SERVER_URL = "https://dashboard.example.com";

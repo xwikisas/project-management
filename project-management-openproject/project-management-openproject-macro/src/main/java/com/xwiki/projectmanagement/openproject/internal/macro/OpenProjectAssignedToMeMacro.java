@@ -28,8 +28,10 @@ import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
@@ -59,7 +61,15 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
     }
 
     @Override
-    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters)
+    protected WorkItemSourceResult readSource(OpenProjectMacroParameters parameters, String content)
+        throws MacroExecutionException
+    {
+        // The work packages assigned to the user are fixed: the macro content is ignored.
+        return super.readSource(parameters, "");
+    }
+
+    @Override
+    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters, WorkItemSourceResult source)
     {
         // The "me" filter can only be resolved for a connected OpenProject account.
         return true;

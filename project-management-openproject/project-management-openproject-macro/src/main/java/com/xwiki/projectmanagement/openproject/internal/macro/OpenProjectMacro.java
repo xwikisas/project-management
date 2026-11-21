@@ -47,6 +47,7 @@ import org.xwiki.skinx.SkinExtension;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
@@ -68,6 +69,11 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 @Named("openproject")
 public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProjectMacroParameters>
 {
+    private static final String CLIENT = "openproject";
+
+    private static final String CONTENT_DESCRIPTION =
+        "The work packages to display, in the format chosen by the source parameter.";
+
     private static final String CLASS = "class";
 
     @Inject
@@ -110,7 +116,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
      */
     public OpenProjectMacro()
     {
-        super("OpenProject", "Retrieve work items from OpenProject.", null, OpenProjectMacroParameters.class);
+        super("OpenProject", "Retrieve work items from OpenProject.",
+            createSourceContentDescriptor(CONTENT_DESCRIPTION), OpenProjectMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
     }
 
@@ -129,9 +136,15 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     }
 
     @Override
+    protected String getClientId()
+    {
+        return CLIENT;
+    }
+
+    @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
-        addToSourceParams(parameters, "client", "openproject");
+        addToSourceParams(parameters, "client", CLIENT);
 
         addToSourceParams(parameters, "instance", parameters.getInstance());
 
@@ -182,13 +195,14 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     /**
      * @param parameters the parameters of the macro
+     * @param source the work packages selected by the macro, with its content read
      * @return {@code true} if the displayed work packages depend on the OpenProject account of the current user, which
      *     anonymous requests can't use: the work packages are filtered on the current user
      */
-    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters)
+    protected boolean requiresUserAccount(OpenProjectMacroParameters parameters, WorkItemSourceResult source)
     {
-        return this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters())
-            || this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier(parameters.getIdentifier());
+        return this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), source.getFilters())
+            || this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier(source.getIdentifier());
     }
 
     @Override
@@ -206,8 +220,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");
 
-        List<Block> warningBlock =
-            userTokenChecker.getWarningBlock(instanceToUse, requiresUserAccount(parameters), context);
+        List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse,
+            requiresUserAccount(parameters, readSource(parameters, content)), context);
 
         if (!warningBlock.isEmpty()) {
             return warningBlock;

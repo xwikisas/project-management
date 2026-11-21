@@ -57,6 +57,10 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
 
     private String presetId;
 
+    private String workItemSource;
+
+    private String liveDataSource;
+
     /**
      * Default constructor.
      */
@@ -207,11 +211,51 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setLayouts(layouts);
     }
 
-    @PropertyHidden
+    /**
+     * The {@code source} parameter of the Live Data macro, which is always the project management source, is replaced
+     * by the source of the macro content (see {@link #getWorkItemSource()}). The Live Data source is set with
+     * {@link #setLiveDataSource(String)}.
+     *
+     * @return the Live Data source if it is set, otherwise the source of the macro content
+     */
+    @Override
+    public String getSource()
+    {
+        return this.liveDataSource != null ? this.liveDataSource : this.workItemSource;
+    }
+
+    /**
+     * @param source how the macro content selects the work items, i.e. the hint of a
+     *     {@link com.xwiki.projectmanagement.source.WorkItemSource} (e.g. {@code query}, {@code list}), see
+     *     {@link #getWorkItemSource()}
+     * @since 1.5.0
+     */
+    @PropertyGroup("filters")
     @Override
     public void setSource(String source)
     {
-        super.setSource(source);
+        this.workItemSource = source;
+    }
+
+    /**
+     * @return how the macro content selects the work items, i.e. the hint of a
+     *     {@link com.xwiki.projectmanagement.source.WorkItemSource} (e.g. {@code query}, {@code list}), or {@code null}
+     *     for the default source
+     * @since 1.5.0
+     */
+    public String getWorkItemSource()
+    {
+        return this.workItemSource;
+    }
+
+    /**
+     * @param liveDataSource the source of the Live Data displaying the work items
+     * @since 1.5.0
+     */
+    @PropertyHidden
+    public void setLiveDataSource(String liveDataSource)
+    {
+        this.liveDataSource = liveDataSource;
     }
 
     @PropertyHidden

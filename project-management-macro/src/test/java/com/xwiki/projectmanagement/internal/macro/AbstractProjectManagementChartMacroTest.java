@@ -19,15 +19,19 @@
  */
 package com.xwiki.projectmanagement.internal.macro;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.inject.Named;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentLookupException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
@@ -37,23 +41,31 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
 
+import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
+import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,7 +77,8 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(PresetFiltersCombiner.class)
+@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class,
+    DefaultProjectManagementClientExecutionContext.class })
 class AbstractProjectManagementChartMacroTest
 {
     private static final String CLIENT = "test";
@@ -85,6 +98,10 @@ class AbstractProjectManagementChartMacroTest
     @MockComponent
     private ComponentManager componentManager;
 
+    @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
+
     @Mock
     private MacroTransformationContext macroTransformationContext;
 
@@ -99,6 +116,9 @@ class AbstractProjectManagementChartMacroTest
 
     @Mock
     private ChartTypeDisplayer displayer;
+
+    @InjectComponentManager
+    private MockitoComponentManager mocker;
 
     private final ProjectManagementChartMacroParameters parameters = new ProjectManagementChartMacroParameters();
 
@@ -270,7 +290,39 @@ class AbstractProjectManagementChartMacroTest
         assertEquals(List.of(message), result.get(1).getChildren().get(0).getChildren());
     }
 
+    @Test
+    void chartsTheWorkItemsSelectedByTheContentInEachDataset() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "list")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "list")).thenReturn(source);
+        when(source.read(eq("1, 2"), any())).thenReturn(new WorkItemSelection(
+            List.of(new LiveDataQuery.Filter(WorkItem.KEY_STATUS, "=", "1")), List.of("1", "2"), Map.of()));
+        this.parameters.setSource("list");
+        this.parameters.setFilters(datasets(TYPE_BUG, ""));
+        // The work items listed in the client context when each dataset is counted.
+        List<Object> listedWorkItems = new ArrayList<>();
+        when(this.projectManagementManager.countWorkItems(eq(CLIENT), any(), eq(WorkItem.KEY_STATUS)))
+            .thenAnswer(invocation -> {
+                listedWorkItems.add(this.mocker.<ProjectManagementClientExecutionContext>getInstance(
+                    ProjectManagementClientExecutionContext.class).get("identifier"));
+                return Optional.of(Map.of("New", 1L));
+            });
+        when(this.displayer.executeCounts(any(), eq(WorkItem.KEY_STATUS), any(), eq(this.macroTransformationContext),
+            any())).thenReturn(this.chart);
+
+        assertEquals(this.chart, execute("1, 2"));
+        // The filters of the content narrow down each dataset.
+        assertEquals(datasets(TYPE_BUG + ',' + STATUS_NEW, STATUS_NEW), this.parameters.getFilters());
+        assertEquals(List.of("1,2", "1,2"), listedWorkItems);
+    }
+
     private List<Block> execute() throws Exception
+    {
+        return execute(null);
+    }
+
+    private List<Block> execute(String content) throws Exception
     {
         when(this.asyncExecutor.execute(any(), any(), any(), any(), any(), anyBoolean())).thenAnswer(invocation -> {
             Macro<ProjectManagementAsyncMacroParams> asyncMacro = invocation.getArgument(0);
@@ -283,6 +335,6 @@ class AbstractProjectManagementChartMacroTest
         this.parameters.setType("pie");
         this.parameters.setProperty(WorkItem.KEY_STATUS);
 
-        return this.macro.execute(this.parameters, null, this.macroTransformationContext);
+        return this.macro.execute(this.parameters, content, this.macroTransformationContext);
     }
 }

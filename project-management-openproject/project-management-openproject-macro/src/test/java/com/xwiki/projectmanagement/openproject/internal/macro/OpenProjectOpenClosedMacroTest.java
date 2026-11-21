@@ -43,6 +43,7 @@ import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -50,6 +51,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
@@ -70,6 +72,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList(WorkItemSourceReader.class)
 class OpenProjectOpenClosedMacroTest
 {
     private static final String STATUS_FILTER = "{\"query\":{\"filters\":[{\"property\":\"status\","
@@ -163,10 +166,11 @@ class OpenProjectOpenClosedMacroTest
         parameters.setPresetId("preset");
         parameters.setOffset(5L);
         parameters.setDatasetsLabels("[\"label\"]");
+        parameters.setSource("list");
         List<Block> chart = mockOpenClosedChartOfTheLast10Days();
 
-        // The same open v closed line chart as without these parameters.
-        assertChart(chart, this.macro.execute(parameters, "", this.context));
+        // The same open v closed line chart as without these parameters, the content being ignored too.
+        assertChart(chart, this.macro.execute(parameters, "1, 2", this.context));
     }
 
     /**
