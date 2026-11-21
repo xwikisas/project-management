@@ -59,6 +59,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -67,6 +68,7 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectId
 import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,6 +76,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
@@ -125,6 +128,9 @@ class OpenProjectMacroTest
 
     @MockComponent
     private OpenProjectIdentifierResolver identifierResolver;
+
+    @MockComponent
+    private OpenProjectNameResolver nameResolver;
 
     @MockComponent
     @Named("ssrx")
@@ -368,7 +374,25 @@ class OpenProjectMacroTest
         assertSame(warningBlock, this.macro.execute(this.parameters, "assignee = me", this.context));
     }
 
-@Test
+    @Test
+    void resolvesTheNamesOfTheQueryInTheContent() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(source.read(eq("project = xwiki"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(new LiveDataQuery.Filter("project", "=", new WorkItemName("xwiki")))));
+        useSource("query", source);
+        when(this.nameResolver.resolve(eq("main"), anyList()))
+            .thenReturn(List.of(new LiveDataQuery.Filter("project", "=", "14")));
+
+        this.macro.execute(this.parameters, "project = xwiki", this.context);
+
+        // The displayers get the ids, and the names are resolved once: not when checking the current user filter.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"14\"}]}]}}", this.parameters.getFilters());
+        verify(this.nameResolver).resolve(eq("main"), anyList());
+    }
+
+    @Test
     void displaysTheSavedQueryLinkedInTheContent() throws Exception
     {
         useSource("openproject/url", new OpenProjectUrlWorkItemSource());
@@ -398,7 +422,7 @@ class OpenProjectMacroTest
         verifyNoInteractions(this.contextComponentManager);
     }
 
-        private void useSource(String hint, WorkItemSource source) throws Exception
+    private void useSource(String hint, WorkItemSource source) throws Exception
     {
         when(this.contextComponentManager.hasComponent(WorkItemSource.class, hint)).thenReturn(true);
         when(this.contextComponentManager.getInstance(WorkItemSource.class, hint)).thenReturn(source);

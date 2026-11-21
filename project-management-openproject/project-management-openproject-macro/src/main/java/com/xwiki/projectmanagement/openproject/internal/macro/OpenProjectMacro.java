@@ -34,6 +34,7 @@ import javax.inject.Singleton;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
@@ -53,6 +54,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
@@ -75,6 +77,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         "The work packages to display, in the format chosen by the source parameter.";
 
     private static final String CLASS = "class";
+
+    @Inject
+    private OpenProjectNameResolver nameResolver;
 
     @Inject
     @Named("ssrx")
@@ -230,5 +235,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
         return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
             : Collections.singletonList(new GroupBlock(result, params));
+    }
+
+    @Override
+    protected List<LiveDataQuery.Filter> resolveNames(OpenProjectMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters) throws MacroExecutionException
+    {
+        return this.nameResolver.resolve(parameters.getInstance(), filters);
     }
 }

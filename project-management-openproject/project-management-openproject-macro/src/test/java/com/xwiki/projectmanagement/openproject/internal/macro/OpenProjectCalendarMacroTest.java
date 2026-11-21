@@ -33,6 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
@@ -58,12 +59,15 @@ import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetecto
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroParameters;
+import com.xwiki.projectmanagement.source.WorkItemName;
+import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -71,6 +75,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -98,6 +104,9 @@ class OpenProjectCalendarMacroTest
 
     @MockComponent
     private LicenseChecker licenseChecker;
+
+    @MockComponent
+    private OpenProjectNameResolver nameResolver;
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
@@ -281,5 +290,23 @@ class OpenProjectCalendarMacroTest
             .thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "http://op/wp?query_props=me", this.context));
+    }
+
+    @Test
+    void sendsTheIdsOfTheNamesOfTheQueryInTheContentToTheCalendar() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(source.read(eq("project = xwiki"), any())).thenReturn(WorkItemSelection.ofFilters(
+            List.of(new LiveDataQuery.Filter("project", "=", new WorkItemName("xwiki")))));
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "query")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "query")).thenReturn(source);
+        when(this.nameResolver.resolve(eq("main"), anyList()))
+            .thenReturn(List.of(new LiveDataQuery.Filter("project", "=", "14")));
+
+        MacroBlock calendar = getCalendarMacro(this.macro.execute(this.parameters, "project = xwiki", this.context));
+
+        // The calendar resource reads the id of the filtered project.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"project\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"14\"}]}]}}", getQueryParameters(calendar.getParameter("json")).get("filters"));
     }
 }
