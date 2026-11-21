@@ -60,6 +60,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -91,7 +92,8 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(WorkItemSourceReader.class)
+// The saved query of the identifier is resolved with the mocked components.
+@ComponentList({ WorkItemSourceReader.class, OpenProjectSavedQueryResolver.class })
 class OpenProjectMacroTest
 {
     private static final String LIVE_DATA_DISPLAYER = "proj-manag-liveData";

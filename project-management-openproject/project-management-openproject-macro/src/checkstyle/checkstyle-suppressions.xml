@@ -26,5 +26,4 @@
 
 <suppressions>
   <suppress checks="ClassFanOutComplexity" files="OpenProjectSpentTimeMacro.java"/>
-  <suppress checks="ClassFanOutComplexity" files="OpenProjectMacro.java"/>
 </suppressions>
