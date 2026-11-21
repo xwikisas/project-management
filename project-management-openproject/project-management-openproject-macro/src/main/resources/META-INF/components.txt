@@ -15,3 +15,4 @@ com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectMembers
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSpentTimeMacro
 com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectSubprojectsMacro
+com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource

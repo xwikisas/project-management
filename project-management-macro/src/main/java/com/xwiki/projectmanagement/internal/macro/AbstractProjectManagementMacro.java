@@ -37,9 +37,13 @@ import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.Macro;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
+import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceRequest;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementMacroParameters;
 
@@ -64,6 +68,9 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
 
+    @Inject
+    private WorkItemSourceReader sourceReader;
+
     /**
      * @param name the name of the macro.
      * @param description the description of the macro.
@@ -73,6 +80,16 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
     public AbstractProjectManagementMacro(String name, String description, ContentDescriptor descriptor, Class<?> clazz)
     {
         super(name, description, descriptor, clazz);
+    }
+
+    /**
+     * @param description the description of the macro content
+     * @return the descriptor of a macro content read by the source chosen by the {@code source} parameter
+     * @since 1.5.0
+     */
+    protected static ContentDescriptor createSourceContentDescriptor(String description)
+    {
+        return new DefaultContentDescriptor(description, false);
     }
 
     /**
@@ -96,8 +113,12 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         throws MacroExecutionException
     {
         WorkItemsDisplayer displayer = parameters.getDisplayer();
-        parameters.setSource("projectmanagement");
+        WorkItemSourceResult source = readSource(parameters, content);
+        parameters.setFilters(source.getFilters());
+        parameters.setIdentifier(source.getIdentifier());
+        parameters.setLiveDataSource("projectmanagement");
         processParameters(parameters);
+        source.getClientScope().forEach((key, value) -> addToSourceParams(parameters, key, value));
         maybeUpdateFilterFromPreset(parameters);
         try {
             String displayerId = displayer.getMacroHint();
@@ -107,8 +128,11 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 throw new MacroExecutionException(
                     String.format("Macro displayer [%s] is standalone but is being used inline.", displayerId));
             }
-            return asyncExecutor.execute(displayerMacro, parameters, content, context, getAsyncParametersProcessor(),
-                isAsync(parameters));
+            // The content has been read by the source: the displayers don't use it, unless it's a legacy Live Data
+            // configuration.
+            String displayerContent = isLiveDataConfiguration(parameters, content) ? content : "";
+            return asyncExecutor.execute(displayerMacro, parameters, displayerContent, context,
+                getAsyncParametersProcessor(), isAsync(parameters));
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer), e);
         } catch (JobException | RenderingException e) {
@@ -116,6 +140,49 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
                 String.format("Failed to asynchronously render the work items using [%s] displayer.", displayer),
                 e);
         }
+    }
+
+    /**
+     * Read the content of the macro with the source chosen by its {@code source} parameter. This has no side effect:
+     * the extending classes can call it before executing the macro, e.g. to know whether the work items are filtered
+     * on the current user.
+     *
+     * @param parameters the parameters of the macro
+     * @param content the content of the macro
+     * @return the work items selected by the macro: its {@code filters} and {@code identifier} parameters when the
+     *     content is empty, otherwise the filters and the identifier read from the content
+     * @throws MacroExecutionException if the content can't be read, or if it is used together with the
+     *     {@code filters} or {@code identifier} parameters, which it replaces
+     * @since 1.5.0
+     */
+    protected WorkItemSourceResult readSource(T parameters, String content) throws MacroExecutionException
+    {
+        String sourceContent = isLiveDataConfiguration(parameters, content) ? null : content;
+        return this.sourceReader.read(new WorkItemSourceRequest().client(getClientId()).content(sourceContent)
+            .source(parameters.getWorkItemSource()).filters(parameters.getFilters(), true)
+            .identifier(parameters.getIdentifier()));
+    }
+
+    /**
+     * Before the {@code source} parameter, the content was passed to the Live Data macro of the table and cards
+     * displayers, as its advanced JSON configuration (e.g. {@code {"query":{"sort":[...]}}}). Such a content is still
+     * passed to the displayers when no source is chosen: no source content starts with a curly bracket, except the
+     * Live Data JSON of the {@code filters} source, which has to be chosen explicitly.
+     */
+    private static boolean isLiveDataConfiguration(ProjectManagementMacroParameters parameters, String content)
+    {
+        return StringUtils.isBlank(parameters.getWorkItemSource()) && StringUtils.startsWith(StringUtils.trim(content),
+            "{");
+    }
+
+    /**
+     * @return the id of the client retrieving the work items (e.g. {@code openproject}), which can provide its own
+     *     sources for the macro content, or {@code null} if the macro isn't specific to a client
+     * @since 1.5.0
+     */
+    protected String getClientId()
+    {
+        return null;
     }
 
     private void maybeUpdateFilterFromPreset(T parameters) throws MacroExecutionException
