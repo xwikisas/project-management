@@ -157,6 +157,14 @@ class OpenProjectIdentifierResolverTest
     }
 
     @Test
+    void getSavedQueryProjectFromAWorkspaceResultsUrl()
+    {
+        // Recent OpenProject versions link the results of a project query to the work packages of its workspace.
+        assertEquals("9", resolver.getSavedQueryProject("/api/v3/workspaces/9/work_packages?filters="
+            + ENCODED_FILTERS + "&includeSubprojects=true&offset=1&pageSize=20"));
+    }
+
+    @Test
     void getSavedQueryProjectWhenTheQueryIsGlobal()
     {
         assertNull(resolver.getSavedQueryProject("/api/v3/work_packages?filters=" + ENCODED_FILTERS));
