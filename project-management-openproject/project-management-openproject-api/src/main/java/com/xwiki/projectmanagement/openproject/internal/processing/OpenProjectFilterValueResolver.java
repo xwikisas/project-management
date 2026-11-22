@@ -258,9 +258,10 @@ public final class OpenProjectFilterValueResolver
     {
         return filter.getConstraints().stream()
             .filter(constraint -> (constraint.getOperator() == null
-                || INCLUDING_OPERATORS.contains(constraint.getOperator()))
-                && constraint.getValue() instanceof String && isId((String) constraint.getValue()))
-            .map(constraint -> (String) constraint.getValue())
+                || INCLUDING_OPERATORS.contains(constraint.getOperator())))
+            .map(constraint -> OpenProjectFilterTranslator.toTextValue(constraint.getValue()))
+            .filter(value -> value instanceof String && isId((String) value))
+            .map(String.class::cast)
             .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 

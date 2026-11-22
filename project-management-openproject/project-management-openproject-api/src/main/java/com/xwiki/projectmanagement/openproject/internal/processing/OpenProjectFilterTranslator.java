@@ -188,7 +188,7 @@ public final class OpenProjectFilterTranslator
      */
     public OpenProjectFilters translate(List<LiveDataQuery.Filter> filters) throws ProjectManagementException
     {
-        return toOpenProjectFilters(mapFilters(filters));
+        return toOpenProjectFilters(mapFilters(withTextValues(filters)));
     }
 
     /**
@@ -202,7 +202,41 @@ public final class OpenProjectFilterTranslator
      */
     public static OpenProjectFilters translateOtherFilters(List<LiveDataQuery.Filter> filters)
     {
-        return toOpenProjectFilters(filters);
+        return toOpenProjectFilters(withTextValues(filters));
+    }
+
+    /**
+     * Converts a value written as a JSON number or boolean into text, which is how OpenProject reads the values of its
+     * filters: the filters written by hand often hold numbers, OpenProject ids being numbers (for example
+     * {@code "value":14} instead of {@code "value":"14"}).
+     *
+     * @param value the value of a filter constraint
+     * @return the value as text if it's a number or a boolean, else the value itself
+     */
+    static Object toTextValue(Object value)
+    {
+        return value instanceof Number || value instanceof Boolean ? String.valueOf(value) : value;
+    }
+
+    private static List<LiveDataQuery.Filter> withTextValues(List<LiveDataQuery.Filter> filters)
+    {
+        boolean hasNonTextValue = filters.stream().flatMap(filter -> filter.getConstraints().stream())
+            .anyMatch(constraint -> toTextValue(constraint.getValue()) != constraint.getValue());
+        if (!hasNonTextValue) {
+            return filters;
+        }
+        List<LiveDataQuery.Filter> result = new ArrayList<>();
+        for (LiveDataQuery.Filter filter : filters) {
+            LiveDataQuery.Filter textFilter = new LiveDataQuery.Filter();
+            textFilter.setProperty(filter.getProperty());
+            textFilter.setMatchAll(filter.isMatchAll());
+            for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
+                textFilter.getConstraints().add(
+                    new LiveDataQuery.Constraint(toTextValue(constraint.getValue()), constraint.getOperator()));
+            }
+            result.add(textFilter);
+        }
+        return result;
     }
 
     private static OpenProjectFilters toOpenProjectFilters(List<LiveDataQuery.Filter> filters)
