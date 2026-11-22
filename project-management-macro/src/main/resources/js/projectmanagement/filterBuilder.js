@@ -488,6 +488,22 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
           addFilter({ property: selectedVal }, true);
         }
       });
+      // Enter on a list of the builder (the property to add a filter on, the operator of a filter) or on a date whose
+      // date picker is open (Enter closing it) doesn't submit the form holding the builder, e.g. the macro editor:
+      // these fields use it to pick their value. Enter on a text value, or on a date once picked, still submits the
+      // form, as on any text field. Listened to in the capture phase, before the date picker closes on Enter.
+      let builderElement = builder.constraintBuilder[0];
+      if (builderElement.preventSubmitOnEnter) {
+        builderElement.removeEventListener('keydown', builderElement.preventSubmitOnEnter, true);
+      }
+      builderElement.preventSubmitOnEnter = function (event) {
+        let field = $(event.target);
+        let datePicker = field.is('.proj-manag-date-val') && field.data('daterangepicker');
+        if (event.key === 'Enter' && (field.is('select') || (datePicker && datePicker.isShowing))) {
+          event.preventDefault();
+        }
+      };
+      builderElement.addEventListener('keydown', builderElement.preventSubmitOnEnter, true);
       builder.constraintBuilder.find('.proj-manag-remove-filter').off('click.filterBuilder')
         .on('click.filterBuilder', function () {
           builder.constraintBuilder.trigger('builderRemoved');

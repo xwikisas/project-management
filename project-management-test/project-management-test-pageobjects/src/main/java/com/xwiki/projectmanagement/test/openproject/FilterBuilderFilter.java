@@ -160,6 +160,18 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
+     * Press Enter on the operator of the filter, as a keyboard user choosing an operator.
+     *
+     * @return this filter
+     * @since 1.5.0
+     */
+    public FilterBuilderFilter pressEnterOnOperator()
+    {
+        this.container.findElement(By.className("proj-manag-constraint-operator")).sendKeys(Keys.ENTER);
+        return this;
+    }
+
+    /**
      * Selects an operator the way a script or some assistive technologies do: the browser doesn't report the change
      * as a user action.
      *
@@ -210,6 +222,20 @@ public class FilterBuilderFilter extends BaseElement
                 .orElseThrow(() -> new NoSuchElementException("No day " + day + " in the date picker.")).click();
         }
         picker.findElement(By.className("applyBtn")).click();
+        getDriver().waitUntilCondition(driver -> getDisplayedDatePicker(pickerLocator) == null);
+        return this;
+    }
+
+    /**
+     * Press Enter on the date of a date filter, as a keyboard user closing its date picker.
+     *
+     * @return this object
+     * @since 1.5.0
+     */
+    public FilterBuilderFilter pressEnterOnDate()
+    {
+        this.container.findElement(By.className("proj-manag-date-val")).sendKeys(Keys.ENTER);
+        By pickerLocator = By.cssSelector(".daterangepicker");
         getDriver().waitUntilCondition(driver -> getDisplayedDatePicker(pickerLocator) == null);
         return this;
     }

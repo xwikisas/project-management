@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
@@ -137,6 +138,18 @@ public class FilterBuilderParameter extends BaseElement
         }
 
         return new FilterBuilderFilter(createdFilter);
+    }
+
+    /**
+     * Press Enter on the "Add a filter on" list, as a keyboard user choosing a property to filter on.
+     *
+     * @return this filter parameter
+     * @since 1.5.0
+     */
+    public FilterBuilderParameter pressEnterOnAddFilter()
+    {
+        getContainer().findElement(By.className(ADD_FILTER_CLASS)).sendKeys(Keys.ENTER);
+        return this;
     }
 
     /**
