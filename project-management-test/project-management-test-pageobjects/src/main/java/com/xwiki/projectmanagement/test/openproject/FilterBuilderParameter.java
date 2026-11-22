@@ -140,6 +140,21 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
+     * @return the warning displayed above the filters when they can't show the macro content (e.g. a query that can't
+     *     be read, or a content read by another source), or an empty string when there is none
+     * @since 1.5.0
+     */
+    public String getContentWarning()
+    {
+        // The filters read the macro content before displaying the warning, if any.
+        WebElement builder = getContainer();
+        getDriver().waitUntilCondition(driver -> !builder.getAttribute("class").contains("proj-manag-query-loading"));
+        return getDriver().findElementsWithoutWaiting(builder,
+            By.xpath("preceding-sibling::*[contains(@class, 'proj-manag-query-error')]")).stream()
+            .map(WebElement::getText).collect(Collectors.joining("\n"));
+    }
+
+    /**
      * @return what the filters select, in plain words, once the labels of the filter values are loaded, and the dates
      *     displayed by their date pickers
      * @since 1.4.0

@@ -61,6 +61,9 @@ setTimeout(function () {
       // that is once the user acts on the builder, or once its filters differ from the ones read from the macro (the
       // events of some tools, e.g. a script or an assistive technology, being reported as untrusted).
       let edited = false;
+      // The property of the filter whose operator or value the user last changed, or null when the last action of the
+      // user on the builder was another one, e.g. adding or removing a filter.
+      let editedProperty = null;
       // The filters read from the macro, compared ignoring their order, or null while they're being read.
       let readFilters = null;
       let describeFilters = function (filters) {
@@ -76,6 +79,13 @@ setTimeout(function () {
         if (e.isTrusted && e.target instanceof Element
             && e.target.closest('.proj-manag-constraint-builder, .daterangepicker')) {
           edited = true;
+          // The date picker of a filter is displayed in the modal, after the filters: it's the one of the filter
+          // whose date field has the focus.
+          let field = e.target.closest('.daterangepicker') ? document.activeElement : e.target;
+          let row = field && field.closest('.proj-manag-constraint');
+          let onFilter = row
+            && field.closest('.proj-manag-constraint-operator, .proj-manag-constraint-value-container');
+          editedProperty = onFilter ? $(row).find('.proj-manag-constraint-name').val() : null;
         }
       }, true));
       let getMacroForm = function () {
@@ -97,7 +107,21 @@ setTimeout(function () {
       // The values of the query read as names, by property: a name made of digits is written back between quotes,
       // so that it isn't read as an id.
       let names = new Map();
+      // Whether a warning is shown above the builder because the content can't be shown as filters.
+      let contentUnread = false;
+      let clearQueryWarning = function () {
+        contentUnread = false;
+        $('.proj-manag-query-error').remove();
+      };
+      // The number of the last reading of the query: the result of a previous reading, e.g. of a content replaced
+      // since, is ignored.
+      let queryRequest = 0;
       let writeQuery = function (filters) {
+        // The content is now the query of the filters, which the builder shows: a reading of the previous content, if
+        // any, is ignored.
+        queryRequest++;
+        $('.proj-manag-query-loading').removeClass('proj-manag-query-loading');
+        clearQueryWarning();
         getContentField().val(queryWriter.toQuery(filters, names)).trigger('input').trigger('change');
         // The query replaces the deprecated filters parameter and the content read by another source.
         $('.proj-manag-filter[data-query]').val('');
@@ -106,11 +130,17 @@ setTimeout(function () {
         }
       };
       let showQueryWarning = function (bld, attribute, parameter) {
+        clearQueryWarning();
         let template = $('.proj-manag-filter[data-query]').attr(attribute) || '{0}';
         bld.element.before($('<div class="box warningmessage proj-manag-query-error"></div>')
           .text(template.replace('{0}', () => parameter)));
+        contentUnread = true;
+        editedProperty = null;
       };
       let readQuery = function (bld) {
+        let request = ++queryRequest;
+        // A previous reading, if any, is ignored.
+        bld.element.removeClass('proj-manag-query-loading');
         let query = String(getContentField().val() || '').trim();
         if (!query) {
           setReadFilters(bld);
@@ -125,11 +155,19 @@ setTimeout(function () {
         bld.element.addClass('proj-manag-query-loading');
         $.get(`${XWiki.contextPath}/rest/wikis/${encodeURIComponent(XWiki.currentWiki)}`
           + '/projectmanagement/query/filters', { query: query }).always(function () {
-          bld.element.removeClass('proj-manag-query-loading');
+          if (request === queryRequest) {
+            bld.element.removeClass('proj-manag-query-loading');
+          }
         }).done(function (data) {
+          if (request !== queryRequest) {
+            return;
+          }
           queryWriter.fromParsedFilters(data.filters, names).forEach(filter => bld.addFilter(filter));
           setReadFilters(bld);
         }).fail(function (response) {
+          if (request !== queryRequest) {
+            return;
+          }
           showQueryWarning(bld, 'data-query-error',
             (response.responseJSON && response.responseJSON.message) || response.statusText);
           // Editing the filters replaces the query that can't be read.
@@ -138,6 +176,8 @@ setTimeout(function () {
       };
       // The user edited the query in the content: the builder shows its filters again, without rewriting it.
       let reloadQuery = function () {
+        // The warning is about the previous content.
+        clearQueryWarning();
         let bld = builder.instances.values().next().value;
         if (!bld || builder.instances.size > 1 || !isQueryMode()) {
           return;
@@ -145,13 +185,13 @@ setTimeout(function () {
         edited = false;
         readFilters = null;
         names.clear();
-        $('.proj-manag-query-error').remove();
         bld.clear();
         readQuery(bld);
       };
       document.addEventListener('change', function (e) {
-        if (e.isTrusted && e.target instanceof Element && e.target.matches('[name="$content"]')
-            && getContentField().is(e.target)) {
+        // The source reading the content is a part of what the builder shows too, e.g. a list of work packages.
+        if (e.isTrusted && e.target instanceof Element && e.target.matches('[name="$content"], [name="source"]')
+            && getMacroForm().find(e.target).length > 0) {
           reloadQuery();
         }
       }, true);
@@ -170,9 +210,24 @@ setTimeout(function () {
         }
         livedataCfgs.set(e.target, livedataCfg);
         if (isQueryMode()) {
-          edited = edited || (readFilters !== null && describeFilters(livedataCfg.query.filters) !== readFilters);
+          let filters = livedataCfg.query.filters;
+          let changed = readFilters !== null && describeFilters(filters) !== readFilters;
+          if (contentUnread) {
+            // The content that the filters can't show is only replaced once the filters select something: a filter
+            // with a value, or with an operator taking none that the user chose (e.g. "is this week"), not the
+            // default operator of a new filter (e.g. "is today" for a date). Filters without value, or removing a
+            // filter, don't replace it.
+            let selects = filters.some(filter => filter.constraints.some(constraint =>
+              queryWriter.takesValue(constraint.operator) ? constraint.value !== ''
+                : String(filter.property) === editedProperty));
+            if (changed && selects) {
+              writeQuery(filters);
+            }
+            return;
+          }
+          edited = edited || changed;
           if (edited) {
-            writeQuery(livedataCfg.query.filters);
+            writeQuery(filters);
           }
         } else {
           $('.proj-manag-filter').val(serializeFilters());
@@ -251,7 +306,9 @@ setTimeout(function () {
         edited = false;
         readFilters = null;
         names.clear();
-        $('.proj-manag-query-error').remove();
+        editedProperty = null;
+        queryRequest++;
+        clearQueryWarning();
         builder.instances.forEach(builder => builder.clean());
         builder.instances.clear();
         $('.proj-manag-constraint-builder').each(function () {

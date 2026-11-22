@@ -295,6 +295,25 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // Editing the filters rewrites the query, even when the browser doesn't report the edit as a user action.
         filters.get(0).selectOperatorWithoutUserAction("is not one of");
         assertEquals("status != " + NEW_STATUS_ID, modal.getContent());
+        // A content that the filters can't show is reported, and kept until the filters select something: new filters
+        // without value, with the default operator of a date ("is today"), removing a filter or changing the operator
+        // of a filter without value don't replace it.
+        String unreadableQuery = String.format("status = %s OR status = %s", NEW_STATUS_ID, IN_PROGRESS_STATUS_ID);
+        modal.setContent(unreadableQuery);
+        filterBuilderParameter = modal.getFilterBuilder();
+        assertThat(filterBuilderParameter.getContentWarning(), containsString("is not supported yet"));
+        assertEquals(0, filterBuilderParameter.getFilters().size());
+        filterBuilderParameter.addFilter("dueDate");
+        FilterBuilderFilter statusFilter = filterBuilderParameter.addFilter("status");
+        filterBuilderParameter.addFilter("assignees").remove();
+        statusFilter.selectOperator("is not one of");
+        assertEquals(unreadableQuery, modal.getContent());
+        assertThat(filterBuilderParameter.getContentWarning(), containsString("is not supported yet"));
+        statusFilter.setSuggestValue("New");
+        content = modal.getContent();
+        assertThat(content, containsString("dueDate = today()"));
+        assertThat(content, containsString("status != " + NEW_STATUS_ID));
+        assertEquals("", filterBuilderParameter.getContentWarning());
         // Clear the filters and expect the macro to display all the entries.
         filterBuilderParameter.clearFilters();
         modal.clickSubmit();

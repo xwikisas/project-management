@@ -39,6 +39,9 @@ define([], function () {
   // The values read as keywords when they're not quoted: all the open or closed statuses (or versions), the locked
   // versions, and the current user.
   const VALUE_KEYWORDS = ['open', 'closed', 'locked', 'me'];
+  // The operators that take no value, e.g. "is not set" or "is today".
+  const NO_VALUE_OPERATORS = ['*', '!*', 'empty', 'o', 'c', 'l', 't', 'w'];
+  let takesValue = operator => !NO_VALUE_OPERATORS.includes(operator);
 
   /*
    * A word that would be read otherwise when unquoted (a keyword, a date, a day relative to today) is quoted, as is a
@@ -182,7 +185,13 @@ define([], function () {
         values.push(constraint.value);
         valuesByOperator.set(constraint.operator, values);
       });
-      valuesByOperator.forEach((values, operator) => addClauses(filter.property, operator, values));
+      valuesByOperator.forEach((values, operator) => {
+        // A filter without value (e.g. a row of the builder whose value isn't chosen yet) selects nothing: it isn't
+        // written, instead of comparing the property with an empty text.
+        if (!takesValue(operator) || values.some(value => value !== '' && value !== null && value !== undefined)) {
+          addClauses(filter.property, operator, values);
+        }
+      });
     });
     return clauses.join(' AND ');
   };
@@ -215,5 +224,5 @@ define([], function () {
     });
   };
 
-  return { toQuery, fromParsedFilters };
+  return { toQuery, fromParsedFilters, takesValue };
 });
