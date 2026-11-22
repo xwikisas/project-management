@@ -30,6 +30,7 @@ import javax.naming.OperationNotSupportedException;
 import org.apache.commons.lang3.StringUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.test.ui.po.BaseElement;
@@ -52,6 +53,20 @@ public class OpenProjectMacroElement extends BaseElement
     private static final By ERROR_DETAILS = By.className("xwikirenderingerrordescription");
 
     private static final By WARNING_MESSAGE = By.cssSelector(".box.warningmessage");
+
+    private static final By FILTER_PANEL = By.className("livedata-advanced-panel-filter");
+
+    private static final By FILTER_PANEL_GROUP =
+        By.cssSelector(".livedata-advanced-panel-filter .livedata-filter-group");
+
+    private static final String PROPERTY_NAME = "property-name";
+
+    /**
+     * The header of the column of the Live Data table that the entries are sorted by first.
+     */
+    private static final By SORTED_COLUMN_HEADER =
+        By.xpath(".//thead//th[.//*[contains(concat(' ', normalize-space(@class), ' '), ' sort-icon ')"
+            + " and contains(concat(' ', normalize-space(@class), ' '), ' sorted ')]]");
 
     private final WebElement self;
 
@@ -164,6 +179,80 @@ public class OpenProjectMacroElement extends BaseElement
     public List<String> getColumnValues(String column) throws OperationNotSupportedException
     {
         return getTexts(waitForTableLayout().getAllCells(column));
+    }
+
+    /**
+     * Open the filter panel of the Live Data, which lists all its filters, including those that the filters of the
+     * columns don't show (e.g. the open statuses).
+     *
+     * @return the operators of the filters listed by the filter panel (e.g. {@code open}), by property name
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.5.0
+     */
+    public Map<String, List<String>> getFilterPanelFilters() throws OperationNotSupportedException
+    {
+        openFilterPanel();
+        Map<String, List<String>> filters = new LinkedHashMap<>();
+        for (WebElement group : self.findElements(FILTER_PANEL_GROUP)) {
+            filters.put(group.findElement(By.className(PROPERTY_NAME)).getText().trim(),
+                group.findElements(By.className("operator-select")).stream()
+                    .map(operator -> new Select(operator).getFirstSelectedOption().getText().trim())
+                    .collect(Collectors.toList()));
+        }
+        return filters;
+    }
+
+    /**
+     * Remove all the filters on a property from the filter panel of the Live Data, and wait for the table to display
+     * the work packages that they filtered out.
+     *
+     * @param property the name of the filtered property, as listed by the filter panel
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.5.0
+     */
+    public void removeFilterPanelFilters(String property) throws OperationNotSupportedException
+    {
+        openFilterPanel();
+        WebElement group = self.findElements(FILTER_PANEL_GROUP).stream()
+            .filter(candidate -> property.equals(candidate.findElement(By.className(PROPERTY_NAME)).getText().trim()))
+            .findFirst().orElseThrow();
+        // The delete button is displayed when hovering the title of the filters of the property.
+        WebElement title = group.findElement(By.className("filter-group-title"));
+        WebElement deleteButton = title.findElement(By.className("delete-filter-group"));
+        getDriver().createActions().moveToElement(title).perform();
+        getDriver().waitUntilCondition(driver -> deleteButton.isDisplayed());
+        runAndWaitForEntriesUpdate(deleteButton::click);
+        getDriver().waitUntilCondition(driver -> self.findElements(FILTER_PANEL_GROUP).stream()
+            .noneMatch(candidate -> property.equals(candidate.findElement(By.className(PROPERTY_NAME)).getText()
+                .trim())));
+    }
+
+    private void openFilterPanel() throws OperationNotSupportedException
+    {
+        waitForTableLayout();
+        if (self.findElements(FILTER_PANEL).stream().anyMatch(WebElement::isDisplayed)) {
+            return;
+        }
+        self.findElement(By.cssSelector(".livedata-dropdown-menu .dropdown-toggle")).click();
+        self.findElement(By.xpath(".//*[contains(@class, 'livedata-dropdown-menu')]//ul//a"
+            + "[contains(normalize-space(.), 'Filter')]")).click();
+        getDriver().waitUntilCondition(
+            driver -> self.findElements(FILTER_PANEL).stream().anyMatch(WebElement::isDisplayed));
+    }
+
+    /**
+     * Wait for the header of the Live Data table to show which column the work packages are sorted by.
+     *
+     * @return the label of the column the work packages are sorted by first
+     * @throws OperationNotSupportedException if the id parameter of the OpenProject macro was not provided
+     * @since 1.5.0
+     */
+    public String getSortedColumn() throws OperationNotSupportedException
+    {
+        waitForTableLayout();
+        // The sort icon is rendered once its icon is loaded.
+        getDriver().waitUntilCondition(driver -> !self.findElements(SORTED_COLUMN_HEADER).isEmpty());
+        return self.findElement(SORTED_COLUMN_HEADER).findElement(By.className(PROPERTY_NAME)).getText();
     }
 
     /**
@@ -319,7 +408,7 @@ public class OpenProjectMacroElement extends BaseElement
             for (WebElement property : card.findElements(By.className("card-property"))) {
                 if (property.isDisplayed()) {
                     String label = StringUtils.removeEnd(
-                        property.findElement(By.className("property-name")).getText().trim(), ":");
+                        property.findElement(By.className(PROPERTY_NAME)).getText().trim(), ":");
                     properties.put(label, property.findElement(By.className("value")).getText().trim());
                 }
             }

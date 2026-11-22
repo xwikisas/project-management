@@ -29,6 +29,8 @@ import javax.inject.Named;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.xwiki.livedata.LiveDataConfiguration;
+import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.observation.internal.DefaultObservationManager;
@@ -62,12 +64,15 @@ import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkQueryResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLiveDataColumnsResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro;
 import com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectMacro;
 import com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectProjectsMacro;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectProjectsMacroParameters;
@@ -88,7 +93,8 @@ import static org.mockito.Mockito.when;
 @OldcoreTest
 @ReferenceComponentList
 @ComponentList({ DefaultObservationManager.class, OpenProjectMacroDisplayListeners.class,
-    DefaultProjectManagementClientExecutionContext.class, WorkItemSourceReader.class })
+    DefaultProjectManagementClientExecutionContext.class, WorkItemSourceReader.class,
+    OpenProjectLinkQueryResolver.class, OpenProjectLiveDataColumnsResolver.class })
 class OpenProjectMacrosOnTheDashboardTest
 {
     private static final String SERVER_URL = "https://dashboard.example.com";
@@ -113,6 +119,14 @@ class OpenProjectMacrosOnTheDashboardTest
 
     @MockComponent
     private OpenProjectAccess openProjectAccess;
+
+    // Needed by the link query resolver of the work items macro.
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
+    @MockComponent
+    @Named("openproject")
+    private LiveDataConfigurationResolver<LiveDataConfiguration> liveDataConfigurationResolver;
 
     @MockComponent
     private ProjectManagementAsyncExecutor asyncExecutor;

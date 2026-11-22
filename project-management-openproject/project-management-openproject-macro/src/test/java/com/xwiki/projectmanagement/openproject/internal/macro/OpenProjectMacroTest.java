@@ -19,6 +19,9 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +33,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataConfiguration;
+import org.xwiki.livedata.LiveDataConfigurationResolver;
+import org.xwiki.livedata.LiveDataMeta;
+import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
@@ -56,6 +63,8 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkQueryResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLiveDataColumnsResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -63,8 +72,11 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 import com.xwiki.projectmanagement.source.WorkItemSelection;
 import com.xwiki.projectmanagement.source.WorkItemName;
 import com.xwiki.projectmanagement.source.WorkItemSource;
@@ -92,12 +104,17 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 // The saved query of the identifier is resolved with the mocked components (its cases are in
 // OpenProjectSavedQueryResolverTest).
-@ComponentList({ WorkItemSourceReader.class, OpenProjectSavedQueryResolver.class })
+@ComponentList({ WorkItemSourceReader.class, OpenProjectSavedQueryResolver.class, OpenProjectLinkQueryResolver.class,
+    OpenProjectLiveDataColumnsResolver.class })
 class OpenProjectMacroTest
 {
     private static final String LIVE_DATA_DISPLAYER = "proj-manag-liveData";
 
     private static final String SAVED_QUERY_LINK = "http://op/wp?query_id=5";
+
+    private static final Set<String> LIST = Set.of("=", "!");
+
+    private static final String PROJECT_LIST = "https://op.example.com/projects/demo/work_packages";
 
     private static final String OTHER_SERVER_LINK = "https://other.example.com/projects/demo/work_packages";
 
@@ -137,6 +154,14 @@ class OpenProjectMacroTest
 
     @MockComponent
     private OpenProjectNameResolver nameResolver;
+
+    // Needed by the link query resolver.
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
+    @MockComponent
+    @Named("openproject")
+    private LiveDataConfigurationResolver<LiveDataConfiguration> liveDataConfigurationResolver;
 
     @MockComponent
     @Named("ssrx")
@@ -365,6 +390,147 @@ class OpenProjectMacroTest
         verify(this.asyncExecutor).execute(same(this.displayerMacro), same(this.parameters), eq(configuration),
             same(this.context), any(), eq(false));
         verifyNoInteractions(this.contextComponentManager);
+    }
+
+    @Test
+    void showsTheFiltersAndTheSortingOfTheIdentifierLinkInTheLiveData() throws Exception
+    {
+        // A page written before the source parameter, whose link selects the open tasks, the most recent first.
+        this.parameters.setIdentifier(link("{\"f\":[{\"n\":\"type\",\"o\":\"=\",\"v\":[\"1\"]},"
+            + "{\"n\":\"status\",\"o\":\"o\",\"v\":[]},{\"n\":\"priority\",\"o\":\"=\",\"v\":[\"9\"]}],"
+            + "\"t\":\"id:desc\"}"));
+        this.parameters.setFilters("{\"query\":{\"filters\":[{\"property\":\"priority\",\"constraints\":"
+            + "[{\"operator\":\"=\",\"value\":\"8\"}]}]}}");
+        useColumns(OpenProjectWorkItemFields.empty(), Map.of("type", LIST, "status", Set.of("=", "!", "o", "c"),
+            "priority", LIST, "identifier", LIST));
+
+        this.macro.execute(this.parameters, "", this.context);
+
+        // The Live Data shows the filters and the sorting of the link, which the client no longer applies itself,
+        // except the filter on the priority, which the macro already filters: the Live Data shows one filter by
+        // property, so the link keeps it.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"priority\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"8\"}]},{\"property\":\"type\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]},"
+            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"o\",\"value\":\"\"}]}]}}",
+            this.parameters.getFilters());
+        assertEquals("identifier:desc", this.parameters.getSort());
+        String identifier = link("{\"f\":[{\"n\":\"priority\",\"o\":\"=\",\"v\":[\"9\"]}]}");
+        assertEquals(identifier, this.parameters.getIdentifier());
+        assertEquals("client=openproject&instance=main&identifier=" + encode(identifier)
+            + "&translationPrefix=openproject.", this.parameters.getSourceParameters());
+    }
+
+    @Test
+    void showsTheFiltersOfTheLinkOnTheFieldsOfTheInstance() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        WorkPackageField approved = new WorkPackageField();
+        approved.setKey("customField3");
+        approved.setName("Approved");
+        approved.setFilterKey("customField3");
+        approved.setFilterValueType("Boolean");
+        approved.setSortable(true);
+        useColumns(new OpenProjectWorkItemFields(List.of(approved)), Map.of("Approved", Set.of("=")));
+
+        this.macro.execute(this.parameters, link("{\"f\":[{\"n\":\"customField3\",\"o\":\"=\",\"v\":[\"t\"]}],"
+            + "\"t\":\"customField3:asc\"}"), this.context);
+
+        // The custom field is named after its property, and its boolean value written as the Live Data writes it.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"Approved\",\"constraints\":[{\"operator\":\"=\","
+            + "\"value\":\"true\"}]}]}}", this.parameters.getFilters());
+        assertEquals("Approved:asc", this.parameters.getSort());
+        assertEquals(PROJECT_LIST, this.parameters.getIdentifier());
+    }
+
+    @Test
+    void sortsTheWorkPackagesOfTheLinkInTheContentAfterTheSortParameter() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        this.parameters.setSort("status:asc");
+        // Only the sorting can be shown: the search of the link has no column filter.
+        String search = "{\"f\":[{\"n\":\"search\",\"o\":\"**\",\"v\":[\"wiki\"]}]}";
+        useColumns(OpenProjectWorkItemFields.empty(), Map.of("status", LIST));
+
+        this.macro.execute(this.parameters, link("{\"t\":\"status:desc,updatedAt:desc\","
+            + search.substring(1)), this.context);
+
+        assertNull(this.parameters.getFilters());
+        // The sort parameter wins for the properties sorted by both.
+        assertEquals("status:asc,updateDate:desc", this.parameters.getSort());
+        assertEquals(link(search), this.parameters.getIdentifier());
+    }
+
+    @Test
+    void keepsTheLinkWhenItsFiltersCantBeShown() throws Exception
+    {
+        String link = link("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}]}");
+        this.parameters.setIdentifier(link);
+        OpenProjectAccessResult access = OpenProjectAccessResult.authenticated(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(access);
+        when(this.workPackageFieldsCache.getFields("main", access)).thenThrow(new IllegalArgumentException("cache"));
+
+        this.macro.execute(this.parameters, "", this.context);
+
+        // The client applies the filters of the link, as before.
+        assertEquals(link, this.parameters.getIdentifier());
+        assertNull(this.parameters.getFilters());
+        assertNull(this.parameters.getSort());
+        String warning = "Failed to show the filters of the link [" + link + "] in the Live Data. Root cause: "
+            + "[IllegalArgumentException: cache].";
+        // The content is read twice: to check the current user filter, then to display the work packages.
+        assertEquals(warning, this.logCapture.getMessage(0));
+        assertEquals(warning, this.logCapture.getMessage(1));
+    }
+
+    @Test
+    void keepsTheLinkWhenItsQueryPropertiesAreInvalid() throws Exception
+    {
+        String link = PROJECT_LIST + "?query_props=%7Bnot+json";
+        this.parameters.setIdentifier(link);
+
+        this.macro.execute(this.parameters, "", this.context);
+
+        // The client reports the invalid link when it requests the work packages.
+        assertEquals(link, this.parameters.getIdentifier());
+        assertNull(this.parameters.getFilters());
+        assertNull(this.parameters.getSort());
+    }
+
+    private void useColumns(OpenProjectWorkItemFields fields, Map<String, Set<String>> filterOperators)
+        throws Exception
+    {
+        OpenProjectAccessResult access = OpenProjectAccessResult.authenticated(this.apiClient);
+        when(this.openProjectAccess.resolve("main")).thenReturn(access);
+        when(this.workPackageFieldsCache.getFields("main", access)).thenReturn(fields);
+        LiveDataConfiguration configuration = new LiveDataConfiguration();
+        configuration.setMeta(new LiveDataMeta());
+        List<LiveDataPropertyDescriptor> descriptors = new ArrayList<>();
+        filterOperators.forEach((property, operators) -> {
+            LiveDataPropertyDescriptor descriptor = new LiveDataPropertyDescriptor();
+            descriptor.setId(property);
+            descriptor.setFilterable(true);
+            descriptor.setFilter(new LiveDataPropertyDescriptor.FilterDescriptor("list"));
+            operators.forEach(operator -> descriptor.getFilter().addOperator(operator, operator));
+            descriptors.add(descriptor);
+        });
+        configuration.getMeta().setPropertyDescriptors(descriptors);
+        when(this.liveDataConfigurationResolver.resolve(any())).thenAnswer(invocation -> {
+            LiveDataConfiguration input = invocation.getArgument(0);
+            // The columns are those of the instance of the macro.
+            return "main".equals(input.getQuery().getSource().getParameters().get("instance")) ? configuration : null;
+        });
+    }
+
+    private static String link(String queryProperties)
+    {
+        return PROJECT_LIST + "?query_props=" + encode(queryProperties);
+    }
+
+    private static String encode(String value)
+    {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private void useSource(String hint, WorkItemSource source) throws Exception

@@ -328,6 +328,17 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
+        // The Live Data shows the filters and the sorting of the link.
+        OpenProjectMacroElement macro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        // The filter of the column shows the label of the type of the link.
+        assertEquals(List.of("Task"), ld.getFilterValues("Type"));
+        assertEquals("ID", macro.getSortedColumn());
+        // Removing a filter of the link from the Live Data shows the work packages that it filtered out.
+        macro.clearColumnFilter("Type");
+        int inProgress = countWorkPackages(DEMO_PROJECT_PATH,
+            "[{\"status\":{\"operator\":\"=\",\"values\":[\"" + IN_PROGRESS_STATUS_ID + "\"]}}]");
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(inProgress, 25), inProgress),
+            getPaginationEntriesText(macro));
 
         // The tasks in progress of all the projects, the most recent first.
         macroModal = new OpenProjectMacroEditModal(setup, testReference);
@@ -349,6 +360,24 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals(1, errors.size());
         assertThat(errors.get(0), containsString("The link is from the OpenProject server other.example.com, not "));
         assertThat(errors.get(0), containsString(" of the connection " + CONNECTION_ID + ". Use a link of "));
+
+        // A filter of the link taking no value, on the open statuses, is listed by the filter panel (the filter of the
+        // column only shows values), which can remove it.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" source=\"url\" id=\"open\"}}%n"
+            + "%s%s/work_packages?query_props=%s%n{{/openproject}}", CONNECTION_ID, this.openProject.getBaseUrl(),
+            DEMO_PROJECT_PATH, encode("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}]}")));
+        setup.gotoPage(testReference);
+        OpenProjectMacroElement openMacro = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0);
+        int open = countWorkPackages(DEMO_PROJECT_PATH, "[{\"status\":{\"operator\":\"o\",\"values\":[]}}]");
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(open, 25), open),
+            getPaginationEntriesText(openMacro));
+        Map<String, List<String>> filters = openMacro.getFilterPanelFilters();
+        assertEquals(List.of("Status"), List.copyOf(filters.keySet()));
+        assertEquals(List.of("open"), filters.get("Status"));
+        openMacro.removeFilterPanelFilters("Status");
+        int all = countWorkPackages(DEMO_PROJECT_PATH, "[]");
+        assertEquals(String.format("Entries 1 - %d out of %d", Math.min(all, 25), all),
+            getPaginationEntriesText(openMacro));
     }
 
     @Test
@@ -778,6 +807,12 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             + encode("[[\"id\",\"desc\"]]") + "&filters=" + encode(TASKS_IN_PROGRESS_FILTERS));
         return StreamSupport.stream(workPackages.get(EMBEDDED).get(ELEMENTS).spliterator(), false)
             .map(workPackage -> workPackage.get("id").asText()).collect(Collectors.toList());
+    }
+
+    private int countWorkPackages(String projectPath, String filters) throws Exception
+    {
+        return this.openProject.getApiResource(projectPath + "/work_packages?pageSize=1&filters=" + encode(filters))
+            .get("total").asInt();
     }
 
     private static List<String> getSubjects(JsonNode workPackages)
