@@ -77,7 +77,8 @@
     <div class="box warningmessage">$!escapetool.xml($services.localization.render("projectmanagement.macro.filter.noFilters"))</div>
   #else
     ## The labels displayed by the filter builder: the operators (by type of filter and operator id, the labels of
-    ## the configuration being used for the other operators) and the words of the summary of the filters.
+    ## the configuration being used for the other operators), the text alternatives of the fields of a filter and the
+    ## words of the summary of the filters.
     ## The operator ids aren't valid in translation keys, so the operators are translated by name.
     #set ($operatorKeys = {
       'list.=': 'list.isOneOf', 'list.!': 'list.isNotOneOf', 'list.&=': 'list.hasAllOf', 'list.*': 'isSet',
@@ -94,7 +95,8 @@
       #set ($discard = $l10n.put($operatorKey.key,
         $services.localization.render("projectmanagement.macro.filter.operator.$operatorKey.value")))
     #end
-    #foreach ($key in ['anotherCondition', 'summary', 'summaryAll', 'summaryIncomplete', 'and', 'or', 'between'])
+    #foreach ($key in ['anotherCondition', 'operatorLabel', 'valueLabel', 'summary', 'summaryAll', 'summaryIncomplete',
+        'and', 'or', 'between'])
       #set ($discard = $l10n.put($key, $services.localization.render("projectmanagement.macro.filter.$key")))
     #end
     <div class="proj-manag-constraint-builder proj-manag-macro-param" data-client="$escapetool.xml($clientId)"

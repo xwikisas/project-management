@@ -254,6 +254,12 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         filterBuilderParameter.addFilter("status").setSuggestValue("In progress").setSuggestValue("New");
         assertEquals("Selects the work items where Assignee is one of OpenProject Admin, and Subject contains \"sp\", "
             + "and Status is one of In progress or New.", filterBuilderParameter.getSummary());
+        // The fields of a filter are named after its property, for assistive technologies.
+        List<FilterBuilderFilter> addedFilters = filterBuilderParameter.getFilters();
+        assertEquals("Operator for Assignee", addedFilters.get(0).getOperatorAccessibleName());
+        assertEquals("Value for Assignee", addedFilters.get(0).getValueAccessibleName());
+        assertEquals("Operator for Subject", addedFilters.get(1).getOperatorAccessibleName());
+        assertEquals("Value for Subject", addedFilters.get(1).getValueAccessibleName());
         // Submit modal and view page.
         modal.clickSubmit();
         editPage.clickSaveAndView();
@@ -612,6 +618,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         String summary = modal.getFilterBuilder().waitForFilters(2).getSummary();
         assertThat(summary, containsString("2024/03/01 00:00 - 2024/03/31 23:59"));
         assertThat(summary, containsString("2024/01/15 10:30 - 2024/01/20 18:00"));
+        // The date picker is named after the property of its filter, for assistive technologies.
+        FilterBuilderFilter dueDateFilter = modal.getFilterBuilder().getFilters().get(0);
+        assertEquals("Operator for Due Date", dueDateFilter.getOperatorAccessibleName());
+        assertEquals("Value for Due Date", dueDateFilter.getValueAccessibleName());
 
         // Displaying the saved dates doesn't change them.
         modal.clickSubmit();

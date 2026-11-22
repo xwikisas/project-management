@@ -70,6 +70,24 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
     let date = parse(value);
     return date.isValid() ? { startDate: date, endDate: date.clone() } : {};
   };
+  /*
+   * Gives a text alternative to a field displaying the value of a filter (e.g. "Value for Status"), whose row has no
+   * visible label for it, or removes it when there's none.
+   */
+  let setTextAlternative = function (field, label) {
+    if (label) {
+      field.attr('aria-label', label);
+    } else {
+      field.removeAttr('aria-label');
+    }
+  };
+  // The field in which the user types the value of a filter suggesting values, displayed instead of its input.
+  let setSuggestTextAlternative = function (inputElem, label) {
+    let selectize = inputElem[0].selectize;
+    if (selectize) {
+      setTextAlternative(selectize.get$('control_input'), label);
+    }
+  };
   let clean = function (type, inputElem, operator) {
     let parent = inputElem.parent();
     switch (type) {
@@ -93,10 +111,15 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
         parent.append(inputElem);
     }
   };
+  /*
+   * Displays the value of a filter: the field holding the value (the given input) or the field displayed instead of
+   * it, e.g. a date picker, which is given the text alternative of the value (params.label).
+   */
   let display = function (type, inputElem, operator, params) {
     clean(type, inputElem, operator);
     let parent = inputElem.parent();
     inputElem.removeClass('hidden');
+    setTextAlternative(inputElem, params.label);
     let builder = $(parent).closest('.proj-manag-constraint-builder')[0];
     window.FilterBuilder.instances.get(builder).element.trigger('displayingFilter', [type, inputElem, operator, params]);
     switch (type) {
@@ -118,7 +141,9 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             return;
           }
           let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
-          let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val').on('change', function() {
+          let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val');
+          setTextAlternative(dateInput, params.label);
+          dateInput.on('change', function() {
             let valToSet = '';
             const daterangepicker = $(this).data("daterangepicker");
             if (!daterangepicker) {
@@ -210,6 +235,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           };
         }
         inputElem.xwikiSelectize(selectizeCfg);
+        setSuggestTextAlternative(inputElem, params.label);
         break;
       case "boolean":
         inputElem.attr('type', 'text');
@@ -227,6 +253,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           ],
           maxItems: 1
         });
+        setSuggestTextAlternative(inputElem, params.label);
         break;
       default: // text
         inputElem.attr('type', 'text');
