@@ -533,6 +533,26 @@ class OpenProjectFilterTranslatorTest
     }
 
     @Test
+    void translateBooleanValues() throws Exception
+    {
+        OpenProjectWorkItemFields booleanFields = new OpenProjectWorkItemFields(List.of(
+            field("customField7", "Approved", "customField7", "[1]Boolean"),
+            field("customField8", "Count", "customField8", "[1]Integer")));
+
+        OpenProjectFilters openProjectFilters = new OpenProjectFilterTranslator(booleanFields, null).translate(List.of(
+            new LiveDataQuery.Filter("Approved", "=", "True"), new LiveDataQuery.Filter("Approved", "!", "false"),
+            new LiveDataQuery.Filter("Approved", "=", "t"), new LiveDataQuery.Filter("Count", "=", "true")));
+
+        // OpenProject takes t and f for the booleans, the Live Data true and false.
+        assertJsonEquals("["
+            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
+            + "{\"customField7\":{\"operator\":\"!\",\"values\":[\"f\"]}},"
+            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
+            + "{\"customField8\":{\"operator\":\"=\",\"values\":[\"true\"]}}"
+            + "]", openProjectFilters.toJson());
+    }
+
+    @Test
     void translateVersionIds() throws Exception
     {
         assertJsonEquals("[{\"customField3\":{\"operator\":\"=\",\"values\":[\"10\"]}}]",

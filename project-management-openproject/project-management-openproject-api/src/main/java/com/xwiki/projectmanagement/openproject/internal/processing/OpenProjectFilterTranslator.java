@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -80,6 +81,11 @@ public final class OpenProjectFilterTranslator
     private static final String TYPEAHEAD_FILTER = "typeahead";
 
     private static final String TYPEAHEAD_OPERATOR = "**";
+
+    /**
+     * The values of the boolean OpenProject filters, by Live Data value.
+     */
+    private static final Map<String, String> BOOLEAN_VALUES = Map.of("true", String.valueOf('t'), "false", "f");
 
     /**
      * A work package key (for example {@code PROJ-42}), or the beginning of one up to its dash (for example
@@ -347,6 +353,13 @@ public final class OpenProjectFilterTranslator
                 mapConstraint(filterType, constraint, field.getFilterOperators(), filter.getProperty());
             if (mappedConstraint == null) {
                 continue;
+            }
+            if (OpenProjectMapper.FILTER_BOOLEAN.equals(filterType) && mappedConstraint.getValue() instanceof String) {
+                // OpenProject takes t and f, the Live Data (and the query) true and false.
+                String value = (String) mappedConstraint.getValue();
+                mappedConstraint = new LiveDataQuery.Constraint(
+                    BOOLEAN_VALUES.getOrDefault(value.trim().toLowerCase(Locale.ROOT), value),
+                    mappedConstraint.getOperator());
             }
             for (Object value : getVersionValues(mappedConstraint.getValue(), versionIdsByName)) {
                 mappedFilter.getConstraints().add(new LiveDataQuery.Constraint(value, mappedConstraint.getOperator()));
