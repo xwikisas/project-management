@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
@@ -128,6 +129,38 @@ public class FilterBuilderFilter extends BaseElement
     {
         getValueElement().sendKeys(value);
         return this;
+    }
+
+    /**
+     * Picks the value of a date filter with its date picker: opens it, clicks the given days of the first month it
+     * displays (the first and the last day of a range of dates), and applies them.
+     *
+     * @param days the days of the month to click, e.g. {@code 10, 12} for a range of dates
+     * @return this object
+     * @since 1.5.0
+     */
+    public FilterBuilderFilter pickDays(int... days)
+    {
+        this.container.findElement(By.className("proj-manag-date-val")).click();
+        By pickerLocator = By.cssSelector(".daterangepicker");
+        getDriver().waitUntilCondition(driver -> getDisplayedDatePicker(pickerLocator) != null);
+        WebElement picker = getDisplayedDatePicker(pickerLocator);
+        for (int day : days) {
+            // The days of the previous and next months, displayed to fill the weeks, have the "off" class.
+            picker.findElements(By.cssSelector(".drp-calendar.left td.available:not(.off)")).stream()
+                .filter(cell -> cell.getText().equals(String.valueOf(day))).findFirst()
+                .orElseThrow(() -> new NoSuchElementException("No day " + day + " in the date picker.")).click();
+        }
+        picker.findElement(By.className("applyBtn")).click();
+        getDriver().waitUntilCondition(driver -> getDisplayedDatePicker(pickerLocator) == null);
+        return this;
+    }
+
+    private WebElement getDisplayedDatePicker(By pickerLocator)
+    {
+        // A date picker is created for each date filter, only the open one being displayed.
+        return getDriver().findElementsWithoutWaiting(pickerLocator).stream().filter(WebElement::isDisplayed)
+            .findFirst().orElse(null);
     }
 
     /**
