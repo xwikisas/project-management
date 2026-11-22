@@ -63,7 +63,12 @@ public class OpenProjectIdentifierResolver
 
     private static final Pattern QUERY_SORT_BY_PATTERN = Pattern.compile("[?&]sortBy=([^&]+)");
 
-    private static final Pattern QUERY_PROJECT_PATTERN = Pattern.compile("/api/v3/projects/([^/?]+)/work_packages");
+    /**
+     * The path of the work packages of a project, in the results link of a saved query bound to a project. Recent
+     * OpenProject versions name the projects workspaces in their API (e.g. {@code /api/v3/workspaces/9/work_packages}).
+     */
+    private static final Pattern QUERY_PROJECT_PATTERN =
+        Pattern.compile("/api/v3/(?:projects|workspaces)/([^/?]+)/work_packages");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
