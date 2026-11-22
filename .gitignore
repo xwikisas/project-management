@@ -42,3 +42,5 @@ nbproject
 *.log
 .sonar-ide.properties
 .clover
+# Node
+node_modules
