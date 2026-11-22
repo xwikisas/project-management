@@ -22,16 +22,21 @@ package com.xwiki.projectmanagement.openproject.internal.processing;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -550,6 +555,79 @@ class OpenProjectFilterTranslatorTest
             + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
             + "{\"customField8\":{\"operator\":\"=\",\"values\":[\"true\"]}}"
             + "]", openProjectFilters.toJson());
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+        // OpenProject keeps a single condition per filter: a range of percentages is the list of its percentages.
+        ">=:20 <=:23 | =:20,21,22,23",
+        ">=:-5 <=:1 | =:0,1",
+        ">=:99 <=:150 | =:99,100",
+        // The bounds of the Live Data filters (exclusive), from the Live Data table.
+        "greater:19 less:22 | =:20,21",
+        // The bounds out of the percentages, even out of the integers.
+        ">=:20 <=:3000000000 | =:20..100",
+        ">=:-3000000000 <=:2 | =:0,1,2",
+        ">=:2.0 <=:3 | =:2,3",
+        ">=:abc <=:3 | >=:abc <=:3",
+        // An empty range matches no percentage, even once clamped to 0..100.
+        ">=:50 <=:20 | >=:101",
+        ">=:150 <=:200 | >=:101",
+        // The bounds that aren't whole numbers are sent as they are, for OpenProject to report them.
+        ">=:1.5 <=:20 | >=:1.5 <=:20",
+        ">=:1 >=:2 <=:20 | >=:1,2 <=:20",
+        ">=:20 | >=:20"
+    })
+    void translateRangesOfPercentages(String constraints, String expectedFilters) throws Exception
+    {
+        // The bounds are matched both, whatever the matchAll flag of the filter.
+        assertEquals(expandRanges(expectedFilters), translatePercentages(constraints, true));
+        assertEquals(expandRanges(expectedFilters), translatePercentages(constraints, false));
+    }
+
+    /**
+     * A range saved by the filter builder of 1.4.x (two rows on the progress, in the filters parameter), whose filter
+     * doesn't set the matchAll flag although its rows are combined with AND.
+     */
+    @Test
+    void translateARangeOfPercentagesSavedWithoutMatchAll() throws Exception
+    {
+        assertJsonEquals("[{\"percentageDone\":{\"operator\":\"=\",\"values\":[" + IntStream.rangeClosed(20, 50)
+            .mapToObj(percentage -> "\"" + percentage + "\"").collect(Collectors.joining(",")) + "]}}]",
+            translate(new ObjectMapper().readValue("[{\"property\":\"progress\",\"constraints\":["
+                + "{\"operator\":\">=\",\"value\":\"20\"},{\"operator\":\"<=\",\"value\":\"50\"}]}]",
+                new TypeReference<List<LiveDataQuery.Filter>>()
+                {
+                })).toJson());
+    }
+
+    private String translatePercentages(String constraints, boolean matchAll) throws Exception
+    {
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+        filter.setProperty("progress");
+        filter.setMatchAll(matchAll);
+        for (String constraint : constraints.split(" ")) {
+            String[] parts = constraint.split(":");
+            filter.getConstraints().add(new LiveDataQuery.Constraint(parts[1], parts[0]));
+        }
+        List<String> openProjectFilters = new ArrayList<>();
+        for (JsonNode openProjectFilter : this.mapper.readTree(translate(List.of(filter)).toJson())) {
+            JsonNode percentageDone = openProjectFilter.get("percentageDone");
+            List<String> values = new ArrayList<>();
+            percentageDone.get("values").forEach(value -> values.add(value.asText()));
+            openProjectFilters.add(percentageDone.get("operator").asText() + ':' + String.join(",", values));
+        }
+        return String.join(" ", openProjectFilters);
+    }
+
+    /**
+     * @return the text with each range of percentages a..b replaced by its percentages
+     */
+    private static String expandRanges(String text)
+    {
+        return Pattern.compile("(\\d+)\\.\\.(\\d+)").matcher(text).replaceAll(range -> IntStream.rangeClosed(
+            Integer.parseInt(range.group(1)), Integer.parseInt(range.group(2))).mapToObj(String::valueOf)
+            .collect(Collectors.joining(",")));
     }
 
     @Test

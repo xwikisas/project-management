@@ -102,19 +102,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       return value ? [value] : [];
     };
     /*
-     * Only a property that a work item can have several values for (a multi-value list), a text or a number can be
-     * filtered by several rows, one per operator taking a value, e.g. the work items having one tag and not another
-     * one, or a number between two bounds. A second row on a single-value list or a date would only repeat or
-     * contradict the first one.
+     * Only a number whose filter takes a range (the "range" parameter of its filter, e.g. the progress) can be
+     * filtered by two rows, a lower and an upper bound. The project management tools keep a single condition per
+     * property (OpenProject keeps the last one), so that the work items having one tag and not another one, or a text
+     * containing two words, can't be filtered.
      */
     let getMaxRows = function (property) {
-      let type = getType(property);
-      let valueOperators = property.filter.operators.filter(operator => takesValue(operator.id)).length;
-      if ((type === 'list' && property.filter.multiValue) || type === 'text' || type === 'number') {
-        return Math.max(valueOperators, 1);
-      }
-      return 1;
+      return getType(property) === 'number' && property.filter.range ? 2 : 1;
     };
+    // The bound completing the bound of another row into a range.
+    const OTHER_BOUNDS = { '>=': '<=', '<=': '>=' };
     // The rows of a property can't share an operator, and an operator taking no value is only for a single row.
     let updateOperators = function (propertyId) {
       let rows = getRows(propertyId);
@@ -277,13 +274,14 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       });
       let existingRows = getRows(property.id);
       if (!operatorId) {
-        // The first operator that the other rows of the property don't use, preferably an excluding one for a
-        // further row, e.g. the work items having a value but not another one.
+        // The first operator that the other rows of the property don't use, preferably the bound completing a range
+        // for a further row of a number, else an excluding one.
         let usedOperators = existingRows.map((index, other) => getRowOperator($(other))).get();
         let candidates = property.filter.operators.filter(o => !usedOperators.includes(o.id)
           && (existingRows.length === 0 || takesValue(o.id)));
-        let operator = (existingRows.length > 0 && candidates.find(o => EXCLUDING_OPERATORS.includes(o.id)))
-          || candidates[0];
+        let otherBounds = usedOperators.map(used => OTHER_BOUNDS[used]);
+        let operator = (existingRows.length > 0 && (candidates.find(o => otherBounds.includes(o.id))
+          || candidates.find(o => EXCLUDING_OPERATORS.includes(o.id)))) || candidates[0];
         operatorId = (operator && operator.id) || property.filter.defaultOperator;
       }
       operatorElem.val(operatorId);

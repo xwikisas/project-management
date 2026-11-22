@@ -19,6 +19,7 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
+import java.math.BigDecimal;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,6 +83,14 @@ public final class OpenProjectFilterTranslator
 
     private static final String TYPEAHEAD_OPERATOR = "**";
 
+    private static final String PERCENTAGE_DONE = "percentageDone";
+
+    private static final BigDecimal PERCENTAGE_MAX = BigDecimal.valueOf(100);
+
+    private static final String OP_LOWER_BOUND = ">=";
+
+    private static final String OP_UPPER_BOUND = "<=";
+
     /**
      * The values of the boolean OpenProject filters, by Live Data value.
      */
@@ -139,8 +148,8 @@ public final class OpenProjectFilterTranslator
             OPERATOR_STARTS_WITH, OP_EQUALS, OPERATOR_EMPTY, OP_EMPTY),
         OpenProjectMapper.FILTER_TEXT, Map.of(OPERATOR_EQUALS, OP_EQUALS, OPERATOR_CONTAINS, OP_CONTAINS,
             OPERATOR_STARTS_WITH, OP_CONTAINS, OPERATOR_EMPTY, OP_EMPTY),
-        OpenProjectMapper.FILTER_NUMBER, Map.of(OPERATOR_EQUALS, OP_EQUALS, OPERATOR_LESS, "<=", OPERATOR_GREATER,
-            ">=", OPERATOR_EMPTY, OP_EMPTY),
+        OpenProjectMapper.FILTER_NUMBER, Map.of(OPERATOR_EQUALS, OP_EQUALS, OPERATOR_LESS, OP_UPPER_BOUND,
+            OPERATOR_GREATER, OP_LOWER_BOUND, OPERATOR_EMPTY, OP_EMPTY),
         OpenProjectMapper.FILTER_BOOLEAN, Map.of(OPERATOR_EQUALS, OP_EQUALS),
         OpenProjectMapper.FILTER_DATE, Map.of(OPERATOR_BETWEEN, OP_BETWEEN, OPERATOR_BEFORE, OP_BETWEEN,
             OPERATOR_AFTER, OP_BETWEEN, OPERATOR_CONTAINS, OP_BETWEEN, OPERATOR_EMPTY, OP_EMPTY));
@@ -251,12 +260,75 @@ public final class OpenProjectFilterTranslator
         for (LiveDataQuery.Filter filter : filters) {
             List<LiveDataQuery.Constraint> validConstraints = getValidConstraints(filter);
             if (!validConstraints.isEmpty()) {
-                openProjectFilters.add(new AbstractMap.SimpleImmutableEntry<>(
-                    OpenProjectMapper.mapLivedataProperty(filter.getProperty()),
-                    Collections.unmodifiableMap(toOpenProjectConstraints(filter.getProperty(), validConstraints))));
+                String openProjectFilter = OpenProjectMapper.mapLivedataProperty(filter.getProperty());
+                Map<String, List<String>> constraints =
+                    toOpenProjectConstraints(filter.getProperty(), validConstraints);
+                if (PERCENTAGE_DONE.equals(openProjectFilter)) {
+                    constraints = toPercentageList(constraints);
+                }
+                openProjectFilters.add(new AbstractMap.SimpleImmutableEntry<>(openProjectFilter,
+                    Collections.unmodifiableMap(constraints)));
             }
         }
         return new OpenProjectFilters(openProjectFilters);
+    }
+
+    /**
+     * OpenProject keeps a single condition per filter, and has no operator matching a range of numbers: the
+     * percentages between a lower and an upper bound, whose values are whole numbers from 0 to 100, are matched by
+     * listing them, for example {@code >= 20} and {@code <= 50} by {@code = 20, 21, ..., 50}. When no percentage
+     * matches, the filter matches none ({@code >= 101}).
+     * <p>
+     * The bounds are always matched both, whatever the {@code matchAll} flag of the filter: the filters saved by the
+     * filter builder of the macro editor (the {@code filters} parameter, the presets) don't set it although their rows
+     * are combined with AND, and a filter added in the Live Data table can't be told apart from them.
+     *
+     * @return the constraints, the bounds of the percentages being replaced by the list of the matched percentages
+     */
+    private static Map<String, List<String>> toPercentageList(Map<String, List<String>> constraints)
+    {
+        List<BigDecimal> bounds = getPercentageBounds(constraints);
+        if (bounds.isEmpty()) {
+            return constraints;
+        }
+        BigDecimal lower = bounds.get(0);
+        BigDecimal upper = bounds.get(1);
+        List<String> percentages = new ArrayList<>();
+        for (int percentage = 0; percentage <= PERCENTAGE_MAX.intValue(); percentage++) {
+            BigDecimal value = BigDecimal.valueOf(percentage);
+            if (value.compareTo(lower) >= 0 && value.compareTo(upper) <= 0) {
+                percentages.add(String.valueOf(percentage));
+            }
+        }
+        if (percentages.isEmpty()) {
+            return Map.of(OP_LOWER_BOUND, List.of(PERCENTAGE_MAX.add(BigDecimal.ONE).toString()));
+        }
+        return Map.of(OP_EQUALS, percentages);
+    }
+
+    /**
+     * @return the lower and the upper bound of the percentages, or an empty list if the constraints aren't a single
+     *     lower and a single upper bound of whole numbers (OpenProject reporting the other values)
+     */
+    private static List<BigDecimal> getPercentageBounds(Map<String, List<String>> constraints)
+    {
+        if (!constraints.keySet().equals(Set.of(OP_LOWER_BOUND, OP_UPPER_BOUND))
+            || constraints.get(OP_LOWER_BOUND).size() != 1 || constraints.get(OP_UPPER_BOUND).size() != 1)
+        {
+            return List.of();
+        }
+        try {
+            BigDecimal lower = new BigDecimal(constraints.get(OP_LOWER_BOUND).get(0).trim());
+            BigDecimal upper = new BigDecimal(constraints.get(OP_UPPER_BOUND).get(0).trim());
+            return isWholeNumber(lower) && isWholeNumber(upper) ? List.of(lower, upper) : List.of();
+        } catch (NumberFormatException e) {
+            return List.of();
+        }
+    }
+
+    private static boolean isWholeNumber(BigDecimal number)
+    {
+        return number.signum() == 0 || number.stripTrailingZeros().scale() <= 0;
     }
 
     /**
