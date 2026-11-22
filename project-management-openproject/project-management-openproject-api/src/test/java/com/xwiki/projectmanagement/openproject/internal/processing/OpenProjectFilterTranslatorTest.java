@@ -263,6 +263,21 @@ class OpenProjectFilterTranslatorTest
     }
 
     @Test
+    void translateKeepsTheTextOfTheTextFiltersAsIs() throws JsonProcessingException, ProjectManagementException
+    {
+        // The text written in the filter builder, read from the query of the macro content.
+        List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("summary", "~", " a \"b\" c\\d été "),
+            new LiveDataQuery.Filter("description", "!~", "  日本語  "));
+
+        String expected = "["
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\" a \\\"b\\\" c\\\\d été \"]}},"
+            + "{\"description\":{\"operator\":\"!~\",\"values\":[\"  日本語  \"]}}"
+            + "]";
+
+        assertEqualsStringFilters(expected, translate(filters).mergeWithApiFilters(null));
+    }
+
+    @Test
     void mergeApiFiltersOnSamePropertyAndOperator() throws JsonProcessingException, ProjectManagementException
     {
         // The livedata property is mapped to the OpenProject one (identifier -> id) before merging.

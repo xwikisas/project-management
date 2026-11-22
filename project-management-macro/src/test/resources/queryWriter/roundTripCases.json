@@ -697,6 +697,240 @@
     {
       "filters":[
         {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":" leading and trailing spaces "
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \" leading and trailing spaces \"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":" leading and trailing spaces "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"two  spaces\tand a tab"
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"two  spaces\tand a tab\"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"two  spaces\tand a tab"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"   "
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"   \"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"   "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"say \"hi\" to \"them\""
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"say \\\"hi\\\" to \\\"them\\\"\"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"say \"hi\" to \"them\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"C:\\temp\\ end\\"
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"C:\\\\temp\\\\ end\\\\\"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"C:\\temp\\ end\\"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"été"
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ été",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"été"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"Größe 日本語 ç"
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"Größe 日本語 ç\"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"Größe 日本語 ç"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"!~",
+              "value":" a \"b\" c\\d é "
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary !~ \" a \\\"b\\\" c\\\\d é \"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"!~",
+              "value":" a \"b\" c\\d é "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"a AND b OR c"
+            }
+          ]
+        }
+      ],
+      "names":{ },
+      "query":"summary ~ \"a AND b OR c\"",
+      "parsed":[
+        {
+          "property":"summary",
+          "constraints":[
+            {
+              "operator":"~",
+              "value":"a AND b OR c"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filters":[
+        {
           "property":"progress",
           "constraints":[
             {
