@@ -19,12 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -38,6 +34,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectLink;
 
 /**
  * Tells whether the work packages a macro displays are filtered on the current user ({@code me}), e.g. on the work
@@ -58,8 +55,6 @@ public class CurrentUserFilterDetector
      * Live Data filters and of the {@code query_props} parameter of the OpenProject URLs.
      */
     private static final Set<String> TEXT_OPERATORS = Set.of("contains", "startsWith", "endsWith", "~", "!~", "**");
-
-    private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile("[?&]query_props=([^&#]+)");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -95,13 +90,16 @@ public class CurrentUserFilterDetector
      */
     public boolean hasCurrentUserFilterInIdentifier(String identifier)
     {
-        Matcher matcher = QUERY_PROPS_PATTERN.matcher(StringUtils.defaultString(identifier));
-        if (!matcher.find()) {
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        if (link == null) {
             return false;
         }
         try {
-            JsonNode properties =
-                this.objectMapper.readTree(URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8));
+            String queryProperties = link.getQueryProperties();
+            if (queryProperties == null) {
+                return false;
+            }
+            JsonNode properties = this.objectMapper.readTree(queryProperties);
             for (JsonNode filter : properties.path("f")) {
                 if (isCurrentUser(filter.path("o"), filter.path("v"))) {
                     return true;

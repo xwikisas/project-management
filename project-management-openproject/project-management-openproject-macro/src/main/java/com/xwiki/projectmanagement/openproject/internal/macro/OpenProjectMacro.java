@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -95,6 +96,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     @Inject
     private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @Inject
+    private OpenProjectLinkChecker linkChecker;
 
     @Inject
     private OpenProjectSavedQueryResolver savedQueryResolver;
@@ -176,8 +180,11 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         stylingSetupManager.useInstanceStyle(instanceToUse);
         jsx.use("OpenProject.Code.ViewAction");
 
+        WorkItemSourceResult source = readSource(parameters, content);
+        // The work packages are requested from the server of the connection, whatever the server of the link.
+        this.linkChecker.check(instanceToUse, source.getIdentifier());
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse,
-            requiresUserAccount(parameters, readSource(parameters, content)), context);
+            requiresUserAccount(parameters, source), context);
 
         if (!warningBlock.isEmpty()) {
             return warningBlock;

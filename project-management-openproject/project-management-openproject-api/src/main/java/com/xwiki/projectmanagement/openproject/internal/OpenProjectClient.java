@@ -20,10 +20,6 @@
 package com.xwiki.projectmanagement.openproject.internal;
 
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -35,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.inject.Inject;
@@ -64,6 +59,8 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.Project;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBadRequestException;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -71,6 +68,7 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterTranslator;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectLink;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
@@ -95,10 +93,6 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private static final String EQUALS = "=";
 
-    private static final String QUERY_PROPS_QUERY_PARAMETER = "query_props=";
-
-    private static final Pattern URL_PATTERN = Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
-
     /**
      * A work package id or, on instances using project-based semantic identifiers, a work package key (e.g.
      * {@code XWIKI-123}).
@@ -111,17 +105,6 @@ public class OpenProjectClient implements ProjectManagementClient
     private static final Pattern ID_OR_KEY_PATTERN = Pattern.compile(String.format("^%s$", ID_OR_KEY));
 
     private static final Pattern IDS_SEPARATOR_PATTERN = Pattern.compile("\\s*,\\s*");
-
-    /**
-     * The path of the page of a single work package, e.g. {@code /work_packages/5},
-     * {@code /projects/demo/work_packages/5/activity} or {@code /wp/5}.
-     */
-    private static final Pattern WORK_PACKAGE_PATH_PATTERN =
-        Pattern.compile("/(?:work_packages|wp)/(\\d+)(?:/[^/]+)?/?$");
-
-    private static final Pattern PROJECTS_PATTERN = Pattern.compile("/projects/([^/]+)/");
-
-    private static final Pattern QUERY_PROPS_PATTERN = Pattern.compile(QUERY_PROPS_QUERY_PARAMETER + "([^&]+)");
 
     private static final String IDENTIFIER = "identifier";
 
@@ -160,6 +143,9 @@ public class OpenProjectClient implements ProjectManagementClient
 
     @Inject
     private OpenProjectIdentifierResolver identifierResolver;
+
+    @Inject
+    private OpenProjectConfiguration configuration;
 
     @Inject
     private Logger logger;
@@ -383,18 +369,19 @@ public class OpenProjectClient implements ProjectManagementClient
         OpenProjectFilters filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
-        if (!URL_PATTERN.matcher(identifier).matches()) {
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        if (link == null) {
             throw new WorkPackageRetrievalBadRequestException(INCORRECT_IDENTIFIER_FORMAT_MESSAGE);
         }
 
-        String urlQueryId = identifierResolver.getStandaloneQueryId(identifier);
+        String urlQueryId = link.getSavedQueryId();
 
         if (urlQueryId != null) {
             return handleSavedQuery(openProjectApiClient, fields, urlQueryId, openProjectPage, pageSize,
                 filtersEntries, sortEntries);
         }
 
-        WorkPackagesQuery query = getWorkPackagesQuery(identifier, filtersEntries, sortEntries);
+        WorkPackagesQuery query = getWorkPackagesQuery(link, filtersEntries, sortEntries);
         return OpenProjectConverters.convertPaginatedResult(
             getWorkPackages(openProjectApiClient, query.project, openProjectPage, pageSize, query.filters,
                 query.sortBy),
@@ -405,11 +392,10 @@ public class OpenProjectClient implements ProjectManagementClient
      * @return the work packages listed by an OpenProject URL (of a project, or of all the projects), matching the
      *     filters of the URL and the given ones
      */
-    private WorkPackagesQuery getWorkPackagesQuery(String identifier, OpenProjectFilters filtersEntries,
+    private WorkPackagesQuery getWorkPackagesQuery(OpenProjectLink link, OpenProjectFilters filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries) throws ProjectManagementException
     {
-        URL url = parseUrl(identifier);
-        JsonNode parametersNode = extractJsonNodeFromQuery(url.getQuery());
+        JsonNode parametersNode = extractJsonNodeFromQuery(link);
 
         JsonNode filtersNode = null;
         JsonNode sortNode = null;
@@ -419,7 +405,7 @@ public class OpenProjectClient implements ProjectManagementClient
             sortNode = parametersNode.path("t");
         }
 
-        return new WorkPackagesQuery(extractProjectFromPath(url.getPath()),
+        return new WorkPackagesQuery(link.getProject(),
             extractFiltersFromQuery(filtersEntries, filtersNode), extractSortByString(sortEntries, sortNode));
     }
 
@@ -442,27 +428,34 @@ public class OpenProjectClient implements ProjectManagementClient
     /**
      * @return the identifier of the macro, where the link of a single work package is replaced by the id of the work
      *     package, so that it's displayed like when given by its id
+     * @throws WorkItemRetrievalException if the identifier is the link of another server than the one of the
+     *     connection, whose work packages would otherwise be taken from the server of the connection
      */
-    private String getIdentifier()
+    private String getIdentifier() throws WorkItemRetrievalException
     {
         String identifier = StringUtils.trim((String) executionContext.get(IDENTIFIER));
-        if (identifier != null && URL_PATTERN.matcher(identifier).matches()) {
-            try {
-                Matcher matcher = WORK_PACKAGE_PATH_PATTERN.matcher(new URL(identifier).getPath());
-                if (matcher.find()) {
-                    return matcher.group(1);
-                }
-            } catch (MalformedURLException e) {
-                // The identifier is then rejected like the other invalid links.
-            }
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        if (link == null) {
+            return identifier;
         }
-        return identifier;
+        // The macros report this error with a translated message before requesting the work packages.
+        OpenProjectConnection connection = this.configuration.getConnection(getConnectionName());
+        if (OpenProjectLink.getLinkOfAnotherServer(identifier, connection) != null) {
+            throw new WorkItemRetrievalException(String.format(
+                "The link [%s] doesn't belong to the server [%s] of the OpenProject connection [%s].", link,
+                connection.getServerURL(), getConnectionName()), HttpURLConnection.HTTP_BAD_REQUEST);
+        }
+        String workPackageId = link.getWorkPackageId();
+        return workPackageId != null ? workPackageId : identifier;
     }
 
-    private boolean isIdsOrSavedQuery(String identifier)
+    private static boolean isIdsOrSavedQuery(String identifier)
     {
-        return StringUtils.isNotEmpty(identifier) && (IDS_PATTERN.matcher(identifier).matches()
-            || identifierResolver.getStandaloneQueryId(identifier) != null);
+        if (StringUtils.isEmpty(identifier)) {
+            return false;
+        }
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        return IDS_PATTERN.matcher(identifier).matches() || (link != null && link.getSavedQueryId() != null);
     }
 
     private boolean isMainPropertiesRequest()
@@ -491,7 +484,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 new OpenProjectFilterTranslator(fields, openProjectApiClient).translate(filters);
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
                 ? new WorkPackagesQuery(null, mappedFilters.toJson(), "")
-                : getWorkPackagesQuery(identifier, mappedFilters, Collections.emptyList());
+                : getWorkPackagesQuery(parseLink(identifier), mappedFilters, Collections.emptyList());
             return Optional.of(openProjectApiClient.countWorkPackages(query.project, query.filters, groupBy));
         } catch (ProjectManagementException | UnsupportedOperationException e) {
             if (e instanceof WorkItemRetrievalException
@@ -510,8 +503,8 @@ public class OpenProjectClient implements ProjectManagementClient
     public Optional<String> getWorkItemsLocation(List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
     {
-        String identifier = getIdentifier();
         try {
+            String identifier = getIdentifier();
             if (isIdsOrSavedQuery(identifier)) {
                 // A list of work packages is never truncated, and the filters can't be added to a saved query.
                 return Optional.empty();
@@ -525,7 +518,7 @@ public class OpenProjectClient implements ProjectManagementClient
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
                 ? new WorkPackagesQuery(null, mappedFilters.toJson(),
                     OpenProjectSortingHandler.convertSorting(mappedSortEntries))
-                : getWorkPackagesQuery(identifier, mappedFilters, mappedSortEntries);
+                : getWorkPackagesQuery(parseLink(identifier), mappedFilters, mappedSortEntries);
             return Optional.ofNullable(
                 openProjectApiClient.getWorkPackagesLocation(query.project, query.filters, query.sortBy));
         } catch (ProjectManagementException | RuntimeException e) {
@@ -716,19 +709,13 @@ public class OpenProjectClient implements ProjectManagementClient
         return result;
     }
 
-    private URL parseUrl(String url) throws WorkItemRetrievalException
+    private static OpenProjectLink parseLink(String identifier) throws WorkItemRetrievalException
     {
-        try {
-            return new URL(url);
-        } catch (MalformedURLException e) {
-            throw new WorkItemRetrievalException("The identifier format is not correct", e);
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        if (link == null) {
+            throw new WorkItemRetrievalException("The identifier format is not correct");
         }
-    }
-
-    private String extractProjectFromPath(String path)
-    {
-        Matcher matcher = PROJECTS_PATTERN.matcher(path);
-        return matcher.find() ? matcher.group(1) : null;
+        return link;
     }
 
     private String extractFiltersFromQuery(OpenProjectFilters filtersList, JsonNode filtersNode)
@@ -795,20 +782,18 @@ public class OpenProjectClient implements ProjectManagementClient
         return OpenProjectSortingHandler.mergeSortEntries(sortEntries, sortByString);
     }
 
-    private JsonNode extractJsonNodeFromQuery(String queryParameters) throws WorkItemRetrievalException
+    private JsonNode extractJsonNodeFromQuery(OpenProjectLink link) throws WorkItemRetrievalException
     {
-        if (queryParameters == null || queryParameters.isEmpty()) {
+        if (StringUtils.isEmpty(link.getQuery())) {
             return null;
         }
 
-        Matcher matcher = QUERY_PROPS_PATTERN.matcher(queryParameters);
+        String parameter = link.getQueryProperties();
 
-        if (!matcher.find()) {
+        if (parameter == null) {
             throw new WorkItemRetrievalException("The query parameters format is not correct");
         }
 
-        String parameter = matcher.group(1);
-        parameter = URLDecoder.decode(parameter, StandardCharsets.UTF_8);
         try {
             return objectMapper.readTree(parameter);
         } catch (JsonProcessingException e) {

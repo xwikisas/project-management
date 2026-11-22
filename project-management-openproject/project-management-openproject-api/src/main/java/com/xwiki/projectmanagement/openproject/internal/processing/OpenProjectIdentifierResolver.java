@@ -19,8 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
@@ -55,10 +53,6 @@ public class OpenProjectIdentifierResolver
      */
     public static final String SAVED_QUERY_RESULTS_URL = "savedQueryResultsUrl";
 
-    private static final Pattern URL_PATTERN = Pattern.compile("^https?://.+", Pattern.CASE_INSENSITIVE);
-
-    private static final Pattern URL_QUERY_ID_PATTERN = Pattern.compile("^query_id=(\\d+)$");
-
     private static final Pattern QUERY_FILTERS_PATTERN = Pattern.compile("[?&]filters=([^&]+)");
 
     private static final Pattern QUERY_SORT_BY_PATTERN = Pattern.compile("[?&]sortBy=([^&]+)");
@@ -71,33 +65,6 @@ public class OpenProjectIdentifierResolver
         Pattern.compile("/api/v3/(?:projects|workspaces)/([^/?]+)/work_packages");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    /**
-     * @param identifier the identifier of the macro.
-     * @return the id of the saved query the identifier points to, or {@code null} if the identifier is not an
-     *     OpenProject URL.
-     */
-    public String getStandaloneQueryId(String identifier)
-    {
-        if (identifier == null || !URL_PATTERN.matcher(identifier.trim()).matches()) {
-            return null;
-        }
-
-        String query;
-
-        try {
-            query = new URL(identifier.trim()).getQuery();
-        } catch (MalformedURLException e) {
-            return null;
-        }
-
-        if (query == null) {
-            return null;
-        }
-
-        Matcher matcher = URL_QUERY_ID_PATTERN.matcher(query.trim());
-        return matcher.matches() ? matcher.group(1) : null;
-    }
 
     /**
      * Retrieves the results link OpenProject generates for a saved query. It holds the filters and sorting of the

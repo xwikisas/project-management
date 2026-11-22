@@ -61,30 +61,6 @@ class OpenProjectIdentifierResolverTest
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
-    void getStandaloneQueryId()
-    {
-        assertEquals(QUERY_ID, resolver.getStandaloneQueryId("https://op.example.org/work_packages?query_id=27"));
-        assertEquals(QUERY_ID,
-            resolver.getStandaloneQueryId("https://op.example.org/projects/demo/work_packages?query_id=27"));
-        assertEquals(QUERY_ID, resolver.getStandaloneQueryId("  http://op.example.org/work_packages?query_id=27  "));
-    }
-
-    @Test
-    void getStandaloneQueryIdWhenNotAStandaloneQuery()
-    {
-        assertNull(resolver.getStandaloneQueryId(null));
-        assertNull(resolver.getStandaloneQueryId("1,2,3"));
-        assertNull(resolver.getStandaloneQueryId("query_id=27"));
-        assertNull(resolver.getStandaloneQueryId("https://op.example.org/work_packages"));
-        assertNull(resolver.getStandaloneQueryId("https://op.example.org/work_packages?query_id=abc"));
-        // A tweaked saved query has to be handled as a regular URL, so that the tweaks are applied.
-        assertNull(resolver.getStandaloneQueryId(
-            "https://op.example.org/work_packages?query_id=27&query_props=%7B%22t%22%3A%22id%3Aasc%22%7D"));
-        assertNull(resolver.getStandaloneQueryId(
-            "https://op.example.org/work_packages?query_props=%7B%22t%22%3A%22id%3Aasc%22%7D"));
-    }
-
-    @Test
     void getSavedQueryResultsUrl() throws ProjectManagementException
     {
         String resultsUrl = "/api/v3/projects/1/work_packages?filters=" + ENCODED_FILTERS;
