@@ -159,6 +159,7 @@
         "displayer": "number",
         "filter": {
           "id": "number",
+          "range": true,
           "operators": [
             {
               "id": "=",
