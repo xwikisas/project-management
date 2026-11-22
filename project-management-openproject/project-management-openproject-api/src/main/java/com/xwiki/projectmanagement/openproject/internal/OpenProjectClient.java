@@ -68,7 +68,8 @@ import com.xwiki.projectmanagement.openproject.exception.WorkPackageRetrievalBad
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessStatus;
-import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterHandler;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterTranslator;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectSortingHandler;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
@@ -108,8 +109,6 @@ public class OpenProjectClient implements ProjectManagementClient
         Pattern.compile(String.format("^\\s*%1$s(\\s*,\\s*%1$s)*\\s*$", ID_OR_KEY));
 
     private static final Pattern IDS_SEPARATOR_PATTERN = Pattern.compile("\\s*,\\s*");
-
-    private static final String NO_FILTERS = "[]";
 
     /**
      * The path of the page of a single work package, e.g. {@code /work_packages/5},
@@ -192,7 +191,8 @@ public class OpenProjectClient implements ProjectManagementClient
             OpenProjectAccessResult access = resolveAccess();
             OpenProjectApiClient openProjectApiClient = access.getClient();
             OpenProjectWorkItemFields fields = getWorkItemFields(access);
-            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            OpenProjectFilters mappedFilters =
+                new OpenProjectFilterTranslator(fields, openProjectApiClient).translate(filters);
             List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
 
             PaginatedResult<WorkItem> workItems;
@@ -204,7 +204,7 @@ public class OpenProjectClient implements ProjectManagementClient
                     openProjectPage -> handleIdentifier(openProjectApiClient, fields, identifier.trim(),
                         openProjectPage, pageSize, mappedFilters, mappedSortEntries));
             } else {
-                String filtersString = OpenProjectFilterHandler.convertFilters(mappedFilters);
+                String filtersString = mappedFilters.toJson();
                 String sortByString = OpenProjectSortingHandler.convertSorting(mappedSortEntries);
                 workItems = getWorkItemsPage(offset, pageSize,
                     openProjectPage -> OpenProjectConverters.convertPaginatedResult(
@@ -328,7 +328,7 @@ public class OpenProjectClient implements ProjectManagementClient
                 throws WorkItemRetrievalException
             {
                 try {
-                    String filtersString = OpenProjectFilterHandler.convertFilters(filters);
+                    String filtersString = OpenProjectFilterTranslator.translateOtherFilters(filters).toJson();
 
                     PaginatedResult<com.xwiki.projectmanagement.openproject.model.Project> projects =
                         getOpenProjectApiClient().getProjects(page, pageSize, filtersString);
@@ -368,7 +368,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private PaginatedResult<WorkItem> handleIdentifier(OpenProjectApiClient openProjectApiClient,
         OpenProjectWorkItemFields fields, String identifier, int openProjectPage, int pageSize,
-        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        OpenProjectFilters filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         if (!URL_PATTERN.matcher(identifier).matches()) {
@@ -393,7 +393,7 @@ public class OpenProjectClient implements ProjectManagementClient
      * @return the work packages listed by an OpenProject URL (of a project, or of all the projects), matching the
      *     filters of the URL and the given ones
      */
-    private WorkPackagesQuery getWorkPackagesQuery(String identifier, List<LiveDataQuery.Filter> filtersEntries,
+    private WorkPackagesQuery getWorkPackagesQuery(String identifier, OpenProjectFilters filtersEntries,
         List<LiveDataQuery.SortEntry> sortEntries) throws ProjectManagementException
     {
         URL url = parseUrl(identifier);
@@ -475,9 +475,10 @@ public class OpenProjectClient implements ProjectManagementClient
             OpenProjectAccessResult access = resolveAccess();
             OpenProjectApiClient openProjectApiClient = access.getClient();
             OpenProjectWorkItemFields fields = getWorkItemFields(access);
-            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            OpenProjectFilters mappedFilters =
+                new OpenProjectFilterTranslator(fields, openProjectApiClient).translate(filters);
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
-                ? new WorkPackagesQuery(null, OpenProjectFilterHandler.convertFilters(mappedFilters), "")
+                ? new WorkPackagesQuery(null, mappedFilters.toJson(), "")
                 : getWorkPackagesQuery(identifier, mappedFilters, Collections.emptyList());
             return Optional.of(openProjectApiClient.countWorkPackages(query.project, query.filters, groupBy));
         } catch (ProjectManagementException | UnsupportedOperationException e) {
@@ -506,10 +507,11 @@ public class OpenProjectClient implements ProjectManagementClient
             OpenProjectAccessResult access = resolveAccess();
             OpenProjectApiClient openProjectApiClient = access.getClient();
             OpenProjectWorkItemFields fields = getWorkItemFields(access);
-            List<LiveDataQuery.Filter> mappedFilters = fields.mapFilters(filters, openProjectApiClient);
+            OpenProjectFilters mappedFilters =
+                new OpenProjectFilterTranslator(fields, openProjectApiClient).translate(filters);
             List<LiveDataQuery.SortEntry> mappedSortEntries = fields.mapSortEntries(sortEntries);
             WorkPackagesQuery query = StringUtils.isEmpty(identifier)
-                ? new WorkPackagesQuery(null, OpenProjectFilterHandler.convertFilters(mappedFilters),
+                ? new WorkPackagesQuery(null, mappedFilters.toJson(),
                     OpenProjectSortingHandler.convertSorting(mappedSortEntries))
                 : getWorkPackagesQuery(identifier, mappedFilters, mappedSortEntries);
             return Optional.ofNullable(
@@ -528,7 +530,7 @@ public class OpenProjectClient implements ProjectManagementClient
      */
     private PaginatedResult<WorkItem> handleIds(OpenProjectApiClient openProjectApiClient,
         OpenProjectWorkItemFields fields, String identifier, int offset, int pageSize,
-        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        OpenProjectFilters filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         List<String> ids = resolveIds(openProjectApiClient, IDS_SEPARATOR_PATTERN.split(identifier.trim()));
@@ -551,7 +553,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
     private PaginatedResult<WorkItem> getWorkItemsByIds(OpenProjectApiClient openProjectApiClient,
         OpenProjectWorkItemFields fields, List<String> ids, int offset, int pageSize,
-        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        OpenProjectFilters filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         int openProjectPage = getOpenProjectPage(offset, pageSize);
@@ -561,7 +563,7 @@ public class OpenProjectClient implements ProjectManagementClient
 
         Map<String, Object> idFiltersAsJson = Map.of("n", "id", "o", EQUALS, "v", ids);
         String filters =
-            OpenProjectFilterHandler.mergeFilters(filtersEntries, objectMapper.valueToTree(List.of(idFiltersAsJson)));
+            filtersEntries.mergeWithUrlFilters(objectMapper.valueToTree(List.of(idFiltersAsJson)));
 
         if (!sortEntries.isEmpty()) {
             String sortBy = OpenProjectSortingHandler.convertSorting(sortEntries);
@@ -717,10 +719,10 @@ public class OpenProjectClient implements ProjectManagementClient
         return matcher.find() ? matcher.group(1) : null;
     }
 
-    private String extractFiltersFromQuery(List<LiveDataQuery.Filter> filtersList, JsonNode filtersNode)
+    private String extractFiltersFromQuery(OpenProjectFilters filtersList, JsonNode filtersNode)
         throws ProjectManagementException
     {
-        return OpenProjectFilterHandler.mergeFilters(filtersList, filtersNode);
+        return filtersList.mergeWithUrlFilters(filtersNode);
     }
 
     /**
@@ -735,12 +737,12 @@ public class OpenProjectClient implements ProjectManagementClient
      */
     private PaginatedResult<WorkItem> handleSavedQuery(OpenProjectApiClient openProjectApiClient,
         OpenProjectWorkItemFields fields, String queryId, int openProjectPage, int pageSize,
-        List<LiveDataQuery.Filter> filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
+        OpenProjectFilters filtersEntries, List<LiveDataQuery.SortEntry> sortEntries)
         throws ProjectManagementException
     {
         String sortBy = sortEntries.isEmpty() ? "" : OpenProjectSortingHandler.convertSorting(sortEntries);
 
-        if (NO_FILTERS.equals(OpenProjectFilterHandler.convertFilters(filtersEntries))) {
+        if (filtersEntries.isEmpty()) {
             return OpenProjectConverters.convertPaginatedResult(
                 openProjectApiClient.getQueryWorkPackages(queryId, openProjectPage, pageSize, sortBy),
                 workPackage -> OpenProjectConverters.convertWorkPackageToWorkItem(workPackage, fields)
@@ -751,7 +753,7 @@ public class OpenProjectClient implements ProjectManagementClient
         if (StringUtils.isEmpty(resultsUrl)) {
             resultsUrl = identifierResolver.getSavedQueryResultsUrl(openProjectApiClient, queryId);
         }
-        String filters = OpenProjectFilterHandler.mergeApiFilters(filtersEntries,
+        String filters = filtersEntries.mergeWithApiFilters(
             identifierResolver.getSavedQueryFilters(resultsUrl));
         String sorting = sortBy.isEmpty() ? identifierResolver.getSavedQuerySortBy(resultsUrl) : sortBy;
         String project = identifierResolver.getSavedQueryProject(resultsUrl);

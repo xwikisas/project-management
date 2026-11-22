@@ -31,13 +31,9 @@ import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
-import com.xwiki.projectmanagement.openproject.internal.WorkPackageFieldsResult;
-import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -45,8 +41,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -97,62 +91,6 @@ class OpenProjectWorkItemFieldsTest
             new PaginatedResult<>(List.of(field("category", "Category", null, null, true)), 0, 1, 1));
         assertEquals(List.of("category"),
             new ArrayList<>(OpenProjectWorkItemFields.of(this.client).getFields().keySet()));
-        // The filters of the instance are known when they are read along with the fields.
-        assertEquals(List.of("foo", "typeahead"), OpenProjectWorkItemFields.of(this.client).mapFilters(
-            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("typeahead", "**", "1")),
-            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
-        when(this.client.getWorkPackageFields()).thenReturn(new WorkPackageFieldsResult(
-            List.of(field("category", "Category", null, null, true)), List.of("typeahead")));
-        assertEquals(List.of("typeahead"), OpenProjectWorkItemFields.of(this.client).mapFilters(
-            List.of(new LiveDataQuery.Filter("foo", "=", "x"), new LiveDataQuery.Filter("typeahead", "**", "1")),
-            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
-    }
-
-    @Test
-    void mapFiltersDropsTheUnknownProperties() throws Exception
-    {
-        OpenProjectWorkItemFields fieldsAndFilters = new OpenProjectWorkItemFields(
-            List.of(field("status", "Status", "status", "[]Status", true),
-                field(TARGET_VERSIONS, "Target versions", "targetVersion", LIST_OF_VERSIONS, true)),
-            // As listed by the query form of the global queries.
-            List.of("status", "subject", "id", "targetVersion", "createdAt", "typeahead"));
-
-        List<LiveDataQuery.Filter> mappedFilters = fieldsAndFilters.mapFilters(Stream.of("foo", "identifier.value",
-            "summary", "labels", "createdAt", "typeahead", "targetVersion", "status", "dueDate", "customFieldX")
-            .map(property -> new LiveDataQuery.Filter(property, "equals", "x")).collect(Collectors.toList()),
-            this.client);
-
-        // OpenProject rejects a filter that doesn't exist, failing the whole request. The generic properties that
-        // OpenProject filters on, the fields and the OpenProject filters of the instance are kept.
-        assertEquals(List.of("summary", "createdAt", "typeahead", "targetVersion", "status", "dueDate"),
-            mappedFilters.stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
-    }
-
-    @Test
-    void mapFiltersKeepsTheFiltersOfTheProjectQueries() throws Exception
-    {
-        OpenProjectWorkItemFields fieldsAndFilters =
-            new OpenProjectWorkItemFields(List.of(field("status", "Status", "status", "[]Status", true)),
-                List.of("status", "subject", "customField5"));
-
-        List<LiveDataQuery.Filter> mappedFilters = fieldsAndFilters.mapFilters(
-            Stream.of("subprojectId", "customField12", "customField5", "customField", "foo")
-                .map(property -> new LiveDataQuery.Filter(property, "=", "1")).collect(Collectors.toList()),
-            this.client);
-
-        // The global queries don't have the subprojects filter, nor the filters on the custom fields referencing
-        // users or versions, which the queries of a project can have.
-        assertEquals(List.of("subprojectId", "customField12", "customField5"),
-            mappedFilters.stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
-    }
-
-    @Test
-    void mapFiltersWithUnknownFilters() throws Exception
-    {
-        // The filters of the instance couldn't be retrieved: an unknown property may be a filter of the instance.
-        assertEquals(List.of("foo", "customField3"), this.fields.mapFilters(
-            List.of(new LiveDataQuery.Filter("foo", "equals", "x"), new LiveDataQuery.Filter("customField3", "=", "1")),
-            this.client).stream().map(LiveDataQuery.Filter::getProperty).collect(Collectors.toList()));
     }
 
     @Test
@@ -179,149 +117,6 @@ class OpenProjectWorkItemFieldsTest
         assertEquals("a, b", values.get("customField6"));
         assertEquals("c", values.get("customField7"));
         assertEquals(6, values.size());
-    }
-
-    @Test
-    void mapFilters() throws Exception
-    {
-        Version version1 = version(10, "1.2.3");
-        Version version2 = version(11, "1.2.3");
-        when(this.client.getVersions()).thenReturn(
-            new PaginatedResult<>(List.of(version1, version2, version(12, "2.0"), version1), 0, 4, 4));
-
-        LiveDataQuery.Filter versionFilter = new LiveDataQuery.Filter("targetVersion", "contains", "1.2.3");
-        versionFilter.getConstraints().add(new LiveDataQuery.Constraint("12", "contains"));
-        versionFilter.getConstraints().add(new LiveDataQuery.Constraint("unknown", "contains"));
-        LiveDataQuery.Filter statusFilter = new LiveDataQuery.Filter("status", "o", "");
-
-        List<LiveDataQuery.Filter> mappedFilters = this.fields.mapFilters(List.of(versionFilter, statusFilter,
-            new LiveDataQuery.Filter("customField6", "contains", "x"),
-            new LiveDataQuery.Filter("category", "equals", "24")), this.client);
-
-        LiveDataQuery.Filter mappedVersionFilter = mappedFilters.get(0);
-        assertEquals("targetVersion", mappedVersionFilter.getProperty());
-        // The name of a version is replaced by the ids of all the versions with this name, an unknown name is kept so
-        // that OpenProject reports it.
-        assertEquals(List.of("10", "11", "12", "unknown"), getValues(mappedVersionFilter));
-        // A list filter matches the values picked in the list.
-        assertTrue(mappedVersionFilter.getConstraints().stream()
-            .allMatch(constraint -> "=".equals(constraint.getOperator())));
-
-        // The OpenProject operators are kept.
-        assertEquals("status", mappedFilters.get(1).getProperty());
-        assertEquals(List.of("o:"), getConstraints(mappedFilters.get(1)));
-
-        assertEquals("customField6", mappedFilters.get(2).getProperty());
-        assertEquals("~", mappedFilters.get(2).getConstraints().get(0).getOperator());
-
-        // A field without filter is sent as it is, so that OpenProject reports it.
-        assertEquals("category", mappedFilters.get(3).getProperty());
-    }
-
-    @Test
-    void mapFiltersWithVersionIds() throws Exception
-    {
-        List<LiveDataQuery.Filter> mappedFilters =
-            this.fields.mapFilters(List.of(new LiveDataQuery.Filter("Observed in", "=", "10")), this.client);
-
-        assertEquals("customField3", mappedFilters.get(0).getProperty());
-        assertEquals(List.of("10"), getValues(mappedFilters.get(0)));
-        verify(this.client, never()).getVersions();
-    }
-
-    @Test
-    void mapFiltersWithGenericLiveDataOperators() throws Exception
-    {
-        // The Live Data offers its generic operators on every filter, whatever the operators of the field.
-        WorkPackageField subject = field("customField1", "Notes", "customField1", "[1]String", true);
-        subject.setFilterOperators(List.of("~", "!~"));
-        WorkPackageField labels = field("customField2", "Labels", "customField2", "[]CustomOption", true);
-        labels.setFilterOperators(List.of("=", "!"));
-        WorkPackageField effort = field("customField3", "Effort", "customField3", "[1]Integer", true);
-        effort.setFilterOperators(List.of("=", "!", ">=", "<="));
-        OpenProjectWorkItemFields customFields = new OpenProjectWorkItemFields(List.of(subject, labels, effort));
-
-        LiveDataQuery.Filter notes = new LiveDataQuery.Filter("Notes", "equals", "a");
-        notes.getConstraints().add(new LiveDataQuery.Constraint("b", "startsWith"));
-        LiveDataQuery.Filter labelsFilter = new LiveDataQuery.Filter("Labels", "startsWith", "1");
-        labelsFilter.getConstraints().add(new LiveDataQuery.Constraint("", "empty"));
-        LiveDataQuery.Filter effortFilter = new LiveDataQuery.Filter("Effort", "less", "5");
-        effortFilter.getConstraints().add(new LiveDataQuery.Constraint("1.5", "greater"));
-        effortFilter.getConstraints().add(new LiveDataQuery.Constraint("2", "equals"));
-
-        List<LiveDataQuery.Filter> mappedFilters =
-            customFields.mapFilters(List.of(notes, labelsFilter, effortFilter), this.client);
-
-        // A text field that can't match a text exactly, nor its beginning, matches the texts containing it.
-        assertEquals(List.of("~:a", "~:b"), getConstraints(mappedFilters.get(0)));
-        // The constraints using an operator that the field doesn't support are dropped.
-        assertEquals(List.of("=:1"), getConstraints(mappedFilters.get(1)));
-        assertEquals("Ignoring the [empty] constraint of the filter on [Labels], since OpenProject supports no "
-            + "equivalent operator for this property.", this.logCapture.getMessage(0));
-        // OpenProject compares the numbers inclusively.
-        assertEquals(List.of("<=:4", ">=:1.5", "=:2"), getConstraints(mappedFilters.get(2)));
-    }
-
-    @Test
-    void mapFiltersOnGenericPropertiesWithGenericLiveDataOperators() throws Exception
-    {
-        WorkPackageField subject = field("subject", "Subject", "subject", "[1]String", true);
-        subject.setFilterOperators(List.of("~", "!~"));
-        WorkPackageField status = field("status", "Status", "status", "[]Status", true);
-        status.setFilterOperators(List.of("o", "=", "c", "!", "*"));
-        WorkPackageField createdAt = field("createdAt", "Created on", "createdAt", "[1]DateTime", true);
-        OpenProjectWorkItemFields genericFields = new OpenProjectWorkItemFields(List.of(subject, status, createdAt));
-
-        LiveDataQuery.Filter statusFilter = new LiveDataQuery.Filter("status", "startsWith", "1");
-        statusFilter.getConstraints().add(new LiveDataQuery.Constraint("", "empty"));
-        LiveDataQuery.Filter creationDate = new LiveDataQuery.Filter("creationDate", "before", "2026-01-01");
-
-        List<LiveDataQuery.Filter> mappedFilters = genericFields.mapFilters(
-            List.of(new LiveDataQuery.Filter("summary", "equals", "a"), statusFilter, creationDate), this.client);
-
-        // The generic properties keep their id, only their operators are checked against the OpenProject filters.
-        assertEquals("summary", mappedFilters.get(0).getProperty());
-        assertEquals(List.of("~:a"), getConstraints(mappedFilters.get(0)));
-        // The status can't be empty in OpenProject.
-        assertEquals(List.of("=:1"), getConstraints(mappedFilters.get(1)));
-        assertEquals("Ignoring the [empty] constraint of the filter on [status], since OpenProject supports no "
-            + "equivalent operator for this property.", this.logCapture.getMessage(0));
-        // The dates are converted with the other filters, their values depending on the operator.
-        assertSame(creationDate, mappedFilters.get(2));
-    }
-
-    @Test
-    void mapFiltersSearchingWorkPackageKeys() throws Exception
-    {
-        LiveDataQuery.Filter partialKey = new LiveDataQuery.Filter("summary", "contains", "proj-");
-        LiveDataQuery.Filter text = new LiveDataQuery.Filter("summary", "contains", "PROJ 42");
-        LiveDataQuery.Filter dashedWord = new LiveDataQuery.Filter("summary", "contains", "e-mail");
-        LiveDataQuery.Filter notKey = new LiveDataQuery.Filter("summary", "contains", "PROJ-4a");
-        LiveDataQuery.Filter excludedKey = new LiveDataQuery.Filter("summary", "equals", "PROJ-42");
-        LiveDataQuery.Filter severalKeys = new LiveDataQuery.Filter("summary", "contains", "PROJ-42");
-        severalKeys.getConstraints().add(new LiveDataQuery.Constraint("PROJ-43", "contains"));
-
-        List<LiveDataQuery.Filter> mappedFilters = this.fields.mapFilters(List.of(
-            new LiveDataQuery.Filter("summary", "contains", " PROJ-42 "), partialKey, text, dashedWord, notKey,
-            excludedKey, severalKeys),
-            this.client);
-
-        // A key, or the beginning of one, is searched with the filter of the OpenProject work package pickers, which
-        // matches the keys as well as the subjects.
-        assertEquals("typeahead", mappedFilters.get(0).getProperty());
-        assertEquals(List.of("**:PROJ-42"), getConstraints(mappedFilters.get(0)));
-        assertEquals("typeahead", mappedFilters.get(1).getProperty());
-        assertEquals(List.of("**:proj-"), getConstraints(mappedFilters.get(1)));
-        // The other searches stay searches of the summary.
-        for (int i = 2; i < mappedFilters.size(); i++) {
-            assertEquals("summary", mappedFilters.get(i).getProperty());
-        }
-        assertEquals(List.of("contains:e-mail"), getConstraints(mappedFilters.get(3)));
-        assertEquals(List.of("contains:PROJ-42", "contains:PROJ-43"), getConstraints(mappedFilters.get(6)));
-        // Compared as JSON trees, since the order of the fields of a JSON object isn't fixed.
-        ObjectMapper mapper = new ObjectMapper();
-        assertEquals(mapper.readTree("[{\"typeahead\":{\"operator\":\"**\",\"values\":[\"PROJ-42\"]}}]"),
-            mapper.readTree(OpenProjectFilterHandler.convertFilters(mappedFilters.subList(0, 1))));
     }
 
     @Test
@@ -379,25 +174,6 @@ class OpenProjectWorkItemFieldsTest
     private static List<String> getProperties(List<LiveDataQuery.SortEntry> sortEntries)
     {
         return sortEntries.stream().map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList());
-    }
-
-    private static List<Object> getValues(LiveDataQuery.Filter filter)
-    {
-        return filter.getConstraints().stream().map(LiveDataQuery.Constraint::getValue).collect(Collectors.toList());
-    }
-
-    private static List<String> getConstraints(LiveDataQuery.Filter filter)
-    {
-        return filter.getConstraints().stream()
-            .map(constraint -> constraint.getOperator() + ':' + constraint.getValue()).collect(Collectors.toList());
-    }
-
-    private static Version version(int id, String name)
-    {
-        Version version = new Version();
-        version.setId(id);
-        version.setName(name);
-        return version;
     }
 
     private static WorkPackageField field(String key, String name, String filterKey, String filterValueType,
