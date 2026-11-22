@@ -20,8 +20,10 @@
 
 package com.xwiki.projectmanagement.calendar.internal.macro;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +35,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
@@ -42,6 +45,7 @@ import org.xwiki.skinx.SkinExtension;
 import com.xpn.xwiki.XWikiContext;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.calendar.rest.CalendarResource;
+import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractWorkItemsMacro;
 import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
 import com.xwiki.projectmanagement.internal.source.WorkItemNameResolver;
@@ -51,7 +55,9 @@ import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 
 /**
  * Abstract calendar macro meant to be implemented by project management implementers. It constructs a REST URL pointing
- * to the {@link CalendarResource} endpoint and delegates rendering to the {@code {{calendar}}} wiki macro.
+ * to the {@link CalendarResource} endpoint and delegates rendering to the {@code {{calendar}}} wiki macro. The calendar
+ * is preceded by hidden messages explaining why its events can't be loaded, one per {@link CalendarLoadError}: the
+ * script of the calendar shows the one matching the status of the failed request of the events.
  *
  * @param <T> the macro parameter type, must extend {@link CalendarMacroParameters}.
  * @version $Id$
@@ -64,12 +70,21 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
 
     private static final String SLASH = "/";
 
+    private static final String CLASS = "class";
+
     @Inject
     private Provider<XWikiContext> xcontextProvider;
 
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
+
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsSkinExtension;
+
+    @Inject
+    private CalendarLoadErrorMessages loadErrorMessages;
 
     @Inject
     private PresetFiltersCombiner presetFiltersCombiner;
@@ -108,8 +123,37 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The result is a single block wrapping the calendar and the messages of its load errors, to which the extending
+     * classes can add parameters (e.g. a class or data attributes read by their scripts).
+     */
     @Override
     public List<Block> execute(T parameters, String content, MacroTransformationContext context)
+        throws MacroExecutionException
+    {
+        // The client context is passed to the calendar resource through its URL, and isn't needed once the URL is
+        // built.
+        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
+            DefaultProjectManagementClientExecutionContext.pushContext(this.macroContext, getClientContext(parameters)))
+        {
+            return executeCalendar(parameters, content, context);
+        }
+    }
+
+    /**
+     * @param parameters the parameters of the macro
+     * @return the client context of the calendar (e.g. the OpenProject connection), passed to the calendar REST
+     *     resource through its URL; by default, the current client context
+     * @since 1.5.0
+     */
+    protected Map<String, Object> getClientContext(T parameters)
+    {
+        return this.macroContext.getContext();
+    }
+
+    private List<Block> executeCalendar(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
         // An invalid content is reported as is: its message tells the user what to fix.
@@ -117,13 +161,14 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         parameters.setFilters(source.getFilters());
         try {
             this.ssrx.use("projectmanagercalendar/css/parameters.css");
+            this.jsSkinExtension.use("projectmanagercalendar/js/calendarLoadError.js");
             // The preset filters have to be resolved before building the REST URL, which carries the filters.
             maybeSetPresetFilters(parameters);
             // We build the REST URL to the CalendarResource endpoint, then add it to the rendering of the calendar
             // macro.
             URIBuilder uriBuilder = getUriBuilder(parameters, source);
             updateUrl(uriBuilder, parameters);
-            return Collections.singletonList(getMacroBlock(parameters, uriBuilder));
+            return Collections.singletonList(getCalendarBlock(parameters, uriBuilder, context));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);
         }
@@ -250,9 +295,59 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         ub.addParameter("excludeWorkItems", "true");
     }
 
-    private MacroBlock getMacroBlock(T parameters, URIBuilder uriBuilder)
+    /**
+     * The message displayed above the calendar when its events can't be loaded for the given reason. By default, the
+     * {@link #getLoadErrorHint(CalendarLoadError) hint} of the error in a warning or error box. The extending classes
+     * can override it, e.g. to invite the user to authenticate to the project management tool.
+     *
+     * @param parameters the parameters of the macro
+     * @param error the reason why the events can't be loaded
+     * @param context the macro transformation context
+     * @return the message explaining the error
+     * @since 1.5.0
+     */
+    protected List<Block> getLoadErrorMessage(T parameters, CalendarLoadError error,
+        MacroTransformationContext context)
+    {
+        return this.loadErrorMessages.getMessage(error);
+    }
+
+    /**
+     * @param error the reason why the events of the calendar can't be loaded
+     * @return the default text explaining the error, translated
+     * @since 1.5.0
+     */
+    protected Block getLoadErrorHint(CalendarLoadError error)
+    {
+        return this.loadErrorMessages.getHint(error);
+    }
+
+    private Block getCalendarBlock(T parameters, URIBuilder uriBuilder, MacroTransformationContext context)
     {
         String jsonURL = uriBuilder.toString();
+        List<Block> children = new ArrayList<>();
+        // The messages are hidden until the script of the calendar finds that the events can't be loaded: their text
+        // is rendered here, escaped and translated, rather than built from the response of the failed request.
+        for (CalendarLoadError error : CalendarLoadError.values()) {
+            // The attributes are ordered, for a stable output.
+            Map<String, String> messageParameters = new LinkedHashMap<>();
+            messageParameters.put(CLASS, "projectmanagement-calendar-load-error");
+            messageParameters.put("data-status", error.getStatus());
+            // Boolean attribute, whose value is its name.
+            String hidden = "hidden";
+            messageParameters.put(hidden, hidden);
+            children.add(new GroupBlock(getLoadErrorMessage(parameters, error, context), messageParameters));
+        }
+        children.add(getMacroBlock(parameters, jsonURL));
+        Map<String, String> calendarParameters = new LinkedHashMap<>();
+        calendarParameters.put(CLASS, "projectmanagement-calendar");
+        // The script of the calendar recognizes the requests of its events by their URL.
+        calendarParameters.put("data-events-url", jsonURL);
+        return new GroupBlock(children, calendarParameters);
+    }
+
+    private MacroBlock getMacroBlock(T parameters, String jsonURL)
+    {
 
         // Build the parameters to pass to the {{calendar}} wiki macro.
         Map<String, String> calendarParams = new HashMap<>();

@@ -19,7 +19,6 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.macro;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,14 +32,13 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
-import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManagementCalendarMacro;
-import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.calendar.internal.macro.CalendarLoadError;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
@@ -66,6 +64,8 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroPar
 @Named("openprojectcalendar")
 public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarMacro<OpenProjectCalendarMacroParameters>
 {
+    private static final String CLASS = "class";
+
     private static final String CONTENT_DESCRIPTION =
         "The work packages to display, in the format chosen by the source parameter.";
 
@@ -138,16 +138,13 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         this.stylingSetupManager.useInstanceStyle(parameters.getInstance());
         this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
-        List<Block> result = new ArrayList<>();
-        // The context is passed to the calendar resource through its URL, and isn't needed once the URL is built.
-        try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
-            DefaultProjectManagementClientExecutionContext.pushContext(this.macroContext, populateContext(parameters)))
-        {
-            result.add(new GroupBlock(super.execute(parameters, content, context),
-                Map.of("class", "openproject-calendar-macro", "data-instance", parameters.getInstance(),
-                    // Editing a work package requires the user's own OpenProject account.
-                    "data-can-edit", String.valueOf(accessStatus == OpenProjectAccessStatus.AUTHENTICATED))));
-        }
+        List<Block> result = super.execute(parameters, content, context);
+        // The script of the macro reads the connection of the calendar from the block wrapping it.
+        Block calendar = result.get(0);
+        calendar.setParameter(CLASS, calendar.getParameter(CLASS) + " openproject-calendar-macro");
+        calendar.setParameter("data-instance", parameters.getInstance());
+        // Editing a work package requires the user's own OpenProject account.
+        calendar.setParameter("data-can-edit", String.valueOf(accessStatus == OpenProjectAccessStatus.AUTHENTICATED));
         return result;
     }
 
@@ -160,7 +157,28 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         }
     }
 
-    private Map<String, Object> populateContext(OpenProjectCalendarMacroParameters parameters)
+    @Override
+    protected List<Block> getLoadErrorMessage(OpenProjectCalendarMacroParameters parameters, CalendarLoadError error,
+        MacroTransformationContext context)
+    {
+        switch (error) {
+            case NOT_AUTHENTICATED:
+                // OpenProject rejected the token of the user (e.g. expired or revoked), or the anonymous requests: the
+                // same warning as when the user isn't connected, inviting them to connect their OpenProject account
+                // when the connection allows it.
+                return this.userTokenChecker.getWarningBlock(parameters.getInstance(),
+                    OpenProjectAccessStatus.NOT_CONNECTED, false, context);
+            case FORBIDDEN:
+                // The work packages might be visible to the OpenProject account of a user who didn't connect it.
+                return this.userTokenChecker.getWarningBlock(parameters.getInstance(), getLoadErrorHint(error),
+                    context.isInline());
+            default:
+                return super.getLoadErrorMessage(parameters, error, context);
+        }
+    }
+
+    @Override
+    protected Map<String, Object> getClientContext(OpenProjectCalendarMacroParameters parameters)
     {
         List<OpenProjectEventType> types = parameters.getTypes();
         boolean hasSprint = types.contains(OpenProjectEventType.SPRINT);

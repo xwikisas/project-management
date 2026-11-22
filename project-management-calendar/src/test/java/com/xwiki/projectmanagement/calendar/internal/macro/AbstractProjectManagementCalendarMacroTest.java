@@ -36,8 +36,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
+import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.MacroBlock;
+import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
@@ -78,7 +82,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class })
+@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class, CalendarLoadErrorMessages.class })
 class AbstractProjectManagementCalendarMacroTest
 {
     private static final String REST_PATH = "/xwiki/rest/wikis/mywiki/projectmanagement/test/calendar";
@@ -96,6 +100,13 @@ class AbstractProjectManagementCalendarMacroTest
     @MockComponent
     @Named("ssrx")
     private SkinExtension ssrx;
+
+    @MockComponent
+    @Named("jsrx")
+    private SkinExtension jsrx;
+
+    @MockComponent
+    private ContextualLocalizationManager l10n;
 
     @MockComponent
     private PresetsManager presetsManager;
@@ -149,6 +160,33 @@ class AbstractProjectManagementCalendarMacroTest
         assertEquals(REST_PATH, url.getPath());
         assertEquals(List.of(EXTRA_PARAMETER), getQueryParameters(url));
         verify(this.presetsManager, never()).getPreset(any());
+    }
+
+    @Test
+    void executeRendersTheMessagesOfTheLoadErrors() throws Exception
+    {
+        for (String key : List.of("invalidRequest", "notAuthenticated", "forbidden")) {
+            Translation translation = mock(Translation.class);
+            when(translation.render()).thenReturn(new WordBlock(key + " message"));
+            when(this.l10n.getTranslation("calendar.loadError." + key)).thenReturn(translation);
+        }
+
+        GroupBlock calendar = executeCalendar(null);
+
+        verify(this.jsrx).use("projectmanagercalendar/js/calendarLoadError.js");
+        assertEquals("projectmanagement-calendar", calendar.getParameter("class"));
+        // The script recognizes the requests of the events by their URL, the one given to the calendar macro.
+        MacroBlock calendarBlock = (MacroBlock) calendar.getChildren().get(4);
+        assertEquals(calendarBlock.getParameter(JSON), calendar.getParameter("data-events-url"));
+        // One hidden message per error, the warnings being for the errors that the user may be able to fix.
+        assertLoadError(calendar.getChildren().get(0), "400", "box errormessage", "invalidRequest message");
+        assertLoadError(calendar.getChildren().get(1), "401", "box warningmessage", "notAuthenticated message");
+        assertLoadError(calendar.getChildren().get(2), "403", "box warningmessage", "forbidden message");
+        // A missing translation is displayed as its key.
+        assertLoadError(calendar.getChildren().get(3), "other", "box errormessage", "calendar.loadError.failure");
+        // The extending classes can display the hints in their own messages.
+        assertEquals("forbidden message",
+            ((WordBlock) this.macro.getLoadErrorHint(CalendarLoadError.FORBIDDEN)).getWord());
     }
 
     @Test
@@ -346,9 +384,24 @@ class AbstractProjectManagementCalendarMacroTest
 
     private MacroBlock execute(String content) throws MacroExecutionException
     {
+        List<Block> children = executeCalendar(content).getChildren();
+        return (MacroBlock) children.get(children.size() - 1);
+    }
+
+    private GroupBlock executeCalendar(String content) throws MacroExecutionException
+    {
         List<Block> result = this.macro.execute(this.parameters, content, this.macroTransformationContext);
         assertEquals(1, result.size());
-        return (MacroBlock) result.get(0);
+        return (GroupBlock) result.get(0);
+    }
+
+    private static void assertLoadError(Block block, String status, String boxClass, String message)
+    {
+        assertEquals(Map.of("class", "projectmanagement-calendar-load-error", "data-status", status, "hidden",
+            "hidden"), block.getParameters());
+        Block box = block.getChildren().get(0);
+        assertEquals(boxClass, box.getParameter("class"));
+        assertEquals(message, ((WordBlock) box.getChildren().get(0)).getWord());
     }
 
     private static List<String> getQueryParameters(URIBuilder url)

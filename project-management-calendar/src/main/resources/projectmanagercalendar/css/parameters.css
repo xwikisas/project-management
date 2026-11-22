@@ -29,3 +29,9 @@
 .time-interval-max {
     margin-left: 1.5rem;
 }
+
+/* The messages explaining why the events of a calendar can't be loaded stay hidden until the script of the calendar
+   shows one, whatever the styles of their content. */
+.projectmanagement-calendar-load-error[hidden] {
+    display: none !important;
+}

@@ -1,2 +1,3 @@
 com.xwiki.projectmanagement.calendar.internal.CalendarEventConverter
 com.xwiki.projectmanagement.calendar.internal.rest.DefaultCalendarResource
+com.xwiki.projectmanagement.calendar.internal.macro.CalendarLoadErrorMessages

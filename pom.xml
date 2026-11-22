@@ -36,6 +36,12 @@
     <licensing.version>1.32.3</licensing.version>
     <urlshortener.version>1.3.4</urlshortener.version>
     <fullcalendar.version>2.5.4</fullcalendar.version>
+    <!-- The JavaScript unit tests (src/test/node of the modules declaring the frontend-maven-plugin), run with
+         Vitest. -->
+    <node.version>v22.12.0</node.version>
+    <pnpm.version>9.15.9</pnpm.version>
+    <!-- Set by the profiles skipping the tests, so that Node and the dependencies aren't installed either. -->
+    <projectmanagement.js.tests.skip>false</projectmanagement.js.tests.skip>
   </properties>
   <packaging>pom</packaging>
   <issueManagement>
@@ -76,10 +82,95 @@
             <argLine>@{argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${project.build.directory} --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED -javaagent:"${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${bytebuddy.version}/byte-buddy-agent-${bytebuddy.version}.jar"</argLine>
           </configuration>
         </plugin>
+        <plugin>
+          <!-- Runs the JavaScript unit tests of src/test/node with Vitest, as in xwiki-platform: Node and pnpm are
+               installed in target. -->
+          <groupId>com.github.eirslett</groupId>
+          <artifactId>frontend-maven-plugin</artifactId>
+          <version>2.0.2</version>
+          <configuration>
+            <workingDirectory>${basedir}/src/test/node</workingDirectory>
+            <installDirectory>${project.build.directory}</installDirectory>
+            <skip>${projectmanagement.js.tests.skip}</skip>
+          </configuration>
+          <executions>
+            <execution>
+              <id>install-node-and-pnpm</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>install-node-and-pnpm</goal>
+              </goals>
+              <configuration>
+                <nodeVersion>${node.version}</nodeVersion>
+                <pnpmVersion>${pnpm.version}</pnpmVersion>
+              </configuration>
+            </execution>
+            <execution>
+              <id>pnpm-install</id>
+              <phase>process-test-resources</phase>
+              <goals>
+                <goal>pnpm</goal>
+              </goals>
+              <configuration>
+                <arguments>install</arguments>
+                <environmentVariables>
+                  <!-- Install the dependencies of the lock file, without updating it. -->
+                  <CI>true</CI>
+                </environmentVariables>
+              </configuration>
+            </execution>
+            <execution>
+              <id>pnpm-test</id>
+              <phase>test</phase>
+              <goals>
+                <goal>pnpm</goal>
+              </goals>
+              <configuration>
+                <arguments>run test:unit</arguments>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <!-- The dependencies installed by pnpm for the JavaScript tests are removed with the build. -->
+          <artifactId>maven-clean-plugin</artifactId>
+          <configuration>
+            <filesets>
+              <fileset>
+                <directory>${basedir}/src/test/node/node_modules</directory>
+              </fileset>
+            </filesets>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
   <profiles>
+    <!-- Skip the JavaScript tests, and the installation of Node and of their dependencies, with the Java tests. -->
+    <profile>
+      <id>skip-js-tests-with-skipTests</id>
+      <activation>
+        <property>
+          <name>skipTests</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <projectmanagement.js.tests.skip>true</projectmanagement.js.tests.skip>
+      </properties>
+    </profile>
+    <profile>
+      <id>skip-js-tests-with-maven.test.skip</id>
+      <activation>
+        <property>
+          <name>maven.test.skip</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <properties>
+        <projectmanagement.js.tests.skip>true</projectmanagement.js.tests.skip>
+      </properties>
+    </profile>
     <profile>
       <id>integration-tests</id>
       <modules>

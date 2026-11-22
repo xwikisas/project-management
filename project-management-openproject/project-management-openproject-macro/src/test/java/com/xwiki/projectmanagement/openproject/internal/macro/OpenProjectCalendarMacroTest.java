@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
@@ -54,6 +55,7 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.web.XWikiRequest;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.calendar.internal.macro.CalendarLoadErrorMessages;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
@@ -93,7 +95,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(WorkItemSourceReader.class)
+@ComponentList({ WorkItemSourceReader.class, CalendarLoadErrorMessages.class })
 class OpenProjectCalendarMacroTest
 {
     private static final String OTHER_SERVER_LINK = "https://other.example.com/projects/demo/work_packages";
@@ -128,6 +130,9 @@ class OpenProjectCalendarMacroTest
 
     @MockComponent
     private ObservationManager observationManager;
+
+    @MockComponent
+    private ContextualLocalizationManager l10n;
 
     @MockComponent
     private StylingSetupManager stylingSetupManager;
@@ -185,11 +190,24 @@ class OpenProjectCalendarMacroTest
     private MacroBlock getCalendarMacro(List<Block> result, String canEdit)
     {
         assertEquals(1, result.size());
-        GroupBlock group = (GroupBlock) result.get(0);
-        assertEquals(Map.of("class", "openproject-calendar-macro", "data-instance", "main", "data-can-edit", canEdit),
-            group.getParameters());
-        assertEquals(1, group.getChildren().size());
-        return (MacroBlock) group.getChildren().get(0);
+        GroupBlock calendar = (GroupBlock) result.get(0);
+        // The block wrapping the calendar tells the script of the macro the connection of the calendar.
+        assertEquals("projectmanagement-calendar openproject-calendar-macro", calendar.getParameter("class"));
+        assertEquals("main", calendar.getParameter("data-instance"));
+        assertEquals(canEdit, calendar.getParameter("data-can-edit"));
+        List<Block> calendarChildren = calendar.getChildren();
+        return (MacroBlock) calendarChildren.get(calendarChildren.size() - 1);
+    }
+
+    /**
+     * @return the message displayed when the events can't be loaded, the calendar REST resource answering with the
+     *     given status
+     */
+    private static List<Block> getLoadErrorMessage(List<Block> result, String status)
+    {
+        return result.get(0).getChildren().stream()
+            .filter(child -> status.equals(child.getParameter("data-status"))).findFirst().orElseThrow()
+            .getChildren();
     }
 
     private static Map<String, String> getQueryParameters(String url) throws Exception
@@ -224,6 +242,27 @@ class OpenProjectCalendarMacroTest
         verify(this.stylingSetupManager).useInstanceStyle("main");
         verify(this.jsrx).use("openproject/js/calendarMacro.js");
         verify(this.jsx).use("OpenProject.Code.ViewAction");
+    }
+
+    @Test
+    void explainsWhyTheEventsCantBeLoaded() throws Exception
+    {
+        List<Block> connectWarning = List.of(new WordBlock("connect"));
+        when(this.userTokenChecker.getWarningBlock("main", OpenProjectAccessStatus.NOT_CONNECTED, false, this.context))
+            .thenReturn(connectWarning);
+        List<Block> forbiddenWarning = List.of(new WordBlock("forbidden"));
+        when(this.userTokenChecker.getWarningBlock(eq("main"), any(Block.class), eq(false)))
+            .thenReturn(forbiddenWarning);
+
+        List<Block> result = this.macro.execute(this.parameters, "", this.context);
+
+        // OpenProject rejected the token of the user, or the anonymous requests: same warning as for a user who isn't
+        // connected, which invites them to connect their OpenProject account.
+        assertEquals(connectWarning, getLoadErrorMessage(result, "401"));
+        // The work packages might be visible to the OpenProject account of the user.
+        assertEquals(forbiddenWarning, getLoadErrorMessage(result, "403"));
+        // The other errors have the default message.
+        assertEquals("box errormessage", getLoadErrorMessage(result, "other").get(0).getParameter("class"));
     }
 
     @Test
