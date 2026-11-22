@@ -54,6 +54,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final By PROPERTIES_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-properties-loading");
 
+    private static final By QUERY_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-query-loading");
+
     private static final By CONTENT = By.cssSelector(".macro-editor-modal textarea[name='$content']");
 
     private static final By NO_CONNECTION_HINT = By.cssSelector(".macro-editor-modal .op-filters-no-connection");
@@ -129,13 +131,16 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
             // content takes one of them: the Filters group can be behind the link.
             clickMore();
         }
-        // The filters reload their properties when the modal is opened with a connection, or when it's changed.
+        // The filters reload their properties when the modal is opened with a connection, or when it's changed, and
+        // read the query of the macro content.
         getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
+        getDriver().waitUntilElementDisappears(QUERY_LOADING);
         return new FilterBuilderParameter();
     }
 
     /**
-     * Replace the macro content, as a user typing it and leaving the field, e.g. a link read by the url source.
+     * Replace the macro content, as a user typing it and leaving the field, e.g. a query (read again by the filters)
+     * or a link read by the url source.
      *
      * @param content the new macro content, e.g. a query
      * @return this object
@@ -155,6 +160,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         field.clear();
         // Leaving the field changes it.
         field.sendKeys(content, Keys.TAB);
+        // The filters read the query of the content again.
+        getDriver().waitUntilElementDisappears(QUERY_LOADING);
         return this;
     }
 

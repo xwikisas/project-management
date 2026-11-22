@@ -29,6 +29,7 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.xwiki.component.annotation.Component;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
@@ -42,6 +43,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 
@@ -58,6 +60,9 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
 {
     private static final String CONTENT_DESCRIPTION =
         "The work packages charted by all the datasets, in the format chosen by the source parameter.";
+
+    @Inject
+    private OpenProjectNameResolver nameResolver;
 
     @Inject
     private LicenseChecker licenseChecker;
@@ -133,5 +138,12 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
             Map<String, Object> clientContext = Map.of("instance", parameters.getInstance());
             ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);
         }
+    }
+
+    @Override
+    protected List<LiveDataQuery.Filter> resolveNames(OpenProjectChartMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters) throws MacroExecutionException
+    {
+        return this.nameResolver.resolve(parameters.getInstance(), filters);
     }
 }

@@ -268,7 +268,9 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setSourceParameters(sourceParameters);
     }
 
+    // The id only matters for the table and cards views.
     @PropertyDisplayHidden
+    @PropertyGroup("display")
     @Override
     public void setId(String id)
     {

@@ -20,7 +20,6 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,10 +30,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -44,19 +41,16 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
-import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
-import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
-import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.displayer.StylingSetupManager;
-import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -75,6 +69,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         "The work packages to display, in the format chosen by the source parameter.";
 
     private static final String CLASS = "class";
+
+    @Inject
+    private OpenProjectNameResolver nameResolver;
 
     @Inject
     @Named("ssrx")
@@ -97,19 +94,10 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     private ObservationManager observationManager;
 
     @Inject
-    private OpenProjectAccess openProjectAccess;
-
-    @Inject
-    private OpenProjectIdentifierResolver identifierResolver;
-
-    @Inject
     private CurrentUserFilterDetector currentUserFilterDetector;
 
     @Inject
-    private ContextualLocalizationManager l10n;
-
-    @Inject
-    private Logger logger;
+    private OpenProjectSavedQueryResolver savedQueryResolver;
 
     /**
      * Default constructor.
@@ -157,40 +145,8 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters,
         MacroTransformationContext context)
     {
-        String queryId = identifierResolver.getStandaloneQueryId(parameters.getIdentifier());
-        if (queryId == null) {
-            return Collections.emptyList();
-        }
-
-        OpenProjectApiClient apiClient = openProjectAccess.resolve(parameters.getInstance()).getClient();
-        if (apiClient == null) {
-            return Collections.emptyList();
-        }
-
-        try {
-            addToSourceParams(parameters, OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL,
-                identifierResolver.getSavedQueryResultsUrl(apiClient, queryId));
-        } catch (ProjectManagementException e) {
-            // OpenProject answers 404 for the saved queries that the user isn't allowed to see too: an empty list of
-            // work packages would wrongly mean that the query matches none.
-            if (isNotFoundOrForbidden(e)) {
-                logger.debug("The saved query [{}] of the instance [{}] is not available. Cause: [{}].", queryId,
-                    parameters.getInstance(), ExceptionUtils.getRootCauseMessage(e));
-                return userTokenChecker.getWarningBlock(parameters.getInstance(),
-                    l10n.getTranslation("openproject.savedQuery.unavailable").render(queryId), context.isInline());
-            }
-            logger.warn("Failed to retrieve the saved query [{}] of the instance [{}]. Cause: [{}].", queryId,
-                parameters.getInstance(), ExceptionUtils.getRootCauseMessage(e));
-        }
-        return Collections.emptyList();
-    }
-
-    private static boolean isNotFoundOrForbidden(ProjectManagementException e)
-    {
-        Integer statusCode = e instanceof WorkItemRetrievalException ? ((WorkItemRetrievalException) e).getStatusCode()
-            : null;
-        return statusCode != null
-            && (statusCode == HttpURLConnection.HTTP_NOT_FOUND || statusCode == HttpURLConnection.HTTP_FORBIDDEN);
+        return this.savedQueryResolver.resolve(parameters, context.isInline(),
+            (key, value) -> addToSourceParams(parameters, key, value));
     }
 
     /**
@@ -230,5 +186,12 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
         return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
             : Collections.singletonList(new GroupBlock(result, params));
+    }
+
+    @Override
+    protected List<LiveDataQuery.Filter> resolveNames(OpenProjectMacroParameters parameters,
+        List<LiveDataQuery.Filter> filters) throws MacroExecutionException
+    {
+        return this.nameResolver.resolve(parameters.getInstance(), filters);
     }
 }

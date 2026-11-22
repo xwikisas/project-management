@@ -101,6 +101,23 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
+     * Selects an operator the way a script or some assistive technologies do: the browser doesn't report the change
+     * as a user action.
+     *
+     * @param operator the label of the operator to select, e.g. "is not one of"
+     * @return this object
+     * @since 1.5.0
+     */
+    public FilterBuilderFilter selectOperatorWithoutUserAction(String operator)
+    {
+        WebElement select = this.container.findElement(By.className("proj-manag-constraint-operator"));
+        getDriver().executeScript("const select = arguments[0];"
+            + "select.value = Array.from(select.options).find(option => option.text === arguments[1]).value;"
+            + "select.dispatchEvent(new Event('change', {bubbles: true}));", select, operator);
+        return this;
+    }
+
+    /**
      * Sets the value of a filter typed in a text field.
      *
      * @param value the value that should be set to the input element of the filter

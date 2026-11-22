@@ -53,6 +53,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.source.WorkItemNameResolver;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceRequest;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
@@ -136,7 +137,7 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         throws MacroExecutionException
     {
         try {
-            WorkItemSourceResult source = readSource(parameters, content);
+            WorkItemSourceResult source = readSource(parameters, content, filters -> resolveNames(parameters, filters));
             parameters.setFilters(source.getFilters());
             Map<String, Object> sourceContext = source.getClientContext();
             if (StringUtils.isNotEmpty(parameters.getPresetId())) {
@@ -205,8 +206,46 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
      */
     protected WorkItemSourceResult readSource(T parameters, String content) throws MacroExecutionException
     {
+        return readSource(parameters, content, null);
+    }
+
+    /**
+     * Read the content of the macro with the source chosen by its {@code source} parameter, the names written in the
+     * filters read from the content being resolved by the given resolver. The extending classes can override it, for
+     * example to ignore the content.
+     *
+     * @param parameters the parameters of the macro
+     * @param content the content of the macro
+     * @param nameResolver replaces the names written in the filters read from the content by ids, or {@code null} to
+     *     keep them as text
+     * @return the work items selected by the macro, as returned by the two-argument {@code readSource}
+     * @throws MacroExecutionException if the content can't be read, or if a name can't be resolved
+     * @since 1.5.0
+     */
+    protected WorkItemSourceResult readSource(T parameters, String content, WorkItemNameResolver nameResolver)
+        throws MacroExecutionException
+    {
         return this.sourceReader.read(new WorkItemSourceRequest().client(parameters.getClient()).content(content)
-            .source(parameters.getSource()).filters(parameters.getFilters(), false));
+            .source(parameters.getSource()).filters(parameters.getFilters(), false).nameResolver(nameResolver));
+    }
+
+    /**
+     * Replace the names written in the filters read from the content (for example the project {@code xwiki}) by the
+     * ids of the resources of the project management tool. It is called when the macro is executed, after reading its
+     * content, but not by the two-argument {@code readSource} (which only checks the content, for example for a filter
+     * on the current user). By default, the names are kept and passed to the client as text.
+     *
+     * @param parameters the parameters of the macro
+     * @param filters the filters read from the content, whose values are names
+     *     ({@link com.xwiki.projectmanagement.source.WorkItemName}) or text (for example ids or dates)
+     * @return the filters with the names replaced by ids
+     * @throws MacroExecutionException if a name matches no resource or several
+     * @since 1.5.0
+     */
+    protected List<LiveDataQuery.Filter> resolveNames(T parameters, List<LiveDataQuery.Filter> filters)
+        throws MacroExecutionException
+    {
+        return filters;
     }
 
     protected void updateFilters(List<List<LiveDataQuery.Filter>> filters, T parameters) throws MacroExecutionException

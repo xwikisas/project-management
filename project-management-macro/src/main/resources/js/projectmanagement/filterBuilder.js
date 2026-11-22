@@ -373,6 +373,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       });
     };
     /*
+     * Removes all the filters, including those waiting for the properties of the chosen instance, e.g. before adding
+     * the filters read from another place.
+     */
+    let clear = function () {
+      clean();
+      getRows().remove();
+      builder.pending = [];
+      onChange();
+    };
+    /*
      * Replaces the properties that can be filtered on, e.g. by the properties of the instance of the client chosen in
      * the macro editor. The rows already added are kept, and the pending filters on the new properties are added.
      *
@@ -488,6 +498,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       addFilter: addFilter,
       addDisplayer: addDisplayer,
       clean: clean,
+      clear: clear,
       cfg: builder.cfg,
       init: init,
       setTitle: setTitle,
