@@ -85,6 +85,10 @@ describe("queryWriter", () => {
     [[filter("progress", ">", "5"), filter("progress", "<", "9")], "progress > 5 AND progress < 9"],
     [[filter("type", "empty", ""), filter("project", "equals", "1")], "type IS EMPTY AND project = 1"],
     [[{ property: "type" }], ""],
+    // A filter without value, e.g. a row of the builder whose value isn't chosen yet, isn't written.
+    [[filter("status", "=", ""), filter("assignees", "!", "")], ""],
+    [[filter("status", "=", ""), filter("project", "=", "7"), filter("dueDate", "t", "")],
+      "project = 7 AND dueDate = today()"],
     [[], ""],
   ])("writes %j as [%s]", (filters, expectedQuery) => {
     expect(queryWriter.toQuery(filters, new Map())).toBe(expectedQuery);

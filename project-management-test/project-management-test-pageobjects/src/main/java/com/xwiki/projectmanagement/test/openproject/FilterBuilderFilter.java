@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.Select;
 import org.xwiki.test.ui.po.BaseElement;
@@ -139,6 +140,23 @@ public class FilterBuilderFilter extends BaseElement
         new Select(this.container.findElement(By.className("proj-manag-constraint-operator")))
             .selectByVisibleText(operator);
         return this;
+    }
+
+    /**
+     * Remove the filter, with its delete icon, and wait for it to be removed.
+     *
+     * @since 1.5.0
+     */
+    public void remove()
+    {
+        this.container.findElement(By.className("proj-manag-delete-filter")).click();
+        getDriver().waitUntilCondition(driver -> {
+            try {
+                return !this.container.isDisplayed();
+            } catch (StaleElementReferenceException e) {
+                return true;
+            }
+        });
     }
 
     /**
