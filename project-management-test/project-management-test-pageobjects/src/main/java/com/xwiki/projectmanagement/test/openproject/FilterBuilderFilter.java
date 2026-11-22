@@ -89,6 +89,46 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
+     * @return the text alternative of the operator of the filter, read by assistive technologies, or an empty string
+     *     if it has none
+     * @since 1.5.0
+     */
+    public String getOperatorAccessibleName()
+    {
+        return getTextAlternative(this.container.findElement(By.className("proj-manag-constraint-operator")));
+    }
+
+    /**
+     * @return the text alternative of the field in which the user enters the value of the filter (e.g. the text field,
+     *     the field in which the values to pick from the suggestions are typed, or the field of the date picker), read
+     *     by assistive technologies, or an empty string if it has none
+     * @since 1.5.0
+     */
+    public String getValueAccessibleName()
+    {
+        // The value can be entered in another field than its input, e.g. a field suggesting values (the input then
+        // having the selectized class before XWiki 16, tomselected after) or a date picker (the input being hidden).
+        // The field suggesting values isn't checked for visibility: Selectize moves it out of sight once a single value
+        // is selected.
+        return getTextAlternative(this.container.findElement(By.cssSelector(
+            ".proj-manag-constraint-value-container input:not(.selectized, .tomselected, .hidden)")));
+    }
+
+    /**
+     * The text alternative given by the attributes of a field (its {@code aria-label}, else its title), which is how
+     * the filter builder names its fields. It isn't computed by the browser (WebDriver's "Get Computed Label"), which
+     * isn't supported by all the drivers that the tests can use.
+     */
+    private String getTextAlternative(WebElement field)
+    {
+        String label = field.getAttribute("aria-label");
+        if (label == null || label.isEmpty()) {
+            label = field.getAttribute("title");
+        }
+        return label == null ? "" : label;
+    }
+
+    /**
      * @param operator the label of the operator to select, e.g. "is not one of"
      * @return this object
      * @since 1.4.0

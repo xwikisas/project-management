@@ -83,6 +83,14 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     let takesValue = function (operator) {
       return !NO_VALUE_OPERATORS.includes(operator);
     };
+    let getPropertyName = function (property) {
+      return property.name || property.id;
+    };
+    // A translated message about a property, e.g. the text alternative of the value of its filter.
+    let formatMessage = function (key, property) {
+      // A function, so that the name is inserted as it is, even when it holds replacement patterns such as $&.
+      return (builder.l10n[key] || '{0}').replace('{0}', () => getPropertyName(property));
+    };
     let getOperatorLabel = function (property, operator) {
       let label = builder.l10n[getType(property) + '.' + operator.id];
       return label || operator.name || operator.id;
@@ -138,8 +146,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
           || rows.filter((index, row) => !takesValue(getRowOperator($(row)))).length > 0;
         this.hidden = full;
         this.disabled = full;
-        let name = property.name || property.id;
-        $(this).text(rows.length > 0 ? (builder.l10n.anotherCondition || '{0}').replace('{0}', name) : name);
+        $(this).text(rows.length > 0 ? formatMessage('anotherCondition', property) : getPropertyName(property));
       });
       builder.addButton.val('');
     };
@@ -159,7 +166,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       let property = getRowProperty(row);
       let operatorId = getRowOperator(row);
       let operator = property.filter.operators.find(o => o.id == operatorId) || { id: operatorId };
-      let description = (property.name || property.id) + ' ' + getOperatorLabel(property, operator);
+      let description = getPropertyName(property) + ' ' + getOperatorLabel(property, operator);
       if (!takesValue(operatorId)) {
         return description;
       }
@@ -235,8 +242,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       valueContainer.removeClass('hidden');
       valElem.val(values.join(','));
       let displayer = property.valueDisplayer || filterDisplayer;
-      // The values of a list row are picked from a list allowing several values.
-      let displayerParams = $.extend({}, property.filter, { multiple: type === 'list' });
+      // The values of a list row are picked from a list allowing several values. The displayer gives the text
+      // alternative to the field that it displays, the row having no visible label for it.
+      let displayerParams = $.extend({}, property.filter, {
+        multiple: type === 'list',
+        label: formatMessage('valueLabel', property)
+      });
       displayer.display(type, valElem, operator, displayerParams);
       valElem.on('change.filterBuilder', onChange);
       // The summary describes a date as the date picker displays it, once it's loaded.
@@ -267,10 +278,11 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       row.removeAttr('id');
       row.removeClass('hidden');
       row.addClass('proj-manag-constraint');
-      row.find('.proj-manag-constraint-title').text(property.name || property.id);
+      row.find('.proj-manag-constraint-title').text(getPropertyName(property));
       row.find('.proj-manag-constraint-name').val(property.id);
       row.data('property', property);
-      let operatorElem = row.find('select.proj-manag-constraint-operator');
+      let operatorElem = row.find('select.proj-manag-constraint-operator')
+        .attr('aria-label', formatMessage('operatorLabel', property));
       property.filter.operators.forEach((operator) => {
         operatorElem.append($('<option></option>').attr('value', operator.id)
           .text(getOperatorLabel(property, operator)));
@@ -408,7 +420,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       }
       builder.addButton.find('option').filter((index, option) => option.value !== '').remove();
       properties.forEach(property => {
-        builder.addButton.append($('<option></option>').attr('value', property.id).text(property.name || property.id));
+        builder.addButton.append($('<option></option>').attr('value', property.id).text(getPropertyName(property)));
       });
       if (redisplayRows) {
         getRows().each(function () {
