@@ -333,6 +333,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         List<String> taskIds = getTasksInProgressIds("");
         assertEquals(taskIds.size(), ld.countRows());
         assertEquals(taskIds.get(0), ld.getCell("ID", 1).getText());
+
+        // The link of another OpenProject server is reported, instead of listing the work packages of the project
+        // with the same identifier on the server of the connection.
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" source=\"url\"}}%n"
+            + "https://other.example.com%s/work_packages%n{{/openproject}}", CONNECTION_ID, DEMO_PROJECT_PATH));
+        setup.gotoPage(testReference);
+        List<String> errors = new ViewPageWithOpenProjectMacro().waitForMacroErrors(1);
+        assertEquals(1, errors.size());
+        assertThat(errors.get(0), containsString("The link is from the OpenProject server other.example.com, not "));
+        assertThat(errors.get(0), containsString(" of the connection " + CONNECTION_ID + ". Use a link of "));
     }
 
     @Test

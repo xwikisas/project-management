@@ -47,6 +47,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
@@ -79,6 +80,9 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
 
     @Inject
     private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @Inject
+    private OpenProjectLinkChecker linkChecker;
 
     @Inject
     private OpenProjectAccess openProjectAccess;
@@ -121,6 +125,8 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         parameters.setClient("openproject");
         // Filtering on the current user requires the OpenProject account of the user.
         WorkItemSourceResult source = readSource(parameters, content);
+        // The work packages are requested from the server of the connection, whatever the server of the link.
+        this.linkChecker.check(parameters.getInstance(), source.getIdentifier());
         List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), accessStatus,
             this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), source.getFilters())
                 || this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier(source.getIdentifier()),

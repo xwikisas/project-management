@@ -99,7 +99,6 @@ class OpenProjectSavedQueryResolverTest
     {
         this.parameters.setInstance("main");
         this.parameters.setIdentifier(SAVED_QUERY_LINK);
-        when(this.identifierResolver.getStandaloneQueryId(SAVED_QUERY_LINK)).thenReturn("5");
     }
 
     @Test

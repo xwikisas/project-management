@@ -39,6 +39,7 @@ import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectLink;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 
 /**
@@ -80,7 +81,8 @@ public class OpenProjectSavedQueryResolver
     public List<Block> resolve(OpenProjectMacroParameters parameters, boolean inline,
         BiConsumer<String, String> sourceParameters)
     {
-        String queryId = this.identifierResolver.getStandaloneQueryId(parameters.getIdentifier());
+        OpenProjectLink link = OpenProjectLink.parse(parameters.getIdentifier());
+        String queryId = link != null ? link.getSavedQueryId() : null;
         if (queryId == null) {
             return Collections.emptyList();
         }

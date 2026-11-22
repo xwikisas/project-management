@@ -58,6 +58,8 @@ import com.xwiki.projectmanagement.model.Linkable;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConfiguration;
+import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
@@ -145,6 +147,9 @@ class OpenProjectClientTest
 
     @MockComponent
     private WorkPackageFieldsCache workPackageFieldsCache;
+
+    @MockComponent
+    private OpenProjectConfiguration configuration;
 
     private OpenProjectApiClient openProjectApiClient;
 
@@ -246,6 +251,43 @@ class OpenProjectClientTest
         assertEquals(List.of("5"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
         // A single work package is never truncated.
         assertEquals(Optional.empty(), this.openProjectClient.getWorkItemsLocation(List.of(), List.of()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "https://other-instance/projects/first-project/work_packages",
+        "https://other-instance/work_packages/5", "https://other-instance/work_packages?query_id=27",
+        "https://open-project-instance/other-path/work_packages" })
+    void getWorkItemsRejectsALinkOfAnotherServer(String link)
+    {
+        when(this.executionContext.get("instance")).thenReturn("main");
+        when(this.configuration.getConnection("main"))
+            .thenReturn(new OpenProjectConnection("main", "http://open-project-instance/openproject/", "", "", ""));
+        when(this.executionContext.get(IDENTIFIER)).thenReturn(link);
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+
+        assertEquals(String.format("The link [%s] doesn't belong to the server [http://open-project-instance/"
+            + "openproject] of the OpenProject connection [main].", link), exception.getMessage());
+        assertEquals(400, exception.getStatusCode());
+        // The work packages of the server of the connection are neither counted nor linked.
+        assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.countWorkItems(List.of(), WorkItem.KEY_STATUS));
+        assertEquals(Optional.empty(), this.openProjectClient.getWorkItemsLocation(List.of(), List.of()));
+    }
+
+    @Test
+    void getWorkItemsWithALinkOfTheServerOfTheConnection() throws ProjectManagementException
+    {
+        when(this.executionContext.get("instance")).thenReturn("main");
+        when(this.configuration.getConnection("main"))
+            .thenReturn(new OpenProjectConnection("main", "https://Open-Project-Instance:443/openproject", "", "", ""));
+        when(this.executionContext.get(IDENTIFIER))
+            .thenReturn("http://open-project-instance/openproject/projects/first-project/work_packages");
+        doReturn(workPackages(4)).when(this.openProjectApiClient)
+            .getProjectWorkPackages("first-project", 1, 10, NO_FILTERS, NO_SORTING);
+
+        assertEquals(List.of("4"), getIds(this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
     }
 
     @Test

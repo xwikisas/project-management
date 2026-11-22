@@ -39,6 +39,7 @@ import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.listener.Format;
 import org.xwiki.rendering.macro.Macro;
+import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 import org.xwiki.test.LogLevel;
@@ -54,6 +55,7 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -70,11 +72,13 @@ import com.xwiki.projectmanagement.source.WorkItemSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -93,11 +97,18 @@ class OpenProjectMacroTest
 {
     private static final String LIVE_DATA_DISPLAYER = "proj-manag-liveData";
 
+    private static final String SAVED_QUERY_LINK = "http://op/wp?query_id=5";
+
+    private static final String OTHER_SERVER_LINK = "https://other.example.com/projects/demo/work_packages";
+
     @RegisterExtension
     private final LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
     @InjectMockComponents
     private OpenProjectMacro macro;
+
+    @MockComponent
+    private OpenProjectLinkChecker linkChecker;
 
     @MockComponent
     private LicenseChecker licenseChecker;
@@ -217,8 +228,7 @@ class OpenProjectMacroTest
     @Test
     void asyncProcessParametersAddsTheSavedQueryResultsUrl() throws Exception
     {
-        this.parameters.setIdentifier("saved");
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
+        this.parameters.setIdentifier(SAVED_QUERY_LINK);
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
@@ -319,15 +329,28 @@ class OpenProjectMacroTest
     {
         useSource("openproject/url", new OpenProjectUrlWorkItemSource());
         this.parameters.setSource("url");
-        when(this.identifierResolver.getStandaloneQueryId("http://op/wp?query_id=5")).thenReturn("5");
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
-        this.macro.execute(this.parameters, "http://op/wp?query_id=5", this.context);
+        this.macro.execute(this.parameters, SAVED_QUERY_LINK, this.context);
         // Called by the asynchronous renderer, with the parameters prepared by the macro execution.
         assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
         assertTrue(this.parameters.getSourceParameters().endsWith("&savedQueryResultsUrl=results"));
+    }
+
+    @Test
+    void reportsALinkOfAnotherServerThanTheOneOfTheConnection() throws Exception
+    {
+        // The link may also be given by the deprecated identifier parameter.
+        this.parameters.setIdentifier(OTHER_SERVER_LINK);
+        doThrow(new MacroExecutionException("other server")).when(this.linkChecker).check("main", OTHER_SERVER_LINK);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "", this.context));
+
+        assertEquals("other server", exception.getMessage());
+        verifyNoInteractions(this.asyncExecutor, this.userTokenChecker);
     }
 
     @Test

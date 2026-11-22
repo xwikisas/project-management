@@ -43,6 +43,7 @@ import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecu
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
@@ -72,6 +73,9 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
 
     @Inject
     private CurrentUserFilterDetector currentUserFilterDetector;
+
+    @Inject
+    private OpenProjectLinkChecker linkChecker;
 
     @Inject
     private ObservationManager observationManager;
@@ -121,6 +125,8 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         parameters.setClient("openproject");
         // Filtering on the current user requires the OpenProject account of the user.
         WorkItemSourceResult source = readSource(parameters, content);
+        // The work packages are requested from the server of the connection, whatever the server of the link.
+        this.linkChecker.check(instanceToUse, source.getIdentifier());
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse,
             currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), source.getFilters())
                 || currentUserFilterDetector.hasCurrentUserFilterInIdentifier(source.getIdentifier()),

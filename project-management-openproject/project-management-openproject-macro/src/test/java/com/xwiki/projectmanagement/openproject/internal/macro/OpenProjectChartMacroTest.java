@@ -33,6 +33,7 @@ import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.test.annotation.BeforeComponent;
 import org.xwiki.test.annotation.ComponentList;
@@ -52,6 +53,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectMacroTestUtils;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.source.OpenProjectUrlWorkItemSource;
@@ -62,9 +64,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -81,6 +85,8 @@ class OpenProjectChartMacroTest
 {
     private static final String OPENPROJECT = "openproject";
 
+    private static final String OTHER_SERVER_LINK = "https://other.example.com/projects/demo/work_packages";
+
     @InjectComponentManager
     private MockitoComponentManager componentManager;
 
@@ -90,6 +96,9 @@ class OpenProjectChartMacroTest
     @MockComponent
     @Named("context")
     private ComponentManager contextComponentManager;
+
+    @MockComponent
+    private OpenProjectLinkChecker linkChecker;
 
     @MockComponent
     private LicenseChecker licenseChecker;
@@ -230,5 +239,21 @@ class OpenProjectChartMacroTest
         when(this.userTokenChecker.getWarningBlock("main", true, this.context)).thenReturn(warningBlock);
 
         assertSame(warningBlock, this.macro.execute(this.parameters, "http://op/wp?query_props=me", this.context));
+    }
+
+    @Test
+    void reportsALinkOfAnotherServerThanTheOneOfTheConnection() throws Exception
+    {
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "openproject/url")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "openproject/url"))
+            .thenReturn(new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        doThrow(new MacroExecutionException("other server")).when(this.linkChecker).check("main", OTHER_SERVER_LINK);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, OTHER_SERVER_LINK, this.context));
+
+        assertEquals("other server", exception.getMessage());
+        verifyNoInteractions(this.asyncExecutor, this.projectManagementManager);
     }
 }

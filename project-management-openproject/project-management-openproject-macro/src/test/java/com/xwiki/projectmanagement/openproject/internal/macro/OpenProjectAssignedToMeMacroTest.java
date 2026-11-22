@@ -184,9 +184,8 @@ class OpenProjectAssignedToMeMacroTest
     {
         OpenProjectAssignedToMeMacroParameters parameters = new OpenProjectAssignedToMeMacroParameters();
         parameters.setInstance("main");
-        parameters.setIdentifier("saved");
+        parameters.setIdentifier("http://op/wp?query_id=5");
         // The parent macro would add the URL of the results of this saved query.
-        when(this.identifierResolver.getStandaloneQueryId("saved")).thenReturn("5");
         when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
