@@ -72,6 +72,12 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  */
 public final class OpenProjectFilterTranslator
 {
+    /**
+     * The operator of the OpenProject filters searching a text in several fields (for example {@code search}), which
+     * the {@code ~} conditions on these filters are converted to.
+     */
+    static final String SEARCH_OPERATOR = "**";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectFilterTranslator.class);
 
     /**
@@ -81,7 +87,12 @@ public final class OpenProjectFilterTranslator
      */
     private static final String TYPEAHEAD_FILTER = "typeahead";
 
-    private static final String TYPEAHEAD_OPERATOR = "**";
+    private static final String TYPEAHEAD_OPERATOR = SEARCH_OPERATOR;
+
+    /**
+     * The OpenProject filters searching a text, whose only operator is {@link #SEARCH_OPERATOR}.
+     */
+    private static final Set<String> SEARCH_FILTERS = Set.of("search", "subjectOr", TYPEAHEAD_FILTER);
 
     private static final String PERCENTAGE_DONE = "percentageDone";
 
@@ -90,6 +101,13 @@ public final class OpenProjectFilterTranslator
     private static final String OP_LOWER_BOUND = ">=";
 
     private static final String OP_UPPER_BOUND = "<=";
+
+    /**
+     * The strict comparisons of the query, which OpenProject doesn't have.
+     */
+    private static final String STRICT_GREATER = ">";
+
+    private static final String STRICT_LOWER = "<";
 
     /**
      * The values of the boolean OpenProject filters, by Live Data value.
@@ -149,7 +167,8 @@ public final class OpenProjectFilterTranslator
         OpenProjectMapper.FILTER_TEXT, Map.of(OPERATOR_EQUALS, OP_EQUALS, OPERATOR_CONTAINS, OP_CONTAINS,
             OPERATOR_STARTS_WITH, OP_CONTAINS, OPERATOR_EMPTY, OP_EMPTY),
         OpenProjectMapper.FILTER_NUMBER, Map.of(OPERATOR_EQUALS, OP_EQUALS, OPERATOR_LESS, OP_UPPER_BOUND,
-            OPERATOR_GREATER, OP_LOWER_BOUND, OPERATOR_EMPTY, OP_EMPTY),
+            OPERATOR_GREATER, OP_LOWER_BOUND, OPERATOR_EMPTY, OP_EMPTY, STRICT_LOWER, OP_UPPER_BOUND, STRICT_GREATER,
+            OP_LOWER_BOUND),
         OpenProjectMapper.FILTER_BOOLEAN, Map.of(OPERATOR_EQUALS, OP_EQUALS),
         OpenProjectMapper.FILTER_DATE, Map.of(OPERATOR_BETWEEN, OP_BETWEEN, OPERATOR_BEFORE, OP_BETWEEN,
             OPERATOR_AFTER, OP_BETWEEN, OPERATOR_CONTAINS, OP_BETWEEN, OPERATOR_EMPTY, OP_EMPTY));
@@ -161,7 +180,7 @@ public final class OpenProjectFilterTranslator
      * The operators that take no value, whose constraints are kept even without value.
      */
     private static final Set<String> OPERATORS_EMPTY_VALS =
-        Set.of("t", "w", "*", OP_EMPTY, String.valueOf('o'), "c", OPERATOR_EMPTY);
+        Set.of("t", "w", "*", OP_EMPTY, String.valueOf('o'), "c", "l", OPERATOR_EMPTY);
 
     private static final Set<String> LIST_FILTERS =
         Set.of(WorkItem.KEY_STATUS, WorkItem.KEY_IDENTIFIER, WorkItem.KEY_ASSIGNEES, WorkItem.KEY_CREATOR,
@@ -504,6 +523,9 @@ public final class OpenProjectFilterTranslator
                 continue;
             }
             String operator = mappedConstraint.getOperator();
+            if (SEARCH_FILTERS.contains(propertyName) && OP_CONTAINS.equals(operator)) {
+                operator = SEARCH_OPERATOR;
+            }
             List<String> values = toOpenProjectValues(propertyName, (String) mappedConstraint.getValue(),
                 constraint.getOperator(), operator);
             result.computeIfAbsent(operator, key -> new ArrayList<>()).addAll(values);
@@ -602,15 +624,19 @@ public final class OpenProjectFilterTranslator
      */
     private static Object mapValue(String operator, Object value)
     {
-        boolean less = OPERATOR_LESS.equals(operator);
-        if ((less || OPERATOR_GREATER.equals(operator)) && value instanceof String) {
+        boolean less = OPERATOR_LESS.equals(operator) || STRICT_LOWER.equals(operator);
+        if ((less || OPERATOR_GREATER.equals(operator) || STRICT_GREATER.equals(operator)) && value instanceof String) {
             String number = StringUtils.trim((String) value);
             try {
-                return String.valueOf(Long.parseLong(number) + (less ? -1 : 1));
+                BigDecimal decimal = new BigDecimal(number);
+                if (isWholeNumber(decimal)) {
+                    return decimal.add(less ? BigDecimal.ONE.negate() : BigDecimal.ONE).toBigInteger().toString();
+                }
             } catch (NumberFormatException e) {
-                // A decimal number is compared inclusively.
-                return number;
+                // OpenProject reports the values that aren't numbers.
             }
+            // A decimal number is compared inclusively.
+            return number;
         }
         return value;
     }

@@ -38,12 +38,24 @@ public final class WorkItemName
 {
     private final String name;
 
+    private final boolean keyword;
+
     /**
      * @param name the name, as written in the content
      */
     public WorkItemName(String name)
     {
+        this(name, false);
+    }
+
+    /**
+     * @param name the name, as written in the content
+     * @param keyword see {@link #isKeyword()}
+     */
+    public WorkItemName(String name, boolean keyword)
+    {
         this.name = Objects.requireNonNull(name);
+        this.keyword = keyword;
     }
 
     /**
@@ -54,16 +66,28 @@ public final class WorkItemName
         return this.name;
     }
 
+    /**
+     * @return {@code true} if the name is a word written without quotes that the query also reads as a keyword
+     *     ({@code open}, {@code closed} or {@code locked}): the client may read it as a keyword where the property has
+     *     such values (for example {@code targetVersion = open} for the open versions), and as a name elsewhere; a
+     *     quoted name is never a keyword
+     */
+    public boolean isKeyword()
+    {
+        return this.keyword;
+    }
+
     @Override
     public boolean equals(Object object)
     {
-        return object instanceof WorkItemName && this.name.equals(((WorkItemName) object).name);
+        return object instanceof WorkItemName && this.name.equals(((WorkItemName) object).name)
+            && this.keyword == ((WorkItemName) object).keyword;
     }
 
     @Override
     public int hashCode()
     {
-        return this.name.hashCode();
+        return Objects.hash(this.name, this.keyword);
     }
 
     @Override

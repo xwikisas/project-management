@@ -537,26 +537,6 @@ class OpenProjectFilterTranslatorTest
             + "]", openProjectFilters.toJson());
     }
 
-    @Test
-    void translateBooleanValues() throws Exception
-    {
-        OpenProjectWorkItemFields booleanFields = new OpenProjectWorkItemFields(List.of(
-            field("customField7", "Approved", "customField7", "[1]Boolean"),
-            field("customField8", "Count", "customField8", "[1]Integer")));
-
-        OpenProjectFilters openProjectFilters = new OpenProjectFilterTranslator(booleanFields, null).translate(List.of(
-            new LiveDataQuery.Filter("Approved", "=", "True"), new LiveDataQuery.Filter("Approved", "!", "false"),
-            new LiveDataQuery.Filter("Approved", "=", "t"), new LiveDataQuery.Filter("Count", "=", "true")));
-
-        // OpenProject takes t and f for the booleans, the Live Data true and false.
-        assertJsonEquals("["
-            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
-            + "{\"customField7\":{\"operator\":\"!\",\"values\":[\"f\"]}},"
-            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
-            + "{\"customField8\":{\"operator\":\"=\",\"values\":[\"true\"]}}"
-            + "]", openProjectFilters.toJson());
-    }
-
     @ParameterizedTest
     @CsvSource(delimiter = '|', value = {
         // OpenProject keeps a single condition per filter: a range of percentages is the list of its percentages.
@@ -565,6 +545,9 @@ class OpenProjectFilterTranslatorTest
         ">=:99 <=:150 | =:99,100",
         // The bounds of the Live Data filters (exclusive), from the Live Data table.
         "greater:19 less:22 | =:20,21",
+        // The strict comparisons of the query.
+        ">:19 <:22 | =:20,21",
+        ">:19 | >=:20",
         // The bounds out of the percentages, even out of the integers.
         ">=:20 <=:3000000000 | =:20..100",
         ">=:-3000000000 <=:2 | =:0,1,2",
@@ -628,6 +611,36 @@ class OpenProjectFilterTranslatorTest
         return Pattern.compile("(\\d+)\\.\\.(\\d+)").matcher(text).replaceAll(range -> IntStream.rangeClosed(
             Integer.parseInt(range.group(1)), Integer.parseInt(range.group(2))).mapToObj(String::valueOf)
             .collect(Collectors.joining(",")));
+    }
+
+    @Test
+    void translateSearches() throws Exception
+    {
+        // The text searches of OpenProject only have the ** operator.
+        assertJsonEquals("[{\"search\":{\"operator\":\"**\",\"values\":[\"wiki\"]}},"
+            + "{\"subjectOr\":{\"operator\":\"**\",\"values\":[\"page\"]}}]", translate(List.of(
+                new LiveDataQuery.Filter("search", "~", "wiki"), new LiveDataQuery.Filter("subjectOr", "~", "page")))
+            .toJson());
+    }
+
+    @Test
+    void translateBooleanValues() throws Exception
+    {
+        OpenProjectWorkItemFields booleanFields = new OpenProjectWorkItemFields(List.of(
+            field("customField7", "Approved", "customField7", "[1]Boolean"),
+            field("customField8", "Count", "customField8", "[1]Integer")));
+
+        OpenProjectFilters openProjectFilters = new OpenProjectFilterTranslator(booleanFields, null).translate(List.of(
+            new LiveDataQuery.Filter("Approved", "=", "True"), new LiveDataQuery.Filter("Approved", "!", "false"),
+            new LiveDataQuery.Filter("Approved", "=", "t"), new LiveDataQuery.Filter("Count", "=", "true")));
+
+        // OpenProject takes t and f for the booleans, the Live Data true and false.
+        assertJsonEquals("["
+            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
+            + "{\"customField7\":{\"operator\":\"!\",\"values\":[\"f\"]}},"
+            + "{\"customField7\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
+            + "{\"customField8\":{\"operator\":\"=\",\"values\":[\"true\"]}}"
+            + "]", openProjectFilters.toJson());
     }
 
     @Test

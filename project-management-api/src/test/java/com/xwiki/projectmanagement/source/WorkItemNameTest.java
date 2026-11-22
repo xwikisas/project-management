@@ -23,8 +23,10 @@ package com.xwiki.projectmanagement.source;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Unit tests for {@link WorkItemName}.
@@ -45,6 +47,19 @@ class WorkItemNameTest
         assertNotEquals("17", name);
         assertEquals("17", name.getName());
         assertEquals("17", name.toString());
+    }
+
+    @Test
+    void isAKeywordOnlyWhenWrittenWithoutQuotes()
+    {
+        WorkItemName keyword = new WorkItemName("open", true);
+
+        assertTrue(keyword.isKeyword());
+        assertFalse(new WorkItemName("open").isKeyword());
+        // The quoted name "open" and the keyword open aren't the same value.
+        assertNotEquals(new WorkItemName("open"), keyword);
+        assertEquals(new WorkItemName("open", true), keyword);
+        assertEquals(new WorkItemName("open", true).hashCode(), keyword.hashCode());
     }
 
     @Test

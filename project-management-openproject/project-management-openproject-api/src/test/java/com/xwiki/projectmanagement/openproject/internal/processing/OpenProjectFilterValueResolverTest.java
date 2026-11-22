@@ -67,8 +67,12 @@ class OpenProjectFilterValueResolverTest
     private final OpenProjectApiClient client = mock(OpenProjectApiClient.class);
 
     private final OpenProjectWorkItemFields fields = new OpenProjectWorkItemFields(List.of(
-        field("version", "Version", "version", OpenProjectWorkItemFields.VERSION_FILTER_VALUE_TYPE),
-        field("customField4", "Reviewer", "customField4", "[]User")));
+        field("version", "Version", "version", OpenProjectWorkItemFields.VERSION_FILTER_VALUE_TYPE,
+            List.of("=", "!", "*", "!*", "o", "l", "c")),
+        field("customField4", "Reviewer", "customField4", "[]User", List.of()),
+        // A version custom field, whose filter doesn't match the versions having a status.
+        field("customField9", "Found in", "customField9", OpenProjectWorkItemFields.VERSION_FILTER_VALUE_TYPE,
+            List.of("=", "&=", "!", "*", "!*"))));
 
     private final OpenProjectFilterValueResolver resolver =
         new OpenProjectFilterValueResolver(this.client, this.fields);
@@ -84,7 +88,7 @@ class OpenProjectFilterValueResolverTest
             resource(new Priority(), 9, "High")));
         when(this.client.getVersions()).thenReturn(result(resource(new Version(), 44, "1.19"),
             resource(new Version(), 45, "2.0"), resource(new Version(), 60, "1.19"), resource(new Version(), 70,
-                "3.0")));
+                "3.0"), resource(new Version(), 80, "Closed")));
         when(this.client.getProjectVersions(14)).thenReturn(result(resource(new Version(), 44, "1.19"),
             resource(new Version(), 45, "2.0")));
         when(this.client.getProjectVersions(15)).thenReturn(result(resource(new Version(), 60, "1.19")));
@@ -246,6 +250,36 @@ class OpenProjectFilterValueResolverTest
     }
 
     @Test
+    void resolveTheVersionStatuses() throws Exception
+    {
+        assertEquals(List.of("targetVersion o ", "targetVersion l ", "targetVersion c "),
+            toStrings(this.resolver.resolve(List.of(
+                new LiveDataQuery.Filter("targetVersion", "=", new WorkItemName("open", true)),
+                new LiveDataQuery.Filter("targetVersion", "=", new WorkItemName("LOCKED", true)),
+                new LiveDataQuery.Filter("targetVersion", "=", new WorkItemName("Closed", true))))));
+        // Elsewhere, the keyword names are names: on the other properties, and on the version custom fields, whose
+        // filter doesn't match the versions having a status.
+        assertEquals(List.of("status = 12", "Found in = 80"), toStrings(this.resolver.resolve(List.of(
+            new LiveDataQuery.Filter("status", "=", new WorkItemName("closed", true)),
+            new LiveDataQuery.Filter("Found in", "=", new WorkItemName("closed", true))))));
+        // When the fields of the instance can't be retrieved, the built-in target version still has the statuses.
+        assertEquals(List.of("targetVersion l ", "Found in = open"), toStrings(new OpenProjectFilterValueResolver(
+            this.client, OpenProjectWorkItemFields.empty()).resolve(List.of(
+                new LiveDataQuery.Filter("targetVersion", "=", new WorkItemName("locked", true)),
+                new LiveDataQuery.Filter("Found in", "=", new WorkItemName("open", true))))));
+        // A quoted name is a version name.
+        assertFails(String.format(NOT_FOUND, "The OpenProject version [open] of the filter on [targetVersion]"),
+            new LiveDataQuery.Filter("targetVersion", "=", name("open")));
+        LiveDataQuery.Filter list = new LiveDataQuery.Filter("targetVersion", "=", "44");
+        list.getConstraints().add(new LiveDataQuery.Constraint(new WorkItemName("open", true), "="));
+        assertFails("The versions [open] of [targetVersion] can only be compared with =, alone (for example "
+            + "targetVersion = open): write \"open\" between quotes for a version named open.", list);
+        assertFails("The versions [locked] of [targetVersion] can only be compared with =, alone (for example "
+            + "targetVersion = locked): write \"locked\" between quotes for a version named locked.",
+            new LiveDataQuery.Filter("targetVersion", "!", new WorkItemName("locked", true)));
+    }
+
+    @Test
     void resolveFailsOnUnknownOrAmbiguousNames()
     {
         assertFails(String.format(NOT_FOUND, "The OpenProject status [Done] of the filter on [status]"),
@@ -297,7 +331,8 @@ class OpenProjectFilterValueResolverTest
     void checkPropertiesFailsOnUnknownProperties() throws Exception
     {
         OpenProjectFilterValueResolver checker = new OpenProjectFilterValueResolver(this.client,
-            new OpenProjectWorkItemFields(List.of(field("customField4", "Reviewer", "customField4", "[]User")),
+            new OpenProjectWorkItemFields(List.of(field("customField4", "Reviewer", "customField4", "[]User",
+                List.of())),
                 List.of("status", "project", "customField4")));
         // The generic properties, the fields of the instance and its filters are known.
         checker.checkProperties(List.of(new LiveDataQuery.Filter("status", "=", "1"),
@@ -374,13 +409,15 @@ class OpenProjectFilterValueResolverTest
         return project;
     }
 
-    private static WorkPackageField field(String key, String name, String filterKey, String filterValueType)
+    private static WorkPackageField field(String key, String name, String filterKey, String filterValueType,
+        List<String> filterOperators)
     {
         WorkPackageField field = new WorkPackageField();
         field.setKey(key);
         field.setName(name);
         field.setFilterKey(filterKey);
         field.setFilterValueType(filterValueType);
+        field.setFilterOperators(filterOperators);
         return field;
     }
 }

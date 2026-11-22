@@ -20,7 +20,9 @@ package com.xwiki.projectmanagement.openproject.internal;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -34,6 +36,7 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectConditionChecker;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterValueException;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterValueResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
@@ -89,6 +92,7 @@ public class OpenProjectNameResolver
         try {
             OpenProjectFilterValueResolver resolver = new OpenProjectFilterValueResolver(access.getClient(), fields);
             resolver.checkProperties(filters);
+            new OpenProjectConditionChecker(fields, getMultiValueFields(instance, access, fields)).check(filters);
             return resolver.resolve(filters);
         } catch (OpenProjectFilterValueException e) {
             throw new MacroExecutionException(e.getMessage(), e);
@@ -96,6 +100,19 @@ public class OpenProjectNameResolver
             this.logger.debug("Failed to resolve the names in the filters of the instance [{}]: [{}].", instance,
                 ExceptionUtils.getRootCauseMessage(e));
             return filters;
+        }
+    }
+
+    private Set<String> getMultiValueFields(String instance, OpenProjectAccessResult access,
+        OpenProjectWorkItemFields fields)
+    {
+        try {
+            return this.workPackageFieldsCache.getMultiValueFields(instance, access.getClient(), fields);
+        } catch (ProjectManagementException | UnsupportedOperationException e) {
+            // The repeated conditions on the custom fields are then combined as on single-value fields.
+            this.logger.debug("Failed to find out which work package fields of the instance [{}] are multi-value: "
+                + "[{}].", instance, ExceptionUtils.getRootCauseMessage(e));
+            return Collections.emptySet();
         }
     }
 }
