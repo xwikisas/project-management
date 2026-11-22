@@ -197,6 +197,17 @@ class OpenProjectFilterValueResolverTest
     }
 
     @Test
+    void resolveVersionsWithinAProjectFilteredByANumber() throws Exception
+    {
+        // The filters written by hand can hold the project id as a JSON number.
+        List<LiveDataQuery.Filter> resolved = this.resolver.resolve(List.of(
+            new LiveDataQuery.Filter("project", "equals", 15),
+            new LiveDataQuery.Filter("targetVersion", "=", name("1.19"))));
+
+        assertEquals(List.of("project equals 15", "targetVersion = 60"), toStrings(resolved));
+    }
+
+    @Test
     void resolveVersionsOfSeveralFilteredProjects() throws Exception
     {
         LiveDataQuery.Filter projects = new LiveDataQuery.Filter("project", "equals", "14");

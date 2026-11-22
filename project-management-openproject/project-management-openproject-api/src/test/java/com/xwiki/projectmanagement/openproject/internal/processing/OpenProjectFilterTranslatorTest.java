@@ -330,6 +330,29 @@ class OpenProjectFilterTranslatorTest
     }
 
     @Test
+    void translateNumberAndBooleanValuesAsText() throws Exception
+    {
+        // The values of the filters written by hand can be JSON numbers or booleans: OpenProject reads them as text.
+        LiveDataQuery.Filter project = new LiveDataQuery.Filter("project", "equals", 14);
+        project.getConstraints().add(new LiveDataQuery.Constraint(15L, "equals"));
+
+        OpenProjectFilters openProjectFilters = new OpenProjectFilterTranslator(this.fields, this.client).translate(
+            List.of(project, new LiveDataQuery.Filter("targetVersion", "=", 12),
+                new LiveDataQuery.Filter("summary", "contains", 42), new LiveDataQuery.Filter("progress", "less", 50),
+                new LiveDataQuery.Filter("customField6", "=", true)));
+
+        assertJsonEquals("["
+            + "{\"project\":{\"operator\":\"=\",\"values\":[\"14\",\"15\"]}},"
+            + "{\"targetVersion\":{\"operator\":\"=\",\"values\":[\"12\"]}},"
+            + "{\"subject\":{\"operator\":\"~\",\"values\":[\"42\"]}},"
+            + "{\"percentageDone\":{\"operator\":\"<=\",\"values\":[\"49\"]}},"
+            + "{\"customField6\":{\"operator\":\"=\",\"values\":[\"true\"]}}"
+            + "]", openProjectFilters.toJson());
+        // A number is an id, never a version name.
+        verify(this.client, never()).getVersions();
+    }
+
+    @Test
     void convertSingleDateFilters() throws JsonProcessingException, ProjectManagementException
     {
         // Only a range of dates is split: a single date is passed as is, even when it contains a slash.
