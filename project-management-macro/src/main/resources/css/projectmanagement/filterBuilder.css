@@ -102,10 +102,6 @@ select.proj-manag-add-filter {
   padding-right: 0;
 }
 
-.proj-manag-date-picker {
-  z-index: 99999;
-}
-
 /* The trash icons of a series and of its filters are centered in boxes of the same width, at the right. */
 .proj-manag-remove-filter,
 .proj-manag-delete-filter {

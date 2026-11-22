@@ -608,6 +608,19 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         editPage.clickSaveAndView();
         // The editor may escape more characters of the value (e.g. the closing braces): compare the unescaped values.
         assertEquals(unescape(filters), getMacroParameter(getContent(setup, testReference), "filters"));
+
+        // The date picker opens above the macro editor: the days it displays can be clicked.
+        modal = new OpenProjectMacroEditModal(setup, testReference);
+        editPage = modal.getEditPage();
+        modal.clickMore();
+        FilterBuilderParameter filterBuilder = modal.getFilterBuilder().waitForFilters(2);
+        filterBuilder.getFilters().get(1).pickDays(10, 12);
+        // The picked days keep the times of the saved range.
+        assertThat(filterBuilder.getSummary(), containsString("2024/01/10 10:30 - 2024/01/12 18:00"));
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        assertThat(getContent(setup, testReference),
+            containsString("creationDate >= 2024-01-10 AND creationDate <= 2024-01-12"));
     }
 
     @Test

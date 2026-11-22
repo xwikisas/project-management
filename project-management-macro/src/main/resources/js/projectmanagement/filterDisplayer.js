@@ -138,6 +138,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             inputElem.val(valToSet);
             inputElem.trigger('change');
           }).appendTo(parent).daterangepicker($.extend({
+            // The date picker is displayed in the dialog holding the filter, if any (e.g. the macro editor): added to
+            // the end of the page, it would be displayed behind the dialog, which would also take back the focus from
+            // its fields (e.g. the time of a date).
+            parentEl: inputElem.closest('.modal')[0] || 'body',
             drops: "down",
             opens: "right",
             timePicker: /[Hhkms]/.test(dateFormat),
@@ -160,7 +164,6 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               delete e.target["hide"];
             }, 0);
           });
-          dateInput.data("daterangepicker").container.addClass('proj-manag-date-picker');
           // The saved value is now displayed as the date picker formats it (e.g. in the summary of the filters).
           inputElem.removeClass('loading').trigger('dateDisplayed');
         }).catch(error => {
