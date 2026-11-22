@@ -34,6 +34,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.MacroBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
@@ -52,14 +54,18 @@ import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 import com.xwiki.projectmanagement.calendar.macro.CalendarMacroParameters;
 import com.xwiki.projectmanagement.internal.macro.PresetFiltersCombiner;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
+import com.xwiki.projectmanagement.source.WorkItemSelection;
+import com.xwiki.projectmanagement.source.WorkItemSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -71,7 +77,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList(PresetFiltersCombiner.class)
+@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class })
 class AbstractProjectManagementCalendarMacroTest
 {
     private static final String REST_PATH = "/xwiki/rest/wikis/mywiki/projectmanagement/test/calendar";
@@ -92,6 +98,10 @@ class AbstractProjectManagementCalendarMacroTest
 
     @MockComponent
     private PresetsManager presetsManager;
+
+    @MockComponent
+    @Named("context")
+    private ComponentManager contextComponentManager;
 
     @MockComponent
     private ProjectManagementClientExecutionContext clientContext;
@@ -282,9 +292,44 @@ class AbstractProjectManagementCalendarMacroTest
         verify(this.presetsManager).getPreset(42);
     }
 
+    @Test
+    void executeWithTheWorkItemsSelectedByTheContent() throws Exception
+    {
+        WorkItemSource source = mock(WorkItemSource.class);
+        when(this.contextComponentManager.hasComponent(WorkItemSource.class, "test/url")).thenReturn(true);
+        when(this.contextComponentManager.getInstance(WorkItemSource.class, "test/url")).thenReturn(source);
+        when(source.read(eq("http://tool/list"), any())).thenReturn(new WorkItemSelection(
+            List.of(new LiveDataQuery.Filter("status", "=", "1")), List.of(), Map.of("identifier", "http://tool/list")));
+        this.parameters.setSource("url");
+
+        URIBuilder url = new URIBuilder(execute("http://tool/list").getParameter(JSON));
+
+        // The filters and the link read from the content are passed to the REST resource of the client.
+        assertEquals(List.of("filters={\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":"
+            + "[{\"operator\":\"=\",\"value\":\"1\"}]}]}}", "identifier=http://tool/list", EXTRA_PARAMETER),
+            getQueryParameters(url));
+    }
+
+    @Test
+    void failsWhenTheContentIsUsedWithTheFiltersParameter()
+    {
+        this.parameters.setFilters("{\"query\":{}}");
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, "status = 1", this.macroTransformationContext));
+
+        assertEquals("The [filters] parameter can't be used together with the macro content: write the filters in "
+            + "the content instead.", exception.getMessage());
+    }
+
     private MacroBlock execute() throws MacroExecutionException
     {
-        List<Block> result = this.macro.execute(this.parameters, null, this.macroTransformationContext);
+        return execute(null);
+    }
+
+    private MacroBlock execute(String content) throws MacroExecutionException
+    {
+        List<Block> result = this.macro.execute(this.parameters, content, this.macroTransformationContext);
         assertEquals(1, result.size());
         return (MacroBlock) result.get(0);
     }

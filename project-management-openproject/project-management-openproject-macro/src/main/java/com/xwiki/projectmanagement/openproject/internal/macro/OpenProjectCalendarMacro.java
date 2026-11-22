@@ -34,11 +34,13 @@ import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.GroupBlock;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.calendar.internal.macro.AbstractProjectManagementCalendarMacro;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectEventType;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
@@ -61,6 +63,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectCalendarMacroPar
 @Named("openprojectcalendar")
 public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarMacro<OpenProjectCalendarMacroParameters>
 {
+    private static final String CONTENT_DESCRIPTION =
+        "The work packages to display, in the format chosen by the source parameter.";
+
     @Inject
     private LicenseChecker licenseChecker;
 
@@ -93,7 +98,7 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
     public OpenProjectCalendarMacro()
     {
         super("OpenProject - Calendar", "Display OpenProject events as a calendar",
-            OpenProjectCalendarMacroParameters.class);
+            new DefaultContentDescriptor(CONTENT_DESCRIPTION, false), OpenProjectCalendarMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
 
     }
@@ -108,17 +113,18 @@ public class OpenProjectCalendarMacro extends AbstractProjectManagementCalendarM
         }
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         OpenProjectAccessStatus accessStatus = this.openProjectAccess.resolve(parameters.getInstance()).getStatus();
+        parameters.setClient("openproject");
         // Filtering on the current user requires the OpenProject account of the user.
+        WorkItemSourceResult source = readSource(parameters, content);
         List<Block> warningBlock = this.userTokenChecker.getWarningBlock(parameters.getInstance(), accessStatus,
-            this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters()),
+            this.currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), source.getFilters())
+                || this.currentUserFilterDetector.hasCurrentUserFilterInIdentifier(source.getIdentifier()),
             context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
         this.stylingSetupManager.setupInstanceStyles();
         this.stylingSetupManager.useInstanceStyle(parameters.getInstance());
-        // insert extra params for context.
-        parameters.setClient("openproject");
         this.jsrx.use("openproject/js/calendarMacro.js");
         this.jsx.use("OpenProject.Code.ViewAction");
         List<Block> result = new ArrayList<>();

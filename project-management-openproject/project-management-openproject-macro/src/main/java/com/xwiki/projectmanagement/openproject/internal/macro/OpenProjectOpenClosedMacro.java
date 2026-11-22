@@ -40,6 +40,7 @@ import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.internal.LastDaysPeriod;
 import com.xwiki.projectmanagement.openproject.internal.MacroParameterChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParameters;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectOpenClosedMacroParameters;
 
@@ -93,6 +94,14 @@ public class OpenProjectOpenClosedMacro extends OpenProjectChartMacro
             throw new MacroExecutionException("Failed to get the chart labels.", e);
         }
         return super.execute(parameters, content, context);
+    }
+
+    @Override
+    protected WorkItemSourceResult readSource(OpenProjectChartMacroParameters parameters, String content)
+        throws MacroExecutionException
+    {
+        // The compared work packages are fixed: the macro content is ignored.
+        return super.readSource(parameters, "");
     }
 
     @Override

@@ -43,4 +43,11 @@ public class OpenProjectAssignedToMeMacroParameters extends OpenProjectMacroPara
     {
         super.setIdentifier(identifier);
     }
+
+    @PropertyHidden
+    @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
+    }
 }

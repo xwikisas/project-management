@@ -63,6 +63,8 @@ class HiddenParametersTest
 
     private static final String FILTERS = "filters";
 
+    private static final String SOURCE = "source";
+
     private static final String DESCRIPTION = "description";
 
     private static final String TYPE = "type";
@@ -93,9 +95,11 @@ class HiddenParametersTest
             arguments(OpenProjectCalendarMacroParameters.class, CLIENT),
             arguments(OpenProjectAssignedToMeMacroParameters.class, FILTERS),
             arguments(OpenProjectAssignedToMeMacroParameters.class, "identifier"),
+            arguments(OpenProjectAssignedToMeMacroParameters.class, SOURCE),
             arguments(OpenProjectMacroParameters.class, DESCRIPTION),
             arguments(OpenProjectAssignedToMeMacroParameters.class, DESCRIPTION),
             arguments(OpenProjectOpenClosedMacroParameters.class, FILTERS),
+            arguments(OpenProjectOpenClosedMacroParameters.class, SOURCE),
             arguments(OpenProjectOpenClosedMacroParameters.class, TYPE),
             arguments(OpenProjectOpenClosedMacroParameters.class, PROPERTY),
             arguments(OpenProjectOpenClosedMacroParameters.class, PRESET_ID),
@@ -135,5 +139,27 @@ class HiddenParametersTest
         this.beanManager.populate(parameters, Map.of("id", "myTable"));
 
         assertEquals("myTable", parameters.getId());
+    }
+
+    @Test
+    void sourceCanBeSet() throws Exception
+    {
+        OpenProjectMacroParameters parameters = new OpenProjectMacroParameters();
+        OpenProjectChartMacroParameters chartParameters = new OpenProjectChartMacroParameters();
+        OpenProjectCalendarMacroParameters calendarParameters = new OpenProjectCalendarMacroParameters();
+
+        this.beanManager.populate(parameters, Map.of(SOURCE, "list"));
+        this.beanManager.populate(chartParameters, Map.of(SOURCE, "url"));
+        this.beanManager.populate(calendarParameters, Map.of(SOURCE, "filters"));
+
+        assertEquals("list", parameters.getWorkItemSource());
+        assertEquals("url", chartParameters.getSource());
+        assertEquals("filters", calendarParameters.getSource());
+        // The source of the Live Data displaying the work packages is set by the macro.
+        parameters.setLiveDataSource("projectmanagement");
+        assertEquals("projectmanagement", parameters.getSource());
+        assertEquals("list", parameters.getWorkItemSource());
+        assertNull(this.beanManager.getBeanDescriptor(OpenProjectMacroParameters.class).getProperty(SOURCE)
+            .getDefaultValue());
     }
 }

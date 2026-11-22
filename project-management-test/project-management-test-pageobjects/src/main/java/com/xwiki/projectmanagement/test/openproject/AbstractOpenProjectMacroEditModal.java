@@ -24,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -52,6 +53,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     private static final String WIDGET_WRAPPER = "[data-cke-widget-wrapper]";
 
     private static final By PROPERTIES_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-properties-loading");
+
+    private static final By CONTENT = By.cssSelector(".macro-editor-modal textarea[name='$content']");
 
     private static final By NO_CONNECTION_HINT = By.cssSelector(".macro-editor-modal .op-filters-no-connection");
 
@@ -120,9 +123,48 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     public FilterBuilderParameter getFilterBuilder()
     {
         selectParameterTab("filters");
+        if (getDriver().findElementsWithoutWaiting(By.className("proj-manag-constraint-builder")).stream()
+            .noneMatch(WebElement::isDisplayed)) {
+            // The macro editor of XWiki 15.10 displays 3 parameter groups at most before its "More" link, and the macro
+            // content takes one of them: the Filters group can be behind the link.
+            clickMore();
+        }
         // The filters reload their properties when the modal is opened with a connection, or when it's changed.
         getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
         return new FilterBuilderParameter();
+    }
+
+    /**
+     * Replace the macro content, as a user typing it and leaving the field, e.g. a link read by the url source.
+     *
+     * @param content the new macro content, e.g. a query
+     * @return this object
+     * @since 1.5.0
+     */
+    public AbstractOpenProjectMacroEditModal setContent(String content)
+    {
+        closeSuggestDropdowns();
+        WebElement field = getDriver().findElementWithoutWaitingWithoutScrolling(CONTENT);
+        if (!field.isDisplayed()) {
+            // The content is in the tab of the optional parameters without group (XWiki 17).
+            String tabPanelId = field.findElement(By.xpath("ancestor::*[@role='tabpanel'][1]")).getAttribute("id");
+            getDriver().findElement(By.cssSelector(
+                String.format(".macro-editor-modal a[role='tab'][aria-controls='%s']", tabPanelId))).click();
+        }
+        getDriver().scrollTo(field);
+        field.clear();
+        // Leaving the field changes it.
+        field.sendKeys(content, Keys.TAB);
+        return this;
+    }
+
+    /**
+     * @return the macro content
+     * @since 1.5.0
+     */
+    public String getContent()
+    {
+        return getDriver().findElementWithoutWaitingWithoutScrolling(CONTENT).getAttribute("value");
     }
 
     private boolean isDisplayed(By locator)
@@ -212,6 +254,11 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
         // The instance parameter is in the Connection tab of the macros having parameter groups.
         selectParameterTab("connection");
         WebElement input = getMacroParameterInput(INSTANCE_PARAMETER);
+        if (!input.isDisplayed()) {
+            // The macro editor of XWiki 15.10 displays 3 parameter groups at most before its "More" link, and the macro
+            // content takes one of them: the Connection group of a new macro is behind the link.
+            clickMore();
+        }
         // It's the last parameter, so it can be out of view.
         getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
         new Select(input).selectByValue(connectionId);

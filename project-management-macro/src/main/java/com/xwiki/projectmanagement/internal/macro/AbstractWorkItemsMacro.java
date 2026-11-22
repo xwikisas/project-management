@@ -37,6 +37,7 @@ import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.macro.AbstractMacro;
+import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
@@ -93,7 +94,19 @@ public abstract class AbstractWorkItemsMacro<T> extends AbstractMacro<T>
      */
     public AbstractWorkItemsMacro(String name, String description, Class<?> clazz)
     {
-        super(name, description, clazz);
+        this(name, description, null, clazz);
+    }
+
+    /**
+     * @param name the name of the macro
+     * @param description the description of the macro
+     * @param contentDescriptor the description of the content of the macro, or {@code null} if it has no content
+     * @param clazz the class of the parameters bean
+     * @since 1.5.0
+     */
+    public AbstractWorkItemsMacro(String name, String description, ContentDescriptor contentDescriptor, Class<?> clazz)
+    {
+        super(name, description, contentDescriptor, clazz);
     }
 
     protected PaginatedResult<WorkItem> getWorkItems(String clientId, ProjectManagementMacroParameters parameters,

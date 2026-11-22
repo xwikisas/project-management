@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
@@ -117,7 +118,7 @@ public class TestClient implements ProjectManagementClient, Initializable
     public PaginatedResult<WorkItem> getWorkItems(int offset, int pageSize, List<LiveDataQuery.Filter> filters,
         List<LiveDataQuery.SortEntry> sortEntries)
     {
-        List<WorkItem> matching = this.workItems.stream()
+        List<WorkItem> matching = getListedWorkItems().stream()
             .filter(workItem -> filters.stream().allMatch(filter -> matches(workItem, filter)))
             .sorted(getComparator(sortEntries))
             .collect(Collectors.toList());
@@ -139,6 +140,21 @@ public class TestClient implements ProjectManagementClient, Initializable
     {
         return Optional.of(String.format("http://xwiki.com/workitems?filters=%d&sort=%s", filters.size(),
             sortEntries.stream().map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.joining(","))));
+    }
+
+    /**
+     * Like a real client, the {@code identifier} context value lists the work items to retrieve, in this order.
+     */
+    private List<WorkItem> getListedWorkItems()
+    {
+        Object identifier = this.executionContext.get("identifier");
+        if (!(identifier instanceof String) || ((String) identifier).isBlank()) {
+            return this.workItems;
+        }
+        return Arrays.stream(((String) identifier).split("\\s*,\\s*"))
+            .flatMap(id -> this.workItems.stream()
+                .filter(workItem -> id.equals(workItem.getLinkableValue(WorkItem.KEY_IDENTIFIER))))
+            .collect(Collectors.toList());
     }
 
     /**

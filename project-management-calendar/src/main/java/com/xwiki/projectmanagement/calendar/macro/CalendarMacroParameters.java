@@ -51,6 +51,8 @@ public class CalendarMacroParameters
 
     private String filters;
 
+    private String source;
+
     private Integer limit;
 
     private String presetId;
@@ -144,6 +146,27 @@ public class CalendarMacroParameters
     public void setFilters(String filters)
     {
         this.filters = filters;
+    }
+
+    /**
+     * @return how the macro content selects the work items, i.e. the hint of a
+     *     {@link com.xwiki.projectmanagement.source.WorkItemSource} (e.g. {@code query}, {@code list}), or {@code null}
+     *     for the default source
+     * @since 1.5.0
+     */
+    public String getSource()
+    {
+        return this.source;
+    }
+
+    /**
+     * @param source see {@link #getSource()}
+     * @since 1.5.0
+     */
+    @PropertyGroup("filters")
+    public void setSource(String source)
+    {
+        this.source = source;
     }
 
     /**

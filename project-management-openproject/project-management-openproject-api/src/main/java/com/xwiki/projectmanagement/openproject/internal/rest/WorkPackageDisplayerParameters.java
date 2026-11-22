@@ -64,7 +64,7 @@ public final class WorkPackageDisplayerParameters
         parameters.setDisplayer(displayer);
         // The Live Data displayers get the work items from the project management Live Data source, and need
         // properties known to OpenProject, unlike the generic default ones.
-        parameters.setSource(LIVE_DATA_SOURCE);
+        parameters.setLiveDataSource(LIVE_DATA_SOURCE);
         parameters.setProperties(PROPERTIES);
         // TODO: Would be nicer if we retrieved the translation prefix from the json configuration.
         parameters.setSourceParameters(String.format("instance=%s&client=%s&translationPrefix=%s", encode(instance),

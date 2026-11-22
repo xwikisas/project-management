@@ -32,10 +32,12 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.observation.ObservationManager;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.macro.descriptor.DefaultContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementChartMacro;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
@@ -54,6 +56,9 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectChartMacroParame
 @Named("openprojectchart")
 public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<OpenProjectChartMacroParameters>
 {
+    private static final String CONTENT_DESCRIPTION =
+        "The work packages charted by all the datasets, in the format chosen by the source parameter.";
+
     @Inject
     private LicenseChecker licenseChecker;
 
@@ -71,7 +76,8 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
      */
     public OpenProjectChartMacro()
     {
-        super("OpenProject - Chart", "desc", OpenProjectChartMacroParameters.class);
+        super("OpenProject - Chart", "desc", new DefaultContentDescriptor(CONTENT_DESCRIPTION, false),
+            OpenProjectChartMacroParameters.class);
         setDefaultCategories(Set.of(OpenProjectClient.CLIENT_PRETTY_NAME, DEFAULT_CATEGORY_CONTENT));
 
     }
@@ -107,13 +113,16 @@ public class OpenProjectChartMacro extends AbstractProjectManagementChartMacro<O
         observationManager.notify(new BeforeOpenProjectMacroExecutionEvent(), this, parameters);
         String instanceToUse = parameters.getInstance();
 
+        parameters.setClient("openproject");
         // Filtering on the current user requires the OpenProject account of the user.
+        WorkItemSourceResult source = readSource(parameters, content);
         List<Block> warningBlock = userTokenChecker.getWarningBlock(instanceToUse,
-            currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), parameters.getFilters()), context);
+            currentUserFilterDetector.hasCurrentUserFilter(parameters.getPresetId(), source.getFilters())
+                || currentUserFilterDetector.hasCurrentUserFilterInIdentifier(source.getIdentifier()),
+            context);
         if (!warningBlock.isEmpty()) {
             return warningBlock;
         }
-        parameters.setClient("openproject");
         return super.execute(parameters, content, context);
     }
 

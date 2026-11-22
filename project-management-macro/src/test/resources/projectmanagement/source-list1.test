@@ -1,0 +1,12 @@
+.runTransformations
+.#-----------------------------------------------------
+.input|xwiki/2.0
+.# List source test - the macro content lists the work items, which are displayed in this order.
+.#-----------------------------------------------------
+{{test displayer="list" source="list"}}
+3, WorkItem2
+{{/test}}
+.#-----------------------------------------------------
+.expect|xhtml/1.0
+.#-----------------------------------------------------
+<ul><li><span class="wikiexternallink"><a href="http://xwiki.com/id/3">PROJ-3</a></span> Do that other thing</li><li>#WorkItem2 Do this thing!</li></ul>

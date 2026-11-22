@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -42,6 +43,7 @@ import org.xwiki.rendering.block.ParagraphBlock;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.AbstractMacro;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.rendering.macro.descriptor.ContentDescriptor;
 import org.xwiki.rendering.transformation.MacroTransformationContext;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -51,6 +53,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xwiki.projectmanagement.chart.displayer.ChartTypeDisplayer;
 import com.xwiki.projectmanagement.exception.WorkItemException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceRequest;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.PaginatedResult;
@@ -88,6 +93,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     private PresetFiltersCombiner presetFiltersCombiner;
 
     @Inject
+    private WorkItemSourceReader sourceReader;
+
+    @Inject
     private ContextualLocalizationManager localizationManager;
 
     /**
@@ -99,7 +107,20 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
      */
     public AbstractProjectManagementChartMacro(String name, String description, Class<?> clazz)
     {
-        super(name, description, clazz);
+        this(name, description, null, clazz);
+    }
+
+    /**
+     * @param name the name of the macro
+     * @param description the description of the macro
+     * @param contentDescriptor the description of the content of the macro, or {@code null} if it has no content
+     * @param clazz the class of the parameters bean
+     * @since 1.5.0
+     */
+    public AbstractProjectManagementChartMacro(String name, String description, ContentDescriptor contentDescriptor,
+        Class<?> clazz)
+    {
+        super(name, description, contentDescriptor, clazz);
     }
 
     /**
@@ -115,6 +136,9 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         throws MacroExecutionException
     {
         try {
+            WorkItemSourceResult source = readSource(parameters, content);
+            parameters.setFilters(source.getFilters());
+            Map<String, Object> sourceContext = source.getClientContext();
             if (StringUtils.isNotEmpty(parameters.getPresetId())) {
                 parameters.setFilters(
                     this.presetFiltersCombiner.combine(parameters.getPresetId(), parameters.getFilters()));
@@ -149,12 +173,13 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
                 {
                     try {
                         return displayChart(chartTypeDisplayer, filters, parameters, translateLabels(labels), context,
-                            typeDisplayerParams);
+                            typeDisplayerParams, sourceContext);
                     } catch (WorkItemException e) {
                         throw new MacroExecutionException("Failed to retrieve the work packages.", e);
                     }
                 }
-            }, parameters, content, context, null, true);
+            // The content has been read by the source.
+            }, parameters, "", context, null, true);
         } catch (LiveDataException e) {
             throw new MacroExecutionException("Failed to parse the provided filters.", e);
         } catch (ComponentLookupException e) {
@@ -164,6 +189,24 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
         } catch (JobException | RenderingException e) {
             throw new MacroExecutionException("The execution of the displayer failed.", e);
         }
+    }
+
+    /**
+     * Read the content of the macro with the source chosen by its {@code source} parameter. The filters read from the
+     * content are added to the filters of each dataset. This has no side effect: the extending classes can call it
+     * before executing the macro, e.g. to know whether the work items are filtered on the current user.
+     *
+     * @param parameters the parameters of the macro
+     * @param content the content of the macro
+     * @return the filters of the datasets, combined with the filters read from the content, and the identifier read
+     *     from the content
+     * @throws MacroExecutionException if the content can't be read
+     * @since 1.5.0
+     */
+    protected WorkItemSourceResult readSource(T parameters, String content) throws MacroExecutionException
+    {
+        return this.sourceReader.read(new WorkItemSourceRequest().client(parameters.getClient()).content(content)
+            .source(parameters.getSource()).filters(parameters.getFilters(), false));
     }
 
     protected void updateFilters(List<List<LiveDataQuery.Filter>> filters, T parameters) throws MacroExecutionException
@@ -206,14 +249,19 @@ public abstract class AbstractProjectManagementChartMacro<T extends ProjectManag
     }
 
     private List<Block> displayChart(ChartTypeDisplayer chartTypeDisplayer, List<List<LiveDataQuery.Filter>> filters,
-        T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams)
-        throws WorkItemException, MacroExecutionException
+        T parameters, List<String> labels, MacroTransformationContext context, Object typeDisplayerParams,
+        Map<String, Object> sourceContext) throws WorkItemException, MacroExecutionException
     {
         // The context that the extending class sets for the client is restored once the chart is displayed.
         try (DefaultProjectManagementClientExecutionContext.ContextScope scope =
             DefaultProjectManagementClientExecutionContext.pushContext(macroContext, macroContext.getContext()))
         {
             prepareContext(parameters);
+            if (!sourceContext.isEmpty() && macroContext instanceof DefaultProjectManagementClientExecutionContext) {
+                Map<String, Object> clientContext = new HashMap<>(macroContext.getContext());
+                clientContext.putAll(sourceContext);
+                ((DefaultProjectManagementClientExecutionContext) macroContext).setContext(clientContext);
+            }
             return displayChartInContext(chartTypeDisplayer, filters, parameters, labels, context,
                 typeDisplayerParams);
         }
