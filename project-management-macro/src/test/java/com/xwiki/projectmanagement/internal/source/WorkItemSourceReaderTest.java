@@ -232,13 +232,13 @@ class WorkItemSourceReaderTest
     {
         WorkItemSourceRequest request = new WorkItemSourceRequest().content("query");
         when(this.source.read(eq("query"), any())).thenReturn(WorkItemSelection.ofFilters(List.of(
-            new LiveDataQuery.Filter("progress", ">=", "50"), new LiveDataQuery.Filter("progress", "<=", "80"))));
+            new LiveDataQuery.Filter("summary", "~", "alpha"), new LiveDataQuery.Filter("summary", "~", "beta"))));
 
         MacroExecutionException exception =
             assertThrows(MacroExecutionException.class, () -> this.reader.read(request));
 
-        assertEquals("The conditions on [progress] can't be combined: only =, !=, IN and NOT IN conditions can be "
-            + "repeated on a property.", exception.getMessage());
+        assertEquals("The conditions on [summary] can't be combined: only =, !=, IN and NOT IN conditions, and a lower "
+            + "(>=, >) and an upper (<=, <) bound of a number, can be repeated on a property.", exception.getMessage());
         assertNull(exception.getCause().getCause());
     }
 

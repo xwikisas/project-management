@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.openproject.internal;
  */
 
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.model.Status;
+import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 import com.xwiki.projectmanagement.source.WorkItemName;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -123,6 +125,32 @@ class OpenProjectNameResolverTest
             + "assignees or targetVersion, or the name of a custom field.", exception.getMessage());
         // The macro error box displays the message of the root cause.
         assertNull(exception.getCause().getCause());
+    }
+
+    @Test
+    void resolveFailsOnConditionsThatOpenProjectCantApply() throws Exception
+    {
+        WorkPackageField labels = new WorkPackageField();
+        labels.setKey("customField1");
+        labels.setName("Labels");
+        labels.setFilterKey("customField1");
+        labels.setFilterValueType("[]CustomOption");
+        labels.setFilterOperators(List.of("=", "&=", "!"));
+        OpenProjectWorkItemFields fields = new OpenProjectWorkItemFields(List.of(labels));
+        when(this.workPackageFieldsCache.getFields(INSTANCE, this.access)).thenReturn(fields);
+        when(this.workPackageFieldsCache.getMultiValueFields(INSTANCE, this.apiClient, fields))
+            .thenReturn(Set.of("customField1"));
+        List<LiveDataQuery.Filter> filters =
+            List.of(new LiveDataQuery.Filter("Labels", "=", "1"), new LiveDataQuery.Filter("Labels", "!", "2"));
+
+        assertEquals("The conditions on [Labels] can't be combined: OpenProject keeps a single condition on a field "
+            + "having several values, for example write Labels ALL IN (a, b) instead of Labels = a AND Labels = b.",
+            assertThrows(MacroExecutionException.class, () -> this.resolver.resolve(INSTANCE, filters)).getMessage());
+
+        // When the fields having several values are unknown, the conditions are combined as on the other fields.
+        when(this.workPackageFieldsCache.getMultiValueFields(INSTANCE, this.apiClient, fields))
+            .thenThrow(new WorkItemRetrievalException("Failed", 500));
+        assertEquals(filters, this.resolver.resolve(INSTANCE, filters));
     }
 
     @Test

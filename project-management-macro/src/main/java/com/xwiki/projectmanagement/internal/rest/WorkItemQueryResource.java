@@ -61,6 +61,19 @@ public class WorkItemQueryResource extends XWikiResource
 {
     private static final String VALUE = "value";
 
+    /**
+     * The conditions that the filter builder doesn't offer, by operator: the days relative to today (for example
+     * {@code dueDate <= -3d}) and the strict comparisons of numbers (for example {@code progress > 20}).
+     */
+    private static final Map<String, String> UNSHOWN_OPERATORS;
+
+    static {
+        String relativeDays = "the days relative to today";
+        String strictComparisons = "the strict comparisons (> and <)";
+        UNSHOWN_OPERATORS = Map.of("t+", relativeDays, "t-", relativeDays, "<t+", relativeDays, ">t+", relativeDays,
+            "<t-", relativeDays, ">t-", relativeDays, ">", strictComparisons, "<", strictComparisons);
+    }
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Inject
@@ -71,7 +84,9 @@ public class WorkItemQueryResource extends XWikiResource
      * @param query the query, for example {@code project = xwiki AND status = open}
      * @return {@code {"filters": [...]}}, the Live Data filters of the query, each name being written as text with
      *     {@code "name": true} in its constraint (so that a name made of digits is written back between quotes), or a
-     *     400 response {@code {"message": "..."}} telling what is wrong with the query
+     *     400 response {@code {"message": "..."}} telling what is wrong with the query, or that the builder can't edit
+     *     it (the days relative to today, the strict comparisons); the keyword names ({@code open}, {@code closed},
+     *     {@code locked}) are written as text, without the name flag, so that they are written back without quotes
      * @throws JsonProcessingException if the response couldn't be serialized
      */
     @GET
@@ -82,8 +97,16 @@ public class WorkItemQueryResource extends XWikiResource
         try {
             filters = this.querySource.read(query == null ? "" : query, new WorkItemSourceContext(null)).getFilters();
         } catch (WorkItemSourceException e) {
-            return Response.status(Response.Status.BAD_REQUEST).type(MediaType.APPLICATION_JSON)
-                .entity(this.objectMapper.writeValueAsString(Map.of("message", e.getMessage()))).build();
+            return badRequest(e.getMessage());
+        }
+        for (LiveDataQuery.Filter filter : filters) {
+            for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
+                String unshown = UNSHOWN_OPERATORS.get(constraint.getOperator());
+                if (unshown != null) {
+                    return badRequest(String.format("The filters can't show %s, used on [%s].", unshown,
+                        filter.getProperty()));
+                }
+            }
         }
         List<Map<String, Object>> result = new ArrayList<>();
         for (LiveDataQuery.Filter filter : filters) {
@@ -92,8 +115,11 @@ public class WorkItemQueryResource extends XWikiResource
                 Map<String, Object> constraintMap = new LinkedHashMap<>();
                 constraintMap.put("operator", constraint.getOperator());
                 if (constraint.getValue() instanceof WorkItemName) {
-                    constraintMap.put(VALUE, ((WorkItemName) constraint.getValue()).getName());
-                    constraintMap.put("name", true);
+                    WorkItemName name = (WorkItemName) constraint.getValue();
+                    constraintMap.put(VALUE, name.getName());
+                    if (!name.isKeyword()) {
+                        constraintMap.put("name", true);
+                    }
                 } else {
                     constraintMap.put(VALUE, constraint.getValue());
                 }
@@ -106,5 +132,11 @@ public class WorkItemQueryResource extends XWikiResource
         }
         return Response.ok(this.objectMapper.writeValueAsString(Map.of("filters", result)),
             MediaType.APPLICATION_JSON).build();
+    }
+
+    private Response badRequest(String message) throws JsonProcessingException
+    {
+        return Response.status(Response.Status.BAD_REQUEST).type(MediaType.APPLICATION_JSON)
+            .entity(this.objectMapper.writeValueAsString(Map.of("message", message))).build();
     }
 }

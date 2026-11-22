@@ -1,0 +1,219 @@
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+/*
+ * Writes the Live Data filters of the filter builder as the textual query read by the default "query" source of the
+ * work item macros, e.g. project = 12 AND status = open. The query is parsed back on the server (WorkItemQueryParser),
+ * and parsing the written query gives back the same filters (tested by src/test/node, with Vitest, on the cases
+ * of src/test/resources/queryWriter/roundTripCases.json, which QueryWriterRoundTripTest parses in Java).
+ *
+ * This module has no dependency, so that it can be run outside of a browser.
+ */
+define([], function () {
+  // The bounds that the "between" operator of the builder takes for the ranges of dates open on one side, which the
+  // query writes with a single comparison, e.g. dueDate >= 2026-11-01 (the same as in the OpenProject client).
+  const NO_LOWER_BOUND = '1970-01-01';
+  const NO_UPPER_BOUND = '3000-01-01';
+  // The query parser also splits the words on the information separators (U+001C to U+001F).
+  const BARE_WORD = /^[^\s\u001c-\u001f(),=!~<>"]+$/;
+  const DATE = /^\d{4}-\d{2}-\d{2}$/;
+  // A day relative to today, e.g. -3d or 2w.
+  const RELATIVE_DAY = /^[+-]?\d{1,5}[dw]$/i;
+  const KEYWORDS = ['and', 'or', 'not', 'in', 'all', 'is', 'empty', 'order'];
+  // The values read as keywords when they're not quoted: all the open or closed statuses (or versions), the locked
+  // versions, and the current user.
+  const VALUE_KEYWORDS = ['open', 'closed', 'locked', 'me'];
+
+  /*
+   * A word that would be read otherwise when unquoted (a keyword, a date, a day relative to today) is quoted, as is a
+   * text that isn't a single word.
+   */
+  let quote = function (text, forced) {
+    text = String(text);
+    if (!forced && BARE_WORD.test(text) && !KEYWORDS.includes(text.toLowerCase()) && !DATE.test(text)
+        && !RELATIVE_DAY.test(text)) {
+      return text;
+    }
+    return '"' + text.replace(/["\\]/g, '\\$&') + '"';
+  };
+
+  let toDate = function (value) {
+    return String(value || '').substring(0, 10);
+  };
+
+  /**
+   * @param filters the Live Data filters, e.g. [{property: 'status', constraints: [{operator: '=', value: '1'}]}]
+   * @param names the values read as names from the query, by property (a Map of Sets): a name made of digits, or
+   *   looking like a keyword, is written between quotes, so that it isn't read as an id or a keyword
+   * @return the query, e.g. status = 1
+   */
+  let toQuery = function (filters, names) {
+    // A value written unquoted is read as an id when it's a number, and as a keyword when it's me, open, closed or
+    // locked: a name looking so is quoted.
+    let quoteValue = function (property, value) {
+      let text = String(value);
+      let isName = !!names && names.has(property) && names.get(property).has(text);
+      return quote(value, isName && (/^\d+$/.test(text) || VALUE_KEYWORDS.includes(text.toLowerCase())));
+    };
+    let listClause = function (property, values, operator, keyword) {
+      let quoteFilterValue = value => quoteValue(property, value);
+      return values.length === 1 && operator ? `${quote(property)} ${operator} ${quoteFilterValue(values[0])}`
+        : `${quote(property)} ${keyword} (${values.map(quoteFilterValue).join(', ')})`;
+    };
+    let clauses = [];
+    let addClauses = function (property, operator, values) {
+      let name = quote(property);
+      let each = format => values.forEach(value => clauses.push(format(value)));
+      switch (operator) {
+        case '!':
+          clauses.push(listClause(property, values, '!=', 'NOT IN'));
+          break;
+        case '&=':
+          clauses.push(listClause(property, values, null, 'ALL IN'));
+          break;
+        case '~':
+        case '!~':
+        case '>=':
+        case '<=':
+        case '>':
+        case '<':
+          each(value => `${name} ${operator} ${quote(value)}`);
+          break;
+        // The generic operators of the Live Data, found in the filters written by hand.
+        case 'contains':
+        case 'startsWith':
+          each(value => `${name} ~ ${quote(value)}`);
+          break;
+        // Strict, as in the OpenProject client (greater than 5 is greater than or equal to 6).
+        case 'greater':
+          each(value => `${name} > ${quote(value)}`);
+          break;
+        case 'less':
+          each(value => `${name} < ${quote(value)}`);
+          break;
+        case '*':
+          clauses.push(`${name} IS NOT EMPTY`);
+          break;
+        case '!*':
+        case 'empty':
+          clauses.push(`${name} IS EMPTY`);
+          break;
+        // All the open or closed statuses, or the open, locked or closed versions.
+        case 'o':
+          clauses.push(`${name} = open`);
+          break;
+        case 'c':
+          clauses.push(`${name} = closed`);
+          break;
+        case 'l':
+          clauses.push(`${name} = locked`);
+          break;
+        case 't':
+          clauses.push(`${name} = today()`);
+          break;
+        case 'w':
+          clauses.push(`${name} = thisWeek()`);
+          break;
+        // The days relative to today.
+        case 't+':
+          each(value => `${name} = ${value}d`);
+          break;
+        case 't-':
+          each(value => `${name} = -${value}d`);
+          break;
+        case '>t+':
+          each(value => `${name} >= ${value}d`);
+          break;
+        case '<t-':
+          each(value => `${name} <= -${value}d`);
+          break;
+        case '<t+':
+          each(value => `${name} >= 0d AND ${name} <= ${value}d`);
+          break;
+        case '>t-':
+          each(value => `${name} >= -${value}d AND ${name} <= 0d`);
+          break;
+        case '=d':
+          each(value => `${name} = ${toDate(value)}`);
+          break;
+        case 'after':
+          each(value => `${name} >= ${toDate(value)}`);
+          break;
+        case 'before':
+          each(value => `${name} <= ${toDate(value)}`);
+          break;
+        case 'between':
+          values.forEach(value => {
+            let bounds = String(value).split('/');
+            let lower = toDate(bounds[0]);
+            let upper = toDate(bounds.length > 1 ? bounds[1] : bounds[0]);
+            if (lower && lower !== NO_LOWER_BOUND) {
+              clauses.push(`${name} >= ${lower}`);
+            }
+            if (upper && upper !== NO_UPPER_BOUND) {
+              clauses.push(`${name} <= ${upper}`);
+            }
+          });
+          break;
+        default:
+          clauses.push(listClause(property, values, '=', 'IN'));
+      }
+    };
+    (filters || []).forEach(filter => {
+      let valuesByOperator = new Map();
+      (filter.constraints || []).forEach(constraint => {
+        let values = valuesByOperator.get(constraint.operator) || [];
+        values.push(constraint.value);
+        valuesByOperator.set(constraint.operator, values);
+      });
+      valuesByOperator.forEach((values, operator) => addClauses(filter.property, operator, values));
+    });
+    return clauses.join(' AND ');
+  };
+
+  // The builder only has the "between" operator for the ranges of dates.
+  let toBuilderConstraint = function (constraint) {
+    if (constraint.operator === 'after') {
+      return { operator: 'between', value: constraint.value + '/' + NO_UPPER_BOUND };
+    } else if (constraint.operator === 'before') {
+      return { operator: 'between', value: NO_LOWER_BOUND + '/' + constraint.value };
+    }
+    return constraint;
+  };
+
+  /**
+   * Reads the filters of a query, as parsed by the REST API: the constraints of the builder, and the values read as
+   * names.
+   *
+   * @param parsedFilters the filters returned by the REST API, whose constraints are flagged with "name: true" when
+   *   their value is a name
+   * @param names the values read as names, by property (a Map of Sets), to which the names of the filters are added
+   * @return the filters of the builder, e.g. a range of dates being a "between" constraint
+   */
+  let fromParsedFilters = function (parsedFilters, names) {
+    return (parsedFilters || []).map(filter => {
+      (filter.constraints || []).filter(constraint => constraint.name).forEach(constraint => {
+        names.set(filter.property, (names.get(filter.property) || new Set()).add(String(constraint.value)));
+      });
+      return { property: filter.property, constraints: (filter.constraints || []).map(toBuilderConstraint) };
+    });
+  };
+
+  return { toQuery, fromParsedFilters };
+});

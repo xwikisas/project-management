@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.internal.source;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -43,6 +44,8 @@ import com.xwiki.projectmanagement.exception.WorkItemSourceException;
  * <li>the filters including values ({@code =}, {@code IN}) keep the values that each of them includes, minus the
  * excluded values;</li>
  * <li>the filters requiring values ({@code ALL IN}) require all their values;</li>
+ * <li>a lower bound ({@code >=} or {@code >}) and an upper bound ({@code <=} or {@code <}) of a number make a range,
+ * held by a filter with both constraints;</li>
  * <li>a filter repeated as it is counts once;</li>
  * <li>the other filters can't be combined: for example two conditions on a number, or on a text.</li>
  * </ul>
@@ -60,6 +63,14 @@ final class WorkItemFilterCombiner
     private static final String EXCLUDING_OPERATOR = "!";
 
     private static final String REQUIRING_OPERATOR = "&=";
+
+    private static final String LOWER_BOUND_OPERATOR = ">=";
+
+    private static final String UPPER_BOUND_OPERATOR = "<=";
+
+    private static final Set<String> LOWER_BOUND_OPERATORS = Set.of(LOWER_BOUND_OPERATOR, ">");
+
+    private static final Set<String> UPPER_BOUND_OPERATORS = Set.of(UPPER_BOUND_OPERATOR, "<");
 
     private WorkItemFilterCombiner()
     {
@@ -111,12 +122,83 @@ final class WorkItemFilterCombiner
             operator -> INCLUDING_OPERATORS.contains(operator) || EXCLUDING_OPERATOR.equals(operator)))
         {
             return combineListFilters(property, filters);
+        } else if (operators.stream().allMatch(
+            operator -> LOWER_BOUND_OPERATORS.contains(operator) || UPPER_BOUND_OPERATORS.contains(operator)))
+        {
+            return combineBounds(property, filters);
         } else if (Set.of("o", "c").equals(operators)) {
             // All the open statuses, and all the closed ones.
             throw noMatch(property);
         }
-        throw new WorkItemSourceException(String.format("The conditions on [%s] can't be combined: only =, !=, IN "
-            + "and NOT IN conditions can be repeated on a property.", property));
+        throw notCombinable(property);
+    }
+
+    private static WorkItemSourceException notCombinable(String property)
+    {
+        return new WorkItemSourceException(String.format("The conditions on [%s] can't be combined: only =, !=, IN "
+            + "and NOT IN conditions, and a lower (>=, >) and an upper (<=, <) bound of a number, can be repeated on "
+            + "a property.", property));
+    }
+
+    /**
+     * Combines a lower and an upper bound of a number into a range.
+     */
+    private static LiveDataQuery.Filter combineBounds(String property, List<LiveDataQuery.Filter> filters)
+        throws WorkItemSourceException
+    {
+        Set<List<Object>> lowerBounds = getBounds(filters, LOWER_BOUND_OPERATORS);
+        Set<List<Object>> upperBounds = getBounds(filters, UPPER_BOUND_OPERATORS);
+        if (lowerBounds.size() > 1 || upperBounds.size() > 1) {
+            throw new WorkItemSourceException(String.format("The conditions on [%s] have several %s bounds.", property,
+                lowerBounds.size() > 1 ? "lower" : "upper"));
+        }
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+        filter.setProperty(property);
+        // A work item matches the range when it matches both bounds.
+        filter.setMatchAll(true);
+        for (List<Object> bound : lowerBounds) {
+            filter.getConstraints().add(new LiveDataQuery.Constraint(bound.get(1), (String) bound.get(0)));
+        }
+        for (List<Object> bound : upperBounds) {
+            filter.getConstraints().add(new LiveDataQuery.Constraint(bound.get(1), (String) bound.get(0)));
+        }
+        if (!lowerBounds.isEmpty() && !upperBounds.isEmpty()) {
+            checkRange(property, lowerBounds.iterator().next(), upperBounds.iterator().next());
+        }
+        return filter;
+    }
+
+    /**
+     * @param lowerBound the operator and the value of the lower bound
+     * @param upperBound the operator and the value of the upper bound
+     */
+    private static void checkRange(String property, List<Object> lowerBound, List<Object> upperBound)
+        throws WorkItemSourceException
+    {
+        int comparison;
+        try {
+            comparison = new BigDecimal(String.valueOf(lowerBound.get(1)).trim())
+                .compareTo(new BigDecimal(String.valueOf(upperBound.get(1)).trim()));
+        } catch (NumberFormatException e) {
+            // Only numbers make a range.
+            throw notCombinable(property);
+        }
+        boolean strict = !LOWER_BOUND_OPERATOR.equals(lowerBound.get(0))
+            || !UPPER_BOUND_OPERATOR.equals(upperBound.get(0));
+        if (comparison > 0 || comparison == 0 && strict) {
+            throw noMatch(property);
+        }
+    }
+
+    /**
+     * @return the distinct bounds (operator and value) of the filters, among the given operators
+     */
+    private static Set<List<Object>> getBounds(List<LiveDataQuery.Filter> filters, Set<String> operators)
+    {
+        return filters.stream().flatMap(filter -> filter.getConstraints().stream())
+            .filter(constraint -> operators.contains(constraint.getOperator()))
+            .map(constraint -> List.of(constraint.getOperator(), constraint.getValue()))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private static LiveDataQuery.Filter combineListFilters(String property, List<LiveDataQuery.Filter> filters)

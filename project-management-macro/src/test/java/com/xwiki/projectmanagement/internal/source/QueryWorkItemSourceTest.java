@@ -74,9 +74,9 @@ class QueryWorkItemSourceTest
             Arguments.of("status = \"Closed\"", "status: = <Closed>"),
             Arguments.of("status IN (\"Closed\", \"open\", New)", "status: = <Closed>, = <open>, = <New>"),
             Arguments.of("status != open", "status: c "),
-            Arguments.of("type = closed", "type: = <closed>"),
+            Arguments.of("type = closed", "type: = {closed}"),
             Arguments.of("status IN (1, Done, \"In progress\")", "status: = 1, = <Done>, = <In progress>"),
-            Arguments.of("type IN (open, closed)", "type: = <open>, = <closed>"),
+            Arguments.of("type IN (open, closed)", "type: = {open}, = {closed}"),
             Arguments.of("status not in (1,2)", "status: ! 1, ! 2"),
             Arguments.of("Labels ALL IN (security, ui)", "Labels: &= <security>, &= <ui>"),
             Arguments.of("summary ~ \"page saving\"", "summary: ~ page saving"),
@@ -136,21 +136,21 @@ class QueryWorkItemSourceTest
             Arguments.of("status NOT 1", "Syntax error at position 12: expected IN, but found [1]."),
             Arguments.of("status IS NULL",
                 "Syntax error at position 11: expected EMPTY or NOT EMPTY, but found [NULL]."),
-            Arguments.of("progress > 50",
-                "The operator [>] at position 10 can only compare dates (for example 2026-11-21): write >= instead."),
+            Arguments.of("progress > abc", "The operator [>] at position 10 can only compare dates (for example "
+                + "2026-11-21) and numbers: write >= instead."),
             Arguments.of("dueDate = tomorrow()",
                 "Unknown function [tomorrow()] at position 11: the supported functions are today() and thisWeek()."),
             Arguments.of("dueDate = today(",
                 "Syntax error at position 17: expected ')', but the query ends."),
             Arguments.of("dueDate != today()",
-                "The function [today()] at position 12 can only be used with the operator [=]."),
+                "The function [today()] at position 12 can't be used with the operator [!=]."),
             Arguments.of("dueDate IN (today())",
-                "The function [today()] at position 13 can only be used with the operator [=]."),
+                "The function [today()] at position 13 can't be listed."),
             Arguments.of("dueDate = 2026-13-01", "Syntax error at position 11: invalid date [2026-13-01]."),
             Arguments.of("status NOT IN (1, Closed)",
                 "[Closed] at position 19 can't be listed: write status = Closed or status != Closed instead."),
             Arguments.of("dueDate > 2026-11-21 AND dueDate < 2026-11-22",
-                "The bounds of the dates of [dueDate] match no day."),
+                "The bounds of the dates of [dueDate] match no day (at position 36)."),
             Arguments.of("dueDate != 2026-11-01", "The operator [!=] can't compare dates (at position 12)."),
             Arguments.of("dueDate >= 2026-11-01 AND dueDate > 2026-11-02",
                 "The property [dueDate] has several lower bounds (the second one at position 37)."),
@@ -197,6 +197,10 @@ class QueryWorkItemSourceTest
 
     private static String describe(Object value)
     {
-        return value instanceof WorkItemName ? "<" + value + ">" : String.valueOf(value);
+        if (value instanceof WorkItemName) {
+            // The keyword names (open, closed, locked written without quotes) are written {name}.
+            return ((WorkItemName) value).isKeyword() ? "{" + value + "}" : "<" + value + ">";
+        }
+        return String.valueOf(value);
     }
 }

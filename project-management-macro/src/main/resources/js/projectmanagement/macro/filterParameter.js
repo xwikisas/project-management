@@ -21,14 +21,17 @@ setTimeout(function () {
   let depsElems = document.getElementsByClassName('proj-manag-filter');
   let deps = (depsElems && depsElems[0] && depsElems[0].getAttribute('data-deps')) || "{}";
   let projManagFilterDeps = JSON.parse(deps) || {};
-  projManagFilterDeps.filterBuilder = new XWiki.Document(
-    new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)
-  ).getURL('jsx', 'resource=js/projectmanagement/filterBuilder.js&minify=true')
+  let mainPage = new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT));
+  projManagFilterDeps.filterBuilder = mainPage.getURL('jsx',
+    'resource=js/projectmanagement/filterBuilder.js&minify=true');
+  projManagFilterDeps.projectManagementQueryWriter = mainPage.getURL('jsx',
+    'resource=js/projectmanagement/macro/queryWriter.js&minify=true');
   require.config({
     paths: projManagFilterDeps
   });
   require(['filterBuilder'], function () {
-    require(['jquery', 'project-management-filter-builder'], function ($, builder) {
+    require(['jquery', 'project-management-filter-builder', 'projectManagementQueryWriter'],
+        function ($, builder, queryWriter) {
       let livedataCfgs = new Map();
       // The filter builders of a chart are its series, titled from the translated template of their container.
       let setSeriesTitle = function (builder, number) {
@@ -75,15 +78,6 @@ setTimeout(function () {
           edited = true;
         }
       }, true));
-      // The bounds that the "between" operator of the builder takes for the ranges of dates open on one side, which
-      // the query writes with a single comparison, e.g. dueDate >= 2026-11-01 (the same as in the OpenProject client).
-      const NO_LOWER_BOUND = '1970-01-01';
-      const NO_UPPER_BOUND = '3000-01-01';
-      const BARE_WORD = /^[^\s(),=!~<>"]+$/;
-      const DATE = /^\d{4}-\d{2}-\d{2}$/;
-      const KEYWORDS = ['and', 'or', 'not', 'in', 'all', 'is', 'empty', 'order'];
-      // The values read as keywords when they're not quoted: all the open or closed statuses, and the current user.
-      const VALUE_KEYWORDS = ['open', 'closed', 'me'];
       let getMacroForm = function () {
         return $('.proj-manag-filter[data-query]').closest('form, .macro-editor');
       };
@@ -103,111 +97,13 @@ setTimeout(function () {
       // The values of the query read as names, by property: a name made of digits is written back between quotes,
       // so that it isn't read as an id.
       let names = new Map();
-      let quote = function (text, forced) {
-        text = String(text);
-        if (!forced && BARE_WORD.test(text) && !KEYWORDS.includes(text.toLowerCase())) {
-          return text;
-        }
-        return '"' + text.replace(/["\\]/g, '\\$&') + '"';
-      };
-      // A value written unquoted is read as a date when it looks like a date, as an id when it's a number, and as a
-      // keyword when it's open, closed or me: a name looking so is quoted.
-      let quoteValue = function (property, value) {
-        let text = String(value);
-        let isName = names.has(property) && names.get(property).has(text);
-        return quote(value, DATE.test(text)
-          || (isName && (/^\d+$/.test(text) || VALUE_KEYWORDS.includes(text.toLowerCase()))));
-      };
-      let toDate = function (value) {
-        return String(value || '').substring(0, 10);
-      };
-      let listClause = function (filter, values, operator, keyword) {
-        let property = quote(filter.property);
-        let quoteFilterValue = value => quoteValue(filter.property, value);
-        return values.length === 1 && operator ? `${property} ${operator} ${quoteFilterValue(values[0])}`
-          : `${property} ${keyword} (${values.map(quoteFilterValue).join(', ')})`;
-      };
-      let toQuery = function (filters) {
-        let clauses = [];
-        filters.forEach(filter => {
-          let property = quote(filter.property);
-          let valuesByOperator = new Map();
-          (filter.constraints || []).forEach(constraint => {
-            let values = valuesByOperator.get(constraint.operator) || [];
-            values.push(constraint.value);
-            valuesByOperator.set(constraint.operator, values);
-          });
-          valuesByOperator.forEach((values, operator) => {
-            switch (operator) {
-              case '!':
-                clauses.push(listClause(filter, values, '!=', 'NOT IN'));
-                break;
-              case '&=':
-                clauses.push(listClause(filter, values, null, 'ALL IN'));
-                break;
-              case '~':
-              case '!~':
-              case '>=':
-              case '<=':
-                values.forEach(value => clauses.push(`${property} ${operator} ${quote(value)}`));
-                break;
-              case '*':
-                clauses.push(`${property} IS NOT EMPTY`);
-                break;
-              case '!*':
-                clauses.push(`${property} IS EMPTY`);
-                break;
-              case 'o':
-                clauses.push(`${property} = open`);
-                break;
-              case 'c':
-                clauses.push(`${property} = closed`);
-                break;
-              case 't':
-                clauses.push(`${property} = today()`);
-                break;
-              case 'w':
-                clauses.push(`${property} = thisWeek()`);
-                break;
-              case '=d':
-                values.forEach(value => clauses.push(`${property} = ${toDate(value)}`));
-                break;
-              case 'between':
-                values.forEach(value => {
-                  let bounds = String(value).split('/');
-                  let lower = toDate(bounds[0]);
-                  let upper = toDate(bounds.length > 1 ? bounds[1] : bounds[0]);
-                  if (lower && lower !== NO_LOWER_BOUND) {
-                    clauses.push(`${property} >= ${lower}`);
-                  }
-                  if (upper && upper !== NO_UPPER_BOUND) {
-                    clauses.push(`${property} <= ${upper}`);
-                  }
-                });
-                break;
-              default:
-                clauses.push(listClause(filter, values, '=', 'IN'));
-            }
-          });
-        });
-        return clauses.join(' AND ');
-      };
       let writeQuery = function (filters) {
-        getContentField().val(toQuery(filters)).trigger('input').trigger('change');
+        getContentField().val(queryWriter.toQuery(filters, names)).trigger('input').trigger('change');
         // The query replaces the deprecated filters parameter and the content read by another source.
         $('.proj-manag-filter[data-query]').val('');
         if (!['', 'query'].includes(getSource())) {
           getMacroForm().find('[name="source"]').val('').trigger('change');
         }
-      };
-      // The builder only has the "between" operator for the ranges of dates.
-      let toBuilderConstraint = function (constraint) {
-        if (constraint.operator === 'after') {
-          return { operator: 'between', value: constraint.value + '/' + NO_UPPER_BOUND };
-        } else if (constraint.operator === 'before') {
-          return { operator: 'between', value: NO_LOWER_BOUND + '/' + constraint.value };
-        }
-        return constraint;
       };
       let showQueryWarning = function (bld, attribute, parameter) {
         let template = $('.proj-manag-filter[data-query]').attr(attribute) || '{0}';
@@ -231,13 +127,7 @@ setTimeout(function () {
           + '/projectmanagement/query/filters', { query: query }).always(function () {
           bld.element.removeClass('proj-manag-query-loading');
         }).done(function (data) {
-          (data.filters || []).forEach(filter => {
-            (filter.constraints || []).filter(constraint => constraint.name).forEach(constraint => {
-              names.set(filter.property, (names.get(filter.property) || new Set()).add(String(constraint.value)));
-            });
-            bld.addFilter({ property: filter.property,
-              constraints: (filter.constraints || []).map(toBuilderConstraint) });
-          });
+          queryWriter.fromParsedFilters(data.filters, names).forEach(filter => bld.addFilter(filter));
           setReadFilters(bld);
         }).fail(function (response) {
           showQueryWarning(bld, 'data-query-error',

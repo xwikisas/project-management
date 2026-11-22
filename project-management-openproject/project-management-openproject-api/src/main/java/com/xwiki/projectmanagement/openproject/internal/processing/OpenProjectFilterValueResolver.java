@@ -90,7 +90,9 @@ public final class OpenProjectFilterValueResolver
      * The operators restricting the work items to the values of the constraint, whose project values restrict the
      * versions that a version name can match.
      */
-    private static final Set<String> INCLUDING_OPERATORS = Set.of("=", "equals", "contains", "startsWith");
+    private static final String EQUALS = "=";
+
+    private static final Set<String> INCLUDING_OPERATORS = Set.of(EQUALS, "equals", "contains", "startsWith");
 
     private static final Map<String, Kind> PROPERTY_KINDS = Map.of(
         WorkItem.KEY_PROJECT, Kind.PROJECT,
@@ -100,6 +102,12 @@ public final class OpenProjectFilterValueResolver
         WorkItem.KEY_ASSIGNEES, Kind.USER,
         WorkItem.KEY_CREATOR, Kind.USER,
         WorkItem.KEY_REPORTER, Kind.USER);
+
+    /**
+     * The OpenProject operators matching the versions having a status, by keyword of the query.
+     */
+    private static final Map<String, String> VERSION_STATUS_OPERATORS =
+        Map.of("open", "o", "locked", "l", "closed", "c");
 
     private static final Map<String, Kind> FILTER_VALUE_TYPE_KINDS = Map.of(
         OpenProjectWorkItemFields.VERSION_FILTER_VALUE_TYPE, Kind.VERSION,
@@ -230,6 +238,11 @@ public final class OpenProjectFilterValueResolver
     {
         if (filter.getConstraints().stream().noneMatch(constraint -> constraint.getValue() instanceof WorkItemName)) {
             return filter;
+        } else if (kind == Kind.VERSION || kind == null) {
+            List<String> statusOperators = getVersionStatusOperators(filter.getProperty());
+            if (filter.getConstraints().stream().anyMatch(constraint -> isVersionStatus(constraint, statusOperators))) {
+                return resolveVersionStatus(filter, statusOperators);
+            }
         }
         LiveDataQuery.Filter resolvedFilter = new LiveDataQuery.Filter();
         resolvedFilter.setProperty(filter.getProperty());
@@ -247,6 +260,58 @@ public final class OpenProjectFilterValueResolver
             }
         }
         return resolvedFilter;
+    }
+
+    /**
+     * @return the operators matching the versions having a status ({@code o}, {@code l}, {@code c}) that the filter of
+     *     a version property supports: only the built-in version filter supports them, not the version custom fields;
+     *     when its field or its operators are unknown (for example when the fields of the instance can't be
+     *     retrieved), the built-in target version is assumed to support them
+     */
+    private List<String> getVersionStatusOperators(String property)
+    {
+        WorkPackageField field = this.fields.getField(property);
+        List<String> operators = field == null || field.getFilterOperators() == null ? List.of()
+            : field.getFilterOperators();
+        if (operators.isEmpty()) {
+            return OpenProjectWorkItemFields.PROPERTY_TARGET_VERSION.equals(property)
+                ? new ArrayList<>(VERSION_STATUS_OPERATORS.values()) : new ArrayList<>();
+        } else if (getKind(property) != Kind.VERSION) {
+            return new ArrayList<>();
+        }
+        return VERSION_STATUS_OPERATORS.values().stream().filter(operators::contains).collect(Collectors.toList());
+    }
+
+    /**
+     * @return whether the constraint is on the versions having a status, written as a keyword ({@code open},
+     *     {@code locked}, {@code closed}) which the filter of the property supports
+     */
+    private static boolean isVersionStatus(LiveDataQuery.Constraint constraint, List<String> statusOperators)
+    {
+        if (!(constraint.getValue() instanceof WorkItemName) || !((WorkItemName) constraint.getValue()).isKeyword()) {
+            return false;
+        }
+        String keyword = ((WorkItemName) constraint.getValue()).getName().toLowerCase(Locale.ROOT);
+        return statusOperators.contains(VERSION_STATUS_OPERATORS.get(keyword));
+    }
+
+    /**
+     * Converts the condition on the versions having a status ({@code targetVersion = open}, {@code locked} or
+     * {@code closed}) into the matching OpenProject operator.
+     */
+    private static LiveDataQuery.Filter resolveVersionStatus(LiveDataQuery.Filter filter, List<String> statusOperators)
+        throws OpenProjectFilterValueException
+    {
+        LiveDataQuery.Constraint constraint = filter.getConstraints().stream()
+            .filter(candidate -> isVersionStatus(candidate, statusOperators)).findFirst().orElseThrow();
+        String keyword = ((WorkItemName) constraint.getValue()).getName();
+        if (filter.getConstraints().size() != 1 || !EQUALS.equals(constraint.getOperator())) {
+            throw new OpenProjectFilterValueException(String.format("The versions [%2$s] of [%1$s] can only be "
+                + "compared with =, alone (for example %1$s = %2$s): write \"%2$s\" between quotes for a version "
+                + "named %2$s.", filter.getProperty(), keyword));
+        }
+        return new LiveDataQuery.Filter(filter.getProperty(),
+            VERSION_STATUS_OPERATORS.get(keyword.toLowerCase(Locale.ROOT)), "");
     }
 
     private static boolean isId(String value)
