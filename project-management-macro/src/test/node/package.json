@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "name": "project-management-macro-tests",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test:unit": "vitest --run",
+    "generate:round-trip": "node generateRoundTripCases.js"
+  },
+  "devDependencies": {
+    "vitest": "3.2.4"
+  }
+}
