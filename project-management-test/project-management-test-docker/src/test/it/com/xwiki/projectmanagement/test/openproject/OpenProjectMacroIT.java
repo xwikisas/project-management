@@ -248,6 +248,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // Create a filter.
         modal.clickMore();
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
+        // Enter on the lists of the filters doesn't submit the macro editor.
+        filterBuilderParameter.pressEnterOnAddFilter();
+        assertTrue(modal.isOpen());
         filterBuilderParameter.addFilter("assignees").setSuggestValue("OpenProject Admin");
         filterBuilderParameter.addFilter("summary").setValue("sp");
         // The values of a filter are combined with OR.
@@ -260,6 +263,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals("Value for Assignee", addedFilters.get(0).getValueAccessibleName());
         assertEquals("Operator for Subject", addedFilters.get(1).getOperatorAccessibleName());
         assertEquals("Value for Subject", addedFilters.get(1).getValueAccessibleName());
+        addedFilters.get(1).pressEnterOnOperator();
+        assertTrue(modal.isOpen());
         // Submit modal and view page.
         modal.clickSubmit();
         editPage.clickSaveAndView();
@@ -653,6 +658,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         editPage = modal.getEditPage();
         modal.clickMore();
         FilterBuilderParameter filterBuilder = modal.getFilterBuilder().waitForFilters(2);
+        // Enter on a date closes its date picker, without submitting the macro editor.
+        filterBuilder.getFilters().get(1).pressEnterOnDate();
+        assertTrue(modal.isOpen());
         filterBuilder.getFilters().get(1).pickDays(10, 12);
         // The picked days keep the times of the saved range.
         assertThat(filterBuilder.getSummary(), containsString("2024/01/10 10:30 - 2024/01/12 18:00"));

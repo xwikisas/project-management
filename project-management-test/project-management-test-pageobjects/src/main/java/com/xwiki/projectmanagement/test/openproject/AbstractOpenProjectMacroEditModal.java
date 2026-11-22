@@ -166,6 +166,16 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
+     * @return {@code true} if the modal is open, {@code false} once it's closed, e.g. submitted
+     * @since 1.5.0
+     */
+    public boolean isOpen()
+    {
+        // The modal loses its "in" class as soon as it starts closing.
+        return isDisplayed(By.cssSelector(".macro-editor-modal.in"));
+    }
+
+    /**
      * @return the macro content
      * @since 1.5.0
      */
