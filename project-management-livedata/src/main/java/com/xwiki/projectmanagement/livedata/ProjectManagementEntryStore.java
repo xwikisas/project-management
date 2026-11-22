@@ -25,10 +25,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
 
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
@@ -42,6 +48,7 @@ import org.xwiki.livedata.LiveDataQuery;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -64,6 +71,14 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         WorkItem.KEY_SUMMARY, WorkItem.KEY_CREATOR, WorkItem.KEY_PROJECT, WorkItem.KEY_REPORTER);
 
     private static final String FLATTEN_FORMAT = "%s.%s";
+
+    private static final int BAD_GATEWAY = 502;
+
+    /**
+     * The statuses of the failures that are temporary (a request timeout, too many requests), which are failures of
+     * the tool rather than rejections of the request.
+     */
+    private static final Set<Integer> TEMPORARY_FAILURES = Set.of(408, 429);
 
     @Inject
     private ProjectManagementManager projectManagementManager;
@@ -115,7 +130,10 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
                 projectManagementManager.getWorkItems(clientId, Math.toIntExact(query.getOffset()), query.getLimit(),
                     query.getFilters(), query.getSort());
         } catch (WorkItemException e) {
-            throw new LiveDataException("Failed to retrieve the work items.", e);
+            if (isAuthenticationOrRightsFailure(e)) {
+                throw new LiveDataException("Failed to retrieve the work items.", e);
+            }
+            throw toErrorResponse(clientId, e);
         }
         ld.setCount(workItems.getTotalItems());
         // The displayers replace the values of the entries by their HTML display, so they work on copies of the work
@@ -133,6 +151,47 @@ public class ProjectManagementEntryStore implements LiveDataEntryStore
         ld.getEntries().addAll(entries);
 
         return ld;
+    }
+
+    private static boolean isAuthenticationOrRightsFailure(WorkItemException e)
+    {
+        Integer statusCode = getStatusCode(e);
+        return statusCode != null && (statusCode == Response.Status.UNAUTHORIZED.getStatusCode()
+            || statusCode == Response.Status.FORBIDDEN.getStatusCode());
+    }
+
+    private static Integer getStatusCode(WorkItemException e)
+    {
+        return e instanceof WorkItemRetrievalException ? ((WorkItemRetrievalException) e).getStatusCode() : null;
+    }
+
+    /**
+     * Live Data only notifies its viewers that the entries couldn't be retrieved, whatever the response. A
+     * {@link LiveDataException} would be answered by the REST layer with its stack trace, which holds the messages of
+     * the tool and the requests sent to it, and logged as an error at each request of the viewers (e.g. at each change
+     * of a filter). The request rejected by the tool (e.g. a filter value it refuses) and the failures of the tool are
+     * answered instead with a short message and a status telling them apart, the failure being logged on the server
+     * only. The callers that don't go through the REST layer (e.g. {@code $services.liveData.query}, which only
+     * catches {@link LiveDataException}) get the {@link WebApplicationException} for these failures.
+     *
+     * @return the exception answering the request with the error response
+     */
+    private WebApplicationException toErrorResponse(String clientId, WorkItemException e)
+    {
+        logger.warn("Failed to retrieve the work items of the client [{}]: [{}].", clientId,
+            ExceptionUtils.getRootCauseMessage(e));
+        logger.debug("Full failure:", e);
+        Integer statusCode = getStatusCode(e);
+        boolean rejected = statusCode != null && statusCode >= Response.Status.BAD_REQUEST.getStatusCode()
+            && statusCode < Response.Status.INTERNAL_SERVER_ERROR.getStatusCode()
+            && !TEMPORARY_FAILURES.contains(statusCode);
+        Response response = rejected
+            ? Response.status(Response.Status.BAD_REQUEST)
+                .entity("The project management tool rejected the request for the work items.")
+                .type(MediaType.TEXT_PLAIN).build()
+            : Response.status(BAD_GATEWAY).entity("Failed to retrieve the work items from the project management tool.")
+                .type(MediaType.TEXT_PLAIN).build();
+        return new WebApplicationException(e, response);
     }
 
     // TODO: Use the WorkItemPropertyDisplayerManager in order to display certain properties. (linkables, props that

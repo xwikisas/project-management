@@ -213,15 +213,11 @@ public class OpenProjectClient implements ProjectManagementClient
             markClosedWorkItems(openProjectApiClient, workItems);
             return workItems;
         } catch (WorkItemRetrievalException e) {
-            // Report authentication and rights failures, so that the caller can tell the user what to do.
-            if (!isAuthenticationOrRightsFailure(e) && isLiveDataRequest()) {
-                return handleWorkPackageRetrievalException(e);
+            if (isNotFound(e) && isLiveDataRequest()) {
+                return getNoWorkItems(e);
             }
             throw e;
         } catch (ProjectManagementException e) {
-            if (isLiveDataRequest()) {
-                return handleWorkPackageRetrievalException(e);
-            }
             throw new WorkItemRetrievalException("An error occurred while trying to get the work items", e);
         }
     }
@@ -266,14 +262,20 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     /**
-     * Live Data can't display the failure of a request (it only notifies that it failed) and the failures of the
-     * requests that its viewers make by filtering and sorting it (e.g. an unsupported combination of filters, which no
-     * work package matches) shouldn't be reported as errors: the request then returns no work package. The other
-     * callers, e.g. the charts, display the failure, so that it isn't mistaken for an empty result.
+     * The work packages that a Live Data table lists can't be found when they no longer exist or the user can't see
+     * them (OpenProject answers 404 for both): the table then has no entry, as when no work package matches. The
+     * other failures (for example a filter that OpenProject rejects, or an unreachable instance) are reported to Live
+     * Data, which notifies the user that the entries couldn't be retrieved, instead of being mistaken for an empty
+     * result. The other callers (for example the charts) report every failure.
      */
     private boolean isLiveDataRequest()
     {
         return Boolean.TRUE.equals(executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA));
+    }
+
+    private static boolean isNotFound(WorkItemRetrievalException e)
+    {
+        return Integer.valueOf(HttpURLConnection.HTTP_NOT_FOUND).equals(e.getStatusCode());
     }
 
     private static boolean isAuthenticationOrRightsFailure(WorkItemRetrievalException e)
@@ -701,7 +703,7 @@ public class OpenProjectClient implements ProjectManagementClient
         }
     }
 
-    private PaginatedResult<WorkItem> handleWorkPackageRetrievalException(ProjectManagementException e)
+    private PaginatedResult<WorkItem> getNoWorkItems(ProjectManagementException e)
     {
         logger.warn("Failed to retrieve work packages: {}", e.getMessage());
         PaginatedResult<WorkItem> result = new PaginatedResult<>();

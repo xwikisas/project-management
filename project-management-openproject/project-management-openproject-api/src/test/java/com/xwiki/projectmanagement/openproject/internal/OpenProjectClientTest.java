@@ -773,44 +773,52 @@ class OpenProjectClientTest
             exception.getCause().getMessage());
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = { 400, 404, 500 })
-    void getWorkItemsReturnsNothingWhenTheRequestOfLiveDataFails(int statusCode) throws ProjectManagementException
+    @Test
+    void getWorkItemsReturnsNothingToLiveDataWhenTheWorkPackagesAreNotFound() throws ProjectManagementException
     {
-        // Live Data can't display the failure, and its viewers can combine filters and sorts that OpenProject rejects.
+        // E.g. the work packages of a project that no longer exists, or that the user can't see.
         when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
         when(this.executionContext.get(IDENTIFIER)).thenReturn("http://open-project-instance/work_packages");
-        doThrow(new WorkItemRetrievalException("Invalid filter", statusCode)).when(this.openProjectApiClient)
+        doThrow(new WorkItemRetrievalException("Not found", 404)).when(this.openProjectApiClient)
             .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
         PaginatedResult<WorkItem> result = this.openProjectClient.getWorkItems(0, 10, List.of(), List.of());
 
         assertEquals(0, result.getItems().size());
         assertEquals(0, result.getTotalItems());
-        assertEquals("Failed to retrieve work packages: Invalid filter", this.logCapture.getMessage(0));
-    }
-
-    @Test
-    void getWorkItemsReturnsNothingWhenOpenProjectFailsForLiveData() throws ProjectManagementException
-    {
-        when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
-        doThrow(new ProjectManagementException("Server error")).when(this.openProjectApiClient)
-            .getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
-
-        assertEquals(0, this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()).getTotalItems());
-        assertEquals("Failed to retrieve work packages: Server error", this.logCapture.getMessage(0));
+        assertEquals("Failed to retrieve work packages: Not found", this.logCapture.getMessage(0));
     }
 
     @ParameterizedTest
-    @ValueSource(ints = { 401, 403 })
-    void getWorkItemsReportsTheRejectionOfTheUserToLiveData(int statusCode) throws ProjectManagementException
+    @ValueSource(ints = { 400, 401, 403 })
+    void getWorkItemsReportsTheRejectionOfTheRequestToLiveData(int statusCode) throws ProjectManagementException
     {
+        // E.g. a filter of the viewer of the table that OpenProject rejects: no entry would hide the failure.
         when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
-        WorkItemRetrievalException failure = new WorkItemRetrievalException("Rejected", statusCode);
+        WorkItemRetrievalException failure = new WorkItemRetrievalException("The request was invalid.",
+            new ProjectManagementException("OpenProject rejected the request: % complete is not an integer."),
+            statusCode);
         doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
 
-        assertSame(failure, assertThrows(WorkItemRetrievalException.class,
-            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of())));
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+
+        assertEquals(statusCode, exception.getStatusCode());
+        assertEquals("OpenProject rejected the request: % complete is not an integer.",
+            exception.getCause().getMessage());
+    }
+
+    @Test
+    void getWorkItemsReportsTheFailureOfOpenProjectToLiveData() throws ProjectManagementException
+    {
+        when(this.executionContext.get(ProjectManagementClientExecutionContext.LIVE_DATA)).thenReturn(Boolean.TRUE);
+        ProjectManagementException failure = new ProjectManagementException("Server error");
+        doThrow(failure).when(this.openProjectApiClient).getWorkPackages(1, 10, NO_FILTERS, NO_SORTING);
+
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> this.openProjectClient.getWorkItems(0, 10, List.of(), List.of()));
+
+        assertSame(failure, exception.getCause());
     }
 
     @ParameterizedTest

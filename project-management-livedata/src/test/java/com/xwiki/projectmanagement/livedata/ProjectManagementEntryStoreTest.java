@@ -25,12 +25,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.livedata.LiveData;
 import org.xwiki.livedata.LiveDataException;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.rendering.renderer.PrintRenderer;
+import org.xwiki.test.LogLevel;
 import org.xwiki.test.annotation.BeforeComponent;
+import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
@@ -40,7 +48,9 @@ import org.xwiki.test.mockito.MockitoComponentManager;
 import com.xwiki.projectmanagement.ProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.ProjectManagementManager;
 import com.xwiki.projectmanagement.displayer.WorkItemPropertyDisplayerManager;
+import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemException;
+import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.DefaultProjectManagementClientExecutionContext;
 import com.xwiki.projectmanagement.livedata.displayer.ProjectManagementLiveDataDisplayer;
 import com.xwiki.projectmanagement.model.Linkable;
@@ -48,6 +58,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,6 +76,9 @@ import static org.mockito.Mockito.when;
 @ComponentTest
 class ProjectManagementEntryStoreTest
 {
+    @RegisterExtension
+    private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
+
     @InjectMockComponents
     private ProjectManagementEntryStore entryStore;
 
@@ -152,16 +166,74 @@ class ProjectManagementEntryStoreTest
     }
 
     @Test
-    void getQueryWithExceptionWhenRetrievingWorkItems() throws WorkItemException, LiveDataException
+    void getQueryRejectedByTheTool() throws WorkItemException
     {
         LiveDataQuery query = createQuery("testclient");
-        WorkItemException cause = new WorkItemException("Failed to retrieve.");
+        WorkItemRetrievalException failure = new WorkItemRetrievalException(
+            "The request to the OpenProject API was invalid. [{\"message\":\"% complete is not an integer.\"}]",
+            new ProjectManagementException("OpenProject rejected the request: % complete is not an integer."), 400);
+        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenThrow(failure);
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class, () -> entryStore.get(query));
+
+        // The response tells the request was rejected, without the details of the failure.
+        Response response = exception.getResponse();
+        assertEquals(400, response.getStatus());
+        assertEquals("The project management tool rejected the request for the work items.", response.getEntity());
+        // The message of the tool is logged on the server.
+        assertEquals("Failed to retrieve the work items of the client [testclient]: [ProjectManagementException: "
+            + "OpenProject rejected the request: % complete is not an integer.].", this.logCapture.getMessage(0));
+        // The context doesn't outlive the request, even when it fails.
+        assertTrue(this.clientContext.getContext().isEmpty());
+    }
+
+    @Test
+    void getQueryWhenTheToolFails() throws WorkItemException
+    {
+        LiveDataQuery query = createQuery("testclient");
+        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any()))
+            .thenThrow(new WorkItemRetrievalException("Failed to retrieve.",
+                new ProjectManagementException("There was an issue in communicating with [http://tool/api]."), null));
+
+        Response response =
+            assertThrows(WebApplicationException.class, () -> entryStore.get(query)).getResponse();
+
+        assertEquals(502, response.getStatus());
+        assertEquals("Failed to retrieve the work items from the project management tool.", response.getEntity());
+        assertFalse(String.valueOf(response.getEntity()).contains("http"));
+        assertEquals("Failed to retrieve the work items of the client [testclient]: [ProjectManagementException: "
+            + "There was an issue in communicating with [http://tool/api].].", this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 408, 429 })
+    void getQueryWhenTheToolFailsTemporarily(int statusCode) throws WorkItemException
+    {
+        LiveDataQuery query = createQuery("testclient");
+        when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any()))
+            .thenThrow(new WorkItemRetrievalException("Too many requests.", statusCode));
+
+        Response response =
+            assertThrows(WebApplicationException.class, () -> entryStore.get(query)).getResponse();
+
+        // The request isn't rejected, the tool can't answer it for now.
+        assertEquals(502, response.getStatus());
+        assertEquals("Failed to retrieve the work items from the project management tool.", response.getEntity());
+        assertEquals("Failed to retrieve the work items of the client [testclient]: "
+            + "[WorkItemRetrievalException: Too many requests.].", this.logCapture.getMessage(0));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 401, 403 })
+    void getQueryWhenTheToolRejectsTheUser(int statusCode) throws WorkItemException
+    {
+        LiveDataQuery query = createQuery("testclient");
+        WorkItemException cause = new WorkItemRetrievalException("Rejected.", statusCode);
         when(projectManagementManager.getWorkItems(any(), anyInt(), anyInt(), any(), any())).thenThrow(cause);
 
         LiveDataException exception = assertThrows(LiveDataException.class, () -> entryStore.get(query));
+
         assertSame(cause, exception.getCause());
-        // The context doesn't outlive the request, even when it fails.
-        assertTrue(this.clientContext.getContext().isEmpty());
     }
 
     @Test
