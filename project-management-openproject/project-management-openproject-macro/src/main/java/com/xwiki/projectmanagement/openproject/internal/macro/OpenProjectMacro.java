@@ -30,6 +30,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.livedata.LiveDataQuery;
 import org.xwiki.observation.ObservationManager;
@@ -154,8 +155,26 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
     public List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters,
         MacroTransformationContext context)
     {
-        return this.savedQueryResolver.resolve(parameters, context.isInline(),
-            (key, value) -> addToSourceParams(parameters, key, value));
+        return resolveSavedQuery(parameters, true, context);
+    }
+
+    @Override
+    protected List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters, String displayerContent,
+        MacroTransformationContext context)
+    {
+        if (StringUtils.isEmpty(displayerContent)) {
+            return asyncProcessParameters(parameters, context);
+        }
+        // The legacy Live Data configuration of the content replaces the filters and the sorting of the macro, so the
+        // Live Data can't show the ones of a saved query: the client keeps applying them.
+        return resolveSavedQuery(parameters, false, context);
+    }
+
+    private List<Block> resolveSavedQuery(OpenProjectMacroParameters parameters, boolean showInLiveData,
+        MacroTransformationContext context)
+    {
+        return this.savedQueryResolver.resolve(parameters, context.isInline(), showInLiveData,
+            (key, value) -> setSourceParam(parameters, key, value));
     }
 
     /**

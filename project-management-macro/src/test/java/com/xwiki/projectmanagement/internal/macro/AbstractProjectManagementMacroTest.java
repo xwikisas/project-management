@@ -156,4 +156,29 @@ class AbstractProjectManagementMacroTest
         // The first source parameter is encoded like the next ones.
         assertEquals("identifier=a%26b%3Dc&client=test&translationPrefix=test.", params.getSourceParameters());
     }
+
+    @Test
+    void setSourceParamReplacesItsValue()
+    {
+        ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
+        params.setSourceParameters("identifier=a&client=test&identifierType=b&identifier=c");
+
+        abstractMacro.setSourceParam(params, "identifier", "d&e");
+
+        assertEquals("client=test&identifierType=b&identifier=d%26e", params.getSourceParameters());
+
+        abstractMacro.setSourceParam(params, "client", null);
+
+        assertEquals("identifierType=b&identifier=d%26e", params.getSourceParameters());
+    }
+
+    @Test
+    void setSourceParamWithoutSourceParameters()
+    {
+        ProjectManagementMacroParameters params = new ProjectManagementMacroParameters();
+
+        abstractMacro.setSourceParam(params, "identifier", "a");
+
+        assertEquals("identifier=a", params.getSourceParameters());
+    }
 }

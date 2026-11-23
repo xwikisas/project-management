@@ -34,6 +34,7 @@ import org.xwiki.localization.ContextualLocalizationManager;
 import org.xwiki.localization.Translation;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.WordBlock;
+import org.xwiki.rendering.macro.MacroExecutionException;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
@@ -42,6 +43,7 @@ import org.xwiki.test.junit5.mockito.MockComponent;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
+import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
@@ -51,6 +53,8 @@ import com.xwiki.projectmanagement.openproject.macro.OpenProjectMacroParameters;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -66,6 +70,10 @@ class OpenProjectSavedQueryResolverTest
 {
     private static final String SAVED_QUERY_LINK = "http://op/projects/demo/work_packages?query_id=5";
 
+    private static final String LIST_LINK = "http://op/projects/9/work_packages?query_props=list";
+
+    private static final String FILTERS = "{\"query\":{\"filters\":[]}}";
+
     @RegisterExtension
     private final LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
 
@@ -77,6 +85,9 @@ class OpenProjectSavedQueryResolverTest
 
     @MockComponent
     private OpenProjectIdentifierResolver identifierResolver;
+
+    @MockComponent
+    private OpenProjectLinkQueryResolver linkQueryResolver;
 
     @MockComponent
     private UserTokenChecker userTokenChecker;
@@ -109,6 +120,81 @@ class OpenProjectSavedQueryResolverTest
 
         assertEquals(List.of(), resolve(false));
 
+        assertEquals(Map.of(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL, "results"), this.sourceParameters);
+    }
+
+    @Test
+    void movesTheFiltersAndTheSortingOfTheSavedQueryToTheLiveData() throws Exception
+    {
+        this.parameters.setFilters(FILTERS);
+        this.parameters.setSort("status:asc");
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results"))).thenReturn(LIST_LINK);
+        when(this.linkQueryResolver.resolve(eq("main"), eq("status:asc"), argThat(source -> FILTERS.equals(
+            source.getFilters()) && LIST_LINK.equals(source.getIdentifier()))))
+            .thenReturn(new WorkItemSourceResult("moved filters", "remaining", Map.of(), "status:asc,id:desc"));
+
+        assertEquals(List.of(), resolve(false));
+
+        assertEquals("moved filters", this.parameters.getFilters());
+        assertEquals("status:asc,id:desc", this.parameters.getSort());
+        assertEquals("remaining", this.parameters.getIdentifier());
+        // The client gets the link of the work package list instead of the saved query.
+        assertEquals(Map.of("identifier", "remaining"), this.sourceParameters);
+    }
+
+    @Test
+    void movesTheFiltersOfTheSavedQueryWithoutSorting() throws Exception
+    {
+        this.parameters.setSort("status:asc");
+        useSavedQueryLink(new WorkItemSourceResult(FILTERS, "remaining", Map.of()));
+
+        assertEquals(List.of(), resolve(false));
+
+        assertEquals(FILTERS, this.parameters.getFilters());
+        assertEquals("status:asc", this.parameters.getSort());
+        assertEquals(Map.of("identifier", "remaining"), this.sourceParameters);
+    }
+
+    @Test
+    void keepsTheSavedQueryWhenTheLiveDataShowsNothingMore() throws Exception
+    {
+        this.parameters.setFilters(FILTERS);
+        useSavedQueryLink(new WorkItemSourceResult(FILTERS, LIST_LINK, Map.of()));
+
+        assertEquals(List.of(), resolve(false));
+
+        assertEquals(FILTERS, this.parameters.getFilters());
+        assertEquals(SAVED_QUERY_LINK, this.parameters.getIdentifier());
+        assertEquals(Map.of(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL, "results"), this.sourceParameters);
+    }
+
+    @Test
+    void keepsTheSavedQueryWhenAskedTo() throws Exception
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+
+        assertEquals(List.of(), this.resolver.resolve(this.parameters, false, false, this.sourceParameters::put));
+
+        assertEquals(SAVED_QUERY_LINK, this.parameters.getIdentifier());
+        assertEquals(Map.of(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL, "results"), this.sourceParameters);
+        verify(this.identifierResolver, never()).getSavedQueryLink(any(), any());
+    }
+
+    @Test
+    void keepsTheSavedQueryWhenItsFiltersCantBeMoved() throws Exception
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results"))).thenReturn(LIST_LINK);
+        when(this.linkQueryResolver.resolve(eq("main"), any(), any()))
+            .thenThrow(new MacroExecutionException("invalid filters"));
+
+        assertEquals(List.of(), resolve(false));
+
+        assertEquals(SAVED_QUERY_LINK, this.parameters.getIdentifier());
         assertEquals(Map.of(OpenProjectIdentifierResolver.SAVED_QUERY_RESULTS_URL, "results"), this.sourceParameters);
     }
 
@@ -181,8 +267,16 @@ class OpenProjectSavedQueryResolverTest
             + "Cause: [ProjectManagementException: forbidden].", this.logCapture.getMessage(0));
     }
 
+    private void useSavedQueryLink(WorkItemSourceResult resolved) throws Exception
+    {
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results"))).thenReturn(LIST_LINK);
+        when(this.linkQueryResolver.resolve(eq("main"), any(), any())).thenReturn(resolved);
+    }
+
     private List<Block> resolve(boolean inline)
     {
-        return this.resolver.resolve(this.parameters, inline, this.sourceParameters::put);
+        return this.resolver.resolve(this.parameters, inline, true, this.sourceParameters::put);
     }
 }
