@@ -104,7 +104,8 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
         assertTrue(setup.rest().<Page>get(presetReference).isHidden());
         setup.createAdminUser();
         setup.loginAsAdmin();
-        assertEquals("No", OpenProjectAdminPage.gotoPage().getListedPresetChartFlag(presetName));
+        assertEquals("No", OpenProjectAdminPage.gotoPageIgnoringLock().getListedPresetChartFlag(presetName));
+        OpenProjectAdminPage.releaseLocks();
         setup.loginAsSuperAdmin();
 
         // Use the preset in a macro.

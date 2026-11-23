@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.test.openproject;
 
+import java.util.List;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebElement;
@@ -28,6 +30,7 @@ import org.openqa.selenium.support.ui.Select;
 import org.xwiki.administration.test.po.AdministrationSectionPage;
 import org.xwiki.livedata.test.po.LiveDataElement;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.test.ui.po.ViewPage;
 
 /**
@@ -69,6 +72,32 @@ public class OpenProjectAdminPage extends AdministrationSectionPage
     {
         AdministrationSectionPage.gotoPage(SECTION_ID);
         return new OpenProjectAdminPage();
+    }
+
+    /**
+     * Go to the OpenProject administration section even when it's locked by another user, e.g. by the user logged in
+     * before the current one, who opened the administration.
+     *
+     * @return the view model of the admin page.
+     */
+    public static OpenProjectAdminPage gotoPageIgnoringLock()
+    {
+        getUtil().gotoPage(getUtil().getURL("XWiki", "XWikiPreferences", "admin",
+            String.format("section=%s&force=1&forceEdit=1", SECTION_ID)));
+        return new OpenProjectAdminPage();
+    }
+
+    /**
+     * Release the locks that the current user holds on the OpenProject administration section, so that another user
+     * can open it afterwards without forcing them.
+     */
+    public static void releaseLocks()
+    {
+        // The cancel action releases the lock of the current user and redirects to the page (the form token is added
+        // by gotoPage).
+        getUtil().gotoPage("XWiki", "XWikiPreferences", "cancel", "");
+        getUtil().gotoPage(new LocalDocumentReference(List.of("OpenProject", "Code"), "OpenProjectConfiguration"),
+            "cancel", "");
     }
 
     /**
