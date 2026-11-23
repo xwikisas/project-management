@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.livedata.test.po.TableLayoutElement;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
 import org.xwiki.test.ui.TestUtils;
@@ -97,6 +98,14 @@ public class OpenProjectPresetIT extends AbstractOpenProjectIT
 
         // The preset is listed in the administration section.
         assertEquals("No", OpenProjectAdminPage.gotoPage().getListedPresetChartFlag(presetName));
+
+        // The preset page is hidden, so that it doesn't show up in the navigation tree, but it's still listed for the
+        // administrators who don't display the hidden pages (superadmin always displays them).
+        assertTrue(setup.rest().<Page>get(presetReference).isHidden());
+        setup.createAdminUser();
+        setup.loginAsAdmin();
+        assertEquals("No", OpenProjectAdminPage.gotoPage().getListedPresetChartFlag(presetName));
+        setup.loginAsSuperAdmin();
 
         // Use the preset in a macro.
         setup.deletePage(testReference);
