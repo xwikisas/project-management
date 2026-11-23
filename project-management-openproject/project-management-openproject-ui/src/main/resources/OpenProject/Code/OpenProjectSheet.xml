@@ -268,7 +268,7 @@
       id="openproject-preset-filters"
       properties="name,isMultiple,_actions"
       source="liveTable"
-      sourceParameters="className=ProjectManagement.Code.Presets.PresetClass&amp;translationPrefix=openproject.presets."
+      sourceParameters="className=ProjectManagement.Code.Presets.PresetClass&amp;translationPrefix=openproject.presets.&amp;queryFilters=currentlanguage"
     /}}
 
     ## Styling job schedule.
