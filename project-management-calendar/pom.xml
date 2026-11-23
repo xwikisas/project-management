@@ -130,6 +130,11 @@
     <build>
         <plugins>
             <plugin>
+                <!-- Runs the JavaScript unit tests of src/test/node, configured in the parent POM. -->
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <executions>
