@@ -66,6 +66,7 @@ import com.xwiki.projectmanagement.openproject.auth.OpenProjectAuthenticator;
 import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.SavedQuery;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
@@ -448,6 +449,13 @@ public class DefaultOpenProjectApiClient implements OpenProjectApiClient
         String queryUrl = String.format(API_URL_QUERY, PathSegmentEncoder.encode(queryId));
         JsonNode queryJson = getOpenProjectResponse(queryUrl, null, null, "", "", "");
         return queryJson.path(OP_RESPONSE_LINKS).path(OP_RESPONSE_RESULTS).path(HREF).asText();
+    }
+
+    @Override
+    public SavedQuery getQuery(String queryId) throws ProjectManagementException
+    {
+        String queryUrl = String.format(API_URL_QUERY, PathSegmentEncoder.encode(queryId));
+        return new SavedQuery(getOpenProjectResponse(queryUrl, null, null, "", "", ""));
     }
 
     @Override

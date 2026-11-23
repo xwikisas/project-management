@@ -33,6 +33,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperty;
+import com.xwiki.projectmanagement.openproject.OpenProjectWorkItemSource;
 
 /**
  * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectChartMacro}.
@@ -73,13 +74,23 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
         this.instance = instance;
     }
 
+    // The series are displayed after the widget of the source parameter, which selects the charted work packages.
     @PropertyDisplayType(OpenProjectFilters.class)
     @PropertyGroup("filters")
-    @PropertyOrder(10)
+    @PropertyOrder(50)
     @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(OpenProjectWorkItemSource.class)
+    @PropertyGroup("filters")
+    @PropertyOrder(1)
+    @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
     }
 
     @PropertyDisplayType(OpenProjectProperty.class)
@@ -100,6 +111,7 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
 
     @PropertyDisplayType(OpenProjectChartPreset.class)
     @PropertyGroup("filters")
+    @PropertyOrder(15)
     @Override
     public void setPresetId(String preset)
     {

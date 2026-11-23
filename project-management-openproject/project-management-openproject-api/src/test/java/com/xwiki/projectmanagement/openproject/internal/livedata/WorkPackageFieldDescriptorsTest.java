@@ -73,6 +73,8 @@ class WorkPackageFieldDescriptorsTest
         assertEquals("/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/versions?search={encodedQuery}",
             version.getFilter().getParameters().get("searchURL"));
         assertEquals(true, version.getFilter().getParameters().get("multiValue"));
+        // The versions and the users are written by name in the query of the macro content.
+        assertEquals(true, version.getFilter().getParameters().get("valueNames"));
 
         LiveDataPropertyDescriptor category = descriptors.get(1);
         assertFalse(category.isFilterable());
@@ -81,6 +83,7 @@ class WorkPackageFieldDescriptorsTest
 
         assertEquals(List.of("=", "!"), getOperators(descriptors.get(2)));
         assertTrue(((String) descriptors.get(2).getFilter().getParameters().get("searchURL")).contains("/users?"));
+        assertEquals(true, descriptors.get(2).getFilter().getParameters().get("valueNames"));
 
         LiveDataPropertyDescriptor labels = descriptors.get(4);
         assertEquals("list", labels.getFilter().getId());
@@ -88,6 +91,8 @@ class WorkPackageFieldDescriptorsTest
         // A single-value list can't match all of several values.
         assertEquals(List.of("=", "!", "*", "!*"), getOperators(labels));
         assertNull(labels.getFilter().getParameters().get("multiValue"));
+        // The custom options are written by id: their names aren't resolved.
+        assertNull(labels.getFilter().getParameters().get("valueNames"));
 
         // The values that aren't links are displayed as text.
         LiveDataPropertyDescriptor notes = descriptors.get(5);

@@ -1007,6 +1007,36 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemByKey() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getWorkPackage("PROJ-7")).thenReturn(createWorkPackage(42));
+        doReturn(workPackages(42)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
+
+        assertEquals("42", this.openProjectClient.getWorkItem("PROJ-7").getIdentifier().getValue());
+    }
+
+    @Test
+    void getWorkItemByKeyThatDoesNotExist() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getWorkPackage("PROJ-404")).thenReturn(null);
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.getWorkItem("PROJ-404"));
+
+        assertEquals("Work Item with ID [PROJ-404] was not found.", exception.getMessage());
+    }
+
+    @Test
+    void getWorkItemWithInvalidId()
+    {
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.getWorkItem("1/2"));
+
+        assertEquals("Work Item with ID [1/2] was not found.", exception.getMessage());
+    }
+
+    @Test
     void getProjectThatDoesNotExist() throws ProjectManagementException
     {
         doReturn(new PaginatedResult<>(List.of(), 0, 1, 0)).when(this.openProjectApiClient)

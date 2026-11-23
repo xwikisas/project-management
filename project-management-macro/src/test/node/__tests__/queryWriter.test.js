@@ -97,4 +97,15 @@ describe("queryWriter", () => {
   it("writes without names", () => {
     expect(queryWriter.toQuery([filter("project", "=", "12")])).toBe("project = 12");
   });
+
+  it("writes the names of the values instead of their ids", () => {
+    const labels = { project: { 5: "Atlas mobile app" }, status: { 1: "New", 7: "2024" }, assignees: { me: "Me" } };
+    const getName = (property, value) => labels[property] && labels[property][value];
+    const names = new Map();
+    const filters = queryWriter.withValueNames([filter("project", "=", "5"), filter("status", "=", "1", "7", "9"),
+      filter("assignees", "=", "me"), filter("summary", "~", "5")], getName, names);
+    // A name made of digits is quoted, so that it isn't read as an id; a value without name is kept.
+    expect(queryWriter.toQuery(filters, names))
+      .toBe('project = "Atlas mobile app" AND status IN (New, "2024", 9) AND assignees = me AND summary ~ 5');
+  });
 });

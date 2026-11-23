@@ -338,10 +338,14 @@ public class OpenProjectAdministrationIT extends AbstractOpenProjectIT
 
             // Without a connection, the values of the filters can't be suggested: the macro editor tells to choose a
             // connection, and choosing one makes the filters already added suggest its values.
+            // The user has to choose the connection: the instance is displayed on top of the Work Packages tab, instead
+            // of the Connection tab.
             OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
             modal.clickMore();
-            assertEquals("No connection is chosen and there is no default connection: choose a connection in the "
-                + "Connection tab to get suggestions for the filter values.", modal.getFiltersNoConnectionHint());
+            assertTrue(modal.isInstanceOnTopOfWorkPackages());
+            assertFalse(modal.isConnectionTabDisplayed());
+            assertEquals("No connection is chosen and there is no default connection: choose an OpenProject instance "
+                + "to get suggestions for the filter values.", modal.getFiltersNoConnectionHint());
             FilterBuilderFilter statusFilter = modal.getFilterBuilder().addFilter("status");
             modal.selectInstance(CONNECTION_ID);
             assertFalse(modal.isFiltersNoConnectionHintDisplayed());

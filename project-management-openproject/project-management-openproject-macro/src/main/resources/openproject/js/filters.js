@@ -17,17 +17,21 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
- require(['jquery'], function ($) {
-   let getInstance = function () {
-     let input = $('.macro-editor-modal :input[name="instance"]');
-     // An empty instance means the default connection, whose name is held by the instance picker.
-     let instance = input.val() || input.attr('data-default-connection') || '';
-     // On an OpenProject dashboard, the macro can use the connection selected on the dashboard.
-     if (instance === 'use_selected_dashboard_connection') {
-       instance = $('#openproject-dashboard-connection-select').val() || '';
+ require.config({
+   paths: {
+     'openproject-connection': new XWiki.Document(XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT))
+       .getURL('jsx', 'resource=openproject/js/connection.js')
+   }
+ });
+ require(['jquery', 'openproject-connection'], function ($, connection) {
+   let getInstance = connection.getInstance;
+   // The work items picked in the macro editor are searched on the connection used by the macro.
+   $(document).on('pm:collectSourceParameters', '.macro-editor-modal .pm-work-item-source', function (event, params) {
+     let instance = getInstance();
+     if (instance) {
+       params.instance = instance;
      }
-     return instance;
-   };
+   });
    // Without a connection, the values of the filters can't be suggested: the user is told to choose one.
    let updateNoConnectionHint = function () {
      $('.macro-editor-modal .op-filters-no-connection').toggleClass('hidden', getInstance() !== '');

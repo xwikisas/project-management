@@ -224,5 +224,36 @@ define([], function () {
     });
   };
 
-  return { toQuery, fromParsedFilters, takesValue };
+  /**
+   * Replaces the values of the filters by their names, e.g. the id of a project by its name, so that the written
+   * query is readable; the client resolves the names into ids when the work items are retrieved. The keywords (e.g.
+   * me) and the values without name are kept.
+   *
+   * @param filters the Live Data filters
+   * @param getName returns the name of a value of a property, or undefined to keep the value: (property, value)
+   * @param names the values read as names, by property (a Map of Sets), to which the written names are added, so
+   *   that a name made of digits or looking like a keyword is written between quotes
+   * @return the filters with the names of their values
+   */
+  let withValueNames = function (filters, getName, names) {
+    return filters.map(filter => {
+      let changed = false;
+      let constraints = (filter.constraints || []).map(constraint => {
+        let value = constraint.value;
+        if (typeof value !== 'string' || value === '' || VALUE_KEYWORDS.includes(value.toLowerCase())) {
+          return constraint;
+        }
+        let name = getName(filter.property, value);
+        if (typeof name !== 'string' || name.trim() === '' || name === value) {
+          return constraint;
+        }
+        names.set(filter.property, (names.get(filter.property) || new Set()).add(name));
+        changed = true;
+        return Object.assign({}, constraint, { value: name });
+      });
+      return changed ? Object.assign({}, filter, { constraints }) : filter;
+    });
+  };
+
+  return { toQuery, fromParsedFilters, takesValue, withValueNames };
 });

@@ -36,6 +36,7 @@ import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.SavedQuery;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
@@ -174,6 +175,13 @@ public class CachingOpenProjectApiClient implements OpenProjectApiClient
     public String getQueryResultsUrl(String queryId) throws ProjectManagementException
     {
         return client.getQueryResultsUrl(queryId);
+    }
+
+    @Override
+    public SavedQuery getQuery(String queryId) throws ProjectManagementException
+    {
+        // Not cached, as the results url: a saved query changed in OpenProject is described as it is now.
+        return this.client.getQuery(queryId);
     }
 
     @Override

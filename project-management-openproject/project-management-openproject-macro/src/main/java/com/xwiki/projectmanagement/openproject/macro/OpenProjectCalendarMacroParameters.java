@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.macro;
 import java.awt.Color;
 import java.util.List;
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyHidden;
@@ -34,6 +35,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectFilter;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
+import com.xwiki.projectmanagement.openproject.OpenProjectWorkItemSource;
 
 /**
  * The parameters for the {@link com.xwiki.projectmanagement.openproject.internal.macro.OpenProjectCalendarMacro}.
@@ -98,12 +100,22 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
      * @param filters the filters to be applied to the work packages retrieved from the configured OpenProject instance
      */
     @PropertyDisplayType(OpenProjectFilter.class)
+    @PropertyDisplayHidden
     @PropertyGroup("filters")
     @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(OpenProjectWorkItemSource.class)
+    @PropertyGroup("filters")
+    @PropertyOrder(1)
+    @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
     }
 
     @PropertyHidden
@@ -157,6 +169,7 @@ public class OpenProjectCalendarMacroParameters extends CalendarMacroParameters 
 
     @PropertyDisplayType(OpenProjectPreset.class)
     @PropertyGroup("filters")
+    @PropertyOrder(15)
     @Override
     public void setPresetId(String preset)
     {

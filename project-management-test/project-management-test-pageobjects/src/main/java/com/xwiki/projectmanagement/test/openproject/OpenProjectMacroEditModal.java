@@ -112,6 +112,8 @@ public class OpenProjectMacroEditModal extends AbstractOpenProjectMacroEditModal
 
     private WebElement getDisplayerSelect()
     {
+        // The displayer is in the Display tab.
+        selectParameterTab("displayer");
         return getDriver().findElement(By.xpath("//select[@name='displayer']"));
     }
 }

@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.xwiki.component.annotation.Role;
+import org.xwiki.stability.Unstable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
@@ -31,6 +32,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.SavedQuery;
 import com.xwiki.projectmanagement.openproject.model.Sprint;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
@@ -194,6 +196,22 @@ public interface OpenProjectApiClient
     {
         throw new UnsupportedOperationException(
             "Retrieving the results url of a saved query is not supported by this client implementation.");
+    }
+
+    /**
+     * Retrieves a saved query, e.g. to name it and to tell whether a work package list can express it.
+     *
+     * @param queryId the id of the saved query
+     * @return the saved query
+     * @throws ProjectManagementException if the query couldn't be retrieved, e.g. with the 404 status code when it
+     *     doesn't exist or the user of the client isn't allowed to see it
+     * @since 1.5.0
+     */
+    @Unstable
+    default SavedQuery getQuery(String queryId) throws ProjectManagementException
+    {
+        throw new UnsupportedOperationException(
+            "Retrieving a saved query is not supported by this client implementation.");
     }
 
     /**

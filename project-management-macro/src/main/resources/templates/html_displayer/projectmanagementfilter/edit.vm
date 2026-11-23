@@ -17,19 +17,11 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
-#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
-#template("filter_builder.vm")
-#filterBuilder({"client": "$!clientId"})
-#set ($deps = {
-  'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
-})
-<textarea class="proj-manag-filter hidden" value="$!escapetool.xml($!displayer.value)"
+## The value of the deprecated filters parameter (Live Data filters as JSON), which the macro editor doesn't display:
+## the filter builder of the widget of the source parameter imports it (see workItemSourceParameter.js), and the widget
+## clears it once the filters are written as a query in the macro content.
+<textarea class="proj-manag-filter hidden" data-legacy-filters="true"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
-  data-deps="$escapetool.xml($jsontool.serialize($deps))"
-  ## In a macro having a content, the filters are written as a query in the content (see filterParameter.js).
-  data-query="true"
-  data-query-error="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.queryNotEditable'))"
-  data-other-source="$escapetool.xml($services.localization.render('projectmanagement.macro.filter.otherSource'))"
-/>
+>$!escapetool.xml($displayer.value)</textarea>

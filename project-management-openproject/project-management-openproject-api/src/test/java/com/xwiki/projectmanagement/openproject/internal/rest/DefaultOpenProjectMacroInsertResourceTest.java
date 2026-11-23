@@ -29,6 +29,8 @@ import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.context.Execution;
 import org.xwiki.context.ExecutionContext;
 import org.xwiki.model.reference.DocumentReference;
@@ -152,12 +154,29 @@ class DefaultOpenProjectMacroInsertResourceTest
     {
         MacroBlock macro = (MacroBlock) blocks.get(0).getChildren().get(0);
         WordBlock line = (WordBlock) blocks.get(0).getChildren().get(1);
-        return String.format("{{%s %s/}}%s", macro.getId(), macro.getParameters(), line.getWord());
+        if (macro.getContent() == null) {
+            return String.format("{{%s %s/}}%s", macro.getId(), macro.getParameters(), line.getWord());
+        }
+        return String.format("{{%1$s %2$s}}%3$s{{/%1$s}}%4$s", macro.getId(), macro.getParameters(),
+            macro.getContent(), line.getWord());
     }
 
     private XWikiDocument getPage() throws XWikiException
     {
         return this.oldcore.getSpyXWiki().getDocument(PAGE, this.oldcore.getXWikiContext());
+    }
+
+    @Test
+    void insertIntoPageWithSeveralWorkPackages() throws Exception
+    {
+        MacroInsertion insertion = createInsertion("openproject");
+        insertion.setMacroContent("236, PROJ-42,7");
+
+        Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", insertion);
+
+        assertEquals(200, response.getStatus());
+        assertEquals("{{openproject {source=list}}}236, PROJ-42,7{{/openproject}}" + CONTENT + "\n",
+            getPage().getContent());
     }
 
     @Test
@@ -167,7 +186,7 @@ class DefaultOpenProjectMacroInsertResourceTest
 
         assertEquals(200, response.getStatus());
         XWikiDocument page = getPage();
-        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n", page.getContent());
+        assertEquals("{{openproject {source=list}}}1{{/openproject}}" + CONTENT + "\n", page.getContent());
         // The saved page is written by the current user, whatever the previous authors of the page were.
         UserReference currentUser = this.userResolver.resolve(CURRENT_USER);
         assertEquals(currentUser, page.getAuthors().getContentAuthor());
@@ -188,7 +207,7 @@ class DefaultOpenProjectMacroInsertResourceTest
         Response response = this.resource.insetIntoPage("xwiki", "Space", "Page", createInsertion("openproject"));
 
         assertEquals(200, response.getStatus());
-        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n",
+        assertEquals("{{openproject {source=list}}}1{{/openproject}}" + CONTENT + "\n",
             this.oldcore.getDocuments().get(new DocumentReference(PAGE, Locale.ROOT)).getContent());
     }
 
@@ -200,7 +219,7 @@ class DefaultOpenProjectMacroInsertResourceTest
         page.setContent(CONTENT + "\nGoodbye moon");
         this.oldcore.getSpyXWiki().saveDocument(page, context);
         MacroInsertion otherInsertion = createInsertion("openproject");
-        otherInsertion.setMacroParameters(Map.of("identifier", "2"));
+        otherInsertion.setMacroContent("2");
         otherInsertion.setSelectedText("moon");
         otherInsertion.setFullLine("Goodbye moon");
         otherInsertion.setOffset(8);
@@ -231,8 +250,8 @@ class DefaultOpenProjectMacroInsertResourceTest
         assertNull(otherFailure.get());
 
         // The second insertion is done on the page saved by the first one.
-        assertEquals("{{openproject {identifier=1}/}}" + CONTENT + "\n{{openproject {identifier=2}/}}Goodbye moon",
-            getPage().getContent());
+        assertEquals("{{openproject {source=list}}}1{{/openproject}}" + CONTENT
+            + "\n{{openproject {source=list}}}2{{/openproject}}Goodbye moon", getPage().getContent());
     }
 
     private void waitUntilBlocked(Thread thread) throws InterruptedException
@@ -296,6 +315,22 @@ class DefaultOpenProjectMacroInsertResourceTest
         assertPageUnchanged();
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "1{{/openproject}}text{{openproject}}2", "1\ntext", "1~", "1{{openproject}}2",
+        "1\r", "1,\r\n2", "", " ", "1,", "1;2", "1 2", " 1" })
+    void insertIntoPageWithInvalidContent(String content) throws Exception
+    {
+        MacroInsertion insertion = createInsertion("openproject");
+        insertion.setMacroContent(content);
+
+        WebApplicationException exception = assertThrows(WebApplicationException.class,
+            () -> this.resource.insetIntoPage("xwiki", "Space", "Page", insertion));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        assertEquals("Invalid macro content.", exception.getResponse().getEntity());
+        assertPageUnchanged();
+    }
+
     private void assertPageUnchanged() throws XWikiException
     {
         XWikiDocument page = getPage();
@@ -309,7 +344,8 @@ class DefaultOpenProjectMacroInsertResourceTest
     {
         MacroInsertion insertion = new MacroInsertion();
         insertion.setMacroId(macroId);
-        insertion.setMacroParameters(Map.of("identifier", "1"));
+        insertion.setMacroParameters(Map.of("source", "list"));
+        insertion.setMacroContent("1");
         insertion.setSelectedText("world");
         insertion.setFullLine(CONTENT);
         insertion.setOffset(6);

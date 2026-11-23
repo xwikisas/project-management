@@ -367,6 +367,64 @@ class SuggestTest
     }
 
     @Test
+    void getSuggestionsForVersionsSharingTheirName() throws ProjectManagementException
+    {
+        Version version1 = createVersion(1, "1.0");
+        Version version2 = createVersion(2, "1.0");
+        Version version3 = createVersion(3, "2.0");
+        when(this.openProjectApiClient.getVersions())
+            .thenReturn(new PaginatedResult<>(List.of(version1, version2, version3), 0, 3, 3));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, null);
+
+        // The versions whose name other versions have (e.g. in other projects) are written by id.
+        assertEquals(List.of(suggestion(version1), suggestion(version2), namedSuggestion(version3)),
+            response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForUsersSharingTheirName() throws ProjectManagementException
+    {
+        User john1 = createUser(1, "John Doe");
+        User john2 = createUser(2, "John Doe");
+        User jane = createUser(3, "Jane Doe");
+        when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter("doe")))
+            .thenReturn(new PaginatedResult<>(List.of(john1, john2, jane), 0, 3, 3));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", PAGE_SIZE, null);
+
+        assertEquals(List.of(suggestion(john1), suggestion(john2), namedSuggestion(jane)), response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForUsersFillingThePage() throws ProjectManagementException
+    {
+        User jane = createUser(3, "Jane Doe");
+        when(this.openProjectApiClient.getUsers(1, 1, nameFilter("doe")))
+            .thenReturn(new PaginatedResult<>(List.of(jane), 0, 1, 2));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", 1, null);
+
+        // Another user having the same name could be on the next page: the user is written by id.
+        assertEquals(List.of(suggestion(jane)), response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForSelectedUser() throws ProjectManagementException
+    {
+        User jane = createUser(3, "Jane Doe");
+        when(this.openProjectApiClient.getUsers(eq(1), eq(PAGE_SIZE), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(jane), 0, 1, 1));
+        when(this.openProjectApiClient.getUsers(1, 100, nameFilter("jane doe")))
+            .thenReturn(new PaginatedResult<>(List.of(jane, createUser(4, "Jane Doe")), 0, 2, 2));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "j", PAGE_SIZE, "3");
+
+        // The selected user is retrieved alone: the users having the same name are searched.
+        assertEquals(List.of(suggestion(jane)), response.getEntity());
+    }
+
+    @Test
     void getSuggestionsForProjectSelectedByIdentifier() throws ProjectManagementException
     {
         Project demo = createProject(3, "demo-project", "Demo");
@@ -379,7 +437,8 @@ class SuggestTest
             "demo-project");
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3")),
+        assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3", "queryValue",
+            "demo-project")),
             response.getEntity());
     }
 
@@ -396,10 +455,12 @@ class SuggestTest
         // The pickers send their value along with the text typed by the user.
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "s", PAGE_SIZE, selectedItem);
 
-        // The selected project is suggested first, by the value of the picker, and only once.
+        // The selected project is suggested first, by the value of the picker, and only once. The projects are written
+        // by their identifier in the query of a macro content.
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-        assertEquals(List.of(Map.of("value", selectedItem, "label", "Demo", "url", "location3"),
-            Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+        assertEquals(List.of(
+            Map.of("value", selectedItem, "label", "Demo", "url", "location3", "queryValue", "demo-project"),
+            Map.of("value", "4", "label", "Scrum", "url", "location4", "queryValue", "scrum")), response.getEntity());
     }
 
     private static Stream<String> selectedProjects()
@@ -444,7 +505,8 @@ class SuggestTest
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
             "use_selected_dashboard_project");
 
-        assertEquals(List.of(Map.of("value", "4", "label", "Scrum", "url", "location4")), response.getEntity());
+        assertEquals(List.of(Map.of("value", "4", "label", "Scrum", "url", "location4", "queryValue", "scrum")),
+            response.getEntity());
         verify(this.openProjectApiClient, never()).getProject(anyString());
     }
 
@@ -506,6 +568,15 @@ class SuggestTest
         return new FilterBuilder().addFilter("name", FilterBuilder.Operator.CONTAINS, search).build();
     }
 
+    private static User createUser(int id, String name)
+    {
+        User user = new User();
+        user.setId(id);
+        user.setName(name);
+        user.setSelf(new Linkable(String.valueOf(id), "location" + id));
+        return user;
+    }
+
     private static Project createProject(int id, String identifier, String name)
     {
         Project project = new Project();
@@ -534,22 +605,32 @@ class SuggestTest
         return version;
     }
 
+    /**
+     * Checks the suggestions of the given resources, the ones other than projects (written by their identifier, which
+     * the test projects don't have) being written by their name in a query.
+     */
     private void verifySuccessResponse(Response response, List<? extends BaseOpenProjectObject> generatedObjects)
     {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(
             generatedObjects
                 .stream()
-                .map(
-                    (el) -> Map.of(
-                        "value", el.getId().toString(),
-                        "label", el.getName(),
-                        "url", el.getSelf().getLocation()
-                    )
-                )
+                .map(el -> el instanceof Project ? suggestion(el) : namedSuggestion(el))
                 .collect(Collectors.toList()),
             response.getEntity()
         );
+    }
+
+    private static Map<String, String> suggestion(BaseOpenProjectObject object)
+    {
+        return Map.of("value", object.getId().toString(), "label", object.getName(), "url",
+            object.getSelf().getLocation());
+    }
+
+    private static Map<String, String> namedSuggestion(BaseOpenProjectObject object)
+    {
+        return Map.of("value", object.getId().toString(), "label", object.getName(), "url",
+            object.getSelf().getLocation(), "queryValue", object.getName());
     }
 
     @Test

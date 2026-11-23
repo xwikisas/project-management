@@ -219,18 +219,34 @@ public final class OpenProjectFilterValueResolver
         }
     }
 
+    /**
+     * @param property a work item property, e.g. {@code status}
+     * @param filterValueType the type of the values of its OpenProject filter, e.g. {@code []Version}, or
+     *     {@code null} when unknown
+     * @return {@code true} if the names written in the values of the filters on this property are resolved into ids
+     *     (e.g. the status {@code Closed}), {@code false} if they're kept as text
+     */
+    public static boolean resolvesNames(String property, String filterValueType)
+    {
+        return getKind(property, filterValueType) != null;
+    }
+
+    private static Kind getKind(String property, String filterValueType)
+    {
+        Kind kind = property == null ? null : PROPERTY_KINDS.get(property);
+        if (kind == null && filterValueType != null) {
+            kind = FILTER_VALUE_TYPE_KINDS.get(filterValueType);
+        }
+        return kind;
+    }
+
     private Kind getKind(String property)
     {
         if (property == null) {
             return null;
         }
-        Kind kind = PROPERTY_KINDS.get(property);
-        if (kind == null) {
-            WorkPackageField field = this.fields.getField(property);
-            kind = field == null || field.getFilterValueType() == null ? null
-                : FILTER_VALUE_TYPE_KINDS.get(field.getFilterValueType());
-        }
-        return kind;
+        WorkPackageField field = this.fields.getField(property);
+        return getKind(property, field == null ? null : field.getFilterValueType());
     }
 
     private LiveDataQuery.Filter resolveFilter(LiveDataQuery.Filter filter, Kind kind, Set<String> projectIds)

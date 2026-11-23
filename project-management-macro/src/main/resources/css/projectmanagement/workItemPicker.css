@@ -1,0 +1,54 @@
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+/* The picker of the work items listed by the "list" source of the work item macros (workItemPicker.js). */
+.pm-workitem-picker .pm-workitem-picker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/*
+ * A listed work item that can't be found, or that isn't a work item id or key. The selector is more specific than the
+ * ones of the chips of the suggest widget.
+ */
+.pm-workitem-picker div.item.pm-workitem-picker-item.pm-workitem-picker-missing {
+  color: #8a6d3b;
+  background-color: #fcf8e3;
+  border: 1px solid #faebcc;
+}
+
+.pm-workitem-picker .pm-workitem-picker-remove {
+  padding: 0 2px;
+  border: none;
+  background: none;
+  color: inherit;
+  line-height: 1;
+  opacity: .6;
+}
+
+.pm-workitem-picker .pm-workitem-picker-remove:hover,
+.pm-workitem-picker .pm-workitem-picker-remove:focus {
+  opacity: 1;
+}
+
+.pm-workitem-picker .pm-workitem-picker-pasteToggle {
+  padding-left: 0;
+}

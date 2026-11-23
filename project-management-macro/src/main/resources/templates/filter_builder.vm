@@ -99,6 +99,10 @@
         'and', 'or', 'between'])
       #set ($discard = $l10n.put($key, $services.localization.render("projectmanagement.macro.filter.$key")))
     #end
+    ## The caller can replace some of these labels, e.g. the summary of no filter.
+    #if ($parameters.l10n)
+      #set ($discard = $l10n.putAll($parameters.l10n))
+    #end
     <div class="proj-manag-constraint-builder proj-manag-macro-param" data-client="$escapetool.xml($clientId)"
       data-cfg="$escapetool.xml($jsontool.serialize($filterableProperties))"
       data-l10n="$escapetool.xml($jsontool.serialize($l10n))">

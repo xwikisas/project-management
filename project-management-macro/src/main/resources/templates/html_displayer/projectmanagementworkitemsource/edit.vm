@@ -1,0 +1,137 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+## The widget choosing how a work item macro selects its work items, displayed for its source parameter. It writes
+## the source parameter (the hidden input, first, which the macro editor fills with the value of the macro) and the
+## macro content, whose field is hidden; its own fields have no name, so that the macro editor doesn't submit them.
+## See workItemSourceParameter.js, which also moves the preset parameter under the filters.
+##
+## Parameters (set by the template of the client including this one):
+## $clientId the client, e.g. openproject; the labels are looked up under "${clientId}.macro.source." first
+## $linkWay whether the work items can be selected by a link to the tool (the url source)
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/workItemSourceParameter.js', {'minify': false}))
+## The filter builder of the matching filters is handled by filterParameter.js.
+#set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
+#set ($discard = $xwiki.ssrx.use('css/projectmanagement/workItemPicker.css'))
+#template('filter_builder.vm')
+#if ("$!clientId" == '')
+  #set ($clientId = "$!macroIdAsString")
+  #set ($clientId = $clientId.split('/')[0])
+#end
+#**
+ * Sets $pmSourceKey to the translation key of a label of the widget: the one of the client if it exists, otherwise the
+ * generic one.
+ *#
+#macro (pmSourceKey $key)
+  #set ($pmSourceKey = "${clientId}.macro.source.$key")
+  #if (!$services.localization.get($pmSourceKey))
+    #set ($pmSourceKey = "projectmanagement.macro.source.$key")
+  #end
+#end
+#macro (pmSourceLabel $key)
+#pmSourceKey($key)$escapetool.xml($services.localization.render($pmSourceKey))#end
+## The messages formatted by the JavaScript code, {0} being replaced by their parameter.
+#set ($messages = {})
+#foreach ($key in ['dropped', 'dropped.query', 'dropped.list', 'dropped.url', 'dropped.advanced', 'dropped.filters',
+    'dropped.identifier', 'identifier.deprecated'])
+  #pmSourceKey($key)
+  #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey, ['{0}'])))
+#end
+#foreach ($key in ['dropped.separator', 'dropped.preset', 'emptyList', 'editAsText', 'editAsFilters'])
+  #pmSourceKey($key)
+  #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey)))
+#end
+#set ($deps = {
+  'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
+})
+<div class="pm-work-item-source" data-client="$escapetool.xml($clientId)"
+  data-rest-url="$escapetool.xml("$request.contextPath/rest")" data-wiki="$escapetool.xml($xcontext.database)"
+  data-l10n="$escapetool.xml($jsontool.serialize($messages))"
+  data-deps="$escapetool.xml($jsontool.serialize($deps))">
+  <input type="hidden" value="$!escapetool.xml($displayer.value)"
+    #foreach ($parameter in $displayer.parameters.entrySet())
+      $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
+    #end
+  />
+  ## The deprecated identifier parameter, which the user can convert to the content.
+  <div class="box warningmessage pm-source-identifier pm-hidden">
+    <p class="pm-source-identifier-message"></p>
+    <button type="button" class="btn btn-default btn-sm pm-source-convert">#pmSourceLabel('identifier.convert')</button>
+  </div>
+  ## The advanced Live Data configuration, kept as it is.
+  <div class="box infomessage pm-source-locked pm-hidden">#pmSourceLabel('advanced.locked')</div>
+  ## A select list rather than radio buttons, to leave the vertical space to the editor of the selected way. The
+  ## advanced way is removed by the JavaScript code when the macro doesn't use it.
+  <div class="pm-source-ways">
+    #set ($waySelectId = "pm-source-way-$mathtool.random(1000, 1000000)")
+    ## The macro editor displays the name of the parameter above: the label is for assistive technologies.
+    <label class="sr-only" for="$waySelectId">#pmSourceLabel('label')</label>
+    ## No name: it's not a macro parameter, the macro editor doesn't submit it.
+    <select id="$waySelectId" class="form-control pm-source-way-select">
+      #set ($ways = ['query', 'list'])
+      #if ($linkWay)
+        #set ($discard = $ways.add('url'))
+      #end
+      #set ($discard = $ways.add('advanced'))
+      #foreach ($way in $ways)
+        <option value="$way">#pmSourceLabel("${way}.label")</option>
+      #end
+    </select>
+  </div>
+  ## Matching filters: the filter builder, or the query as text.
+  <div class="pm-source-editor" data-way="query">
+    <div class="pm-source-query-builder" data-builder-role="query"
+      data-query-error="$escapetool.xml($services.localization.render(
+        'projectmanagement.macro.filter.queryNotEditable'))">
+      ## Without filter, the summary of the builder tells what the macro selects.
+      #pmSourceKey('noFilter')
+      #filterBuilder({"client": "$!clientId", "l10n": {"summaryAll": $services.localization.render($pmSourceKey)}})
+    </div>
+    <div class="pm-source-query-text pm-hidden">
+      <label class="pm-source-field-label">#pmSourceLabel('query.textLabel')
+        <textarea class="form-control pm-source-query-input" rows="3"></textarea>
+      </label>
+      <p class="xHint">#pmSourceLabel('query.textHint')</p>
+    </div>
+    <button type="button" class="btn btn-link pm-source-toggle-text">#pmSourceLabel('editAsText')</button>
+    ## The preset parameter is moved here.
+    <div class="pm-source-preset-slot"></div>
+  </div>
+  ## Specific work items, picked by the work item picker (workItemPicker.js), mounted by workItemSourceParameter.js.
+  <div class="pm-source-editor pm-hidden" data-way="list">
+    <span class="pm-source-field-label">#pmSourceLabel('list.inputLabel')</span>
+    <div class="pm-source-list-picker"></div>
+  </div>
+  #if ($linkWay)
+    ## A link to the tool, described by the client (see the pm:urlChanged event of workItemSourceParameter.js).
+    <div class="pm-source-editor pm-hidden" data-way="url">
+      <label class="pm-source-field-label">#pmSourceLabel('url.inputLabel')
+        <input type="text" class="form-control pm-source-url-input" />
+      </label>
+      <p class="xHint">#pmSourceLabel('url.inputHint')</p>
+      <div class="pm-source-url-description" aria-live="polite"></div>
+    </div>
+  #end
+  ## Any other source, e.g. the Live Data JSON filters, only displayed when the macro uses it.
+  <div class="pm-source-editor pm-hidden" data-way="advanced">
+    <label class="pm-source-field-label">#pmSourceLabel('advanced.contentLabel')
+      <textarea class="form-control pm-source-advanced-input" rows="6"></textarea>
+    </label>
+  </div>
+</div>

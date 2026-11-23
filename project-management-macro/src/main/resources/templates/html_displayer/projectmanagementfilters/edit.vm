@@ -20,7 +20,7 @@
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
 #template("filter_builder.vm")
 ## The title of each series, the JavaScript code replacing __N__ by its number.
-<div class="project-management-filters"
+<div class="project-management-filters" data-builder-role="series"
   data-series-title="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.series', ['__N__']))">
 #set ($firstSeriesTitle = $services.localization.render('projectmanagement.macro.chart.series', [1]))
 #filterBuilder({"client": "$!clientId", "title": $firstSeriesTitle, "removable": true})

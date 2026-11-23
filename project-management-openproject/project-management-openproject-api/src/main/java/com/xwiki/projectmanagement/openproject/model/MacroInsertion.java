@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.Map;
 
+import org.xwiki.stability.Unstable;
+
 /**
  * Models the location of a selected text in a page.
  *
@@ -40,6 +42,8 @@ public class MacroInsertion
     private boolean force;
 
     private Map<String, String> macroParameters;
+
+    private String macroContent;
 
     /**
      * @return the text that was selected by the user.
@@ -103,6 +107,27 @@ public class MacroInsertion
     public void setMacroParameters(Map<String, String> macroParameters)
     {
         this.macroParameters = macroParameters;
+    }
+
+    /**
+     * @return the content of the inserted macro (e.g. the work packages it displays), or {@code null} when the macro
+     *     is inserted without content
+     * @since 1.5.0
+     */
+    @Unstable
+    public String getMacroContent()
+    {
+        return macroContent;
+    }
+
+    /**
+     * @param macroContent see {@link #getMacroContent()}.
+     * @since 1.5.0
+     */
+    @Unstable
+    public void setMacroContent(String macroContent)
+    {
+        this.macroContent = macroContent;
     }
 
     /**

@@ -17,15 +17,24 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-require(['jquery'], function ($) {
+require.config({
+  paths: {
+    'projectmanagement-macro-editor-layout': new XWiki.Document(XWiki.Model.resolve('Main.WebHome',
+      XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=js/projectmanagement/macro/macroEditorLayout.js')
+  }
+});
+require(['jquery', 'projectmanagement-macro-editor-layout'], function ($, layout) {
   // The keys are the values of the displayer parameter. The single and inline displayers display the first work item
-  // only, with properties of their own: the sort and the offset still choose which work item comes first.
+  // only, with properties of their own: the sort and the offset still choose which work item comes first. The page
+  // sizes and the id only matter for the table and cards displayers.
   const unneededParams = {
-    single: ["limit", "properties"],
-    inline: ["limit", "properties"],
-    list: ["properties"],
-    enum: ["properties"]
+    single: ["limit", "properties", "pageSizes", "id"],
+    inline: ["limit", "properties", "pageSizes", "id"],
+    list: ["properties", "pageSizes", "id"],
+    enum: ["properties", "pageSizes", "id"]
   };
+  // The advanced parameters of the Display group, grouped under a "More options" toggle.
+  const moreOptions = ['pageSizes', 'id'];
   // The values of the deprecated workItemsDisplayer parameter, and the matching values of the displayer parameter.
   const legacyDisplayers = {
     liveData: 'table',
@@ -42,30 +51,13 @@ require(['jquery'], function ($) {
     let parameters = (input.macroCall && input.macroCall.parameters) || {};
     return Object.keys(parameters).some(key => key.toLowerCase() === 'displayer');
   };
-  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it
-  // empty, and its tab when it holds no other visible field, activating the first visible tab if it was the active one
-  // (the macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
-  // Keep in sync with the copy in project-management-openproject-macro's openproject/js/countParameter.js.
-  let hideParameter = function (input) {
-    let tabPanel = input.closest('.macro-parameter').addClass('hidden').closest('.tab-pane');
-    while (tabPanel.length > 0 && tabPanel.find('.macro-parameter').not('.hidden').length === 0) {
-      let tabPanels = tabPanel.parent().children();
-      let tabs = tabPanel.parent().siblings('[role="tablist"]').children();
-      tabs.eq(tabPanels.index(tabPanel)).add(tabPanel).addClass('hidden');
-      if (tabPanel.hasClass('active')) {
-        tabs.add(tabPanels).removeClass('active');
-        tabs.not('.hidden').first().add(tabPanels.not('.hidden').first()).addClass('active');
-      }
-      tabPanel = tabPanel.parent().closest('.tab-pane');
-    }
-  };
   // Edit a macro using the deprecated parameter with the displayer one, so that the displayer chosen in the editor,
   // the default one included, isn't overridden by the deprecated parameter left in the macro. The displayer parameter
   // takes precedence over the deprecated one, so the deprecated value is used only when the macro call has no displayer
-  // parameter.
-  let migrateLegacyDisplayer = function () {
-    let legacyInput = $('.macro-editor :input[name="workItemsDisplayer"]');
-    let displayerSelect = $('.macro-editor select[name="displayer"]');
+  // parameter. The field of the deprecated parameter is hidden, so that the macro editor doesn't display it empty.
+  let migrateLegacyDisplayer = function (editor) {
+    let legacyInput = editor.find(':input[name="workItemsDisplayer"]');
+    let displayerSelect = editor.find('select[name="displayer"]');
     let legacyValue = Object.keys(legacyDisplayers).find(key => key.toLowerCase() ===
       (legacyInput.val() || '').toLowerCase());
     if (legacyValue && displayerSelect.length > 0) {
@@ -73,16 +65,12 @@ require(['jquery'], function ($) {
         displayerSelect.val(legacyDisplayers[legacyValue]);
       }
       legacyInput.val('');
-      hideParameter(legacyInput);
+      layout.hideParameter(editor, 'workItemsDisplayer');
     }
   };
-  let initParams = function () {
-    migrateLegacyDisplayer();
-    hideShowParams();
-  };
-  let hideShowParams = function () {
-    let displayerVal = ($('.macro-editor select[name="displayer"]').val() || '').toLowerCase();
-    $('.macro-editor').find('.macro-parameter').each(function () {
+  let hideShowParams = function (editor) {
+    let displayerVal = (editor.find('select[name="displayer"]').val() || '').toLowerCase();
+    editor.find('.macro-parameter').each(function () {
       let element = $(this);
       let foundInput = element.find('.macro-parameter-field :input');
       if (foundInput.length > 0 && (unneededParams[displayerVal] || []).indexOf(foundInput.attr('name')) > -1) {
@@ -91,35 +79,19 @@ require(['jquery'], function ($) {
         element.show();
       }
     });
+    layout.refreshMoreOptions(editor);
   };
-  $(document).on('change', '.macro-editor select[name="displayer"]', hideShowParams);
-  $(document).on('show.bs.modal', '.modal', function () {
-    let modal = $(this);
-    setTimeout(function () {
-      const content = modal.find('.macro-editor');
-      if (!content || content.length <= 0) {
-        console.log('Modal content not found');
-        return;
-      }
-      if (!content[0].classList.contains('loading')) {
-        initParams();
-        return;
-      }
-      const observer = new MutationObserver(() => {
-        if (!content[0].classList.contains('loading')) {
-          observer.disconnect();
-          initParams();
-        }
-      });
-
-      observer.observe(content[0], {
-        attributes: true,
-        attributeFilter: ['class'],
-        subtree: true
-      });
-    });
-    setTimeout(initParams);
+  let initParams = function (editor) {
+    let displayerSelect = editor.find('select[name="displayer"]');
+    layout.mergeGroupTabs(editor, displayerSelect.attr('data-other-parameters-label'));
+    layout.addMoreOptions(editor, 'display', moreOptions, displayerSelect.attr('data-more-options-label'),
+      displayerSelect.attr('data-fewer-options-label'));
+    migrateLegacyDisplayer(editor);
+    hideShowParams(editor);
+  };
+  $(document).on('change', '.macro-editor select[name="displayer"]', function () {
+    hideShowParams($(this).closest('.macro-editor'));
   });
-  // The script is loaded by the displayer field, i.e. once the macro editor is already displayed.
-  initParams();
+  // The script is loaded by the displayer field: lay out the editors of the macros having one.
+  layout.onMacroEditor(editor => editor.find('select[name="displayer"]').length > 0, initParams);
 });

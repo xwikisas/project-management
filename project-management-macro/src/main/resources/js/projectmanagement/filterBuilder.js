@@ -147,6 +147,24 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       });
       builder.addButton.val('');
     };
+    // The names of the values loaded by the list fields, by property id, kept when a field is displayed again (e.g.
+    // when the operator of its row changes) until it loads them again: see getValueName. They're cleared when the
+    // properties are loaded from another source (e.g. another OpenProject instance), whose values differ.
+    let knownNames = new Map();
+    // The name of a value written in a query is the queryValue of its option, given by the source when the name
+    // identifies the value (e.g. not the name of a version that several projects have).
+    let getOptionName = function (option) {
+      return option && option.queryValue;
+    };
+    let rememberName = function (property, value, option) {
+      let name = getOptionName(option);
+      if (name && String(name) !== String(value)) {
+        if (!knownNames.has(property.id)) {
+          knownNames.set(property.id, new Map());
+        }
+        knownNames.get(property.id).set(String(value), String(name));
+      }
+    };
     let getValueLabel = function (row, value) {
       let valElem = getValueElement(row);
       let selectize = valElem[0] && valElem[0].selectize;
@@ -254,10 +272,14 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         // The summary displays the labels of the values, loaded after the values are displayed. The label of a value
         // that already has an option, e.g. one created from the value alone, is loaded by updating that option, which
         // the Selectize version bundled with XWiki (0.13.3, from 15.10.x to 17.10.x) doesn't signal with an event.
-        selectize.on('option_add', updateSummary);
+        selectize.on('option_add', function (value, data) {
+          rememberName(property, value, data);
+          updateSummary();
+        });
         let updateOption = selectize.updateOption;
         selectize.updateOption = function (...args) {
           let result = updateOption.apply(this, args);
+          rememberName(property, args[0], args[1]);
           updateSummary();
           return result;
         };
@@ -421,6 +443,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         builder.addButton.append($('<option></option>').attr('value', property.id).text(getPropertyName(property)));
       });
       if (redisplayRows) {
+        knownNames.clear();
         getRows().each(function () {
           let row = $(this);
           let values = getRowValues(row);
@@ -520,6 +543,20 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
     init();
     builders.set(builder.constraintBuilder[0], {
       getConstraints: getJson,
+      // The name of a value of a filter written in a query: the queryValue of its option (e.g. the identifier of a
+      // project, the name of a status), or undefined when the value has none or its option isn't known (yet).
+      getValueName: function (propertyId, value) {
+        let name;
+        getRows(propertyId).each(function () {
+          let selectize = getValueElement($(this))[0]?.selectize;
+          let optionName = getOptionName(selectize && selectize.options[value]);
+          if (optionName && String(optionName) !== String(value)) {
+            name = optionName;
+            return false;
+          }
+        });
+        return name || knownNames.get(propertyId)?.get(String(value));
+      },
       element: builder.constraintBuilder,
       addFilter: addFilter,
       addDisplayer: addDisplayer,
@@ -531,11 +568,20 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       setSourceParameters: setSourceParameters
     });
   };
-  let newBuilder = (window.FilterBuilder && window.FilterBuilder.newBuilder()) || function () {
-    if (!window.FilterBuilder || window.FilterBuilder.instances.size <= 0) {
+  /*
+   * Adds a builder, e.g. a new series of a chart: a copy, without filters, of the first builder of the given container
+   * (of the first builder of the page when no container is given).
+   *
+   * @param container the element holding the builders, e.g. the series of a chart
+   * @return the new builder, or nothing when there's no builder to copy
+   */
+  let newBuilder = function (container) {
+    let existingBuilder = container && $(container).length
+      ? $(container).find('.proj-manag-constraint-builder').first()
+      : $(Array.from(builders.keys())[0] || []);
+    if (!existingBuilder.length) {
       return;
     }
-    let existingBuilder = window.FilterBuilder.instances.values().next().value.element;
     let cloned = existingBuilder.clone();
     cloned.find('.proj-manag-constraints').empty();
     existingBuilder.parent().append(cloned);

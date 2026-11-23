@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.xwiki.ckeditor.test.po.CKEditor;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.TestConfiguration;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
@@ -40,6 +41,7 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.test.openproject.WorkItemSourceEditor.Way;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -47,6 +49,7 @@ import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.startsWith;
+import static org.hamcrest.Matchers.endsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -146,6 +149,39 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         assertEquals(keys, enumeration.getWorkPackageLinks());
         assertEquals(closedDisplayed.stream().map(OpenProjectWorkPackageKeysIT::getKey).collect(Collectors.toList()),
             enumeration.getClosedWorkPackages());
+
+        // The macro editor tells that the first macro uses the deprecated identifier parameter, and converts it to
+        // specific work packages, which can be picked by key.
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        WYSIWYGEditPage editPage = modal.getEditPage();
+        WorkItemSourceEditor source = modal.getWorkItemSource();
+        assertEquals(Way.SPECIFIC, source.getWay());
+        assertEquals("This macro uses the deprecated Work Packages parameter: " + identifier,
+            source.getDeprecationNotice());
+        source.convertIdentifier();
+        assertEquals("", source.getDeprecationNotice());
+        assertEquals(Way.SPECIFIC, source.getWay());
+        assertEquals(5, source.getPickedWorkPackages().size());
+        assertEquals(List.of("UNKNOWN-1"), source.getMissingWorkPackages());
+        JsonNode picked = getWorkPackages("2").get(1);
+        source.pickWorkPackages(getKey(picked));
+        List<String> pickedLabels = source.getPickedWorkPackages();
+        assertEquals(6, pickedLabels.size(), pickedLabels.toString());
+        assertThat(pickedLabels.get(5), endsWith(picked.get("subject").asText()));
+        // The work package given by its id is labelled by its key, as OpenProject displays it.
+        assertThat(pickedLabels.get(1), startsWith(getKey(first) + " "));
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+
+        String content = setup.rest().<Page>get(testReference).getContent();
+        assertThat(content, startsWith("{{openproject id=\"keys\" source=\"list\" instance=\"" + CONNECTION_ID
+            + "\"}}"));
+        // The picked work package is listed by its key, after the converted ones.
+        assertThat(content, containsString(String.join(", ", getKey(other), first.get("id").asText(), "UNKNOWN-1",
+            getKey(second), getKey(closed), getKey(picked))));
+        table = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+        assertEquals(5, table.countRows());
+        assertEquals(getKey(picked), table.getCell("ID", 5).getText());
     }
 
     @Test

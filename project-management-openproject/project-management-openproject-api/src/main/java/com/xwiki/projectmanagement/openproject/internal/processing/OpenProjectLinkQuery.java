@@ -145,6 +145,18 @@ public final class OpenProjectLinkQuery
     }
 
     /**
+     * @param link a link given to an OpenProject macro
+     * @return the number of filters in the {@code query_props} parameter of the link, 0 when it has none, or when it is
+     *     the link of a single work package or of a saved query
+     * @throws IllegalArgumentException if the {@code query_props} parameter of the link can't be read
+     */
+    public static int countFilters(OpenProjectLink link)
+    {
+        JsonNode properties = readQueryProperties(link);
+        return properties == null ? 0 : properties.path(FILTERS).size();
+    }
+
+    /**
      * @return the operator of the Live Data filter expressing the OpenProject operator
      */
     private static String getLiveDataOperator(String property, String operator)

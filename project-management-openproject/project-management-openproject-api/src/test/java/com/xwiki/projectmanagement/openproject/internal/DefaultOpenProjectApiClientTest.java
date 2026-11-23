@@ -69,6 +69,7 @@ import com.xwiki.projectmanagement.openproject.model.ColoredOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.News;
 import com.xwiki.projectmanagement.openproject.model.Priority;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.SavedQuery;
 import com.xwiki.projectmanagement.openproject.model.Status;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
@@ -1089,6 +1090,49 @@ class DefaultOpenProjectApiClientTest
             new BearerTokenAuthenticator(OPEN_PROJECT_TOKEN), this.client, this.descriptionCleaner);
         assertEquals(OPEN_PROJECT_CONNECTION_URL + "/work_packages?query_props=%7B%22f%22%3A%5B%5D%7D",
             slashClient.getWorkPackagesLocation(null, "", ""));
+    }
+
+    @Test
+    void getQuery() throws Exception
+    {
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{\"_type\":\"Query\",\"id\":5,\"name\":\"Open tasks\","
+            + "\"includeSubprojects\":false,\"timestamps\":[\"2026-11-01T00:00:00Z\",\"PT0S\"],"
+            + "\"_links\":{\"project\":{\"href\":\"/api/v3/projects/9\",\"title\":\"Demo\"},"
+            + "\"results\":{\"href\":\"/api/v3/projects/9/work_packages?includeSubprojects=false\"}}}");
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+
+        SavedQuery query = openProjectApiClient.getQuery("5");
+
+        assertEquals("Open tasks", query.getName());
+        assertEquals("Demo", query.getProjectName());
+        assertEquals("/api/v3/projects/9/work_packages?includeSubprojects=false", query.getResultsUrl());
+        verify(client).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        assertEquals(OPEN_PROJECT_CONNECTION_URL + "/api/v3/queries/5", captor.getValue().uri().toString());
+    }
+
+    @Test
+    void getQueryOfAllTheProjects() throws Exception
+    {
+        when(this.response.statusCode()).thenReturn(200);
+        when(this.response.body()).thenReturn("{\"id\":6,\"name\":\"All open\","
+            + "\"_links\":{\"project\":{\"href\":null},\"results\":{\"href\":\"/api/v3/work_packages\"}}}");
+
+        SavedQuery query = openProjectApiClient.getQuery("6");
+
+        assertNull(query.getProjectName());
+        assertEquals("/api/v3/work_packages", query.getResultsUrl());
+    }
+
+    @Test
+    void getQueryThatIsNotVisible()
+    {
+        when(this.response.statusCode()).thenReturn(404);
+        when(this.response.body()).thenReturn("{}");
+
+        WorkItemRetrievalException exception =
+            assertThrows(WorkItemRetrievalException.class, () -> openProjectApiClient.getQuery("7"));
+        assertEquals(404, exception.getStatusCode());
     }
 
     @Test

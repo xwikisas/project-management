@@ -46,7 +46,8 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/types?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/types?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {
@@ -261,7 +262,8 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {
@@ -289,7 +291,8 @@
               "name": "Not set"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/users?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {
@@ -308,7 +311,8 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/priorities?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/priorities?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {
@@ -330,7 +334,8 @@
               "name": "Not equals"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/projects?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {
@@ -363,7 +368,8 @@
               "name": "not empty"
             }
           ],
-          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses?search={encodedQuery}"
+          "searchURL": "/rest/wikis/{wikiName}/openproject/instance/{instance}/suggest/statuses?search={encodedQuery}",
+          "valueNames": true
         }
       },
       {

@@ -17,6 +17,8 @@
 ## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
+## Lays out the macro editor (e.g. the "More options" of the Display tab) and hides the parameters that the chosen
+## displayer doesn't use.
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/displayerParameter.js'))
 ## Like the enum displayer of the platform, but with the value of the displayer parameter (the lower case name of the
 ## constant, e.g. single) as option value instead of the name of the constant, so that the macro editor writes
@@ -25,7 +27,13 @@
 #if (!$enumValues)
   #set ($enumValues = $displayer.type.getEnumConstants())
 #end
-<select
+## The labels used by the script laying out the macro editor.
+#set ($moreOptionsLabel = $services.localization.render('projectmanagement.macro.editor.moreOptions'))
+#set ($fewerOptionsLabel = $services.localization.render('projectmanagement.macro.editor.fewerOptions'))
+#set ($otherParametersLabel = $services.localization.render('projectmanagement.macro.editor.otherParameters'))
+<select data-more-options-label="$escapetool.xml($moreOptionsLabel)"
+  data-fewer-options-label="$escapetool.xml($fewerOptionsLabel)"
+  data-other-parameters-label="$escapetool.xml($otherParametersLabel)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
