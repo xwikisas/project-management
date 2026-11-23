@@ -335,6 +335,40 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
+     * @param filter an OpenProject filter, as named by the links of the OpenProject work package lists (e.g.
+     *     {@code subject} or {@code customField3})
+     * @return the work item property filtered by the OpenProject filter: the property exposing the field of this
+     *     instance having this filter (e.g. the name of a custom field), or else the generic work item property of the
+     *     filter (e.g. {@code summary}), or the filter itself when it's neither (e.g. {@code search})
+     */
+    String getFilterProperty(String filter)
+    {
+        for (Map.Entry<String, WorkPackageField> field : this.fields.entrySet()) {
+            if (filter.equals(field.getValue().getFilterKey())) {
+                return field.getKey();
+            }
+        }
+        return OpenProjectMapper.mapOpenProjectName(filter);
+    }
+
+    /**
+     * @param column an OpenProject column, as named by the sorting of the links of the OpenProject work package lists
+     *     (e.g. {@code subject} or {@code customField3})
+     * @return the work item property of the column (e.g. {@code summary}, or the name of the custom field), or the
+     *     column itself when it's neither a generic work item property nor a field of this instance, a sort entry
+     *     being allowed to name an OpenProject column (see {@link #mapSortEntries(List)})
+     */
+    String getColumnProperty(String column)
+    {
+        for (Map.Entry<String, WorkPackageField> field : this.fields.entrySet()) {
+            if (column.equals(field.getValue().getKey())) {
+                return field.getKey();
+            }
+        }
+        return OpenProjectMapper.mapOpenProjectName(column);
+    }
+
+    /**
      * @return whether the property is a generic work item property that OpenProject filters on, or an OpenProject
      *     filter of the instance (e.g. {@code subprojectId}, {@code updatedAt} or {@code customField3}), or whether
      *     this can't be known, since the filters of the instance couldn't be retrieved

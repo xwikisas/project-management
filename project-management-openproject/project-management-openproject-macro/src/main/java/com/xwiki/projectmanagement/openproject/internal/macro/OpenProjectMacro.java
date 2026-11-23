@@ -42,12 +42,14 @@ import org.xwiki.rendering.transformation.MacroTransformationContext;
 import org.xwiki.skinx.SkinExtension;
 
 import com.xwiki.projectmanagement.internal.macro.AbstractProjectManagementMacro;
+import com.xwiki.projectmanagement.internal.source.WorkItemNameResolver;
 import com.xwiki.projectmanagement.internal.source.WorkItemSourceResult;
 import com.xwiki.projectmanagement.openproject.event.BeforeOpenProjectMacroExecutionEvent;
 import com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver;
 import com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
@@ -102,6 +104,9 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
 
     @Inject
     private OpenProjectSavedQueryResolver savedQueryResolver;
+
+    @Inject
+    private OpenProjectLinkQueryResolver linkQueryResolver;
 
     /**
      * Default constructor.
@@ -193,6 +198,20 @@ public class OpenProjectMacro extends AbstractProjectManagementMacro<OpenProject
         Map<String, String> params = Collections.singletonMap(CLASS, "open-project-macro");
         return context.isInline() ? Collections.singletonList(new FormatBlock(result, Format.NONE, params))
             : Collections.singletonList(new GroupBlock(result, params));
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The filters and the sorting of the link of a work package list are moved to the filters and the sorting of the
+     * macro, so that its Live Data shows them (see {@link OpenProjectLinkQueryResolver}).
+     */
+    @Override
+    protected WorkItemSourceResult readSource(OpenProjectMacroParameters parameters, String content,
+        WorkItemNameResolver nameResolver) throws MacroExecutionException
+    {
+        return this.linkQueryResolver.resolve(parameters.getInstance(), parameters.getSort(),
+            super.readSource(parameters, content, nameResolver));
     }
 
     @Override

@@ -26,8 +26,8 @@ import java.util.Map;
 
 /**
  * The work items selected by a macro once its content is read by its source, expressed with the existing macro
- * parameters, so that the rest of the macro execution is unchanged: the Live Data filters and the identifier (the
- * listed work items or a link understood by the client), plus the other values for the client.
+ * parameters, so that the rest of the macro execution is unchanged: the Live Data filters, the sorting and the
+ * identifier (the listed work items or a link understood by the client), plus the other values for the client.
  *
  * @version $Id$
  * @since 1.5.0
@@ -40,6 +40,8 @@ public final class WorkItemSourceResult
 
     private final Map<String, String> clientScope;
 
+    private final String sort;
+
     /**
      * @param filters the filters, as a serialized Live Data configuration (or a list of configurations, one per chart
      *     dataset), or {@code null}
@@ -49,9 +51,24 @@ public final class WorkItemSourceResult
      */
     public WorkItemSourceResult(String filters, String identifier, Map<String, String> clientScope)
     {
+        this(filters, identifier, clientScope, null);
+    }
+
+    /**
+     * @param filters the filters, as a serialized Live Data configuration (or a list of configurations, one per chart
+     *     dataset), or {@code null}
+     * @param identifier the identifier of the work items, i.e. ids or keys separated by commas, or a link understood
+     *     by the client, or {@code null}
+     * @param clientScope the other values passed to the client in its execution context
+     * @param sort the sorting of the work items, in the format of the {@code sort} parameter (e.g.
+     *     {@code status:asc,identifier:desc}), or {@code null} to keep the {@code sort} parameter of the macro
+     */
+    public WorkItemSourceResult(String filters, String identifier, Map<String, String> clientScope, String sort)
+    {
         this.filters = filters;
         this.identifier = identifier;
         this.clientScope = Collections.unmodifiableMap(new LinkedHashMap<>(clientScope));
+        this.sort = sort;
     }
 
     /**
@@ -70,6 +87,15 @@ public final class WorkItemSourceResult
     public String getIdentifier()
     {
         return this.identifier;
+    }
+
+    /**
+     * @return the sorting of the work items, in the format of the {@code sort} parameter (e.g.
+     *     {@code status:asc,identifier:desc}), or {@code null} to keep the {@code sort} parameter of the macro
+     */
+    public String getSort()
+    {
+        return this.sort;
     }
 
     /**

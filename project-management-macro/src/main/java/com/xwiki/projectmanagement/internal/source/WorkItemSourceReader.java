@@ -216,10 +216,14 @@ public class WorkItemSourceReader
     }
 
     /**
+     * @param filters the filters, as a serialized Live Data configuration (or a list of configurations, one per chart
+     *     dataset), or {@code null}
+     * @param addedFilters the filters to add
      * @return the filters with the given filters added to their configuration, or to the configuration of each chart
      *     dataset
+     * @throws MacroExecutionException if the filters can't be parsed
      */
-    private String mergeFilters(String filters, List<LiveDataQuery.Filter> addedFilters)
+    public String mergeFilters(String filters, List<LiveDataQuery.Filter> addedFilters)
         throws MacroExecutionException
     {
         if (addedFilters.isEmpty()) {

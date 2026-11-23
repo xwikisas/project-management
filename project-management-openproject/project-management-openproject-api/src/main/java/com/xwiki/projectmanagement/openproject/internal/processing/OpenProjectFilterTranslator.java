@@ -78,6 +78,12 @@ public final class OpenProjectFilterTranslator
      */
     static final String SEARCH_OPERATOR = "**";
 
+    /**
+     * The generic work item properties holding dates.
+     */
+    static final Set<String> PROPERTIES_DATE = Set.of(WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE,
+        WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE, WorkItem.KEY_DATE_RANGE);
+
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenProjectFilterTranslator.class);
 
     /**
@@ -172,9 +178,6 @@ public final class OpenProjectFilterTranslator
         OpenProjectMapper.FILTER_BOOLEAN, Map.of(OPERATOR_EQUALS, OP_EQUALS),
         OpenProjectMapper.FILTER_DATE, Map.of(OPERATOR_BETWEEN, OP_BETWEEN, OPERATOR_BEFORE, OP_BETWEEN,
             OPERATOR_AFTER, OP_BETWEEN, OPERATOR_CONTAINS, OP_BETWEEN, OPERATOR_EMPTY, OP_EMPTY));
-
-    private static final Set<String> PROPERTIES_DATE = Set.of(WorkItem.KEY_START_DATE, WorkItem.KEY_DUE_DATE,
-        WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE, WorkItem.KEY_DATE_RANGE);
 
     /**
      * The operators that take no value, whose constraints are kept even without value.
@@ -559,10 +562,11 @@ public final class OpenProjectFilterTranslator
         if (!PROPERTIES_DATE.contains(propertyName)) {
             return Collections.singletonList(values);
         }
-        // A range of dates is an ISO 8601 time interval. The other operators take a single date, which isn't split even
-        // when it contains a slash (for example a date formatted as 2026/11/10).
+        // A range of dates is an ISO 8601 time interval, whose bounds may be empty (for example 2026-11-01/ for the
+        // dates since November 1st). The other operators take a single date, which isn't split even when it contains a
+        // slash (for example a date formatted as 2026/11/10).
         if (OP_BETWEEN.equals(operator)) {
-            String[] parts = values.split("/");
+            String[] parts = values.split("/", -1);
             if (parts.length > 1) {
                 return Arrays.asList(parts[0], parts[1]);
             }

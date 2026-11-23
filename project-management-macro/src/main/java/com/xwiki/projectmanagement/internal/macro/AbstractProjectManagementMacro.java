@@ -120,6 +120,9 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         WorkItemSourceResult source = readSource(parameters, content, filters -> resolveNames(parameters, filters));
         parameters.setFilters(source.getFilters());
         parameters.setIdentifier(source.getIdentifier());
+        if (source.getSort() != null) {
+            parameters.setSort(source.getSort());
+        }
         parameters.setLiveDataSource("projectmanagement");
         processParameters(parameters);
         source.getClientScope().forEach((key, value) -> addToSourceParams(parameters, key, value));

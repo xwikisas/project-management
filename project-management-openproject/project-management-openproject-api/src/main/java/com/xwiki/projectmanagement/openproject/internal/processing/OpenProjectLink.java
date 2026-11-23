@@ -25,6 +25,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -217,6 +218,19 @@ public final class OpenProjectLink
     {
         Matcher matcher = QUERY_PROPS_PATTERN.matcher(StringUtils.defaultString(getQuery()));
         return matcher.find() ? URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8) : null;
+    }
+
+    /**
+     * @param queryProperties the {@code query_props} parameter of the returned link (e.g. {@code {"f":[...]}}), or
+     *     {@code null} for none
+     * @return this link without its query string and its fragment, with the given {@code query_props} parameter, if
+     *     any, e.g. to select the same work packages with fewer filters
+     */
+    public String withQueryProperties(String queryProperties)
+    {
+        String link = StringUtils.substringBefore(StringUtils.substringBefore(this.url.toString(), "#"), "?");
+        return queryProperties == null ? link
+            : link + "?query_props=" + URLEncoder.encode(queryProperties, StandardCharsets.UTF_8);
     }
 
     private String getHost()

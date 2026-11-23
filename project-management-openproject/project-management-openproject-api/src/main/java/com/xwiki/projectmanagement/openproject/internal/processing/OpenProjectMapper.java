@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.xwiki.projectmanagement.model.WorkItem;
@@ -74,8 +76,28 @@ public final class OpenProjectMapper
         // The OpenProject filter matching the work packages whose date range overlaps an interval.
         WorkItem.KEY_DATE_RANGE, "datesInterval");
 
+    /**
+     * The generic work item properties of the OpenProject filters and columns whose name differs in OpenProject, as
+     * named by the links of the OpenProject work package lists. The date range has no column in the Live Data, so its
+     * filter ({@code datesInterval}) isn't listed.
+     */
+    private static final Map<String, String> OPENPROJECT_KEY_MAPPING = createOpenProjectKeyMapping();
+
     private OpenProjectMapper()
     {
+    }
+
+    private static Map<String, String> createOpenProjectKeyMapping()
+    {
+        Map<String, String> mapping = new HashMap<>();
+        for (String property : List.of(WorkItem.KEY_IDENTIFIER, WorkItem.KEY_SUMMARY, WorkItem.KEY_ASSIGNEES,
+            WorkItem.KEY_CREATOR, WorkItem.KEY_CREATION_DATE, WorkItem.KEY_UPDATE_DATE, WorkItem.KEY_PROGRESS))
+        {
+            mapping.put(KEY_MAPPING.get(property), property);
+        }
+        // The links of the OpenProject work package lists name the assignee filter and column after the field.
+        mapping.put("assignee", WorkItem.KEY_ASSIGNEES);
+        return Map.copyOf(mapping);
     }
 
     /**
@@ -88,5 +110,20 @@ public final class OpenProjectMapper
     public static String mapLivedataProperty(String key)
     {
         return KEY_MAPPING.getOrDefault(key, key);
+    }
+
+    /**
+     * Gets the generic work item property of an OpenProject filter or column, the reverse of
+     * {@link #mapLivedataProperty(String)}.
+     *
+     * @param name an OpenProject filter or column, for example {@code subject}
+     * @return the matching work item property, for example {@code summary}, or the name itself when it's the same in
+     *     OpenProject (for example {@code status}) or when it isn't the filter or column of a generic work item
+     *     property
+     * @since 1.5.0
+     */
+    public static String mapOpenProjectName(String name)
+    {
+        return OPENPROJECT_KEY_MAPPING.getOrDefault(name, name);
     }
 }

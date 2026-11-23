@@ -21,9 +21,13 @@ package com.xwiki.projectmanagement.openproject.internal.macro;
 
 import java.util.List;
 
+import javax.inject.Named;
+
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.livedata.LiveDataConfiguration;
+import org.xwiki.livedata.LiveDataConfigurationResolver;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.WordBlock;
 import org.xwiki.rendering.macro.Macro;
@@ -39,10 +43,13 @@ import com.xwiki.projectmanagement.internal.source.WorkItemSourceReader;
 import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.LicenseChecker;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkQueryResolver;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectLiveDataColumnsResolver;
 import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccessResult;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectIdentifierResolver;
+import com.xwiki.projectmanagement.openproject.internal.processing.WorkPackageFieldsCache;
 import com.xwiki.projectmanagement.openproject.macro.OpenProjectAssignedToMeMacroParameters;
 import com.xwiki.projectmanagement.presets.Preset;
 import com.xwiki.projectmanagement.presets.PresetsManager;
@@ -60,7 +67,8 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
-@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class })
+@ComponentList({ PresetFiltersCombiner.class, WorkItemSourceReader.class, OpenProjectLinkQueryResolver.class,
+    OpenProjectLiveDataColumnsResolver.class })
 class OpenProjectAssignedToMeMacroTest
 {
     private static final String STATUS_NEW =
@@ -77,6 +85,14 @@ class OpenProjectAssignedToMeMacroTest
 
     @MockComponent
     private OpenProjectAccess openProjectAccess;
+
+    // Needed by the link query resolver.
+    @MockComponent
+    private WorkPackageFieldsCache workPackageFieldsCache;
+
+    @MockComponent
+    @Named("openproject")
+    private LiveDataConfigurationResolver<LiveDataConfiguration> liveDataConfigurationResolver;
 
     @MockComponent
     private PresetsManager presetsManager;

@@ -2,6 +2,8 @@ com.xwiki.projectmanagement.openproject.internal.CurrentUserFilterDetector
 com.xwiki.projectmanagement.openproject.internal.LicenseChecker
 com.xwiki.projectmanagement.openproject.internal.OpenProjectNameResolver
 com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkChecker
+com.xwiki.projectmanagement.openproject.internal.OpenProjectLinkQueryResolver
+com.xwiki.projectmanagement.openproject.internal.OpenProjectLiveDataColumnsResolver
 com.xwiki.projectmanagement.openproject.internal.OpenProjectSavedQueryResolver
 com.xwiki.projectmanagement.openproject.internal.OpenProjectCalendarEventProvider
 com.xwiki.projectmanagement.openproject.internal.SystemClockProvider
