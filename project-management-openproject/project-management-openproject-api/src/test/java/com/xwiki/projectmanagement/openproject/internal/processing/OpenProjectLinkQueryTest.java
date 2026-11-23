@@ -200,6 +200,29 @@ class OpenProjectLinkQueryTest
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
+    @Test
+    void countFilters()
+    {
+        assertEquals(2, countFilters(PROJECT_LIST + "?query_props=" + encode("{\"t\":\"id:desc\",\"f\":["
+            + "{\"n\":\"status\",\"o\":\"o\",\"v\":[]},{\"n\":\"type\",\"o\":\"=\",\"v\":[\"1\"]}]}")));
+        assertEquals(0, countFilters(PROJECT_LIST + "?query_props=" + encode("{\"t\":\"id:desc\"}")));
+        assertEquals(0, countFilters(PROJECT_LIST));
+        // The filters of a saved query are on OpenProject, and a work package page has none.
+        assertEquals(0, countFilters(PROJECT_LIST + "?query_id=5"));
+        assertEquals(0, countFilters(PROJECT_LIST + "/5?query_props=" + encode("{\"f\":[{\"n\":\"status\"}]}")));
+    }
+
+    @Test
+    void countFiltersOfAnInvalidLink()
+    {
+        assertThrows(IllegalArgumentException.class, () -> countFilters(PROJECT_LIST + "?query_props=%5B%5D"));
+    }
+
+    private static int countFilters(String link)
+    {
+        return OpenProjectLinkQuery.countFilters(OpenProjectLink.parse(link));
+    }
+
     private static List<String> describe(List<LiveDataQuery.Filter> filters)
     {
         return filters.stream().map(filter -> String.format("%s %s %s", filter.getProperty(),

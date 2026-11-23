@@ -21,18 +21,12 @@
 // shared with the Java tests.
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-
-const SOURCE = resolve(import.meta.dirname, "../../main/resources/js/projectmanagement/macro/queryWriter.js");
+import { loadAmdModule } from "./amdModule.js";
 
 export const ROUND_TRIP_CASES = resolve(import.meta.dirname, "../resources/queryWriter/roundTripCases.json");
 
 export function loadQueryWriter() {
-  let module;
-  const define = (dependencies, factory) => {
-    module = factory();
-  };
-  new Function("define", readFileSync(SOURCE, "utf-8"))(define);
-  return module;
+  return loadAmdModule("macro/queryWriter.js");
 }
 
 export function readRoundTripCases() {

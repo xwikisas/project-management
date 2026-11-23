@@ -20,12 +20,14 @@
 
 package com.xwiki.projectmanagement.calendar.macro;
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.ProjectManagementFilter;
+import com.xwiki.projectmanagement.ProjectManagementWorkItemSource;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.TimeInterval;
 import com.xwiki.projectmanagement.calendar.WeekDays;
@@ -142,6 +144,7 @@ public class CalendarMacroParameters
      * @param filters see {@link #getFilters()}.
      */
     @PropertyDisplayType(ProjectManagementFilter.class)
+    @PropertyDisplayHidden
     @PropertyGroup("filters")
     public void setFilters(String filters)
     {
@@ -163,7 +166,9 @@ public class CalendarMacroParameters
      * @param source see {@link #getSource()}
      * @since 1.5.0
      */
+    @PropertyDisplayType(ProjectManagementWorkItemSource.class)
     @PropertyGroup("filters")
+    @PropertyOrder(1)
     public void setSource(String source)
     {
         this.source = source;
@@ -202,6 +207,7 @@ public class CalendarMacroParameters
      * @since 1.3.0
      */
     @PropertyGroup("filters")
+    @PropertyOrder(15)
     public void setPresetId(String preset)
     {
         this.presetId = preset;

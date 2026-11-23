@@ -20,9 +20,22 @@
 ## Moves the value of the deprecated count parameter of the macros having one (all have an instance parameter) to
 ## the limit parameter.
 #set ($discard = $xwiki.jsrx.use('openproject/js/countParameter.js', {'minify': false}))
+## Lays out the macro editor of the work package macros, e.g. displays the instance above the work packages when the
+## user has to choose the connection.
+#set ($discard = $xwiki.jsrx.use('openproject/js/instanceParameter.js', {'minify': false}))
 ## A short list of connections, so a plain select, like the macro parameters taking a few values.
 #set ($defaultConnection = $services.openproject.defaultConnectionName)
+#set ($connectionOptions = $services.openproject.getConnectionOptions())
+## The label of the dashboard option is a translation key, unlike the name of a connection, which is its value.
+#set ($connectionCount = 0)
+#foreach ($option in $connectionOptions)
+  #if ($option.name == $option.value)
+    #set ($connectionCount = $connectionCount + 1)
+  #end
+#end
+#set ($otherParametersLabel = $services.localization.render('projectmanagement.macro.editor.otherParameters'))
 <select class="op-instance-select" data-default-connection="$!escapetool.xml($defaultConnection)"
+  data-connection-count="$connectionCount" data-other-parameters-label="$escapetool.xml($otherParametersLabel)"
   #foreach ($parameter in $displayer.parameters.entrySet())
     $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
   #end
@@ -37,7 +50,7 @@
   #end
   <option value="">$escapetool.xml($emptyLabel)</option>
 #end
-#foreach ($option in $services.openproject.getConnectionOptions())
+#foreach ($option in $connectionOptions)
   ## The label of the dashboard option is a translation key, the label of a connection is its name.
   #set ($label = $option.name)
   #if ($option.name != $option.value)

@@ -58,6 +58,7 @@ import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.doc.XWikiLock;
 import com.xwiki.commons.document.MacroUtils;
 import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
+import com.xwiki.projectmanagement.openproject.internal.OpenProjectClient;
 import com.xwiki.projectmanagement.openproject.model.MacroInsertion;
 import com.xwiki.projectmanagement.openproject.rest.OpenProjectMacroInsertResource;
 
@@ -314,7 +315,8 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
         if (workBlock != null && workBlock.getParent() != null) {
             listToPrepend = workBlock.getParent().getChildren();
         }
-        Block opBLock = new MacroBlock(macroInsertion.getMacroId(), macroInsertion.getMacroParameters(), true);
+        Block opBLock = new MacroBlock(macroInsertion.getMacroId(), macroInsertion.getMacroParameters(),
+            macroInsertion.getMacroContent(), true);
         listToPrepend.add(0, opBLock);
         // Render the block in xwiki syntax again.
         String newLine = macroUtils.renderMacroContent(xdom.getChildren(), Syntax.XWIKI_2_1);
@@ -371,16 +373,24 @@ public class DefaultOpenProjectMacroInsertResource extends XWikiResource impleme
                 .entity(String.format("Only the [%s] macro can be inserted.", INSERTED_MACRO_ID)).build());
         }
 
-        checkMacroParameters(macroInsertion);
+        checkMacroCall(macroInsertion);
     }
 
-    private void checkMacroParameters(MacroInsertion macroInsertion)
+    private void checkMacroCall(MacroInsertion macroInsertion)
     {
         if (macroInsertion.getMacroParameters() != null && macroInsertion.getMacroParameters().keySet().stream()
             .anyMatch(name -> name == null || !MACRO_PARAMETER_NAME.matcher(name).matches()))
         {
             throw new WebApplicationException(
                 Response.status(Response.Status.BAD_REQUEST).entity("Invalid macro parameter name.").build());
+        }
+        // The macro content is written as is in a line of the page content: only the work packages listed by the
+        // inserted macro are accepted, so that the content can't end the line, the macro (e.g. with a closing tag, or
+        // a tilde escaping it) or start another macro.
+        String content = macroInsertion.getMacroContent();
+        if (content != null && !OpenProjectClient.isWorkPackageList(content)) {
+            throw new WebApplicationException(
+                Response.status(Response.Status.BAD_REQUEST).entity("Invalid macro content.").build());
         }
     }
 

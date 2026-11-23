@@ -1,0 +1,29 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+## The widget choosing how an OpenProject macro selects its work packages, with the OpenProject link way.
+#set ($clientId = 'openproject')
+#set ($linkWay = true)
+## Displayed by the JavaScript code when the macro has no connection and there is no default one: the values of the
+## filters can't be suggested without a connection.
+<div class="box infomessage op-filters-no-connection hidden">$escapetool.xml(
+  $services.localization.render('openproject.filters.noConnection.hint'))</div>
+#template('html_displayer/projectmanagementworkitemsource/edit.vm')
+#set ($discard = $xwiki.jsrx.use('openproject/js/filters.js', {'minify': true}))
+#set ($discard = $xwiki.jsrx.use('openproject/js/workItemSource.js', {'minify': true}))

@@ -102,7 +102,15 @@ public class OpenProjectClient implements ProjectManagementClient
     private static final Pattern IDS_PATTERN =
         Pattern.compile(String.format("^\\s*%1$s(\\s*,\\s*%1$s)*\\s*$", ID_OR_KEY));
 
+    private static final String KEY_RESOLUTION_FAILURE = "Failed to resolve the work package key [{}]: {}";
+
     private static final Pattern ID_OR_KEY_PATTERN = Pattern.compile(String.format("^%s$", ID_OR_KEY));
+
+    /**
+     * Work packages separated by commas, on a single line: only spaces around the commas.
+     */
+    private static final Pattern WORK_PACKAGE_LIST_PATTERN =
+        Pattern.compile(String.format("^%1$s( *, *%1$s)*$", ID_OR_KEY));
 
     private static final Pattern IDS_SEPARATOR_PATTERN = Pattern.compile("\\s*,\\s*");
 
@@ -162,19 +170,51 @@ public class OpenProjectClient implements ProjectManagementClient
         return value != null && ID_OR_KEY_PATTERN.matcher(value).matches();
     }
 
+    /**
+     * @param value a value listing work packages
+     * @return {@code true} if the value lists the ids or keys of work packages separated by commas (e.g.
+     *     {@code 123, PROJ-124}), on a single line, without anything else
+     */
+    public static boolean isWorkPackageList(String value)
+    {
+        return value != null && WORK_PACKAGE_LIST_PATTERN.matcher(value).matches();
+    }
+
     @Override
     public WorkItem getWorkItem(String workItemId) throws WorkItemNotFoundException, WorkItemRetrievalException
     {
+        String notFound = String.format("Work Item with ID [%s] was not found.", workItemId);
+        // The id filter of OpenProject only accepts ids: a key (e.g. PROJ-42) is turned into the id of its work
+        // package first, and a value that is neither an id nor a key matches no work package.
+        String id = workItemId;
+        if (!StringUtils.isNumeric(workItemId)) {
+            if (!isWorkPackageIdOrKey(workItemId)) {
+                throw new WorkItemNotFoundException(notFound);
+            }
+            WorkPackage workPackage;
+            try {
+                workPackage = getWorkPackage(resolveAccess().getClient(), workItemId, false);
+            } catch (WorkItemRetrievalException e) {
+                throw e;
+            } catch (ProjectManagementException e) {
+                throw new WorkItemRetrievalException("An error occurred while trying to get the work item", e);
+            }
+            if (workPackage == null) {
+                throw new WorkItemNotFoundException(notFound);
+            }
+            id = String.valueOf(workPackage.getId());
+        }
+
         LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
 
         filter.setProperty(WorkItem.KEY_IDENTIFIER);
-        filter.getConstraints().add(new LiveDataQuery.Constraint(workItemId, EQUALS));
+        filter.getConstraints().add(new LiveDataQuery.Constraint(id, EQUALS));
 
         PaginatedResult<WorkItem> result =
             getWorkItems(0, 1, Collections.singletonList(filter), Collections.emptyList());
 
         if (result.getItems().isEmpty()) {
-            throw new WorkItemNotFoundException(String.format("Work Item with ID [%s] was not found.", workItemId));
+            throw new WorkItemNotFoundException(notFound);
         }
 
         return result.getItems().get(0);
@@ -612,7 +652,7 @@ public class OpenProjectClient implements ProjectManagementClient
             } else {
                 Optional<WorkPackage> workPackage = resolutions.get(idOrKey);
                 if (workPackage == null) {
-                    workPackage = Optional.ofNullable(getWorkPackage(openProjectApiClient, idOrKey));
+                    workPackage = Optional.ofNullable(getWorkPackage(openProjectApiClient, idOrKey, true));
                     resolutions.put(idOrKey, workPackage);
                 }
                 workPackage.ifPresent(resolved -> ids.add(String.valueOf(resolved.getId())));
@@ -631,7 +671,7 @@ public class OpenProjectClient implements ProjectManagementClient
     {
         List<String> existingIds = new ArrayList<>();
         for (String id : ids) {
-            if (getWorkPackage(openProjectApiClient, id) != null) {
+            if (getWorkPackage(openProjectApiClient, id, true) != null) {
                 existingIds.add(id);
             }
         }
@@ -639,10 +679,12 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     /**
+     * @param warn whether a key that OpenProject rejects is logged as a warning (e.g. a key listed by a macro) rather
+     *     than for debugging (e.g. a key typed in the work item picker, which tells it's not found)
      * @return the work package with the given id or key, or {@code null} if it doesn't exist, if the user can't see
      *     it or if OpenProject rejects the key
      */
-    private WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key)
+    private WorkPackage getWorkPackage(OpenProjectApiClient openProjectApiClient, String key, boolean warn)
         throws ProjectManagementException
     {
         try {
@@ -652,7 +694,11 @@ public class OpenProjectClient implements ProjectManagementClient
                 throw e;
             }
             // OpenProject rejected the key, which is then skipped like a work package that doesn't exist.
-            logger.warn("Failed to resolve the work package key [{}]: {}", key, e.getMessage());
+            if (warn) {
+                logger.warn(KEY_RESOLUTION_FAILURE, key, e.getMessage());
+            } else {
+                logger.debug(KEY_RESOLUTION_FAILURE, key, e.getMessage());
+            }
             return null;
         }
     }

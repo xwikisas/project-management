@@ -40,6 +40,7 @@ import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.SavedQuery;
 import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
@@ -334,6 +335,19 @@ class CachingOpenProjectApiClientTest
             cachingOpenProjectApiClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
         assertSame(otherResult,
             otherCachingClient.getWorkPackages(OFFSET, PAGE_SIZE, FILTERS_STRING, SORT_BY_STRING));
+    }
+
+    @Test
+    void getQueryIsNotCached() throws ProjectManagementException
+    {
+        SavedQuery query = new SavedQuery(mapper.createObjectNode().put("name", "Open tasks"));
+        when(openProjectApiClient.getQuery("5")).thenReturn(query);
+
+        // A saved query changed in OpenProject is described as it is now.
+        assertSame(query, cachingOpenProjectApiClient.getQuery("5"));
+        assertSame(query, cachingOpenProjectApiClient.getQuery("5"));
+        verify(openProjectApiClient, times(2)).getQuery("5");
+        verifyNoInteractions(cache);
     }
 
     private static Map<String, PaginatedResult<? extends BaseOpenProjectObject>> useMapBackedCache(

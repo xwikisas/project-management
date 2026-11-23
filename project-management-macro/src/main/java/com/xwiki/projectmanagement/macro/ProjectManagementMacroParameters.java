@@ -25,6 +25,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.xwiki.livedata.macro.LiveDataMacroParameters;
+import org.xwiki.properties.annotation.PropertyAdvanced;
 import org.xwiki.properties.annotation.PropertyDescription;
 import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
@@ -37,6 +38,7 @@ import com.xwiki.projectmanagement.ProjectManagementFilter;
 import com.xwiki.projectmanagement.ProjectManagementPreset;
 import com.xwiki.projectmanagement.ProjectManagementProperties;
 import com.xwiki.projectmanagement.ProjectManagementSortEntry;
+import com.xwiki.projectmanagement.ProjectManagementWorkItemSource;
 import com.xwiki.projectmanagement.internal.WorkItemsDisplayer;
 
 /**
@@ -105,7 +107,10 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setProperties(properties);
     }
 
+    // The filters are edited by the widget of the source parameter, as a query written in the macro content: the macro
+    // editor only holds the value of this deprecated parameter, imported in the filter builder.
     @PropertyDisplayType(ProjectManagementFilter.class)
+    @PropertyDisplayHidden
     @PropertyGroup("filters")
     @Override
     public void setFilters(String filters)
@@ -193,7 +198,11 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
     // PropertyHidden for parameters that are handled by the application. PropertyAdvanced for parameters that can
     // still be passed to the macro but are hidden in order to make the macro less crowded.
 
-    @PropertyDisplayHidden
+    // The page sizes and the id only matter for the table and cards views: the macro editor displays them as advanced
+    // parameters at the end of the Display group.
+    @PropertyAdvanced
+    @PropertyGroup("display")
+    @PropertyOrder(90)
     @Override
     public void setPageSizes(String pageSizes)
     {
@@ -233,7 +242,9 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      *     {@link #getWorkItemSource()}
      * @since 1.5.0
      */
+    @PropertyDisplayType(ProjectManagementWorkItemSource.class)
     @PropertyGroup("filters")
+    @PropertyOrder(1)
     @Override
     public void setSource(String source)
     {
@@ -268,9 +279,9 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
         super.setSourceParameters(sourceParameters);
     }
 
-    // The id only matters for the table and cards views.
-    @PropertyDisplayHidden
+    @PropertyAdvanced
     @PropertyGroup("display")
+    @PropertyOrder(91)
     @Override
     public void setId(String id)
     {
@@ -292,6 +303,7 @@ public class ProjectManagementMacroParameters extends LiveDataMacroParameters
      */
     @PropertyDisplayType(ProjectManagementPreset.class)
     @PropertyGroup("filters")
+    @PropertyOrder(15)
     public void setPresetId(String presetId)
     {
         this.presetId = presetId;

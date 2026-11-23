@@ -105,6 +105,10 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         assertThat(content, startsWith("{{openproject "));
         assertThat(content, containsString(String.format("instance=\"%s\"", CONNECTION_ID)));
         assertThat(content, containsString("displayer=\"inline\""));
+        // The work package is listed in the macro content, not in the deprecated identifier parameter.
+        assertThat(content, containsString("source=\"list\""));
+        assertThat(content, containsString("{{/openproject}}"));
+        assertThat(content, not(containsString("identifier=")));
         assertThat(content, not(containsString(MARKER)));
     }
 
@@ -130,6 +134,7 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         setup.gotoPage(testReference, "edit", "editor=wiki");
         String content = new WikiEditPage().getContent();
         assertThat(content, startsWith("{{openproject "));
+        assertThat(content, containsString("source=\"list\""));
         assertThat(content, not(containsString("instance=")));
 
         // With several connections and no default one, the search tells what to do, and its entry inserts nothing.

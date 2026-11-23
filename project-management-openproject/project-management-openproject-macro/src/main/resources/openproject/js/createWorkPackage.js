@@ -142,9 +142,11 @@ require(["jquery", "create-work-package-utils", "xwiki-l10n!openproject.createwo
       inline: 'enforce',
       parameters: {
         instance: connection,
-        identifier: workPackage.id,
+        source: "list",
         displayer: "inline"
-      }
+      },
+      // The macro content is written only when it's a string.
+      content: String(workPackage.id)
     });
     createWpUtils.notify(l10n.get("notify.submit.success"), "done");
     } catch (err) {

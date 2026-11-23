@@ -1099,10 +1099,10 @@ require(['jquery', 'xwiki-l10n!openproject.createworkpackage.insert'], function 
       macroId: "openproject",
       macroParameters: {
         instance: opInstance,
-        identifier: workPackage,
+        source: "list",
         displayer: "inline"
-
       },
+      macroContent: String(workPackage),
       selectedText: selectedText,
       offset: startOffset,
       fullLine: line

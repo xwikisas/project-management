@@ -43,11 +43,13 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.test.openproject.WorkItemSourceEditor.Way;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -79,10 +81,6 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
     private static final String TASK_TYPE_ID = "1";
 
     private static final String NEW_STATUS_ID = "1";
-
-    private static final String SOURCE_PARAMETER = "source";
-
-    private static final String URL_SOURCE = "url";
 
     private static final String IN_PROGRESS_STATUS_ID = "7";
 
@@ -245,8 +243,13 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
             String.format("{{openproject instance=\"%s\" id=\"macroParameterFilterTest\"/}}", CONNECTION_ID));
         OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
         WYSIWYGEditPage editPage = modal.getEditPage();
-        // Create a filter.
+        // The macro selects the work packages matching filters by default: without filter, all of them.
         modal.clickMore();
+        WorkItemSourceEditor source = modal.getWorkItemSource();
+        assertEquals(Way.MATCHING_FILTERS, source.getWay());
+        assertEquals(List.of(Way.MATCHING_FILTERS, Way.SPECIFIC, Way.LINK), source.getWays());
+        assertEquals("No filter: all the work packages you can see.", source.getNoFilterHint());
+        // Create a filter.
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();
         // Enter on the lists of the filters doesn't submit the macro editor.
         filterBuilderParameter.pressEnterOnAddFilter();
@@ -265,6 +268,30 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals("Value for Subject", addedFilters.get(1).getValueAccessibleName());
         addedFilters.get(1).pressEnterOnOperator();
         assertTrue(modal.isOpen());
+        // Switching to the specific work packages keeps the filters, which Submit would drop, and the other way round.
+        // Until a work package is picked, the user is also warned that all the work packages would be shown.
+        String pickedSubject = this.openProject.getApiResource("/work_packages/1").get("subject").asText();
+        source.selectWay(Way.SPECIFIC);
+        assertThat(source.getFooterWarning(), startsWith("No work package is picked: all the work packages will be "
+            + "shown. Submit drops the filters (assignees = \"OpenProject Admin\""));
+        source.pickWorkPackages(pickedSubject);
+        assertEquals(List.of("#1 " + pickedSubject), source.getPickedWorkPackages());
+        assertEquals("1", modal.getContent());
+        // Enter picks the typed id, not the first work package found by the search for it.
+        String secondSubject = this.openProject.getApiResource("/work_packages/2").get("subject").asText();
+        source.typeAndEnterWorkPackage("2");
+        assertEquals(List.of("#1 " + pickedSubject, "#2 " + secondSubject), source.getPickedWorkPackages());
+        assertEquals("1, 2", modal.getContent());
+        // Edited as text, the list shows the picked work packages, and the ids typed in it are picked.
+        assertEquals("1, 2", source.getIdsAsText());
+        source.pasteIds("2, 1");
+        assertEquals(List.of("#2 " + secondSubject, "#1 " + pickedSubject), source.getPickedWorkPackages());
+        assertEquals("2, 1", modal.getContent());
+        source.pasteIds("1, 2");
+        source.selectWay(Way.MATCHING_FILTERS);
+        assertEquals("Submit drops the 2 picked work packages.", source.getFooterWarning());
+        assertEquals(3, modal.getFilterBuilder().getFilters().size());
+        assertThat(modal.getContent(), startsWith("assignees = \"OpenProject Admin\""));
         // Submit modal and view page.
         modal.clickSubmit();
         editPage.clickSaveAndView();
@@ -273,10 +300,11 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         List<OpenProjectMacroElement> macros = page.getOpenProjectMacros();
         assertEquals(1, macros.size());
         assertEquals("Entries 1 - 3 out of 3", getPaginationEntriesText(macros.get(0)));
-        // The builder writes the filters as a query in the macro content, instead of the deprecated filters parameter.
+        // The builder writes the filters as a query in the macro content, instead of the deprecated filters parameter,
+        // with the names of the picked values rather than their ids.
         String content = getContent(setup, testReference);
-        assertThat(content, containsString(String.format("assignees = %s AND summary ~ sp AND status IN (%s, %s)",
-            ADMIN_USER_ID, IN_PROGRESS_STATUS_ID, NEW_STATUS_ID)));
+        assertThat(content,
+            containsString("assignees = \"OpenProject Admin\" AND summary ~ sp AND status IN (\"In progress\", New)"));
         assertThat(content, not(containsString("filters=")));
         // Open modal and expect the builder to contain the added filters, read from the query.
         modal = new OpenProjectMacroEditModal(setup, testReference);
@@ -297,9 +325,10 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         assertEquals(1, filters.size());
         assertEquals(List.of("New"), filters.get(0).getSuggestValues());
         assertEquals(query, modal.getContent());
-        // Editing the filters rewrites the query, even when the browser doesn't report the edit as a user action.
+        // Editing the filters rewrites the query, even when the browser doesn't report the edit as a user action, with
+        // the names of the values read as ids.
         filters.get(0).selectOperatorWithoutUserAction("is not one of");
-        assertEquals("status != " + NEW_STATUS_ID, modal.getContent());
+        assertEquals("status != New", modal.getContent());
         // A content that the filters can't show is reported, and kept until the filters select something: new filters
         // without value, with the default operator of a date ("is today"), removing a filter or changing the operator
         // of a filter without value don't replace it.
@@ -317,7 +346,7 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         statusFilter.setSuggestValue("New");
         content = modal.getContent();
         assertThat(content, containsString("dueDate = today()"));
-        assertThat(content, containsString("status != " + NEW_STATUS_ID));
+        assertThat(content, containsString("status != New"));
         assertEquals("", filterBuilderParameter.getContentWarning());
         // Clear the filters and expect the macro to display all the entries.
         filterBuilderParameter.clearFilters();
@@ -346,9 +375,14 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         macroModal.clickMore();
         // The deprecated identifier parameter is only displayed when it's set.
         assertFalse(macroModal.isMacroParameterDisplayed("identifier"));
-        macroModal.setMacroParameter(SOURCE_PARAMETER, URL_SOURCE);
-        macroModal.setContent(getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc",
+        WorkItemSourceEditor source = macroModal.getWorkItemSource().selectWay(Way.LINK);
+        source.setLink(getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc",
             "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\""));
+        // The link is described under its field.
+        String description = source.getLinkDescription();
+        assertThat(description, startsWith("Work package list of the project "));
+        assertThat(description, containsString(", with 2 filters."));
+        assertFalse(source.isLinkDescriptionWarning());
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
@@ -367,8 +401,16 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // The tasks in progress of all the projects, the most recent first.
         macroModal = new OpenProjectMacroEditModal(setup, testReference);
         editPage = macroModal.getEditPage();
+        // The link of another OpenProject server is reported in the macro editor.
+        source = macroModal.getWorkItemSource();
+        assertEquals(Way.LINK, source.getWay());
+        source.setLink("https://other.example.com" + DEMO_PROJECT_PATH + "/work_packages");
+        assertThat(source.getLinkDescription(), startsWith("The link is from the OpenProject server "
+            + "other.example.com, not "));
+        assertTrue(source.isLinkDescriptionWarning());
         macroModal.setContent(getTasksInProgressUrl("/work_packages", "desc",
             "\"id\",\"subject\",\"type\",\"status\",\"assignee\",\"priority\",\"project\""));
+        assertEquals("Work package list of all the projects, with 2 filters.", source.getLinkDescription());
         macroModal.clickSubmit();
         ld = saveAndGetFirstOPMacro(editPage);
         List<String> taskIds = getTasksInProgressIds("");
@@ -425,8 +467,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WYSIWYGEditPage editPage = macroModal.getEditPage();
         macroModal.clickMore();
         // The macro filters can't be combined with a link, so the filters are set from the livedata.
-        macroModal.setMacroParameter(SOURCE_PARAMETER, URL_SOURCE);
-        macroModal.setContent(savedQueryUrl);
+        WorkItemSourceEditor source = macroModal.getWorkItemSource().selectWay(Way.LINK).setLink(savedQueryUrl);
+        // The saved query is named under the link.
+        assertThat(source.getLinkDescription(), startsWith("Saved query \"Milestones\" (project "));
         macroModal.clickSubmit();
         TableLayoutElement ld = saveAndGetFirstOPMacro(editPage);
         assertEquals(milestones.size(), ld.countRows());
@@ -748,6 +791,26 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         String content = getContent(setup, testReference);
         assertEquals("list", getMacroParameter(content, "displayer"));
         assertNull(getMacroParameter(content, "workItemsDisplayer"));
+
+        // A content starting with a curly bracket, without source, is an advanced Live Data configuration: the macro
+        // editor keeps it as it is.
+        String configuration = "{\"query\":{\"filters\":[]}}";
+        setup.createPage(testReference, String.format("{{openproject instance=\"%s\" "
+            + "id=\"editMacroWithDeprecatedDisplayer\" limit=\"3\"}}%n%s%n{{/openproject}}", CONNECTION_ID,
+            configuration));
+        modal = new OpenProjectMacroEditModal(setup, testReference);
+        editPage = modal.getEditPage();
+        WorkItemSourceEditor source = modal.getWorkItemSource();
+        assertTrue(source.isLocked());
+        assertThat(source.getAdvancedNotice(), startsWith("Advanced Live Data configuration: "));
+        assertEquals(Way.ADVANCED, source.getWay());
+        assertFalse(source.isAdvancedContentEditable());
+        assertEquals("", source.getFooterWarning());
+        modal.clickSubmit();
+        editPage.clickSaveAndView();
+        content = getContent(setup, testReference);
+        assertThat(content, containsString(configuration));
+        assertNull(getMacroParameter(content, "source"));
     }
 
     // The unescaped value of a parameter of the first macro of the given wiki syntax, null when missing.

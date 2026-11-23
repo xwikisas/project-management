@@ -33,6 +33,7 @@ import org.xwiki.properties.BeanDescriptor;
 import org.xwiki.properties.BeanManager;
 import org.xwiki.properties.PropertyDescriptor;
 import org.xwiki.properties.PropertyException;
+import org.xwiki.properties.annotation.PropertyOrder;
 import org.xwiki.properties.internal.DefaultBeanManager;
 import org.xwiki.properties.internal.DefaultConverterManager;
 import org.xwiki.properties.internal.converter.ConvertUtilsConverter;
@@ -43,13 +44,16 @@ import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.mockito.MockitoComponentManager;
 
 import com.xwiki.projectmanagement.ProjectManagementFilter;
+import com.xwiki.projectmanagement.ProjectManagementWorkItemSource;
 import com.xwiki.projectmanagement.calendar.CalendarViews;
 import com.xwiki.projectmanagement.calendar.TimeInterval;
 import com.xwiki.projectmanagement.calendar.WeekDays;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Validate how the macro parameters of {@link CalendarMacroParameters} are converted and described, which also covers
@@ -131,6 +135,15 @@ class CalendarMacroParametersTest
         // builder.
         assertEquals(TimeInterval.class, descriptor.getProperty("timeInterval").getDisplayType());
         assertEquals(ProjectManagementFilter.class, descriptor.getProperty("filters").getDisplayType());
+        // The filters are edited by the widget of the source parameter, first in the Work Packages tab: the macro
+        // editor only holds the value of the deprecated filters parameter.
+        assertTrue(descriptor.getProperty("filters").isDisplayHidden());
+        PropertyDescriptor source = descriptor.getProperty("source");
+        assertEquals(ProjectManagementWorkItemSource.class, source.getDisplayType());
+        assertFalse(source.isDisplayHidden());
+        assertEquals(1, source.getWriteMethod().getAnnotation(PropertyOrder.class).value());
+        assertEquals(15, descriptor.getProperty("presetId").getWriteMethod().getAnnotation(PropertyOrder.class)
+            .value());
         PropertyDescriptor firstDay = descriptor.getProperty("firstDay");
         assertEquals(WeekDays.class, firstDay.getPropertyType());
         assertEquals(WeekDays.SUNDAY, firstDay.getDefaultValue());

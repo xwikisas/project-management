@@ -24,7 +24,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -50,11 +49,17 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final String PRESET_PARAMETER = "presetId";
 
+    private static final String SOURCE_PARAMETER = "source";
+
+    private static final String FILTERS_GROUP = "filters";
+
+    private static final String PANE_ID_PREFIX = "macroParameterTreeNode-";
+
+    private static final String CLASS = "class";
+
     private static final String WIDGET_WRAPPER = "[data-cke-widget-wrapper]";
 
     private static final By PROPERTIES_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-properties-loading");
-
-    private static final By QUERY_LOADING = By.cssSelector(".macro-editor-modal .proj-manag-query-loading");
 
     private static final By CONTENT = By.cssSelector(".macro-editor-modal textarea[name='$content']");
 
@@ -120,27 +125,32 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
-     * @return the filter parameter which has a model of its own.
+     * @return the filters of the matching filters way of the field selecting the work items, once they show the query
+     *     of the macro
      */
     public FilterBuilderParameter getFilterBuilder()
     {
-        selectParameterTab("filters");
-        if (getDriver().findElementsWithoutWaiting(By.className("proj-manag-constraint-builder")).stream()
-            .noneMatch(WebElement::isDisplayed)) {
-            // The macro editor of XWiki 15.10 displays 3 parameter groups at most before its "More" link, and the macro
-            // content takes one of them: the Filters group can be behind the link.
-            clickMore();
-        }
-        // The filters reload their properties when the modal is opened with a connection, or when it's changed, and
-        // read the query of the macro content.
+        WorkItemSourceEditor source = getWorkItemSource();
+        // The filters reload their properties when the modal is opened with a connection, or when it's changed.
         getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
-        getDriver().waitUntilElementDisappears(QUERY_LOADING);
-        return new FilterBuilderParameter();
+        return source.getFilters();
     }
 
     /**
-     * Replace the macro content, as a user typing it and leaving the field, e.g. a query (read again by the filters)
-     * or a link read by the url source.
+     * @return the field choosing how the macro selects its work items (filters, specific work packages, link), in the
+     *     tab displaying it
+     * @since 1.5.0
+     */
+    public WorkItemSourceEditor getWorkItemSource()
+    {
+        selectParameterTab(SOURCE_PARAMETER);
+        return new WorkItemSourceEditor();
+    }
+
+    /**
+     * Replace the macro content as the user would, with the editor of the selected way: the query of the matching
+     * filters edited as text (the filters then show it), the ids of the specific work packages pasted, or the link
+     * typed.
      *
      * @param content the new macro content, e.g. a query
      * @return this object
@@ -149,19 +159,20 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     public AbstractOpenProjectMacroEditModal setContent(String content)
     {
         closeSuggestDropdowns();
-        WebElement field = getDriver().findElementWithoutWaitingWithoutScrolling(CONTENT);
-        if (!field.isDisplayed()) {
-            // The content is in the tab of the optional parameters without group (XWiki 17).
-            String tabPanelId = field.findElement(By.xpath("ancestor::*[@role='tabpanel'][1]")).getAttribute("id");
-            getDriver().findElement(By.cssSelector(
-                String.format(".macro-editor-modal a[role='tab'][aria-controls='%s']", tabPanelId))).click();
+        WorkItemSourceEditor source = getWorkItemSource();
+        switch (source.getWay()) {
+            case SPECIFIC:
+                source.pasteIds(content);
+                break;
+            case LINK:
+                source.setLink(content);
+                break;
+            case MATCHING_FILTERS:
+                source.editQueryAsText(content).editQueryWithFilters();
+                break;
+            default:
+                throw new UnsupportedOperationException("The content of the advanced way can't be set.");
         }
-        getDriver().scrollTo(field);
-        field.clear();
-        // Leaving the field changes it.
-        field.sendKeys(content, Keys.TAB);
-        // The filters read the query of the content again.
-        getDriver().waitUntilElementDisappears(QUERY_LOADING);
         return this;
     }
 
@@ -176,7 +187,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
-     * @return the macro content
+     * @return the macro content, as it will be submitted (the content field is hidden: the field selecting the work
+     *     items edits it)
      * @since 1.5.0
      */
     public String getContent()
@@ -203,6 +215,8 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public boolean isMacroParameterDisplayed(String name)
     {
+        // The parameters of the tabs that aren't selected are hidden.
+        selectParameterTab(name);
         // Look at the whole parameter (its name, description and field), since the input of some fields is hidden and
         // replaced by a widget (e.g. a suggest input).
         return getDriver().findElementsWithoutWaiting(By.cssSelector(
@@ -222,8 +236,9 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
-     * Display all the parameters: expand every collapsed "More" link of the modal, the one of the parameter list and
-     * those of the parameter groups, whose order depends on the XWiki version.
+     * Display all the parameters: expand every collapsed "More" link of the modal (the one of the parameter list and
+     * those of the parameter groups of XWiki 15.10, if the editor still has them) and every collapsed "More options"
+     * toggle of the tabs.
      */
     public void clickMore()
     {
@@ -241,7 +256,16 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
             }
             links.get(0).click();
         }
-        scrollToFooter();
+        By collapsedOptions = By.cssSelector(".macro-editor-modal .pm-more-options-toggle[aria-expanded='false']");
+        for (WebElement toggle : getDriver().findElementsWithoutWaiting(collapsedOptions)) {
+            // The toggle is hidden when the parameters under it are all hidden, e.g. by the chosen displayer.
+            if (!toggle.findElement(By.xpath("..")).getAttribute(CLASS).contains("pm-hidden")) {
+                selectTabOf(toggle);
+                getDriver().scrollTo(toggle);
+                toggle.click();
+                getDriver().waitUntilCondition(driver -> "true".equals(toggle.getAttribute("aria-expanded")));
+            }
+        }
     }
 
     /**
@@ -250,6 +274,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public SuggestInputElement getSuggestInput(String name)
     {
+        selectParameterTab(name);
         WebElement input = getMacroParameterInput(name);
         SuggestInputElement suggestInput = new SuggestInputElement(input);
         // The parameters of the modal can be out of view (e.g. above the viewport after scrolling to the footer), and
@@ -268,20 +293,38 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     public AbstractOpenProjectMacroEditModal selectInstance(String connectionId)
     {
         closeSuggestDropdowns();
-        // The instance parameter is in the Connection tab of the macros having parameter groups.
-        selectParameterTab("connection");
+        // The instance is in the Connection tab, or on top of the Work Packages tab when the user has to choose it.
+        selectParameterTab(INSTANCE_PARAMETER);
         WebElement input = getMacroParameterInput(INSTANCE_PARAMETER);
-        if (!input.isDisplayed()) {
-            // The macro editor of XWiki 15.10 displays 3 parameter groups at most before its "More" link, and the macro
-            // content takes one of them: the Connection group of a new macro is behind the link.
-            clickMore();
-        }
-        // It's the last parameter, so it can be out of view.
-        getDriver().scrollTo(input.findElement(By.xpath("ancestor::*[contains(@class, 'macro-parameter')][1]")));
+        getDriver().scrollTo(getParameter(INSTANCE_PARAMETER));
         new Select(input).selectByValue(connectionId);
         // The filters load the properties of the chosen connection, and their values are suggested from it.
         getDriver().waitUntilElementDisappears(PROPERTIES_LOADING);
         return this;
+    }
+
+    /**
+     * @return {@code true} if the instance is displayed on top of the Work Packages tab, above the field selecting the
+     *     work packages, as when the user has to choose the connection (no default connection and several ones)
+     * @since 1.5.0
+     */
+    public boolean isInstanceOnTopOfWorkPackages()
+    {
+        selectParameterTab(FILTERS_GROUP);
+        WebElement instance = getParameter(INSTANCE_PARAMETER);
+        WebElement first = getDriver().findElementWithoutWaitingWithoutScrolling(
+            By.cssSelector(String.format("#%s%s .macro-parameter", PANE_ID_PREFIX, FILTERS_GROUP)));
+        return instance.isDisplayed() && instance.equals(first);
+    }
+
+    /**
+     * @return {@code true} if the Connection tab is displayed
+     * @since 1.5.0
+     */
+    public boolean isConnectionTabDisplayed()
+    {
+        return getDriver().findElementsWithoutWaiting(getTabLocator(PANE_ID_PREFIX + "connection")).stream()
+            .anyMatch(WebElement::isDisplayed);
     }
 
     /**
@@ -293,7 +336,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public String getFiltersNoConnectionHint()
     {
-        selectParameterTab("filters");
+        selectParameterTab(FILTERS_GROUP);
         WebElement hint = getDriver().findElementWithoutWaitingWithoutScrolling(NO_CONNECTION_HINT);
         getDriver().waitUntilCondition(driver -> hint.isDisplayed());
         return hint.getText();
@@ -306,7 +349,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public boolean isFiltersNoConnectionHintDisplayed()
     {
-        selectParameterTab("filters");
+        selectParameterTab(FILTERS_GROUP);
         return isDisplayed(NO_CONNECTION_HINT);
     }
 
@@ -316,28 +359,61 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public String getSelectedInstance()
     {
-        selectParameterTab("connection");
+        selectParameterTab(INSTANCE_PARAMETER);
         return new Select(getMacroParameterInput(INSTANCE_PARAMETER)).getFirstSelectedOption().getText().trim();
     }
 
     /**
-     * Parameters that provide the same feature (e.g. the filters and the filter preset) are displayed as tabs, only
-     * one of them being visible at a time. Select the tab of the given parameter, if it has one.
+     * Select the tab displaying the given parameter group, or the given parameter, when it's not the selected one. The
+     * parameters are grouped in tabs (e.g. Work Packages, Display, Connection), only one of them being visible at a
+     * time.
      *
-     * @param name the technical name of the parameter.
+     * @param name the id of a parameter group (e.g. {@code filters}) or the technical name of a parameter
      * @since 1.3.0-rc-15
      */
     public void selectParameterTab(String name)
     {
-        String tabPanelId = "macroParameterTreeNode-" + name;
-        getDriver().findElementsWithoutWaiting(By.cssSelector(
-            String.format(".macro-editor-modal a[role='tab'][aria-controls='%s']", tabPanelId))).stream()
-            .filter(WebElement::isDisplayed).findFirst().ifPresent(tab -> {
-                closeSuggestDropdowns();
-                tab.click();
-                getDriver().waitUntilCondition(
-                    driver -> driver.findElement(By.id(tabPanelId)).getAttribute("class").contains("active"));
-            });
+        List<WebElement> groupTabs = getDriver().findElementsWithoutWaiting(getTabLocator(PANE_ID_PREFIX + name));
+        if (!groupTabs.isEmpty()) {
+            selectTab(groupTabs.get(0));
+        } else {
+            getDriver().findElementsWithoutWaiting(By.cssSelector(
+                String.format(".macro-editor-modal .macro-parameter[data-id='%s']", name))).stream().findFirst()
+                .ifPresent(this::selectTabOf);
+        }
+    }
+
+    private By getTabLocator(String paneId)
+    {
+        return By.cssSelector(String.format(".macro-editor-modal a[role='tab'][aria-controls='%s']", paneId));
+    }
+
+    private WebElement getParameter(String name)
+    {
+        return getDriver().findElementWithoutWaitingWithoutScrolling(
+            By.cssSelector(String.format(".macro-editor-modal .macro-parameter[data-id='%s']", name)));
+    }
+
+    // Selects the tab displaying the given element, if it's in a tab.
+    private void selectTabOf(WebElement element)
+    {
+        List<WebElement> panes =
+            element.findElements(By.xpath("ancestor::*[contains(@class, 'macro-parameter-group-members')][1]"));
+        if (!panes.isEmpty()) {
+            getDriver().findElementsWithoutWaiting(getTabLocator(panes.get(0).getAttribute("id"))).stream()
+                .findFirst().ifPresent(this::selectTab);
+        }
+    }
+
+    private void selectTab(WebElement tab)
+    {
+        WebElement item = tab.findElement(By.xpath(".."));
+        // A hidden tab only holds hidden parameters.
+        if (tab.isDisplayed() && !item.getAttribute(CLASS).contains("active")) {
+            closeSuggestDropdowns();
+            tab.click();
+            getDriver().waitUntilCondition(driver -> item.getAttribute(CLASS).contains("active"));
+        }
     }
 
     /**

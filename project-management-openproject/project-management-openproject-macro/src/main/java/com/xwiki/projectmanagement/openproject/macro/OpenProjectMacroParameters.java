@@ -20,6 +20,7 @@ package com.xwiki.projectmanagement.openproject.macro;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
+import org.xwiki.properties.annotation.PropertyDisplayHidden;
 import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyGroup;
 import org.xwiki.properties.annotation.PropertyOrder;
@@ -31,6 +32,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
 import com.xwiki.projectmanagement.openproject.OpenProjectPreset;
 import com.xwiki.projectmanagement.openproject.OpenProjectProperties;
 import com.xwiki.projectmanagement.openproject.OpenProjectSort;
+import com.xwiki.projectmanagement.openproject.OpenProjectWorkItemSource;
 
 /**
  * OpenProject macro params.
@@ -69,12 +71,22 @@ public class OpenProjectMacroParameters extends ProjectManagementMacroParameters
     }
 
     @PropertyDisplayType(OpenProjectFilter.class)
+    @PropertyDisplayHidden
     @PropertyGroup("filters")
     @PropertyOrder(10)
     @Override
     public void setFilters(String filters)
     {
         super.setFilters(filters);
+    }
+
+    @PropertyDisplayType(OpenProjectWorkItemSource.class)
+    @PropertyGroup("filters")
+    @PropertyOrder(1)
+    @Override
+    public void setSource(String source)
+    {
+        super.setSource(source);
     }
 
     @PropertyDisplayType(OpenProjectProperties.class)

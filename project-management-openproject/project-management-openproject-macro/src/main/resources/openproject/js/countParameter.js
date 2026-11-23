@@ -17,7 +17,13 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-require(['jquery'], function ($) {
+require.config({
+  paths: {
+    'projectmanagement-macro-editor-layout': new XWiki.Document(XWiki.Model.resolve('Main.WebHome',
+      XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=js/projectmanagement/macro/macroEditorLayout.js')
+  }
+});
+require(['jquery', 'projectmanagement-macro-editor-layout'], function ($, layout) {
   // The macros having the deprecated count parameter.
   const macrosWithCount = ['openproject-news', 'openproject-projects', 'openproject-subprojects',
     'openproject-project-members', 'openproject-spent-time'];
@@ -33,24 +39,6 @@ require(['jquery'], function ($) {
       value = value.value;
     }
     return value === undefined || value === null ? undefined : String(value);
-  };
-
-  // Hide the field of a deprecated parameter whose value was migrated, so that the macro editor doesn't display it
-  // empty, and its tab when it holds no other visible field, activating the first visible tab if it was the active one
-  // (the macro editor displays the deprecated parameters set by the macro call, on the tab of their group).
-  // Keep in sync with the copy in project-management-macro's js/projectmanagement/macro/displayerParameter.js.
-  let hideParameter = function (input) {
-    let tabPanel = input.closest('.macro-parameter').addClass('hidden').closest('.tab-pane');
-    while (tabPanel.length > 0 && tabPanel.find('.macro-parameter').not('.hidden').length === 0) {
-      let tabPanels = tabPanel.parent().children();
-      let tabs = tabPanel.parent().siblings('[role="tablist"]').children();
-      tabs.eq(tabPanels.index(tabPanel)).add(tabPanel).addClass('hidden');
-      if (tabPanel.hasClass('active')) {
-        tabs.add(tabPanels).removeClass('active');
-        tabs.not('.hidden').first().add(tabPanels.not('.hidden').first()).addClass('active');
-      }
-      tabPanel = tabPanel.parent().closest('.tab-pane');
-    }
   };
 
   // Edit a macro using the deprecated count parameter with the limit one, so that the limit chosen in the editor, the
@@ -72,18 +60,11 @@ require(['jquery'], function ($) {
     if (count !== undefined && count.trim() !== '' && getParameterValue(macroCall, 'limit') === undefined) {
       limitInput.val(count.trim());
     }
-    // Always clear the count, whose input holds at least its default value, so that it isn't saved.
+    // Always clear the count, whose input holds at least its default value, so that it isn't saved, and hide its
+    // field, so that the macro editor doesn't display it empty.
     countInput.val('');
-    hideParameter(countInput);
+    layout.hideParameter(macroEditor, 'count');
   };
-  // The macro editor sends this event once it displays the parameters of the edited macro.
-  $(document).on('xwiki:dom:updated', function (event, data) {
-    $((data && data.elements) || []).filter('.macro-editor').each(function () {
-      migrateCount($(this));
-    });
-  });
-  // The script is loaded by the instance field, i.e. once the macro editor is already displayed, after the event.
-  $('.macro-editor').each(function () {
-    migrateCount($(this));
-  });
+  // The script is loaded by the instance field.
+  layout.onMacroEditor(layout.forMacros(macrosWithCount), migrateCount);
 });

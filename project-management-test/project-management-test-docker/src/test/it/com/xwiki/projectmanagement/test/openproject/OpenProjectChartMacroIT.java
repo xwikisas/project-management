@@ -36,6 +36,7 @@ import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.editor.WikiEditPage;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.xwiki.projectmanagement.test.openproject.WorkItemSourceEditor.Way;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -204,7 +205,17 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         OpenProjectChartMacroEditModal modal = new OpenProjectChartMacroEditModal(setup, testReference);
         modal.selectInstance(CONNECTION_ID);
         modal.clickMore();
+        // The series are displayed under the field selecting the charted work packages, whatever the way.
+        WorkItemSourceEditor source = modal.getWorkItemSource();
+        assertEquals(List.of(Way.MATCHING_FILTERS, Way.SPECIFIC, Way.LINK), source.getWays());
+        assertEquals(1, modal.getSeries().size());
+        assertEquals("Series 1", modal.getSeries().get(0).getTitle());
+        source.selectWay(Way.SPECIFIC);
+        assertEquals(1, modal.getSeries().size());
+        source.selectWay(Way.MATCHING_FILTERS);
         modal.getFilterBuilder().addFilter("status").setSuggestValue(NEW);
+        // The filters select the charted work packages, written as a query in the macro content.
+        assertEquals("status = New", modal.getContent());
         modal.clickSubmit();
         modal.getEditPage().clickSaveAndView();
 

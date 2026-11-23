@@ -113,6 +113,19 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
             .map(item -> item.getAttribute("textContent").trim()).findFirst().orElse("");
     }
 
+    /**
+     * @return the series of the chart, each one having its own filters, displayed under the field selecting the
+     *     charted work packages
+     * @since 1.5.0
+     */
+    public List<FilterBuilderParameter> getSeries()
+    {
+        selectParameterTab("filters");
+        return getDriver().findElementsWithoutWaiting(By.cssSelector(
+            ".macro-editor-modal [data-builder-role='series'] .proj-manag-constraint-builder")).stream()
+            .filter(WebElement::isDisplayed).map(FilterBuilderParameter::new).collect(Collectors.toList());
+    }
+
     private WebElement getChartOptionInput(String option)
     {
         selectParameterTab("display");
@@ -132,6 +145,7 @@ public class OpenProjectChartMacroEditModal extends AbstractOpenProjectMacroEdit
     {
         // We don't use org.xwiki.test.ui.po.Select since it presses Escape after selecting an option, which closes
         // the macro edit modal.
+        selectParameterTab(TYPE_PARAMETER);
         return new Select(getMacroParameterInput(TYPE_PARAMETER));
     }
 }

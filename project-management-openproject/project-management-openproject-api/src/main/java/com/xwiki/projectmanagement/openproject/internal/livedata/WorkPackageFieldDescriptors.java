@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterValueResolver;
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectWorkItemFields;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -119,13 +120,13 @@ public final class WorkPackageFieldDescriptors
             descriptor.setDisplayer(new LiveDataPropertyDescriptor.DisplayerDescriptor("html"));
         }
 
-        LiveDataPropertyDescriptor.FilterDescriptor filter = getFilter(field, multiValue);
+        LiveDataPropertyDescriptor.FilterDescriptor filter = getFilter(id, field, multiValue);
         descriptor.setFilterable(filter != null);
         descriptor.setFilter(filter);
         return descriptor;
     }
 
-    private static LiveDataPropertyDescriptor.FilterDescriptor getFilter(WorkPackageField field,
+    private static LiveDataPropertyDescriptor.FilterDescriptor getFilter(String id, WorkPackageField field,
         boolean multiValue)
     {
         String valueType = field.getFilterValueType();
@@ -147,6 +148,11 @@ public final class WorkPackageFieldDescriptors
             // Tells the filter builder that the field can be filtered on with several operators at once, e.g. the
             // work packages having one value and not another one.
             filter.getParameters().put("multiValue", true);
+        }
+        if (OpenProjectFilterValueResolver.resolvesNames(id, valueType)) {
+            // Tells the filter builder to write the names of the values (e.g. the name of a project) in the query of
+            // the macro content, which is resolved into ids when the work items are retrieved.
+            filter.getParameters().put("valueNames", true);
         }
         String suggestion = SUGGESTIONS.get(valueType);
         if (suggestion != null) {

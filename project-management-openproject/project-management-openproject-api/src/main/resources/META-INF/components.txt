@@ -25,6 +25,8 @@ com.xwiki.projectmanagement.openproject.internal.rest.DefaultOpenProjectMacroIns
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkObjectsResource
 com.xwiki.projectmanagement.openproject.internal.rest.document.DefaultOpenProjectLinkSearchResource
 com.xwiki.projectmanagement.openproject.internal.rest.OpenProjectAvatarResource
+com.xwiki.projectmanagement.openproject.internal.rest.OpenProjectLinkResource
+com.xwiki.projectmanagement.openproject.internal.rest.PageEditRightChecker
 com.xwiki.projectmanagement.openproject.internal.livedata.OpenProjectLivedataConfigurationResolver
 com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectSpaceCreatingListener
 com.xwiki.projectmanagement.openproject.internal.listener.OpenProjectTemplateCopyListener

@@ -23,7 +23,8 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
    * this script can be loaded before the field is added to the page.
    */
   let loadDatePicker = function () {
-    let deps = JSON.parse($('.proj-manag-filter[data-deps]').first().attr('data-deps') || '{}');
+    let deps = JSON.parse($('.proj-manag-filter[data-deps], .pm-work-item-source[data-deps]').first()
+      .attr('data-deps') || '{}');
     if (deps.daterangepicker) {
       require.config({ paths: { daterangepicker: deps.daterangepicker } });
     }

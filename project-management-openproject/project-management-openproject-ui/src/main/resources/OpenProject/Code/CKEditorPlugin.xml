@@ -183,9 +183,11 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
                 inline: 'enforce',
                 parameters: {
                   ...(isDefaultConnection ? {} : {instance}),
-                  identifier: wp.identifier.value,
+                  source: 'list',
                   displayer: 'inline'
-                }
+                },
+                // The macro content is written only when it's a string.
+                content: String(wp.identifier.value)
               }
             }
           };
