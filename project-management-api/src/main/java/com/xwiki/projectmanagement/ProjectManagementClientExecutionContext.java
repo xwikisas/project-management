@@ -36,9 +36,10 @@ public interface ProjectManagementClientExecutionContext
 {
     /**
      * The key of the context value that is {@link Boolean#TRUE} when the work items are requested by Live Data, whose
-     * viewers can filter and sort them, and which can't display why a request failed. A client can then return no work
-     * item for a request it can't answer (e.g. an unsupported combination of filters), while it reports the failure to
-     * the other callers (e.g. a chart, which displays it).
+     * viewers can filter and sort them. A client can then return no work item when the work items it lists can't be
+     * found (e.g. they no longer exist), which the table shows as no entry, while it reports that failure to the other
+     * callers (e.g. a chart, which displays it). The other failures (e.g. filters that the tool rejects) are reported
+     * to Live Data too, which notifies the user that the entries couldn't be retrieved.
      *
      * @since 1.4.0
      */
