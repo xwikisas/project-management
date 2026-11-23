@@ -19,7 +19,12 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
@@ -44,6 +49,9 @@ import static org.mockito.Mockito.when;
 class OpenProjectIdentifierResolverTest
 {
     private static final String QUERY_ID = "27";
+
+    private static final OpenProjectLink SAVED_QUERY_LINK =
+        OpenProjectLink.parse("https://op.example.org/work_packages?query_id=27");
 
     private static final String ENCODED_FILTERS =
         "%5B%7B%22status%22%3A%7B%22operator%22%3A%22o%22%2C%22values%22%3A%5B%5D%7D%7D%5D";
@@ -141,8 +149,72 @@ class OpenProjectIdentifierResolverTest
     }
 
     @Test
+    void getSavedQueryLink() throws Exception
+    {
+        String filters = "[{\"status\":{\"operator\":\"o\",\"values\":[]}},"
+            + "{\"type\":{\"operator\":\"=\",\"values\":[\"1\",\"2\"]}}]";
+        String resultsUrl = "/api/v3/workspaces/9/work_packages?filters=" + encode(filters)
+            + "&includeSubprojects=true&sortBy=" + encode("[[\"id\",\"desc\"],[\"subject\",\"asc\"]]");
+
+        // The query of a project, linked without its project.
+        String link = resolver.getSavedQueryLink(SAVED_QUERY_LINK, resultsUrl);
+
+        assertEquals("https://op.example.org/projects/9/work_packages?query_props="
+            + encode("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]},"
+            + "{\"n\":\"type\",\"o\":\"=\",\"v\":[\"1\",\"2\"]}],\"t\":\"id:desc,subject:asc\"}"), link);
+    }
+
+    @Test
+    void getSavedQueryLinkWithoutFiltersNorSorting() throws Exception
+    {
+        assertEquals("https://op.example.org/work_packages?query_props=" + encode("{\"f\":[]}"),
+            resolver.getSavedQueryLink(SAVED_QUERY_LINK, "/api/v3/work_packages?offset=1"));
+    }
+
+    @Test
+    void getSavedQueryLinkWhenTheQueryIsSortedManually() throws Exception
+    {
+        // The manual sorting is stored with the query: a work package list can't express it.
+        assertNull(resolver.getSavedQueryLink(SAVED_QUERY_LINK, "/api/v3/work_packages?filters=" + ENCODED_FILTERS
+            + "&sortBy=" + encode("[[\"manualSorting\",\"asc\"],[\"id\",\"asc\"]]")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "includeSubprojects=false", "timestamps=2026-11-01T00%3A00%3A00Z%2CPT0S",
+        "timestamps=P-1D" })
+    void getSavedQueryLinkWhenTheQueryCantBeExpressedAsAList(String parameter) throws Exception
+    {
+        // A work package list can't exclude the subprojects, nor compare with a baseline.
+        assertNull(resolver.getSavedQueryLink(SAVED_QUERY_LINK, "/api/v3/projects/9/work_packages?filters="
+            + ENCODED_FILTERS + "&" + parameter + "&sortBy=" + ENCODED_SORT_BY));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "includeSubprojects=true&timestamps=PT0S", "groupBy=status&showHierarchies=true" })
+    void getSavedQueryLinkIgnoresTheSettingsThatAListCanExpress(String parameter) throws Exception
+    {
+        assertEquals("https://op.example.org/projects/9/work_packages?query_props="
+            + encode("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}],\"t\":\"id:desc\"}"),
+            resolver.getSavedQueryLink(SAVED_QUERY_LINK, "/api/v3/projects/9/work_packages?filters="
+                + ENCODED_FILTERS + "&" + parameter + "&sortBy=" + ENCODED_SORT_BY));
+    }
+
+    @Test
+    void getSavedQueryLinkWhenTheSortingCantBeRead()
+    {
+        WorkItemRetrievalException exception = assertThrows(WorkItemRetrievalException.class,
+            () -> resolver.getSavedQueryLink(SAVED_QUERY_LINK, "/api/v3/work_packages?sortBy=%5Bnot-json"));
+        assertEquals("Failed to read the sorting of the saved query", exception.getMessage());
+    }
+
+    @Test
     void getSavedQueryProjectWhenTheQueryIsGlobal()
     {
         assertNull(resolver.getSavedQueryProject("/api/v3/work_packages?filters=" + ENCODED_FILTERS));
+    }
+
+    private static String encode(String value)
+    {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

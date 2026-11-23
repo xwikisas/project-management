@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
 
 import javax.inject.Named;
 
@@ -361,6 +362,79 @@ class OpenProjectMacroTest
         // Called by the asynchronous renderer, with the parameters prepared by the macro execution.
         assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
 
+        assertTrue(this.parameters.getSourceParameters().endsWith("&savedQueryResultsUrl=results"));
+    }
+
+    @Test
+    void showsTheFiltersAndTheSortingOfTheSavedQueryLinkedInTheContentInTheLiveData() throws Exception
+    {
+        useSource("openproject/url", new OpenProjectUrlWorkItemSource());
+        this.parameters.setSource("url");
+        useColumns(OpenProjectWorkItemFields.empty(), Map.of("status", Set.of("=", "!", "o", "c")));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        // The saved query selects the open work packages matching a search, the most recent first.
+        String search = "{\"f\":[{\"n\":\"search\",\"o\":\"**\",\"v\":[\"wiki\"]}]}";
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results"))).thenReturn(link("{\"f\":["
+            + "{\"n\":\"status\",\"o\":\"o\",\"v\":[]},{\"n\":\"search\",\"o\":\"**\",\"v\":[\"wiki\"]}],"
+            + "\"t\":\"id:desc\"}"));
+
+        this.macro.execute(this.parameters, SAVED_QUERY_LINK, this.context);
+        // Called by the asynchronous renderer, with the parameters prepared by the macro execution.
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
+
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":[{\"operator\":\"o\","
+            + "\"value\":\"\"}]}]}}", this.parameters.getFilters());
+        assertEquals("identifier:desc", this.parameters.getSort());
+        // The client gets the work package list of the query, with the filter that the Live Data can't show.
+        assertEquals(link(search), this.parameters.getIdentifier());
+        assertEquals("client=openproject&instance=main&translationPrefix=openproject.&identifier="
+            + encode(link(search)), this.parameters.getSourceParameters());
+    }
+
+    @Test
+    void keepsTheFiltersOfTheSavedQueryOnThePropertiesFilteredByTheMacro() throws Exception
+    {
+        this.parameters.setIdentifier(SAVED_QUERY_LINK);
+        String filters = "{\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":"
+            + "[{\"operator\":\"c\",\"value\":\"\"}]}]}}";
+        this.parameters.setFilters(filters);
+        useColumns(OpenProjectWorkItemFields.empty(), Map.of("type", LIST, "status", Set.of("=", "!", "o", "c")));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results"))).thenReturn(link("{\"f\":["
+            + "{\"n\":\"status\",\"o\":\"o\",\"v\":[]},{\"n\":\"type\",\"o\":\"=\",\"v\":[\"1\"]}]}"));
+
+        this.macro.execute(this.parameters, "", this.context);
+        assertEquals(List.of(), this.macro.asyncProcessParameters(this.parameters, this.context));
+
+        // The Live Data shows a single filter by property: the filter of the saved query on the status, which the macro
+        // already filters, stays in the link instead of being shown twice.
+        assertEquals("{\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":[{\"operator\":\"c\","
+            + "\"value\":\"\"}]},{\"property\":\"type\",\"constraints\":[{\"operator\":\"=\",\"value\":\"1\"}]}]}}",
+            this.parameters.getFilters());
+        assertEquals(link("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}]}"), this.parameters.getIdentifier());
+    }
+
+    @Test
+    void keepsTheSavedQueryWhenTheContentIsALiveDataConfiguration() throws Exception
+    {
+        // A page written before the source parameter, whose content configures the Live Data.
+        String configuration = "{\"query\":{\"sort\":[{\"property\":\"summary\"}]}}";
+        this.parameters.setIdentifier(SAVED_QUERY_LINK);
+        when(this.openProjectAccess.resolve("main")).thenReturn(OpenProjectAccessResult.authenticated(this.apiClient));
+        when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
+        when(this.identifierResolver.getSavedQueryLink(any(), eq("results")))
+            .thenReturn(link("{\"f\":[{\"n\":\"status\",\"o\":\"o\",\"v\":[]}]}"));
+        // The asynchronous renderer processes the parameters before executing the displayer.
+        when(this.asyncExecutor.execute(same(this.displayerMacro), same(this.parameters), eq(configuration),
+            same(this.context), any(), eq(false))).thenAnswer(invocation -> invocation
+                .<BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>>>getArgument(4)
+                .apply(this.parameters, this.context));
+
+        this.macro.execute(this.parameters, configuration, this.context);
+
+        // The configuration replaces the filters and the sorting of the macro: the saved query keeps applying its own.
+        assertNull(this.parameters.getFilters());
+        assertEquals(SAVED_QUERY_LINK, this.parameters.getIdentifier());
         assertTrue(this.parameters.getSourceParameters().endsWith("&savedQueryResultsUrl=results"));
     }
 

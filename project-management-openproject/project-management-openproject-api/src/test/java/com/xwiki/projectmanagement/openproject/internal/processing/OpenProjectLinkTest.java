@@ -257,4 +257,27 @@ class OpenProjectLinkTest
         assertThrows(IllegalArgumentException.class,
             () -> OpenProjectLink.parse("https://op.example.org/work_packages?query_props=%zz").getQueryProperties());
     }
+
+    @Test
+    void toWorkPackageList()
+    {
+        // The list of another project than the one of the link, with filters.
+        assertEquals("https://op.example.org:8443/projects/9/work_packages"
+            + "?query_props=%7B%22t%22%3A%22id%3Aasc%22%7D",
+            OpenProjectLink.parse("https://op.example.org:8443/projects/demo/work_packages?query_id=27#top")
+                .toWorkPackageList("9", "{\"t\":\"id:asc\"}"));
+        // The list of all the projects, without filters, on a server running under a sub-path.
+        assertEquals("http://example.org/openproject/work_packages",
+            OpenProjectLink.parse("http://example.org/openproject/projects/demo/work_packages/?query_id=27")
+                .toWorkPackageList(null, null));
+        assertEquals("http://example.org/openproject/projects/9/work_packages",
+            OpenProjectLink.parse("http://example.org/openproject/work_packages/?query_id=27")
+                .toWorkPackageList("9", null));
+    }
+
+    @Test
+    void toWorkPackageListWhenTheSubPathCantBeRead()
+    {
+        assertNull(OpenProjectLink.parse("https://op.example.org/wp/5").toWorkPackageList("9", null));
+    }
 }

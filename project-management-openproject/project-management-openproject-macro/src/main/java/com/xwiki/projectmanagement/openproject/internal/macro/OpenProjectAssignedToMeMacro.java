@@ -85,6 +85,13 @@ public class OpenProjectAssignedToMeMacro extends OpenProjectMacro
     }
 
     @Override
+    protected List<Block> asyncProcessParameters(OpenProjectMacroParameters parameters, String displayerContent,
+        MacroTransformationContext context)
+    {
+        return asyncProcessParameters(parameters, context);
+    }
+
+    @Override
     public void processParameters(OpenProjectMacroParameters parameters)
     {
         parameters.setFilters(ASSIGNED_TO_ME_FILTERS);

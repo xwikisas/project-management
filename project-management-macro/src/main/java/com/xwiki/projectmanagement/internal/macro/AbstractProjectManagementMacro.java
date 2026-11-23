@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.internal.macro;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -139,7 +140,7 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
             // configuration.
             String displayerContent = isLiveDataConfiguration(parameters, content) ? content : "";
             return asyncExecutor.execute(displayerMacro, parameters, displayerContent, context,
-                getAsyncParametersProcessor(), isAsync(parameters));
+                getAsyncParametersProcessor(displayerContent), isAsync(parameters));
         } catch (ComponentLookupException e) {
             throw new MacroExecutionException(String.format("Could not find the displayer [%s].", displayer), e);
         } catch (JobException | RenderingException e) {
@@ -272,10 +273,50 @@ public abstract class AbstractProjectManagementMacro<T extends ProjectManagement
         return !parameters.getDisplayer().isLiveData();
     }
 
-    protected BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>>
-        getAsyncParametersProcessor()
+    /**
+     * Like {@link #asyncProcessParameters(ProjectManagementMacroParameters, MacroTransformationContext)}, knowing the
+     * content passed to the displayer, which it calls by default.
+     *
+     * @param parameters the parameters of the currently executing macro, see
+     *     {@link #asyncProcessParameters(ProjectManagementMacroParameters, MacroTransformationContext)}
+     * @param displayerContent the content passed to the displayer: empty, or a legacy Live Data configuration (e.g.
+     *     {@code {"query":{"sort":[...]}}}), which the Live Data displayers use instead of the filters and the sorting
+     *     of the parameters
+     * @param context the macro transformation context of the macro
+     * @return the blocks to display instead of the work items, or an empty list to display the work items
+     * @since 1.5.0
+     */
+    protected List<Block> asyncProcessParameters(T parameters, String displayerContent,
+        MacroTransformationContext context)
     {
-        return (params, context) -> asyncProcessParameters((T) params, context);
+        return asyncProcessParameters(parameters, context);
+    }
+
+    protected BiFunction<ProjectManagementAsyncMacroParams, MacroTransformationContext, List<Block>>
+        getAsyncParametersProcessor(String displayerContent)
+    {
+        return (params, context) -> asyncProcessParameters((T) params, displayerContent, context);
+    }
+
+    /**
+     * Sets a source parameter, replacing its current value, if any.
+     *
+     * @param parameters the parameters of the macro
+     * @param key the key of the source parameter, e.g. {@code identifier}
+     * @param value the value of the source parameter, or {@code null} (or empty) to only remove its current value
+     * @since 1.5.0
+     */
+    protected void setSourceParam(T parameters, String key, String value)
+    {
+        String prefix = URLEncoder.encode(key, StandardCharsets.UTF_8) + '=';
+        List<String> kept = new ArrayList<>();
+        for (String parameter : StringUtils.split(StringUtils.defaultString(parameters.getSourceParameters()), '&')) {
+            if (!parameter.startsWith(prefix)) {
+                kept.add(parameter);
+            }
+        }
+        parameters.setSourceParameters(String.join("&", kept));
+        addToSourceParams(parameters, key, value);
     }
 
     protected void addToSourceParams(T parameters, String key, String value)

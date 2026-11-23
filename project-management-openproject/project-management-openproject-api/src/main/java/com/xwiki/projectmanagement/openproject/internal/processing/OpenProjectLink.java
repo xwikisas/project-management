@@ -71,6 +71,8 @@ public final class OpenProjectLink
 
     private static final String SLASH = "/";
 
+    private static final String WORK_PACKAGES_PATH = "/work_packages";
+
     private static final String DOT = ".";
 
     private final URL url;
@@ -228,9 +230,39 @@ public final class OpenProjectLink
      */
     public String withQueryProperties(String queryProperties)
     {
-        String link = StringUtils.substringBefore(StringUtils.substringBefore(this.url.toString(), "#"), "?");
+        return withQueryProperties(
+            StringUtils.substringBefore(StringUtils.substringBefore(this.url.toString(), "#"), "?"), queryProperties);
+    }
+
+    private static String withQueryProperties(String link, String queryProperties)
+    {
         return queryProperties == null ? link
             : link + "?query_props=" + URLEncoder.encode(queryProperties, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * @param project the identifier (or id) of a project, or {@code null} for all the projects
+     * @param queryProperties the {@code query_props} parameter of the returned link (e.g. {@code {"f":[...]}}), or
+     *     {@code null} for none
+     * @return the link of the work package list of the given project, on the server of this link (with its sub-path,
+     *     when OpenProject runs under one), with the given {@code query_props} parameter, if any; {@code null} when
+     *     the sub-path can't be read from this link, which is neither a page of a project nor a work package list
+     */
+    public String toWorkPackageList(String project, String queryProperties)
+    {
+        String path = this.url.getPath();
+        Matcher projectMatcher = PROJECT_PATH_PATTERN.matcher(path);
+        String serverPath;
+        if (projectMatcher.find()) {
+            serverPath = path.substring(0, projectMatcher.start());
+        } else if (StringUtils.stripEnd(path, SLASH).endsWith(WORK_PACKAGES_PATH)) {
+            serverPath = StringUtils.removeEnd(StringUtils.stripEnd(path, SLASH), WORK_PACKAGES_PATH);
+        } else {
+            return null;
+        }
+        String projectPath = project == null ? "" : "/projects/" + project;
+        return withQueryProperties(this.url.getProtocol() + "://" + this.url.getAuthority() + serverPath + projectPath
+            + WORK_PACKAGES_PATH, queryProperties);
     }
 
     private String getHost()

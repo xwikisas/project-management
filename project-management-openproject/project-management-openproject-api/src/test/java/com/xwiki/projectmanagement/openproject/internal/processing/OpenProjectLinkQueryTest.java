@@ -145,6 +145,27 @@ class OpenProjectLinkQueryTest
             MAPPER.readTree(new OpenProjectFilterTranslator(FIELDS, null).translate(query.getFilters()).toJson()));
     }
 
+    @Test
+    void readsTheFiltersAndTheSortingOfASavedQuery() throws Exception
+    {
+        // The results link of a saved query of a project, as returned by OpenProject 17.9.
+        String resultsUrl = "/api/v3/workspaces/3/work_packages?filters=" + encode("[{\"status\":{\"operator\":\"o\","
+            + "\"values\":[]}},{\"type\":{\"operator\":\"=\",\"values\":[\"1\"]}},{\"search\":{\"operator\":\"**\","
+            + "\"values\":[\"wiki\"]}}]") + "&includeSubprojects=true&offset=1&pageSize=20&showHierarchies=true"
+            + "&showSums=false&sortBy=" + encode("[[\"id\",\"asc\"]]") + "&timestamps=PT0S";
+        String savedQueryLink = new OpenProjectIdentifierResolver().getSavedQueryLink(
+            OpenProjectLink.parse("https://op.example.com/work_packages?query_id=5"), resultsUrl);
+
+        OpenProjectLinkQuery query =
+            OpenProjectLinkQuery.read(OpenProjectLink.parse(savedQueryLink), () -> columns(FIELDS));
+
+        assertEquals(List.of("status o []", "type = [1]"), describe(query.getFilters()));
+        assertEquals(List.of("identifier:asc"), describeSort(query.getSortEntries()));
+        // The list of the project of the query keeps the filter that the Live Data can't show.
+        assertEquals("https://op.example.com/projects/3/work_packages?query_props="
+            + encode("{\"f\":[{\"n\":\"search\",\"o\":\"**\",\"v\":[\"wiki\"]}]}"), query.getLink());
+    }
+
     @ParameterizedTest
     @ValueSource(strings = { PROJECT_LIST, PROJECT_LIST + "?query_id=5", "https://op.example.com/wp/5?query_props=%7B%7D",
         PROJECT_LIST + "/12/activity", PROJECT_LIST + "?query_props=%7B%22c%22%3A%5B%22id%22%5D%7D" })

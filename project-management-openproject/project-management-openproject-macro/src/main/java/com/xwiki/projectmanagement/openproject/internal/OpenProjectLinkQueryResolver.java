@@ -53,7 +53,8 @@ import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectLi
  * the Live Data.
  * <p>
  * The links of a single work package and of a saved query, and the lists of work packages, are left as they are: a
- * list (or a single work package) has no filter to show, and the filters of a saved query are stored on OpenProject.
+ * list (or a single work package) has no filter to show, and the filters of a saved query are stored on OpenProject,
+ * which {@link OpenProjectSavedQueryResolver} reads with the account of the current user, to move them the same way.
  *
  * @version $Id$
  * @since 1.5.0

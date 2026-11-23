@@ -206,6 +206,9 @@ class OpenProjectAssignedToMeMacroTest
         when(this.identifierResolver.getSavedQueryResultsUrl(this.apiClient, "5")).thenReturn("results");
 
         assertEquals(List.of(), this.macro.asyncProcessParameters(parameters, new MacroTransformationContext()));
+        // Nor when the content is a Live Data configuration.
+        assertEquals(List.of(), this.macro.asyncProcessParameters(parameters, "{\"query\":{}}",
+            new MacroTransformationContext()));
 
         assertNull(parameters.getSourceParameters());
     }
