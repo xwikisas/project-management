@@ -116,6 +116,17 @@ class ChartEditorPageTest extends PageTest
     }
 
     @Test
+    void seriesCanBeRemovedWithTheKeyboard() throws Exception
+    {
+        Document result = render("html_displayer/openprojectfilters/edit.vm");
+
+        // The remove icon of a series is a link, reachable with the keyboard, named for the assistive technologies.
+        Element remove = result.selectFirst(".proj-manag-header a.proj-manag-remove-filter");
+        assertEquals("#", remove.attr("href"), result.html());
+        assertEquals("projectmanagement.macro.chart.removeSeries", remove.attr("title"));
+    }
+
+    @Test
     void filtersEditorProposesTheFilterableProperties() throws Exception
     {
         Document result = render("html_displayer/openprojectfilters/edit.vm");
@@ -133,6 +144,10 @@ class ChartEditorPageTest extends PageTest
         String l10n = result.selectFirst(".proj-manag-constraint-builder").attr("data-l10n");
         assertTrue(l10n.contains("\"list.=\":\"projectmanagement.macro.filter.operator.list.isOneOf\""), l10n);
         assertTrue(l10n.contains("\"date.between\":\"projectmanagement.macro.filter.operator.date.isBetween\""),
+            l10n);
+        assertTrue(l10n.contains("\"date.before\":\"projectmanagement.macro.filter.operator.date.isOnOrBefore\""),
+            l10n);
+        assertTrue(l10n.contains("\"date.after\":\"projectmanagement.macro.filter.operator.date.isOnOrAfter\""),
             l10n);
         assertTrue(l10n.contains("\"summary\":\"projectmanagement.macro.filter.summary\""), l10n);
     }
@@ -181,6 +196,11 @@ class ChartEditorPageTest extends PageTest
         assertEquals("projectmanagement.macro.chart.series [__N__]", labels.attr("data-placeholder"));
         assertEquals("projectmanagement.macro.chart.addSeriesName",
             result.selectFirst("button.proj-manag-chart-label-new.proj-manag-add-link").text());
+        // The remove icon of a series name is a link, reachable with the keyboard, named for the assistive
+        // technologies.
+        Element remove = result.selectFirst("#proj-manag-chart-label-template a.proj-manag-chart-label-remove");
+        assertEquals("#", remove.attr("href"));
+        assertEquals("projectmanagement.macro.chart.removeSeriesName", remove.attr("title"));
     }
 
     @Test
@@ -192,6 +212,9 @@ class ChartEditorPageTest extends PageTest
         Element picker = result.selectFirst("select.op-preset-select");
         assertTrue(picker.hasAttr("disabled"), result.html());
         assertEquals("projectmanagement.macro.filter.preset.none.chart", picker.text());
+        // The macro editor labels the field of the parameter, which the disabled select is without holding its value.
+        assertEquals("parameter-presetId", picker.id());
+        assertFalse(picker.hasAttr("name"));
     }
 
     @Test
@@ -225,6 +248,8 @@ class ChartEditorPageTest extends PageTest
         Element picker = result.selectFirst("select.op-preset-select");
         assertFalse(picker.hasAttr("disabled"), result.html());
         assertEquals("3", picker.selectFirst("option[value=3]").val());
+        // The select keeps the name of the label of the parameter when the picker moves this label to its text input.
+        assertEquals("parameter-presetId-ts-label", picker.attr("aria-labelledby"));
     }
 
     @Test

@@ -75,6 +75,7 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -448,6 +449,20 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getUsersWithTheirLogin() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\": 2, \"_embedded\": {\"elements\": ["
+            + "{\"id\": 5, \"name\": \"QA150 Twin\", \"login\": \"qa150same1\", \"_links\": {}},"
+            + "{\"id\": 6, \"name\": \"QA150 Twin\", \"_links\": {}}]}}");
+
+        List<User> users = this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "[]").getItems();
+
+        assertEquals("qa150same1", users.get(0).getLogin());
+        // OpenProject gives the login of the users only to the users who can manage them.
+        assertNull(users.get(1).getLogin());
+    }
+
+    @Test
     void getAvailableUsersParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
@@ -480,6 +495,21 @@ class DefaultOpenProjectApiClientTest
         assertEquals("<p>Versions &gt;= 1.6</p>", project.getDescriptionHtml());
         assertEquals("Versions &gt;= 1.6", project.getDescription());
         assertEquals("doc", project.getIdentifier());
+    }
+
+    @Test
+    void getVersionsWithTheirProject() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"_embedded\": {\"elements\": ["
+            + "{\"id\": 10, \"name\": \"1.0\", \"_links\": {\"definingProject\": {\"href\": \"/api/v3/projects/7\", "
+            + "\"title\": \"Demo\"}}},"
+            + "{\"id\": 11, \"name\": \"1.0\", \"_links\": {}}]}}");
+
+        List<Version> versions = openProjectApiClient.getVersions().getItems();
+
+        assertEquals("Demo", versions.get(0).getDefiningProjectName());
+        // The project of a version isn't always known, e.g. when the current user can't see it.
+        assertNull(versions.get(1).getDefiningProjectName());
     }
 
     @Test

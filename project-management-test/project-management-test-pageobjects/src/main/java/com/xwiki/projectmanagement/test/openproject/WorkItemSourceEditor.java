@@ -175,6 +175,16 @@ public class WorkItemSourceEditor extends BaseElement
     }
 
     /**
+     * @return the label of the field selecting the way, read by the assistive technologies
+     */
+    public String getWayLabel()
+    {
+        WebElement select = getWidget().findElement(WAY_SELECT);
+        return getWidget().findElement(By.cssSelector(String.format("label[for='%s']", select.getAttribute("id"))))
+            .getAttribute("textContent").trim();
+    }
+
+    /**
      * Pick specific work packages: search each given text (a subject, an id or a key) and pick the first work
      * package found, or the typed id or key itself.
      *
@@ -450,6 +460,22 @@ public class WorkItemSourceEditor extends BaseElement
     public String getNoFilterHint()
     {
         return getFilters().getSummary();
+    }
+
+    /**
+     * @return the description of the field selecting the way, read by the assistive technologies (the text of the
+     *     elements that its {@code aria-describedby} attribute references), or an empty string if it has none
+     */
+    public String getWayDescription()
+    {
+        String ids = getWidget().findElement(WAY_SELECT).getAttribute("aria-describedby");
+        if (ids == null) {
+            return "";
+        }
+        return Arrays.stream(ids.trim().split("\\s+")).filter(id -> !id.isEmpty())
+            .map(id -> getDriver().findElementWithoutWaitingWithoutScrolling(By.id(id)).getAttribute("textContent")
+                .trim())
+            .collect(Collectors.joining(" "));
     }
 
     /**

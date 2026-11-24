@@ -248,6 +248,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         WorkItemSourceEditor source = modal.getWorkItemSource();
         assertEquals(Way.MATCHING_FILTERS, source.getWay());
         assertEquals(List.of(Way.MATCHING_FILTERS, Way.SPECIFIC, Way.LINK), source.getWays());
+        // The field is described by the hint of the parameter, for assistive technologies.
+        assertEquals("Choose how the macro selects the work packages; only the selected way is saved.",
+            source.getWayDescription());
         assertEquals("No filter: all the work packages you can see.", source.getNoFilterHint());
         // Create a filter.
         FilterBuilderParameter filterBuilderParameter = modal.getFilterBuilder();

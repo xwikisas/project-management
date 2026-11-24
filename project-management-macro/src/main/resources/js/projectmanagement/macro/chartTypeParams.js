@@ -19,7 +19,7 @@
  */
 define('projectmanagement.chart.typeParams', {
   prefix: 'projectmanagement.macro.chart.typeParams.',
-  keys: ['loading', 'loaded', 'failed']
+  keys: ['failed']
 });
 
 require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selectize'], function ($, l10n) {
@@ -31,6 +31,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     return notification;
   };
   const SEPARATOR = ",";
+  // The fields of the options get new ids each time they're displayed: the pickers of the previous ones can still be in
+  // the page (their lists of values are appended to the body).
+  let fieldCount = 0;
   let updateInput = function () {
     let param = {};
     $('.proj-manag-chart-type-param input').each(function () {
@@ -56,15 +59,19 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     // the chart types have the same options anyway.
     let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val() || 'line';
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
-    let notif = createNotification(l10n.get('loading'), 'inprogress');
-    notif.show();
+    // Displaying the options of the chart type is a refresh of the editor, which only tells when it fails.
     $.getJSON(getChartTypeParamsURL)
       .done(function (paramTemplates) {
         var htmlTemplate = document.getElementById("proj-manag-chart-type-param-template").content;
 
         paramTemplates.forEach(template => {
           var clone = $(htmlTemplate).clone();
-          clone.find('.proj-manag-chart-type-param-name').text(template.label || template.id);
+          // The name of the option labels its field. The picker moves this label to its own text input, the field
+          // keeping its name through aria-labelledby (Tom Select, on XWiki 18+, hides it but the screen readers see it).
+          let fieldId = 'proj-manag-chart-type-param-' + (++fieldCount);
+          let labelId = fieldId + '-label';
+          clone.find('.proj-manag-chart-type-param-name').text(template.label || template.id)
+            .attr({id: labelId, for: fieldId});
           var val = template.multiple && params[template.id] instanceof Array ?
             params[template.id].join(SEPARATOR) : params[template.id];
           if (template.description) {
@@ -72,7 +79,7 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
           }
           clone.find('input')
             .data('type', template.multiple ? 'array' : 'string')
-            .attr('name', template.id)
+            .attr({id: fieldId, name: template.id, 'aria-labelledby': labelId})
             .val(val)
             .on('change', updateInput);
 
@@ -93,10 +100,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
             options: selectizeOptions
           });
         });
-        notif.replace(createNotification(l10n.get('loaded'), 'done'));
       })
       .fail(function () {
-        notif.replace(createNotification(l10n.get('failed'), 'error'));
+        createNotification(l10n.get('failed'), 'error').show();
         console.error("Failed to retrieve the chart type parameter.");
         paramsInput.toggleClass('hidden');
       });

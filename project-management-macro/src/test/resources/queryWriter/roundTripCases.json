@@ -1230,8 +1230,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2026-11-01/3000-01-01"
+              "operator":"after",
+              "value":"2026-11-01"
             }
           ]
         }
@@ -1256,8 +1256,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2026-11-30"
+              "operator":"before",
+              "value":"2026-11-30"
             }
           ]
         }
@@ -2184,8 +2184,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2038-12-25/3000-01-01"
+              "operator":"after",
+              "value":"2038-12-25"
             }
           ]
         },
@@ -2193,8 +2193,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2027-07-12"
+              "operator":"before",
+              "value":"2027-07-12"
             }
           ]
         },
@@ -2256,8 +2256,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2039-02-21"
+              "operator":"before",
+              "value":"2039-02-21"
             }
           ]
         },
@@ -2624,8 +2624,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2040-12-07"
+              "operator":"before",
+              "value":"2040-12-07"
             }
           ]
         }
@@ -3014,8 +3014,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2021-03-27/3000-01-01"
+              "operator":"after",
+              "value":"2021-03-27"
             }
           ]
         },
@@ -4004,8 +4004,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2025-05-08/3000-01-01"
+              "operator":"after",
+              "value":"2025-05-08"
             }
           ]
         },
@@ -4013,8 +4013,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2046-01-11/3000-01-01"
+              "operator":"after",
+              "value":"2046-01-11"
             }
           ]
         },
@@ -4146,8 +4146,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2045-01-11"
+              "operator":"before",
+              "value":"2045-01-11"
             }
           ]
         },
@@ -5011,8 +5011,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2048-05-22"
+              "operator":"before",
+              "value":"2048-05-22"
             }
           ]
         }
@@ -5641,8 +5641,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2038-03-13"
+              "operator":"before",
+              "value":"2038-03-13"
             }
           ]
         },
@@ -5792,8 +5792,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2005-05-23/3000-01-01"
+              "operator":"after",
+              "value":"2005-05-23"
             }
           ]
         },
@@ -6278,8 +6278,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2027-04-12/3000-01-01"
+              "operator":"after",
+              "value":"2027-04-12"
             }
           ]
         }
@@ -6544,8 +6544,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2030-08-14"
+              "operator":"before",
+              "value":"2030-08-14"
             }
           ]
         }
@@ -7316,8 +7316,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2039-04-24"
+              "operator":"before",
+              "value":"2039-04-24"
             }
           ]
         },
@@ -7967,8 +7967,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2046-03-28"
+              "operator":"before",
+              "value":"2046-03-28"
             }
           ]
         },
@@ -8028,8 +8028,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2006-05-06/3000-01-01"
+              "operator":"after",
+              "value":"2006-05-06"
             }
           ]
         },
@@ -8435,8 +8435,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2036-01-27/3000-01-01"
+              "operator":"after",
+              "value":"2036-01-27"
             }
           ]
         }
@@ -8497,8 +8497,8 @@
           "property":"Catégorie",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2014-10-14"
+              "operator":"before",
+              "value":"2014-10-14"
             }
           ]
         }
@@ -8811,8 +8811,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2031-03-12/3000-01-01"
+              "operator":"after",
+              "value":"2031-03-12"
             }
           ]
         }
@@ -9224,8 +9224,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2036-07-18/3000-01-01"
+              "operator":"after",
+              "value":"2036-07-18"
             }
           ]
         }
@@ -9397,8 +9397,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2008-03-02/3000-01-01"
+              "operator":"after",
+              "value":"2008-03-02"
             }
           ]
         }
@@ -9572,8 +9572,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2014-05-23"
+              "operator":"before",
+              "value":"2014-05-23"
             }
           ]
         },
@@ -10098,8 +10098,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2023-07-04/3000-01-01"
+              "operator":"after",
+              "value":"2023-07-04"
             }
           ]
         }
@@ -10440,8 +10440,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2049-12-27/3000-01-01"
+              "operator":"after",
+              "value":"2049-12-27"
             }
           ]
         }
@@ -10512,8 +10512,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2021-11-03"
+              "operator":"before",
+              "value":"2021-11-03"
             }
           ]
         },
@@ -10530,8 +10530,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2038-07-27/3000-01-01"
+              "operator":"after",
+              "value":"2038-07-27"
             }
           ]
         }
@@ -11065,8 +11065,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2033-12-09/3000-01-01"
+              "operator":"after",
+              "value":"2033-12-09"
             }
           ]
         }
@@ -11512,8 +11512,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2016-02-13"
+              "operator":"before",
+              "value":"2016-02-13"
             }
           ]
         }
@@ -11670,8 +11670,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2014-08-01/3000-01-01"
+              "operator":"after",
+              "value":"2014-08-01"
             }
           ]
         }
@@ -12152,8 +12152,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2048-04-19"
+              "operator":"before",
+              "value":"2048-04-19"
             }
           ]
         }
@@ -13805,8 +13805,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2017-05-12/3000-01-01"
+              "operator":"after",
+              "value":"2017-05-12"
             }
           ]
         },
@@ -14407,8 +14407,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2047-12-08/3000-01-01"
+              "operator":"after",
+              "value":"2047-12-08"
             }
           ]
         },
@@ -14514,8 +14514,8 @@
           "property":"Labels",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2011-03-18"
+              "operator":"before",
+              "value":"2011-03-18"
             }
           ]
         }
@@ -14808,8 +14808,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2004-05-15"
+              "operator":"before",
+              "value":"2004-05-15"
             }
           ]
         }
@@ -14990,8 +14990,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2026-10-03/3000-01-01"
+              "operator":"after",
+              "value":"2026-10-03"
             }
           ]
         }
@@ -15051,8 +15051,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2030-09-06"
+              "operator":"before",
+              "value":"2030-09-06"
             }
           ]
         }
@@ -15378,8 +15378,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2032-03-20/3000-01-01"
+              "operator":"after",
+              "value":"2032-03-20"
             }
           ]
         },
@@ -15459,8 +15459,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2025-01-28"
+              "operator":"before",
+              "value":"2025-01-28"
             }
           ]
         },
@@ -15723,8 +15723,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2020-09-20"
+              "operator":"before",
+              "value":"2020-09-20"
             }
           ]
         },
@@ -15839,8 +15839,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2014-08-11/3000-01-01"
+              "operator":"after",
+              "value":"2014-08-11"
             }
           ]
         }
@@ -15994,8 +15994,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2004-04-08"
+              "operator":"before",
+              "value":"2004-04-08"
             }
           ]
         },
@@ -16369,8 +16369,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2038-07-25"
+              "operator":"before",
+              "value":"2038-07-25"
             }
           ]
         }
@@ -16800,8 +16800,8 @@
           "property":"Catégorie",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2023-06-14"
+              "operator":"before",
+              "value":"2023-06-14"
             }
           ]
         }
@@ -17227,8 +17227,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2011-12-18/3000-01-01"
+              "operator":"after",
+              "value":"2011-12-18"
             }
           ]
         },
@@ -17422,8 +17422,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2041-09-19/3000-01-01"
+              "operator":"after",
+              "value":"2041-09-19"
             }
           ]
         },
@@ -17618,8 +17618,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2046-04-28/3000-01-01"
+              "operator":"after",
+              "value":"2046-04-28"
             }
           ]
         },
@@ -18070,8 +18070,8 @@
           "property":"x(y)",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2022-12-22"
+              "operator":"before",
+              "value":"2022-12-22"
             }
           ]
         }
@@ -18209,8 +18209,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2044-10-24"
+              "operator":"before",
+              "value":"2044-10-24"
             }
           ]
         },
@@ -18227,8 +18227,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2033-10-26"
+              "operator":"before",
+              "value":"2033-10-26"
             }
           ]
         }
@@ -19018,8 +19018,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2039-06-13"
+              "operator":"before",
+              "value":"2039-06-13"
             }
           ]
         },
@@ -19465,8 +19465,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2015-09-08/3000-01-01"
+              "operator":"after",
+              "value":"2015-09-08"
             }
           ]
         },
@@ -19518,8 +19518,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2021-11-12/3000-01-01"
+              "operator":"after",
+              "value":"2021-11-12"
             }
           ]
         },
@@ -20462,8 +20462,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2018-10-10/3000-01-01"
+              "operator":"after",
+              "value":"2018-10-10"
             }
           ]
         }
@@ -20775,8 +20775,8 @@
           "property":"dueDate",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2004-01-28/3000-01-01"
+              "operator":"after",
+              "value":"2004-01-28"
             }
           ]
         },
@@ -20960,8 +20960,8 @@
           "property":"x(y)",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2047-01-28/3000-01-01"
+              "operator":"after",
+              "value":"2047-01-28"
             }
           ]
         }
@@ -21338,8 +21338,8 @@
           "property":"summary",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2042-04-25/3000-01-01"
+              "operator":"after",
+              "value":"2042-04-25"
             }
           ]
         }
@@ -22300,8 +22300,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2003-02-16/3000-01-01"
+              "operator":"after",
+              "value":"2003-02-16"
             }
           ]
         },
@@ -23230,8 +23230,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2009-12-09"
+              "operator":"before",
+              "value":"2009-12-09"
             }
           ]
         },
@@ -23614,8 +23614,8 @@
           "property":"My field",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2042-08-02/3000-01-01"
+              "operator":"after",
+              "value":"2042-08-02"
             }
           ]
         },
@@ -23738,8 +23738,8 @@
           "property":"12",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2045-06-25"
+              "operator":"before",
+              "value":"2045-06-25"
             }
           ]
         }
@@ -23856,8 +23856,8 @@
           "property":"AND",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2048-11-22"
+              "operator":"before",
+              "value":"2048-11-22"
             }
           ]
         }
@@ -24265,8 +24265,8 @@
           "property":"Catégorie",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2028-11-15"
+              "operator":"before",
+              "value":"2028-11-15"
             }
           ]
         },
@@ -24292,8 +24292,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2017-08-27"
+              "operator":"before",
+              "value":"2017-08-27"
             }
           ]
         }
@@ -24398,8 +24398,8 @@
           "property":"progress",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2046-09-18/3000-01-01"
+              "operator":"after",
+              "value":"2046-09-18"
             }
           ]
         }
@@ -25123,8 +25123,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2046-09-19/3000-01-01"
+              "operator":"after",
+              "value":"2046-09-19"
             }
           ]
         },
@@ -25353,8 +25353,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2019-03-14/3000-01-01"
+              "operator":"after",
+              "value":"2019-03-14"
             }
           ]
         },
@@ -25430,8 +25430,8 @@
           "property":"x(y)",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2034-06-18"
+              "operator":"before",
+              "value":"2034-06-18"
             }
           ]
         },
@@ -25823,8 +25823,8 @@
           "property":"project",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2003-10-09/3000-01-01"
+              "operator":"after",
+              "value":"2003-10-09"
             }
           ]
         },
@@ -26299,8 +26299,8 @@
           "property":"Catégorie",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2011-06-15"
+              "operator":"before",
+              "value":"2011-06-15"
             }
           ]
         }
@@ -26512,8 +26512,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"2013-04-05/3000-01-01"
+              "operator":"after",
+              "value":"2013-04-05"
             }
           ]
         },
@@ -26878,8 +26878,8 @@
           "property":"a\"b",
           "constraints":[
             {
-              "operator":"between",
-              "value":"1970-01-01/2028-11-28"
+              "operator":"before",
+              "value":"2028-11-28"
             }
           ]
         },

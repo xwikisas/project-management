@@ -61,7 +61,9 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       style.id = STYLE_ID;
       style.textContent = '.pm-work-item-source .pm-source-ways { margin-bottom: 10px; }'
         + ' .pm-work-item-source .pm-source-way-select { width: auto; max-width: 100%; }'
-        + ' .pm-work-item-source .pm-source-field-label { display: block; font-weight: normal; }'
+        // The labels have no margin, as the names of the parameters in the macro editor, whose hint style
+        // (macro-parameter-description) the hints under them take, so that they're spaced the same.
+        + ' .pm-work-item-source .pm-source-field-label { display: block; font-weight: normal; margin: 0; }'
         + ' .pm-work-item-source .pm-source-toggle-text { padding-left: 0; }'
         + ' .modal-footer .' + DROPPED_CLASS + ' { text-align: left; }';
       document.head.appendChild(style);
@@ -85,6 +87,25 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     input.val(value).trigger('input');
   };
 
+  // Writes a parameter that may be a list of values separated by commas (e.g. the properties, picked in a list
+  // allowing several values), keeping the values that its list doesn't propose.
+  const setParameterValue = function (input, value) {
+    const selectize = input[0] && input[0].selectize;
+    if (!selectize || selectize.settings.maxItems === 1) {
+      setValue(input, value);
+      return;
+    }
+    const items = value.split(',');
+    items.filter(item => !selectize.options[item]).forEach(item => {
+      selectize.addOption({[selectize.settings.valueField]: item, [selectize.settings.labelField]: item});
+    });
+    selectize.setValue(items);
+  };
+
+  // The parameters that can hold the settings of the advanced Live Data configuration of a macro, see
+  // workItemSelection.js#splitLiveDataConfiguration.
+  const LIVE_DATA_PARAMETERS = ['properties', 'limit'];
+
   // The displayers showing only one work item.
   const SINGLE_DISPLAYERS = ['single', 'inline'];
 
@@ -92,20 +113,33 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
    * Mounts the work item picker of the specific work items. The client specific parameters of its REST requests
    * (e.g. the connection of OpenProject) are collected, on each request, from the handlers of the
    * pm:collectSourceParameters event triggered on the widget.
+   *
+   * The script of the client handling this event can load after this one: when the widget is rendered with
+   * data-source-parameters="pending", the picked work items are only resolved once the client sets it to "ready" and
+   * triggers pm:sourceParametersChanged on the widget, which it also triggers when its parameters change (e.g. the
+   * user chooses another connection).
    */
-  const mountPicker = function (widget, initialIds, onChange) {
+  const mountPicker = function (widget, initialIds, onChange, messages) {
     const urls = function () {
       const parameters = {};
       widget.trigger('pm:collectSourceParameters', [parameters]);
       return workItemList.restUrls(widget.attr('data-rest-url'), widget.attr('data-wiki'), widget.attr('data-client'),
         parameters);
     };
-    return workItemPicker.mount(widget.find('.pm-source-list-picker'), {
+    const picker = workItemPicker.mount(widget.find('.pm-source-list-picker'), {
       searchUrl: text => urls().searchUrl(text),
       itemUrl: id => urls().itemUrl(id),
       initialIds,
-      onChange
+      onChange,
+      waitForParameters: widget.attr('data-source-parameters') === 'pending',
+      messages
     });
+    widget.on('pm:sourceParametersChanged', function (event) {
+      if (event.target === this) {
+        picker.refresh();
+      }
+    });
+    return picker;
   };
 
   // The picker of the last bound widget: its suggestions are displayed in the page body, outside of the macro editor.
@@ -149,16 +183,21 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     let textMode = false;
     const queryContainer = widget.find('[data-builder-role="query"]');
     const waySelect = widget.find('.pm-source-way-select');
+    // The select is named by the name of the parameter displayed above it, which depends on the macro (e.g. "Chart the
+    // work packages selected by"): the label of the widget is the generic one.
+    const parameterName = widget.closest('.macro-parameter').find('.macro-parameter-name').first().text().trim();
+    if (parameterName) {
+      widget.find('label[for="' + waySelect.attr('id') + '"]').text(parameterName);
+    }
     // The advanced way is only offered to the macros using it.
     if (!model.hasAdvancedWay(state)) {
       waySelect.find('option[value="advanced"]').remove();
     }
     const queryText = widget.find('.pm-source-query-input');
 
-    // The layout: the widget edits the content, the preset is displayed under the filters, and the deprecated
-    // identifier is displayed by the widget, which converts it.
-    layout.hideParameter(editor, '$content');
-    layout.hideParameter(editor, 'identifier');
+    // The layout: the widget edits the content, the preset is displayed under the filters, the deprecated identifier
+    // is displayed by the widget, which converts it, and the deprecated filters by the filter builder.
+    model.getEditedParameters(state).forEach(name => layout.hideParameter(editor, name));
     layout.moveParameter(editor, 'presetId', widget.find('.pm-source-preset-slot'));
     layout.activateGroup(editor, 'filters');
 
@@ -168,6 +207,10 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
         return;
       }
       const messages = [];
+      const liveData = state.values.liveData;
+      if (liveData && state.way !== model.ADVANCED && Object.keys(liveData.parameters).length) {
+        messages.push(l10n['liveData.moved']);
+      }
       if (model.isEmptyList(state)) {
         messages.push(l10n.emptyList);
       }
@@ -219,7 +262,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
 
     // Gives the filter builder what to show; filterParameter.js keeps it until the builder is ready.
     const showInBuilder = function () {
-      const input = state.values.query.trim() === '' && state.values.legacyFilters !== ''
+      const input = model.showsLegacyFilters(state)
         ? {type: 'filters', value: state.values.legacyFilters} : {type: 'query', value: state.values.query};
       queryContainer.data('pmPendingInput', input);
       queryContainer.trigger(input.type === 'filters' ? 'pm:importFilters' : 'pm:setQuery', [input.value]);
@@ -245,7 +288,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     const picker = mountPicker(widget, state.values.list, function (ids) {
       state.values.list = ids;
       write();
-    });
+    }, workItemList.clientMessages(l10n));
     mountedPicker = picker;
     // Only the first work item is shown by the displayers of a single work item.
     const displayerFields = editor.find(':input[name="displayer"], :input[name="workItemsDisplayer"]');
@@ -267,20 +310,34 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     });
     widget.on('input', '.pm-source-query-input', function () {
       state.values.query = String($(this).val() || '');
+      state.values.queryEdited = true;
       render();
       write();
     });
     widget.on('click', '.pm-source-toggle-text', function () {
       textMode = !textMode;
       if (textMode) {
-        queryText.val(state.values.query);
+        // The deprecated filters are shown as the query of the filter builder importing them, which is only written
+        // once the user changes it.
+        const holder = {query: state.values.query};
+        if (model.showsLegacyFilters(state)) {
+          queryContainer.trigger('pm:collectQuery', [holder]);
+        }
+        queryText.val(holder.query);
       } else {
         showInBuilder();
       }
       render();
     });
     widget.on('click', '.pm-source-convert', function () {
-      state = model.withConvertedIdentifier(state);
+      // The settings of the advanced Live Data configuration of the macro, which the content no longer holds, are
+      // moved to the parameters holding them, when the macro has them.
+      const parameters = LIVE_DATA_PARAMETERS.filter(name => editor.find(`:input[name="${name}"]`).length);
+      state = model.withConvertedIdentifier(state, parameters);
+      const liveData = state.values.liveData;
+      Object.entries((liveData && liveData.parameters) || {}).forEach(([name, value]) => {
+        setParameterValue(editor.find(`:input[name="${name}"]`), value);
+      });
       showValues();
       render();
       write();
@@ -288,8 +345,15 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     queryContainer.on('pm:queryChanged', function (event, query) {
       if (event.target === this) {
         state.values.query = String(query || '');
+        state.values.queryEdited = true;
         render();
         write();
+      }
+    });
+    queryContainer.on('pm:unsupportedFilters', function (event, conditions) {
+      if (event.target === this) {
+        state.values.unsupportedFilters = conditions || [];
+        renderDropped();
       }
     });
     fields.presetId.on('change', function () {
@@ -300,6 +364,12 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
         write();
       }
     });
+    // The select is described by the hint of the parameter, which the macro editor displays above it.
+    const parameterHint = widget.closest('.macro-parameter').children('.macro-parameter-description').first();
+    if (parameterHint.length) {
+      parameterHint.attr('id', parameterHint.attr('id') || waySelect.attr('id') + '-hint');
+      waySelect.attr('aria-describedby', parameterHint.attr('id'));
+    }
 
     showValues();
     render();

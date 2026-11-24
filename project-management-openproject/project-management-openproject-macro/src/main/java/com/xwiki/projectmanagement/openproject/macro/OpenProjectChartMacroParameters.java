@@ -74,10 +74,12 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
         this.instance = instance;
     }
 
-    // The series are displayed after the widget of the source parameter, which selects the charted work packages.
+    // The series are displayed after the widget of the source parameter, which selects the charted work packages. Each
+    // parameter has its own order: XWiki 17.5+ drops the parameters having the order of another one (e.g. typeParams)
+    // from the macro descriptor, so they are neither displayed by the macro editor nor set when the macro is executed.
     @PropertyDisplayType(OpenProjectFilters.class)
     @PropertyGroup("filters")
-    @PropertyOrder(50)
+    @PropertyOrder(16)
     @Override
     public void setFilters(String filters)
     {

@@ -111,7 +111,8 @@ public final class OpenProjectLinkQuery
      * @return the filters and the sorting of the link, or {@code null} if it has none: the link of a single work
      *     package, of a saved query (whose filters are on OpenProject) or of a work package list without filter nor
      *     sorting in its {@code query_props} parameter
-     * @throws IllegalArgumentException if the {@code query_props} parameter of the link can't be read
+     * @throws IllegalArgumentException if the {@code query_props} parameter of the link can't be read, or if the link
+     *     of a work package list has other parameters without it (e.g. {@code query_id=abc})
      */
     public static OpenProjectLinkQuery read(OpenProjectLink link, Supplier<Columns> columnsSupplier)
     {
@@ -148,7 +149,8 @@ public final class OpenProjectLinkQuery
      * @param link a link given to an OpenProject macro
      * @return the number of filters in the {@code query_props} parameter of the link, 0 when it has none, or when it is
      *     the link of a single work package or of a saved query
-     * @throws IllegalArgumentException if the {@code query_props} parameter of the link can't be read
+     * @throws IllegalArgumentException if the {@code query_props} parameter of the link can't be read, or if the link
+     *     of a work package list has other parameters without it (e.g. {@code query_id=abc})
      */
     public static int countFilters(OpenProjectLink link)
     {
@@ -168,12 +170,20 @@ public final class OpenProjectLinkQuery
     /**
      * @return the {@code query_props} parameter of the link of a work package list, or {@code null} if the link has
      *     none or isn't the link of a work package list
+     * @throws IllegalArgumentException if the link of a work package list has a query string without
+     *     {@code query_props} parameter (e.g. {@code query_id=abc}), which the client can't read either
      */
     private static JsonNode readQueryProperties(OpenProjectLink link)
     {
-        String queryProperties = link.getWorkPackageId() != null || link.getSavedQueryId() != null ? null
-            : link.getQueryProperties();
+        if (link.getWorkPackageId() != null || link.getSavedQueryId() != null) {
+            return null;
+        }
+        String queryProperties = link.getQueryProperties();
         if (queryProperties == null) {
+            if (StringUtils.isNotEmpty(link.getQuery())) {
+                throw new IllegalArgumentException(
+                    "The link has parameters that are neither a saved query nor a query_props parameter.");
+            }
             return null;
         }
         JsonNode properties;
