@@ -256,6 +256,11 @@ class AbstractProjectManagementCalendarMacroTest
     @CsvSource(value = {
         "06:00-20:00, 06:00, 20:00",
         "' 08:30 - 18:00 ', 08:30, 18:00",
+        // Until midnight.
+        "20:00-24:00, 20:00, 24:00",
+        "8:00-08:00:30, 8:00, 08:00:30",
+        // The times that can't be read are passed to the calendar as they are.
+        "20:00-6h, 20:00, 6h",
         "07:00-, 07:00, NULL",
         "-19:00, NULL, 19:00",
         "' - ', NULL, NULL",
@@ -272,6 +277,26 @@ class AbstractProjectManagementCalendarMacroTest
 
         assertEquals(expectedMinTime, calendarBlock.getParameters().get("minTime"));
         assertEquals(expectedMaxTime, calendarBlock.getParameters().get("maxTime"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "20:00-06:00",
+        "08:00-08:00",
+        "' 18:00 - 9:30 '",
+        "20:00:30-20:00:15",
+        "20:00-00:00"
+    })
+    void executeWithTimeIntervalEndingBeforeItStarts(String timeInterval)
+    {
+        this.parameters.setTimeInterval(timeInterval);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, null, this.macroTransformationContext));
+
+        // The calendar would display no time slot.
+        assertEquals(String.format("The [timeInterval] parameter must end after it starts (e.g. 06:00-20:00), but is "
+            + "[%s].", timeInterval), exception.getMessage());
     }
 
     @Test

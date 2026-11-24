@@ -99,6 +99,33 @@ describe("readInitial", () => {
   });
 });
 
+describe("showsLegacyFilters", () => {
+  it("tells when the query way shows the legacy filters: the macro has no query", () => {
+    const state = model.readInitial({ filters: LEGACY_FILTERS });
+    expect(model.showsLegacyFilters(state)).toBe(true);
+
+    state.values.query = "status = open";
+    expect(model.showsLegacyFilters(state)).toBe(false);
+
+    expect(model.showsLegacyFilters(model.readInitial({ content: "status = open", filters: LEGACY_FILTERS })))
+      .toBe(false);
+    expect(model.showsLegacyFilters(model.readInitial({}))).toBe(false);
+    expect(model.showsLegacyFilters(model.readInitial({ filters: "[{}]", isChart: true }))).toBe(false);
+  });
+});
+
+describe("getEditedParameters", () => {
+  it("hides the parameters that the widget edits, the legacy filters included", () => {
+    expect(model.getEditedParameters(model.readInitial({ filters: LEGACY_FILTERS })))
+      .toEqual(["$content", "identifier", "filters"]);
+  });
+
+  it("doesn't hide the series of a chart", () => {
+    expect(model.getEditedParameters(model.readInitial({ filters: "[{}]", isChart: true })))
+      .toEqual(["$content", "identifier"]);
+  });
+});
+
 describe("toFields", () => {
   it("writes nothing for an empty macro", () => {
     expect(model.toFields(model.readInitial({}))).toEqual(EMPTY_FIELDS);
@@ -141,9 +168,36 @@ describe("toFields", () => {
     state.way = "query";
     expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, filters: LEGACY_FILTERS, identifier: "12" });
 
+    // The query replacing the legacy filters is written from them.
     state.values.query = "status = open";
     expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content: "status = open" });
+    expect(model.droppedValues(state)).toEqual([{ type: "identifier", value: "12" }]);
+
+    // Except their conditions that the filter builder can't show.
+    state.values.unsupportedFilters = ["Description empty", "Subject notEquals a"];
     expect(model.droppedValues(state)).toEqual([
+      { type: "unsupportedFilters", value: "Description empty, Subject notEquals a" },
+      { type: "identifier", value: "12" },
+    ]);
+
+    // Removing all the filters drops them too.
+    state.values.unsupportedFilters = [];
+    state.values.query = "";
+    state.values.queryEdited = true;
+    expect(model.toFields(state)).toEqual(EMPTY_FIELDS);
+    expect(model.showsLegacyFilters(state)).toBe(false);
+    expect(model.droppedValues(state)).toEqual([
+      { type: "filters", value: LEGACY_FILTERS },
+      { type: "identifier", value: "12" },
+    ]);
+
+    // Another way drops them.
+    state.values.query = "status = open";
+    state.way = "list";
+    state.values.list = ["7"];
+    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content: "7", source: "list" });
+    expect(model.droppedValues(state)).toEqual([
+      { type: "query", value: "status = open" },
       { type: "filters", value: LEGACY_FILTERS },
       { type: "identifier", value: "12" },
     ]);

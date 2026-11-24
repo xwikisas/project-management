@@ -46,6 +46,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
   const NO_VALUE_OPERATORS = ['*', '!*', 'o', 'c', 't', 'w', 'empty'];
   // The operators excluding the values of their row, whose values are highlighted.
   const EXCLUDING_OPERATORS = ['!', '!~'];
+  // Marks a builder while the filters it's given are being read, e.g. the query of a macro (see setLoading).
+  const LOADING_CLASS = 'proj-manag-query-loading';
 
   let builders = (window.FilterBuilder && window.FilterBuilder.instances) || new Map();
   let initBuilder = (window.FilterBuilder && window.FilterBuilder.inializeBuilder) || function (element) {
@@ -64,7 +66,10 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       // The filters on properties that the builder doesn't know (yet), e.g. on the custom fields of an instance
       // whose properties are being loaded: they are kept as they are.
       pending: [],
-      propertiesRequest: 0
+      propertiesRequest: 0,
+      // Whether the properties are those of the previous source (e.g. another OpenProject instance) while the ones of
+      // the new source are loading: see setSourceParameters.
+      sourceChanging: false
     };
 
     let getType = function (property) {
@@ -207,8 +212,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       return description + ' ' + values[0];
     };
-    // What the filters select, in plain words.
+    // What the filters select, in plain words, or that they're being read (see setLoading).
     let updateSummary = function () {
+      if (builder.constraintBuilder.hasClass(LOADING_CLASS)) {
+        builder.constraintBuilder.find('.proj-manag-filter-summary').text(builder.l10n.summaryLoading || '');
+        return;
+      }
       let descriptions = getRows().map((index, row) => describeRow($(row))).get().filter(text => text !== null);
       let incomplete = getRows().length - descriptions.length;
       let summary = descriptions.length > 0
@@ -244,12 +253,20 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       updateSummary();
       builder.constraintBuilder.trigger('constraintsUpdated', [getJson()]);
     };
+    // The options of the given values in their list field, e.g. with their labels, without the data of the field.
+    let getValueOptions = function (valElem, values) {
+      let selectize = valElem[0] && valElem[0].selectize;
+      return values.map(value => selectize && selectize.options[value]).filter(option => option)
+        .map(option => Object.fromEntries(Object.entries(option).filter(([key]) => !key.startsWith('$'))));
+    };
     let displayValue = function (row, values, focus) {
       let property = getRowProperty(row);
       let type = getType(property);
       let operator = getRowOperator(row);
       let valElem = getValueElement(row);
       let valueContainer = row.find('.proj-manag-constraint-value-container');
+      // Read before the field is cleaned.
+      let valueOptions = type === 'list' && builder.sourceChanging ? getValueOptions(valElem, values) : [];
       row.toggleClass('proj-manag-constraint-excluding', EXCLUDING_OPERATORS.includes(operator));
       filterDisplayer.clean(type, valElem, row.data('displayedOperator'));
       row.data('displayedOperator', operator);
@@ -268,6 +285,13 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
         multiple: type === 'list',
         label: formatMessage('valueLabel', property)
       });
+      if (type === 'list' && builder.sourceChanging) {
+        // The values of a list come from the source of the properties: while the properties of a new source are
+        // loading, no value is suggested, rather than the values of the previous source. The labels of the values
+        // already displayed are kept.
+        delete displayerParams.searchURL;
+        displayerParams.options = valueOptions;
+      }
       displayer.display(type, valElem, operator, displayerParams);
       valElem.on('change.filterBuilder', onChange);
       // The summary describes a date as the date picker displays it, once it's loaded.
@@ -364,14 +388,30 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
     /*
      * Adds the rows of a Live Data filter: one row per operator for a list, the values of an operator being in the
      * same row, and one row per constraint for the other types. A filter without constraints adds an empty row.
+     *
+     * The constraints of a filter flagged with dropUnsupported (e.g. read from the deprecated filters parameter) whose
+     * generic Live Data operator has no equivalent for the property (see queryWriter.splitSupported) are dropped, and
+     * reported by the unsupportedConstraints event (the name of the property, the dropped constraints) triggered on
+     * the builder.
      */
     let addFilter = function (filter, focus) {
       let property = builder.cfg.find(i => i.id == filter.property);
       if (property) {
         // The generic operators of the Live Data (e.g. contains, in the filters parameter written by an older version)
         // are shown with the operators of the property selecting the same work items (e.g. ~ for a text).
-        filter = queryWriter.toBuilderFilter(filter, getType(property),
-          property.filter.operators.map(operator => operator.id));
+        let operators = property.filter.operators.map(operator => operator.id);
+        if (filter.dropUnsupported) {
+          let split = queryWriter.splitSupported(filter, getType(property), operators);
+          if (split.unsupported.length > 0) {
+            builder.constraintBuilder.trigger('unsupportedConstraints', [getPropertyName(property), split.unsupported]);
+            if (split.filter.constraints.length === 0) {
+              return;
+            }
+          }
+          filter = split.filter;
+        } else {
+          filter = queryWriter.toBuilderFilter(filter, getType(property), operators);
+        }
       }
       let constraints = filter.constraints || [];
       if (!property) {
@@ -380,7 +420,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
           if (pendingFilter) {
             pendingFilter.constraints.push(...constraints);
           } else {
-            builder.pending.push({ property: filter.property, constraints: constraints.slice() });
+            // Added once its property is known, e.g. a custom field of the instance whose properties are loading.
+            builder.pending.push({ property: filter.property, constraints: constraints.slice(),
+              dropUnsupported: filter.dropUnsupported });
           }
           onChange();
         }
@@ -484,7 +526,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
      *
      * @param sourceParameters the parameters of the livedata source
      * @param redisplayRows whether the rows already added are displayed again with the new properties, see
-     *   setProperties
+     *   setProperties: the parameters select another source (e.g. the user chose another instance), whose values
+     *   differ, so that the list rows don't suggest the values of the previous source while the properties load
      */
     let setSourceParameters = function (sourceParameters, redisplayRows) {
       let request = ++builder.propertiesRequest;
@@ -497,10 +540,21 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
         }));
       // Marks the builder while its properties are loading.
       builder.constraintBuilder.addClass('proj-manag-properties-loading');
+      if (redisplayRows && !builder.sourceChanging) {
+        // Until the properties of the new source are loaded, the list rows, those already added and those added
+        // meanwhile, suggest no value (see displayValue), and they're displayed again once the properties are loaded.
+        // When they can't be loaded, the rows keep suggesting no value, the properties being those of another source.
+        builder.sourceChanging = true;
+        getRows().filter((index, row) => getType(getRowProperty($(row))) === 'list').each(function () {
+          displayValue($(this), getRowValues($(this)), false);
+        });
+      }
       return $.getJSON(url).then(function (properties) {
         // Only the properties of the last parameters are used.
         if (request === builder.propertiesRequest && Array.isArray(properties) && properties.length > 0) {
-          setProperties(properties, redisplayRows);
+          let sourceChanged = builder.sourceChanging;
+          builder.sourceChanging = false;
+          setProperties(properties, redisplayRows || sourceChanged);
         }
       }).catch(function () {
         console.error(`Failed to load the properties to filter on from [${url}].`);
@@ -513,6 +567,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
     let setTitle = function (newTitle) {
       builder.constraintBuilder.find('.proj-manag-header-title').text(newTitle);
     };
+    /*
+     * Marks the builder while the filters it's given are being read, e.g. the query of a macro, parsed by the server:
+     * its summary tells so instead of describing the filters it has so far (none), and no filter can be added, since
+     * the filters being read would then be lost.
+     */
+    let setLoading = function (loading) {
+      builder.constraintBuilder.toggleClass(LOADING_CLASS, loading).attr('aria-busy', loading ? 'true' : null);
+      builder.addButton.prop('disabled', loading);
+      updateSummary();
+    };
     let init = function () {
       builder.constraintBuilder = element;
       builder.addButton = builder.constraintBuilder.find('.proj-manag-add-filter');
@@ -521,12 +585,35 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       builder.cfg = builder.constraintBuilder.data('cfg');
       builder.l10n = builder.constraintBuilder.data('l10n') || {};
       // Choosing a property adds a row for it, the select going back to its placeholder.
-      builder.addButton.off('change.filterBuilder').on('change.filterBuilder', function (event) {
-        event.preventDefault();
-        let selectedVal = $(this).val();
+      let addSelectedProperty = function () {
+        let selectedVal = builder.addButton.val();
         if (selectedVal) {
           addFilter({ property: selectedVal }, true);
         }
+      };
+      /*
+       * A property picked with the mouse is added at once. The keys moving through the properties of the closed select
+       * (arrows, type-ahead) select each property they reach, which the browsers signal as a change before the key is
+       * released: the property is added on Enter instead, and the select goes back to its placeholder when it's left
+       * without adding it.
+       */
+      let keyDown = false;
+      builder.addButton.off('.filterBuilder').on('change.filterBuilder', function (event) {
+        event.preventDefault();
+        if (!keyDown) {
+          addSelectedProperty();
+        }
+      }).on('keydown.filterBuilder', function (event) {
+        if (event.key === 'Enter') {
+          addSelectedProperty();
+        } else {
+          keyDown = true;
+        }
+      }).on('keyup.filterBuilder mousedown.filterBuilder', function () {
+        keyDown = false;
+      }).on('blur.filterBuilder', function () {
+        keyDown = false;
+        $(this).val('');
       });
       // Enter on a list of the builder (the property to add a filter on, the operator of a filter) or on a date whose
       // date picker is open (Enter closing it) doesn't submit the form holding the builder, e.g. the macro editor:
@@ -545,7 +632,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       };
       builderElement.addEventListener('keydown', builderElement.preventSubmitOnEnter, true);
       builder.constraintBuilder.find('.proj-manag-remove-filter').off('click.filterBuilder')
-        .on('click.filterBuilder', function () {
+        .on('click.filterBuilder', function (event) {
+          // A link, to be reachable with the keyboard, that doesn't navigate.
+          event.preventDefault();
           builder.constraintBuilder.trigger('builderRemoved');
           if (window.FilterBuilder && window.FilterBuilder.instances) {
             window.FilterBuilder.instances.delete(builder.constraintBuilder[0]);
@@ -582,7 +671,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       cfg: builder.cfg,
       init: init,
       setTitle: setTitle,
-      setSourceParameters: setSourceParameters
+      setSourceParameters: setSourceParameters,
+      setLoading: setLoading
     });
   };
   /*

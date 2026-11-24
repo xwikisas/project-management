@@ -80,7 +80,8 @@ define([], function () {
    *     filters selecting the work items
    * @return {{way: string, locked: boolean, values: Object, initial: Object}} the state of the widget: the selected
    *     way, whether it's locked (the advanced Live Data configuration, kept as it is), the values of all the ways
-   *     ({query, presetId, legacyFilters, list, url, advanced: {source, content}, identifier}) and the initial fields
+   *     ({query, queryEdited, presetId, legacyFilters, unsupportedFilters, list, url, advanced: {source, content},
+   *     identifier}) and the initial fields
    */
   const readInitial = function (fields) {
     const initial = {
@@ -93,9 +94,15 @@ define([], function () {
     };
     const values = {
       query: '',
+      // Whether the user edited the query (its filters or its text), which then replaces the deprecated parameters,
+      // even when it's empty.
+      queryEdited: false,
       presetId: initial.presetId,
       // The deprecated filters parameter, edited by the filter builder of the query way.
       legacyFilters: initial.isChart ? '' : initial.filters,
+      // The conditions of the deprecated filters parameter that the filter builder can't show, as text (e.g.
+      // "Description empty"), which a query replacing them doesn't have.
+      unsupportedFilters: [],
       list: [],
       url: '',
       advanced: {source: '', content: ''},
@@ -125,6 +132,25 @@ define([], function () {
       values.advanced = {source: initial.source, content: initial.content};
     }
     return {way, locked, values, initial};
+  };
+
+  /**
+   * @param {Object} state the state of the widget
+   * @return {Array<string>} the macro parameters that the widget edits, hidden from the macro editor: the content, the
+   *     deprecated identifier, which the widget converts, and the deprecated filters, which the filter builder of the
+   *     query way imports (not the series of a chart)
+   */
+  const getEditedParameters = function (state) {
+    return state.initial.isChart ? ['$content', 'identifier'] : ['$content', 'identifier', 'filters'];
+  };
+
+  /**
+   * @param {Object} state the state of the widget
+   * @return {boolean} whether the query way shows the deprecated filters parameter, which the macro has without query
+   *     (unless the user emptied it): its filter builder imports them, and its query is the one of the imported filters
+   */
+  const showsLegacyFilters = function (state) {
+    return !state.values.queryEdited && trim(state.values.query) === '' && state.values.legacyFilters !== '';
   };
 
   /**
@@ -179,8 +205,8 @@ define([], function () {
     const content = getContent(state);
     const values = state.values;
     // The macros reject the deprecated identifier and filters parameters together with a content, and ignore the
-    // source without content.
-    const keepLegacy = content === '';
+    // source without content. The query that the user edited replaces them, even without filter (all the work items).
+    const keepLegacy = content === '' && !(state.way === QUERY && values.queryEdited);
     let filters = keepLegacy ? values.legacyFilters : '';
     if (state.initial.isChart) {
       filters = state.initial.filters;
@@ -199,7 +225,9 @@ define([], function () {
    * @param {Object} state the state of the widget
    * @return {Array<{type: string, value: string}>} the values that the user entered (or that the macro had) and that
    *     submitting the selected way drops: the values of the other ways, the preset (outside the Matching filters),
-   *     the deprecated filters and identifier parameters replaced by a content
+   *     the deprecated filters and identifier parameters replaced by a content. The query replacing the deprecated
+   *     filters is written from them (see showsLegacyFilters): only their conditions that the filter builder can't
+   *     show are dropped (unsupportedFilters)
    */
   const droppedValues = function (state) {
     if (state.locked) {
@@ -229,7 +257,13 @@ define([], function () {
       dropped.push({type: 'preset', value: values.presetId});
     }
     if (values.legacyFilters !== '' && fields.filters === '') {
-      dropped.push({type: 'filters', value: values.legacyFilters});
+      const unsupported = values.unsupportedFilters || [];
+      // The query replacing them is written from them, unless the user removed all its filters.
+      if (state.way !== QUERY || fields.content === '') {
+        dropped.push({type: 'filters', value: values.legacyFilters});
+      } else if (unsupported.length > 0) {
+        dropped.push({type: 'unsupportedFilters', value: unsupported.join(', ')});
+      }
     }
     if (values.identifier !== '' && fields.identifier === '') {
       dropped.push({type: 'identifier', value: values.identifier});
@@ -323,6 +357,8 @@ define([], function () {
     convertIdentifier,
     readInitial,
     hasAdvancedWay,
+    getEditedParameters,
+    showsLegacyFilters,
     toFields,
     droppedValues,
     isEmptyList,

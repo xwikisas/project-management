@@ -125,7 +125,7 @@ public class CalendarMacroParameters
      */
     @PropertyDisplayType(TimeInterval.class)
     @PropertyGroup("display")
-    @PropertyOrder(40)
+    @PropertyOrder(41)
     public void setTimeInterval(String timeInterval)
     {
         this.timeInterval = timeInterval;

@@ -1,0 +1,103 @@
+/*
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+/**
+ * Tells the user of the macro editor why the values of the filters can't be suggested when they can't read the data of
+ * the OpenProject connection (e.g. they must connect their OpenProject account): the message of the macros, rendered by
+ * OpenProject.Code.CKEditorPlugin, is displayed once a suggestion request fails, and removed once the suggestions are
+ * retrieved again or when the connection changes.
+ */
+define('openproject-not-authorized-message', [], function () {
+  'use strict';
+
+  /**
+   * @param fetchMessage requests the message of a connection: (connection) => promise of the HTML of the message,
+   *     empty when the current user can read the data of the connection
+   * @return a (connection) => promise of the message function, which requests the message of a connection once, and
+   *     again after a failure, a failure giving an empty message
+   */
+  const createMessageLoader = function (fetchMessage) {
+    const messages = {};
+    return function (connection) {
+      if (!messages[connection]) {
+        messages[connection] = Promise.resolve(fetchMessage(connection))
+          .then(message => typeof message === 'string' ? message : '')
+          .catch(() => {
+            delete messages[connection];
+            return '';
+          });
+      }
+      return messages[connection];
+    };
+  };
+
+  /**
+   * @param options the environment of the message:
+   *     - getConnection: () => the connection used by the edited macro, empty when there's none
+   *     - getMessage: (connection) => promise of the message of the connection (see createMessageLoader)
+   *     - show: (html, context) => displays the message, unless it's already displayed, the context being the one of
+   *       the failure, e.g. the filters whose suggestions failed
+   *     - remove: () => removes the message, if displayed
+   * @return the handlers of the events changing the message: suggestionsFailed(context), suggestionsLoaded,
+   *     connectionChanged
+   */
+  const createNotifier = function (options) {
+    return {
+      suggestionsFailed: function (context) {
+        const connection = options.getConnection();
+        if (!connection) {
+          return Promise.resolve();
+        }
+        return options.getMessage(connection).then(message => {
+          // The connection may have changed while the message was loading.
+          if (message && options.getConnection() === connection) {
+            options.show(message, context);
+          }
+        });
+      },
+      suggestionsLoaded: function () {
+        options.remove();
+      },
+      connectionChanged: function () {
+        options.remove();
+      }
+    };
+  };
+
+  /**
+   * @param href the URL of a link of the message, e.g. the link connecting the OpenProject account, which may come
+   *     back to a page (its redirectUrl parameter)
+   * @param baseURL the URL against which a relative link is resolved, e.g. the URL of the current page
+   * @param redirectURL the page to come back to, e.g. the edited page
+   * @return the URL of the link, coming back to the given page
+   */
+  const getLinkURL = function (href, baseURL, redirectURL) {
+    const url = new URL(href, baseURL);
+    if (url.searchParams.has('redirectUrl')) {
+      url.searchParams.set('redirectUrl', redirectURL);
+    }
+    return url.toString();
+  };
+
+  return {
+    createMessageLoader,
+    createNotifier,
+    getLinkURL
+  };
+});

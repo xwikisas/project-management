@@ -103,7 +103,118 @@ define([], function () {
     if (hasKey) {
       option.key = item.key;
     }
+    // The id of a work item listed by its key is kept so that it matches the searched id too.
+    let identifier = item.identifier?.value;
+    if (identifier !== undefined && identifier !== null && String(identifier) !== id) {
+      option.id = String(identifier);
+    }
     return option;
+  };
+
+  /**
+   * @param status the HTTP status of a failed request of the picker, e.g. 404, or 0 when the server didn't answer
+   * @return why the work item of a failed request can't be shown: notFound when it doesn't exist (or the user can't
+   *     see it), notRetrieved otherwise (e.g. the tool is unreachable, or the user isn't authenticated to it)
+   */
+  let failureState = function (status) {
+    return status === 404 ? 'notFound' : 'notRetrieved';
+  };
+
+  /**
+   * @param item the work item found by the lookup of a picked id, or undefined if the lookup failed
+   * @param id the picked id or key, e.g. 157 or ac-1
+   * @param typed whether the user picked the id by typing it, rather than finding it in the macro content: the work
+   *     item is then picked by its key when it has one, as the # inserter writes it
+   * @param status the HTTP status of the failed lookup, see failureState
+   * @return the option of the picker showing the picked work item: picked by the key of the work item when typed
+   *     (e.g. AC-1 for 157 or ac-1, in the case of the tool), and by the typed id when the work item can't be shown,
+   *     with the state telling why (see failureState)
+   */
+  let pickedOption = function (item, id, typed, status) {
+    let key = typed && typeof item?.key === 'string' && item.key !== '' ? item.key : undefined;
+    return toOption(item, key || id) || {value: id, label: id, state: failureState(status)};
+  };
+
+  /**
+   * The picker only searches the work items once the user types: without a typed text, the suggestions would list the
+   * work items found by the previous searches, e.g. when the suggest widget or a late answer of the search opens them
+   * once a work item is picked (and the typed text cleared).
+   *
+   * @param typedText the text typed in the picker
+   * @return whether the suggestions can be shown for this text
+   */
+  let canShowSuggestions = function (typedText) {
+    return String(typedText || '').trim() !== '';
+  };
+
+  /**
+   * @param options the options of the picker, e.g. the picked work items or the work items found by a search
+   * @param text a typed id or key, e.g. 157 or ac-1
+   * @return the option showing the work item with this id or key, whatever the case of the key (as the tool displays
+   *     it, e.g. AC-1), or undefined if there's none
+   */
+  let findOption = function (options, text) {
+    let wanted = String(text || '').trim().toUpperCase();
+    if (wanted === '') {
+      return undefined;
+    }
+    return (options || []).find(option => [option?.value, option?.key, option?.id]
+      .some(value => value !== undefined && value !== null && String(value).toUpperCase() === wanted));
+  };
+
+  /**
+   * @param found the work item whose id or key is the searched text, if any, returned by the REST API
+   * @param items the work items found by the search of the text
+   * @return the work items to suggest: the one with the searched id or key first, then the other found work items
+   */
+  let withItemFound = function (found, items) {
+    let foundId = found?.identifier?.value;
+    let others = (Array.isArray(items) ? items : []).filter(item => foundId === undefined || foundId === null
+      || String(item?.identifier?.value) !== String(foundId));
+    return found && foundId !== undefined && foundId !== null ? [found, ...others] : others;
+  };
+
+  /**
+   * Resolves the picked work items (shows their label), once the parameters of the REST requests are known: the
+   * client giving them (e.g. the connection of OpenProject) can load after the picker.
+   *
+   * @param resolveId resolves a picked work item, given its id
+   * @param waiting whether the work items are only resolved once ready() is called
+   * @return {request(id): resolves the work item, now or once ready, ready(ids): resolves the given work items (all
+   *     the picked ones) and the next requested ones right away, e.g. once the parameters are known or changed}
+   */
+  let resolution = function (resolveId, waiting) {
+    let ready = !waiting;
+    return {
+      request: function (id) {
+        if (ready) {
+          resolveId(id);
+        }
+      },
+      ready: function (ids) {
+        ready = true;
+        dedupe(ids).forEach(id => resolveId(id));
+      }
+    };
+  };
+
+  // The messages of the picker that the client can word in its own terms, e.g. "Work package {0} not found".
+  const CLIENT_MESSAGES = ['notFound', 'notRetrieved', 'invalid', 'pasteLabel'];
+
+  /**
+   * @param widgetMessages the messages of the widget of the source parameter, holding the client wording of the
+   *     picker messages under list.<key>, e.g. list.notFound
+   * @return the client wording of the picker messages, by message key, e.g. {notFound: 'Work package {0} not found'}
+   */
+  let clientMessages = function (widgetMessages) {
+    let messages = {};
+    CLIENT_MESSAGES.forEach(key => {
+      let message = widgetMessages?.['list.' + key];
+      if (typeof message === 'string' && message !== '') {
+        messages[key] = message;
+      }
+    });
+    return messages;
   };
 
   /**
@@ -136,5 +247,6 @@ define([], function () {
     };
   };
 
-  return {parseList, formatList, isIdOrKey, extend, toOption, restUrls};
+  return {parseList, formatList, isIdOrKey, extend, toOption, failureState, pickedOption, canShowSuggestions,
+    findOption, withItemFound, resolution, clientMessages, restUrls};
 });

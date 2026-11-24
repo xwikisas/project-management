@@ -25,7 +25,10 @@
  *   deprecated filters parameter with pm:importFilters(json), triggered on the container, which keeps the last one as
  *   its pmPendingInput data until the builder is ready. The builder triggers pm:queryChanged(query) on the container
  *   once the user edits the filters, and pm:queryError(message) when it can't show the query. It never writes a macro
- *   parameter itself. The query is parsed by the REST API, so that a single parser reads the queries.
+ *   parameter itself. The query is parsed by the REST API, so that a single parser reads the queries. The conditions
+ *   of the deprecated filters parameter that the builder can't show (e.g. an operator that the property doesn't have)
+ *   are dropped, and reported, as text, with pm:unsupportedFilters(conditions), the whole list each time. The
+ *   handlers of pm:collectQuery(holder) get the query of the filters shown by the builder, in holder.query.
  * - "series" (the series of a chart) and no role (e.g. the preset page): the filters are written as Live Data JSON in
  *   the .proj-manag-filter field, one configuration per builder when there are several.
  */
@@ -158,16 +161,18 @@ setTimeout(function () {
         };
         return queryWriter.withValueNames(filters, getName, queryNames);
       };
+      let getQuery = function (bld, filters) {
+        // The names written for this query are only quoted in it: a later id equal to one of them stays an id.
+        let queryNames = new Map([...names].map(([property, values]) => [property, new Set(values)]));
+        return queryWriter.toQuery(withValueNames(bld, filters, queryNames), queryNames);
+      };
       let writeQuery = function (bld, filters) {
         // The query is now the one of the filters, which the builder shows: a reading of the previous query, if any,
         // is ignored.
         queryRequest++;
-        $('.proj-manag-query-loading').removeClass('proj-manag-query-loading');
+        bld.setLoading(false);
         clearQueryWarning();
-        // The names written for this query are only quoted in it: a later id equal to one of them stays an id.
-        let queryNames = new Map([...names].map(([property, values]) => [property, new Set(values)]));
-        getQueryContainer(bld.element).trigger('pm:queryChanged',
-          [queryWriter.toQuery(withValueNames(bld, filters, queryNames), queryNames)]);
+        getQueryContainer(bld.element).trigger('pm:queryChanged', [getQuery(bld, filters)]);
       };
       let showQueryWarning = function (bld, message) {
         clearQueryWarning();
@@ -181,17 +186,17 @@ setTimeout(function () {
       let readQuery = function (bld, query) {
         let request = ++queryRequest;
         // A previous reading, if any, is ignored.
-        bld.element.removeClass('proj-manag-query-loading');
+        bld.setLoading(false);
         if (!query) {
           setReadFilters(bld);
           return;
         }
         // Marks the builder while the query is read.
-        bld.element.addClass('proj-manag-query-loading');
+        bld.setLoading(true);
         $.get(`${XWiki.contextPath}/rest/wikis/${encodeURIComponent(XWiki.currentWiki)}`
           + '/projectmanagement/query/filters', { query: query }).always(function () {
           if (request === queryRequest) {
-            bld.element.removeClass('proj-manag-query-loading');
+            bld.setLoading(false);
           }
         }).done(function (data) {
           if (request !== queryRequest) {
@@ -219,17 +224,30 @@ setTimeout(function () {
         resetQueryBuilder(bld);
         readQuery(bld, String(query || '').trim());
       };
+      // The conditions of the deprecated filters parameter that the builder dropped, as text, e.g. "Description empty".
+      let unsupportedFilters = [];
+      let reportUnsupportedFilters = function (bld, conditions) {
+        unsupportedFilters.push(...conditions);
+        getQueryContainer(bld.element).trigger('pm:unsupportedFilters', [unsupportedFilters.slice()]);
+      };
       // Shows the filters of the deprecated filters parameter (a Live Data configuration as JSON), written as a query
-      // once they're edited.
+      // once they're edited. The conditions that the builder can't show are dropped: the client ignores them too.
       let importFilters = function (bld, json) {
         resetQueryBuilder(bld);
+        // A reading of a query, if any, is ignored.
         queryRequest++;
+        bld.setLoading(false);
+        unsupportedFilters = [];
+        reportUnsupportedFilters(bld, []);
         try {
           let cfg = JSON.parse(json);
           cfg = cfg instanceof Array ? cfg[0] : cfg;
-          ((cfg && cfg.query && cfg.query.filters) || []).forEach(filter => bld.addFilter(filter));
+          ((cfg && cfg.query && cfg.query.filters) || []).forEach(filter => bld.addFilter(Object.assign({}, filter,
+            {dropUnsupported: true})));
         } catch (e) {
           console.error('Failed to read the filters parameter.', e);
+          // The filters can't show any of them.
+          reportUnsupportedFilters(bld, [json]);
         }
         setReadFilters(bld);
       };
@@ -262,6 +280,12 @@ setTimeout(function () {
           $(this).data('pmPendingInput', input);
           let bld = getQueryBuilder(this);
           bld && applyInput(bld, input);
+        }
+      });
+      $(document).on('pm:collectQuery' + EVENT_NAMESPACE, QUERY_CONTAINER, function (e, holder) {
+        let bld = getQueryBuilder(this);
+        if (e.target === this && bld && holder) {
+          holder.query = getQuery(bld, Object.values(bld.getConstraints() || {}));
         }
       });
       let updateQuery = function (bld, filters) {
@@ -306,6 +330,14 @@ setTimeout(function () {
           livedataCfgs.delete(e.target);
           getJsonField().val(serializeFilters());
         });
+        builderElem.off('unsupportedConstraints' + EVENT_NAMESPACE).on('unsupportedConstraints' + EVENT_NAMESPACE,
+          function (e, propertyName, constraints) {
+            let bld = builder.instances.get(e.target);
+            if (bld && isQueryBuilder(bld)) {
+              reportUnsupportedFilters(bld, constraints.map(constraint => [propertyName, constraint.operator,
+                constraint.value].filter(part => part !== undefined && part !== null && part !== '').join(' ')));
+            }
+          });
       };
       $(document).on('filterBuilderInitialized', function (e, builderElem) {
         bindBuilder(builderElem);
@@ -343,6 +375,7 @@ setTimeout(function () {
         livedataCfgs.clear();
         edits.clear();
         names.clear();
+        unsupportedFilters = [];
         queryRequest++;
         clearQueryWarning();
         builder.instances.forEach(bld => bld.clean());

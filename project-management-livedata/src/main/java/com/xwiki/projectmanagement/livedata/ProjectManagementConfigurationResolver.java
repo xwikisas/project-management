@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -69,6 +70,12 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
     private static final CharSequence PREFIX_ACTION = "action.";
 
     private static final String SUFFIX_HINT = ".hint";
+
+    private static final String FILTER_LIST = "list";
+
+    private static final String FILTER_OPTIONS = "options";
+
+    private static final String OPTION_VALUE = "value";
 
     @Inject
     private Logger logger;
@@ -117,7 +124,61 @@ public class ProjectManagementConfigurationResolver implements LiveDataConfigura
         // untranslated, so that a property named like a translation key (e.g. identifier.value) isn't taken for a
         // known one.
         addMissingSortAndFilterDescriptors(translatedConfig);
+        addListFilterValueOptions(translatedConfig);
         return translatedConfig;
+    }
+
+    /**
+     * Adds the values of the list filters of the query (e.g. the filters of a macro) to the options of their filter,
+     * labeled with the values themselves. The list filter of Live Data on XWiki 18 before 18.10 (XWIKI-25647) drops a
+     * value set by the configuration when the filter has no option, its options coming only from its search URL: the
+     * filter then looks empty while the entries are filtered. With an option, the value is displayed, and its label
+     * is replaced by the one of its suggestion when the search URL suggests it (e.g. the name of a type given by id).
+     */
+    private static void addListFilterValueOptions(LiveDataConfiguration config)
+    {
+        LiveDataQuery query = config.getQuery();
+        if (query == null || query.getFilters() == null) {
+            return;
+        }
+        Map<String, LiveDataPropertyDescriptor.FilterDescriptor> listFilters = getListFilters(config);
+        for (LiveDataQuery.Filter filter : query.getFilters()) {
+            LiveDataPropertyDescriptor.FilterDescriptor listFilter = listFilters.get(filter.getProperty());
+            if (listFilter != null && filter.getConstraints() != null) {
+                // The empty value (e.g. of the "Not set" operator) has its own option.
+                filter.getConstraints().stream().map(constraint -> Objects.toString(constraint.getValue(), ""))
+                    .filter(value -> !value.isEmpty()).forEach(value -> addOption(listFilter, value));
+            }
+        }
+    }
+
+    private static Map<String, LiveDataPropertyDescriptor.FilterDescriptor> getListFilters(
+        LiveDataConfiguration config)
+    {
+        Map<String, LiveDataPropertyDescriptor.FilterDescriptor> listFilters = new HashMap<>();
+        if (config.getMeta() != null && config.getMeta().getPropertyDescriptors() != null) {
+            for (LiveDataPropertyDescriptor descriptor : config.getMeta().getPropertyDescriptors()) {
+                if (descriptor.getFilter() != null && FILTER_LIST.equals(descriptor.getFilter().getId())) {
+                    listFilters.put(descriptor.getId(), descriptor.getFilter());
+                }
+            }
+        }
+        return listFilters;
+    }
+
+    private static void addOption(LiveDataPropertyDescriptor.FilterDescriptor filter, String value)
+    {
+        Object options = filter.getParameters().get(FILTER_OPTIONS);
+        List<Object> newOptions = options instanceof List ? new ArrayList<>((List<?>) options) : new ArrayList<>();
+        boolean known = newOptions.stream()
+            .anyMatch(option -> value.equals(option instanceof Map ? ((Map<?, ?>) option).get(OPTION_VALUE) : option));
+        if (!known) {
+            Map<String, Object> option = new LinkedHashMap<>();
+            option.put(OPTION_VALUE, value);
+            option.put("label", value);
+            newOptions.add(option);
+            filter.getParameters().put(FILTER_OPTIONS, newOptions);
+        }
     }
 
     /**

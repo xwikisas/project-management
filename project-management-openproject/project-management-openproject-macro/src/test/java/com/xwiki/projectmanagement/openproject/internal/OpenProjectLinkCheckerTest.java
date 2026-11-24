@@ -91,9 +91,32 @@ class OpenProjectLinkCheckerTest
     }
 
     @ParameterizedTest
+    @ValueSource(strings = { "?query_id=abc", "?query_props=%7Bnot" })
+    void reportsALinkWhoseParametersCantBeRead(String query)
+    {
+        when(this.l10n.getTranslationPlain("openproject.link.invalidParameters")).thenReturn("translated");
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.checker.check("main", SERVER_URL + "/projects/demo/work_packages" + query));
+
+        assertEquals("translated", exception.getMessage());
+    }
+
+    @Test
+    void reportsALinkWhoseParametersCantBeReadWithoutTranslation()
+    {
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.checker.check("unknown", SERVER_URL + "/work_packages?query_id=abc"));
+
+        assertEquals("The parameters of the link [https://op.example.com/work_packages?query_id=abc] can't be read.",
+            exception.getMessage());
+    }
+
+    @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = { "12, XWIKI-3", "http://OP.example.com/work_packages?query_id=5",
-        "https://op.example.com:443/work_packages/5/activity" })
+        "https://op.example.com:443/work_packages/5/activity", "https://op.example.com/projects/demo/work_packages?"
+        + "query_props=%7B%22f%22%3A%5B%5D%7D", "https://op.example.com/work_packages/5?tab=activity" })
     void acceptsTheListsOfWorkPackagesAndTheLinksOfTheServer(String identifier)
     {
         assertDoesNotThrow(() -> this.checker.check("main", identifier));

@@ -25,6 +25,8 @@
 ## Parameters (set by the template of the client including this one):
 ## $clientId the client, e.g. openproject; the labels are looked up under "${clientId}.macro.source." first
 ## $linkWay whether the work items can be selected by a link to the tool (the url source)
+## $sourceParameters whether the client gives parameters to the REST requests of the widget (e.g. the connection), with
+##   a script that tells when they're ready (see the pm:sourceParametersChanged event of workItemSourceParameter.js)
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/workItemSourceParameter.js', {'minify': false}))
 ## The filter builder of the matching filters is handled by filterParameter.js.
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
@@ -49,7 +51,7 @@
 ## The messages formatted by the JavaScript code, {0} being replaced by their parameter.
 #set ($messages = {})
 #foreach ($key in ['dropped', 'dropped.query', 'dropped.list', 'dropped.url', 'dropped.advanced', 'dropped.filters',
-    'dropped.identifier', 'dropped.liveData', 'identifier.deprecated'])
+    'dropped.identifier', 'dropped.liveData', 'dropped.unsupportedFilters', 'identifier.deprecated'])
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey, ['{0}'])))
 #end
@@ -58,13 +60,21 @@
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey)))
 #end
+## The messages of the work item picker that the client words in its own terms, if it does (see
+## workItemList.clientMessages); the picker has its own generic messages otherwise.
+#foreach ($key in ['list.notFound', 'list.notRetrieved', 'list.invalid', 'list.pasteLabel'])
+  #set ($pmClientKey = "${clientId}.macro.source.$key")
+  #if ($services.localization.get($pmClientKey))
+    #set ($discard = $messages.put($key, $services.localization.render($pmClientKey, ['{0}'])))
+  #end
+#end
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })
 <div class="pm-work-item-source" data-client="$escapetool.xml($clientId)"
   data-rest-url="$escapetool.xml("$request.contextPath/rest")" data-wiki="$escapetool.xml($xcontext.database)"
   data-l10n="$escapetool.xml($jsontool.serialize($messages))"
-  data-deps="$escapetool.xml($jsontool.serialize($deps))">
+  data-deps="$escapetool.xml($jsontool.serialize($deps))"#if ($sourceParameters) data-source-parameters="pending"#end>
   <input type="hidden" value="$!escapetool.xml($displayer.value)"
     #foreach ($parameter in $displayer.parameters.entrySet())
       $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
@@ -81,7 +91,8 @@
   ## advanced way is removed by the JavaScript code when the macro doesn't use it.
   <div class="pm-source-ways">
     #set ($waySelectId = "pm-source-way-$mathtool.random(1000, 1000000)")
-    ## The macro editor displays the name of the parameter above: the label is for assistive technologies.
+    ## The macro editor displays the name of the parameter above: the label is for assistive technologies, and
+    ## workItemSourceParameter.js replaces its text by that name, which depends on the macro.
     <label class="sr-only" for="$waySelectId">#pmSourceLabel('label')</label>
     ## No name: it's not a macro parameter, the macro editor doesn't submit it.
     <select id="$waySelectId" class="form-control pm-source-way-select">
@@ -105,10 +116,15 @@
       #filterBuilder({"client": "$!clientId", "l10n": {"summaryAll": $services.localization.render($pmSourceKey)}})
     </div>
     <div class="pm-source-query-text pm-hidden">
-      <label class="pm-source-field-label">#pmSourceLabel('query.textLabel')
-        <textarea class="form-control pm-source-query-input" rows="3"></textarea>
-      </label>
-      <p class="xHint">#pmSourceLabel('query.textHint')</p>
+      #set ($queryTextId = "pm-source-query-$mathtool.random(1000, 1000000)")
+      ## The hint is between the label and the field, as the macro editor displays the hints of the parameters, with
+      ## the same style.
+      <label class="pm-source-field-label" for="$queryTextId">#pmSourceLabel('query.textLabel')</label>
+      <div class="macro-parameter-description pm-source-field-hint" id="${queryTextId}-hint">
+        #pmSourceLabel('query.textHint')
+      </div>
+      <textarea id="$queryTextId" class="form-control pm-source-query-input" rows="3"
+        aria-describedby="${queryTextId}-hint"></textarea>
     </div>
     <button type="button" class="btn btn-link pm-source-toggle-text">#pmSourceLabel('editAsText')</button>
     ## The preset parameter is moved here.
@@ -122,10 +138,13 @@
   #if ($linkWay)
     ## A link to the tool, described by the client (see the pm:urlChanged event of workItemSourceParameter.js).
     <div class="pm-source-editor pm-hidden" data-way="url">
-      <label class="pm-source-field-label">#pmSourceLabel('url.inputLabel')
-        <input type="text" class="form-control pm-source-url-input" />
-      </label>
-      <p class="xHint">#pmSourceLabel('url.inputHint')</p>
+      #set ($urlInputId = "pm-source-url-$mathtool.random(1000, 1000000)")
+      <label class="pm-source-field-label" for="$urlInputId">#pmSourceLabel('url.inputLabel')</label>
+      <div class="macro-parameter-description pm-source-field-hint" id="${urlInputId}-hint">
+        #pmSourceLabel('url.inputHint')
+      </div>
+      <input type="text" id="$urlInputId" class="form-control pm-source-url-input"
+        aria-describedby="${urlInputId}-hint" />
       <div class="pm-source-url-description" aria-live="polite"></div>
     </div>
   #end
