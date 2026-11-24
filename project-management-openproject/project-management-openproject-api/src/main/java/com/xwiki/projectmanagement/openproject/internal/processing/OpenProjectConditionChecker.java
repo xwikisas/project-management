@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.openproject.internal.processing;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,7 +48,8 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  * numbers that a lower ({@code >=}) and an upper ({@code <=}) bound make can only be expressed on the percentage done,
  * whose values are whole numbers (see {@link OpenProjectFilterTranslator}).</li>
  * </ul>
- * Nothing is checked for the properties whose OpenProject filter is unknown.
+ * Nothing is checked for the properties whose OpenProject filter is unknown, apart from the texts (the summary and the
+ * description), whose filters OpenProject always has, with the same operators.
  *
  * @version $Id$
  * @since 1.5.0
@@ -163,14 +165,26 @@ public final class OpenProjectConditionChecker
         return field == null ? this.fields.getMappedField(OpenProjectMapper.mapLivedataProperty(property)) : field;
     }
 
+    /**
+     * @return the operators of the OpenProject filter of a property: the ones of its field, or, for the texts without
+     *     field (the description, which isn't a column of the work package lists, or the subject when the fields of
+     *     the instance are unknown), the ones that OpenProject has on their filter; empty if unknown
+     */
+    private static Collection<String> getSupportedOperators(String property, WorkPackageField field)
+    {
+        Collection<String> supportedOperators = field == null
+            ? OpenProjectFilterTranslator.getTextFilterOperators(property) : field.getFilterOperators();
+        return supportedOperators == null ? List.of() : supportedOperators;
+    }
+
     private void checkOperator(String property, String operator, WorkPackageField field)
         throws OpenProjectFilterValueException
     {
-        if (field == null || field.getFilterOperators() == null || field.getFilterOperators().isEmpty()) {
+        Collection<String> supportedOperators = getSupportedOperators(property, field);
+        if (supportedOperators.isEmpty()) {
             return;
         }
-        List<String> supportedOperators = field.getFilterOperators();
-        if (GREATER.equals(operator) || LOWER.equals(operator)) {
+        if (field != null && (GREATER.equals(operator) || LOWER.equals(operator))) {
             checkStrictComparison(property, operator, field);
         }
         String openProjectOperator = TRANSLATED_OPERATORS.getOrDefault(operator, operator);
@@ -189,7 +203,7 @@ public final class OpenProjectConditionChecker
      *     conditions
      */
     private static OpenProjectFilterValueException unsupportedCondition(String property, String operator,
-        String openProjectOperator, List<String> supportedOperators)
+        String openProjectOperator, Collection<String> supportedOperators)
     {
         String supported = QUERY_SYNTAX.entrySet().stream()
             .filter(entry -> supportedOperators.contains(entry.getKey())).map(Map.Entry::getValue).distinct()

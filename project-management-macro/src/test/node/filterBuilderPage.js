@@ -26,6 +26,7 @@ import TomSelect from "tom-select";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { loadQueryWriter } from "./queryWriter.js";
+import { loadAmdModule } from "./amdModule.js";
 
 const SOURCES = resolve(import.meta.dirname, "../../main/resources/js/projectmanagement");
 
@@ -88,8 +89,7 @@ function evaluate(path, define, require) {
 function getBuilderHTML(properties) {
   const addOptions = properties.map((property) => `<option value="${property.id}">${property.name}</option>`)
     .join("");
-  return `<form>
-    <div class="proj-manag-constraint-builder" data-client="test">
+  return `<div class="proj-manag-constraint-builder" data-client="test">
       <div class="proj-manag-header"></div>
       <div class="proj-manag-constraints"></div>
       <div class="proj-manag-add-filter-container">
@@ -111,21 +111,14 @@ function getBuilderHTML(properties) {
           <a href="#" class="proj-manag-delete-filter">Remove</a>
         </div>
       </div>
-    </div>
-  </form>`;
+    </div>`;
 }
 
-/**
- * Displays a filter builder, replacing the content of the page.
- *
- * @param properties the properties that can be filtered on, as given by the filter_properties template
- * @param l10n the labels of the builder (see filter_builder.vm)
- * @return the filter builder (the instance registered in window.FilterBuilder.instances)
- */
-export async function displayFilterBuilder(properties, l10n = {}) {
+// Displays the given HTML holding filter builders, and evaluates the scripts of the builders.
+async function displayBuilders(html, properties, l10n) {
   await loadLibraries();
   delete window.FilterBuilder;
-  document.body.innerHTML = getBuilderHTML(properties);
+  document.body.innerHTML = html;
   jquery(".proj-manag-constraint-builder").attr({
     "data-cfg": JSON.stringify(properties),
     "data-l10n": JSON.stringify(l10n),
@@ -138,7 +131,52 @@ export async function displayFilterBuilder(properties, l10n = {}) {
   }, require);
   evaluate("filterBuilder.js", (name, dependencies, factory) => factory(jquery, filterDisplayer, loadQueryWriter()),
     require);
+}
+
+/**
+ * Displays a filter builder, replacing the content of the page.
+ *
+ * @param properties the properties that can be filtered on, as given by the filter_properties template
+ * @param l10n the labels of the builder (see filter_builder.vm)
+ * @return the filter builder (the instance registered in window.FilterBuilder.instances)
+ */
+export async function displayFilterBuilder(properties, l10n = {}) {
+  await displayBuilders(`<form>${getBuilderHTML(properties)}</form>`, properties, l10n);
   return window.FilterBuilder.instances.get(document.querySelector(".proj-manag-constraint-builder"));
+}
+
+/**
+ * Displays the series of a chart macro (projectmanagementfilters/edit.vm), replacing the content of the page, with the
+ * script binding them to the parameter holding them (filterParameter.js).
+ *
+ * @param properties the properties that can be filtered on, as given by the filter_properties template
+ * @param value the value of the parameter holding the series: Live Data configurations, as JSON
+ * @return a promise resolved once the series of the parameter are displayed
+ */
+export async function displayChartSeries(properties, value) {
+  // The handlers of the series displayed before.
+  jquery(document).off();
+  await displayBuilders(`<div class="macro-editor">
+      <div class="project-management-filters" data-builder-role="series" data-series-title="Series __N__">
+        ${getBuilderHTML(properties)}
+      </div>
+      <button type="button" class="project-management-new-dataset">+ Add series</button>
+      <textarea class="proj-manag-filter hidden" name="filters"></textarea>
+    </div>`, properties, {});
+  jquery(".proj-manag-filter").val(value);
+  const require = (dependencies, onLoad) => onLoad(jquery, window.FilterBuilder, loadQueryWriter(),
+    loadAmdModule("macro/queryEdits.js"));
+  require.config = () => {};
+  evaluate("macro/filterParameter.js", () => {}, require);
+  // The script waits for the macro editor to be displayed.
+  await new Promise((resolve) => setTimeout(resolve));
+}
+
+/**
+ * @return {Array} the series displayed by {@link displayChartSeries}, as the Live Data filters of their builders
+ */
+export function getDisplayedSeries() {
+  return [...window.FilterBuilder.instances.values()].map((builder) => Object.values(builder.getConstraints()));
 }
 
 /**

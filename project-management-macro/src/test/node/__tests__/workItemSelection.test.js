@@ -160,13 +160,17 @@ describe("toFields", () => {
     expect(model.droppedValues(state)).toEqual([{ type: "list", value: "2" }]);
   });
 
-  it("keeps the legacy filters and identifier until a content replaces them", () => {
+  it("keeps the legacy filters and identifier on their own way until a content replaces them", () => {
     const state = model.readInitial({ filters: LEGACY_FILTERS, identifier: "12" });
-    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, filters: LEGACY_FILTERS, identifier: "12" });
-    expect(model.droppedValues(state)).toEqual([]);
+    // The macro is opened on the way of the identifier, which keeps it, without the filters of the matching filters.
+    expect(state.way).toBe("list");
+    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, identifier: "12" });
+    expect(model.droppedValues(state)).toEqual([{ type: "filters", value: LEGACY_FILTERS }]);
 
+    // The matching filters keep the legacy filters, not the identifier.
     state.way = "query";
-    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, filters: LEGACY_FILTERS, identifier: "12" });
+    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, filters: LEGACY_FILTERS });
+    expect(model.droppedValues(state)).toEqual([{ type: "identifier", value: "12" }]);
 
     // The query replacing the legacy filters is written from them.
     state.values.query = "status = open";
@@ -201,6 +205,32 @@ describe("toFields", () => {
       { type: "filters", value: LEGACY_FILTERS },
       { type: "identifier", value: "12" },
     ]);
+  });
+
+  it.each([
+    ["specific work items without any picked", "list"],
+    ["link left empty", "url"],
+  ])("drops the legacy filters on the %s, like a query", (name, way) => {
+    const state = model.readInitial({ filters: LEGACY_FILTERS });
+    state.way = way;
+    expect(model.toFields(state)).toEqual(EMPTY_FIELDS);
+    expect(model.droppedValues(state)).toEqual([{ type: "filters", value: LEGACY_FILTERS }]);
+
+    const query = model.readInitial({ content: "status = open" });
+    query.way = way;
+    expect(model.toFields(query)).toEqual(EMPTY_FIELDS);
+    expect(model.droppedValues(query)).toEqual([{ type: "query", value: "status = open" }]);
+  });
+
+  it("keeps the legacy identifier only on the way it converts to", () => {
+    const state = model.readInitial({ identifier: "http://op/wp?query_id=2" });
+    expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, identifier: "http://op/wp?query_id=2" });
+
+    for (const way of ["query", "list"]) {
+      state.way = way;
+      expect(model.toFields(state)).toEqual(EMPTY_FIELDS);
+      expect(model.droppedValues(state)).toEqual([{ type: "identifier", value: "http://op/wp?query_id=2" }]);
+    }
   });
 
   it("doesn't write the source of a way without content", () => {
@@ -241,6 +271,76 @@ describe("isEmptyList", () => {
     const state = model.readInitial({ content: "{}" });
     state.way = "list";
     expect(model.isEmptyList(state)).toBe(false);
+  });
+
+  it("is false while the legacy identifier is kept", () => {
+    const state = model.readInitial({ identifier: "12, 13" });
+    expect(state.way).toBe("list");
+    expect(model.isEmptyList(state)).toBe(false);
+
+    // The identifier of a link is dropped by the list.
+    expect(model.isEmptyList({ ...model.readInitial({ identifier: "http://op/wp" }), way: "list" })).toBe(true);
+  });
+});
+
+describe("getWarning", () => {
+  // The messages of the OpenProject macros (see projectmanagementworkitemsource/edit.vm).
+  const L10N = {
+    dropped: "Submit drops {0}.",
+    "dropped.separator": "; ",
+    "dropped.query": "the filters ({0})",
+    "dropped.list": "the {0} picked work packages",
+    "dropped.list.singular": "the picked work package",
+    "dropped.filters": "the filters of the deprecated Filters parameter",
+    "dropped.identifier": "the deprecated Work Packages parameter ({0})",
+    "dropped.unsupportedSeries": "the unsupported conditions of the series ({0})",
+    emptyList: "No work package is picked: all the work packages will be shown.",
+  };
+
+  it("names a single picked work package without number", () => {
+    const state = model.readInitial({ source: "list", content: "236" });
+    state.way = "query";
+    state.values.query = "status = open";
+    expect(model.getWarning(state, L10N, true)).toBe("Submit drops the picked work package.");
+
+    state.way = "url";
+    expect(model.getWarning(state, L10N, true))
+      .toBe("Submit drops the filters (status = open); the picked work package.");
+
+    state.values.list = ["236", "237"];
+    expect(model.getWarning(state, L10N, true))
+      .toBe("Submit drops the filters (status = open); the 2 picked work packages.");
+  });
+
+  it("tells that the legacy filters are dropped when no work package is picked", () => {
+    const state = model.readInitial({ filters: LEGACY_FILTERS });
+    state.way = "list";
+    expect(model.getWarning(state, L10N, true)).toBe("No work package is picked: all the work packages will be "
+      + "shown. Submit drops the filters of the deprecated Filters parameter.");
+  });
+
+  it("tells that the legacy identifier is dropped by the matching filters", () => {
+    const state = model.readInitial({ filters: LEGACY_FILTERS, identifier: "237,239" });
+    state.way = "query";
+    expect(model.getWarning(state, L10N, true)).toBe("Submit drops the deprecated Work Packages parameter (237,239).");
+  });
+
+  it("tells nothing about the selection that isn't written", () => {
+    const state = model.readInitial({ filters: LEGACY_FILTERS, identifier: "237,239" });
+    expect(model.getWarning(state, L10N, false)).toBe("");
+  });
+
+  it("lists the conditions dropped from the series once", () => {
+    const state = model.readInitial({ filters: "[{}]", isChart: true });
+    state.values.unsupportedSeries = ["Description empty", "Description empty", "Subject startsWith a"];
+    expect(model.getWarning(state, L10N, false))
+      .toBe("Submit drops the unsupported conditions of the series (Description empty, Subject startsWith a).");
+
+    state.values.query = "status = open";
+    state.way = "list";
+    state.values.list = ["7"];
+    expect(model.getWarning(state, L10N, true)).toBe("Submit drops the filters (status = open); the unsupported "
+      + "conditions of the series (Description empty, Subject startsWith a).");
   });
 });
 

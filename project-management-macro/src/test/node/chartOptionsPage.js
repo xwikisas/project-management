@@ -20,11 +20,14 @@
 // Displays the Chart Options parameter of the chart macro editor in the DOM of jsdom (the test files using it run in
 // the jsdom environment): the HTML of its editor (projectmanagementcharttypeparams/edit.vm) and the script served to
 // the browsers (chartTypeParams.js), with the libraries that XWiki gives it: jQuery and Tom Select (the suggest widget
-// of XWiki 18+).
+// of XWiki 18+). The Group By parameter is displayed above, as by property_picker.vm, with its script
+// (propertyParameter.js), and the fields that the pickers enhance are hidden from the assistive technologies, as the
+// OpenProject macros do (macroEditorLayout.js#hideEnhancedFields).
 import jquery from "jquery";
 import TomSelect from "tom-select";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadAmdModule } from "./amdModule.js";
 
 const RESOURCES = resolve(import.meta.dirname, "../../main/resources");
 
@@ -42,11 +45,12 @@ jquery.fn.xwikiSelectize = function (settings) {
 };
 
 // The HTML of the editor of the parameter, without its Velocity code: the options are displayed in its first element,
-// from the template that follows it.
-function getEditorHTML() {
+// from the template that follows it. Its first element has the client of the macro, set by Velocity.
+function getEditorHTML(client) {
   const editor = readFileSync(resolve(RESOURCES,
     "templates/html_displayer/projectmanagementcharttypeparams/edit.vm"), "utf-8");
-  return editor.match(/<div class="proj-manag-chart-type-params[\s\S]*<\/template>/)[0];
+  return editor.match(/<div class="proj-manag-chart-type-params[\s\S]*<\/template>/)[0]
+    .replace("$!escapetool.xml($clientId)", client);
 }
 
 // The notifications of XWiki, recording their type, their text and whether they're shown.
@@ -77,22 +81,32 @@ function createNotificationClass(notifications) {
 /**
  * Displays the Chart Options of the chart macro editor, replacing the content of the page.
  *
- * @param chartOptions the options of each chart type, as returned by the REST resource listing them: the request of
- *   the options of a chart type missing from this object fails
+ * @param chartOptions the options of each chart type, as returned by the REST resource listing them, e.g. under
+ *   "line", or under "line?client=openproject" for the options worded by a client: the request of the options of a
+ *   chart type missing from this object fails
  * @param chartType the chart type selected in the editor
  * @param value the value of the parameter, e.g. {"metric":"cumulative"}
+ * @param client the client of the macro, e.g. openproject, or "" for none
  * @return the notifications displayed by the editor, as {type, text, shown}, the text being the translation key
  */
-export function displayChartOptions(chartOptions, chartType = "line", value = "") {
-  const typeOptions = Object.keys({ line: true, ...chartOptions })
+export function displayChartOptions(chartOptions, chartType = "line", value = "", client = "") {
+  const typeOptions = Object.keys({ line: true, ...chartOptions }).filter((type) => !type.includes("?"))
     .map((type) => `<option value="${type}">${type}</option>`).join("");
-  document.body.innerHTML = `<div class="macro-editor-modal">
+  document.body.innerHTML = `<div class="macro-editor-modal"><div class="macro-editor" data-macroId="openprojectchart">
     <div class="macro-parameter"><select name="type">${typeOptions}</select></div>
     <div class="macro-parameter">
-      ${getEditorHTML()}
+      <label for="parameter-property">Group By</label>
+      <select id="parameter-property" name="property" class="proj-manag-property-picker"
+          aria-labelledby="parameter-property-ts-label">
+        <option value="status">Status</option>
+        <option value="dueDate">Due Date</option>
+      </select>
+    </div>
+    <div class="macro-parameter">
+      ${getEditorHTML(client)}
       <textarea id="proj-manag-chart-type-params" class="hidden"></textarea>
     </div>
-  </div>`;
+  </div></div>`;
   jquery("select[name=type]").val(chartType);
   jquery("#proj-manag-chart-type-params").val(value);
   // The handlers of the editor displayed before.
@@ -111,9 +125,11 @@ export function displayChartOptions(chartOptions, chartType = "line", value = ""
   const define = () => {};
   const l10n = { get: (key) => key };
   const require = (dependencies, onLoad) => onLoad(jquery, l10n);
-  new Function("define", "require", "XWiki",
-    readFileSync(resolve(RESOURCES, "js/projectmanagement/macro/chartTypeParams.js"), "utf-8"))(define, require,
-    XWiki);
+  loadAmdModule("macro/macroEditorLayout.js").hideEnhancedFields(jquery(".macro-editor"));
+  for (const script of ["propertyParameter.js", "chartTypeParams.js"]) {
+    new Function("define", "require", "XWiki",
+      readFileSync(resolve(RESOURCES, "js/projectmanagement/macro", script), "utf-8"))(define, require, XWiki);
+  }
   return notifications;
 }
 

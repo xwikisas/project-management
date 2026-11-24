@@ -77,6 +77,24 @@ class OpenProjectConditionCheckerTest
     }
 
     @Test
+    void checkRejectsAnUnsupportedOperatorOnTheTextsWithoutField()
+    {
+        // The description isn't a column of the work package lists, and the fields of the instance can be unknown: the
+        // filters on the description and on the subject only search a text.
+        OpenProjectConditionChecker withoutFields =
+            new OpenProjectConditionChecker(OpenProjectWorkItemFields.empty(), Set.of());
+        assertDoesNotThrow(() -> this.checker.check(List.of(new LiveDataQuery.Filter("description", "~", "x"),
+            new LiveDataQuery.Filter("description", "!~", "y"))));
+
+        assertEquals("The condition [description IS EMPTY] isn't supported by OpenProject, which supports on "
+            + "[description]: ~, !~.", assertThrows(OpenProjectFilterValueException.class,
+                () -> this.checker.check(List.of(new LiveDataQuery.Filter("description", "!*", "")))).getMessage());
+        assertEquals("The condition [summary IS NOT EMPTY] isn't supported by OpenProject, which supports on "
+            + "[summary]: ~, !~.", assertThrows(OpenProjectFilterValueException.class,
+                () -> withoutFields.check(List.of(new LiveDataQuery.Filter("summary", "*", "")))).getMessage());
+    }
+
+    @Test
     void checkRejectsAnOperatorOutsideOfTheQuery()
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("status", "contains", "1"));

@@ -46,6 +46,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
   const NO_VALUE_OPERATORS = ['*', '!*', 'o', 'c', 't', 'w', 'empty'];
   // The operators excluding the values of their row, whose values are highlighted.
   const EXCLUDING_OPERATORS = ['!', '!~'];
+  // The operators of the conditions on whether a property is set (IS NOT EMPTY and IS EMPTY in a query), which a
+  // property proposes when the tool can apply them on it: a filter using one on another property (e.g. written by hand
+  // in a query) can't be applied, which its row tells (e.g. OpenProject rejects them on the description).
+  const SET_OPERATORS = ['*', '!*'];
+  // Numbers the warnings of the rows, by which their operator refers to them.
+  let warningCount = 0;
   // Marks a builder while the filters it's given are being read, e.g. the query of a macro (see setLoading).
   const LOADING_CLASS = 'proj-manag-query-loading';
   // Marks a builder while its properties are loading (see setSourceParameters).
@@ -284,6 +290,24 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       return values.map(value => selectize && selectize.options[value]).filter(option => option)
         .map(option => Object.fromEntries(Object.entries(option).filter(([key]) => !key.startsWith('$'))));
     };
+    // The row of a condition on whether its property is set, which the property doesn't propose, tells that the tool
+    // can't apply it: the filter is kept as it is, until the user changes it or removes it.
+    let updateSetConditionWarning = function (row, property, operator) {
+      let operatorElem = row.find('select.proj-manag-constraint-operator');
+      let warning = row.children('.proj-manag-constraint-unsupported');
+      if (!SET_OPERATORS.includes(operator) || property.filter.operators.some(item => item.id == operator)) {
+        warning.remove();
+        operatorElem.removeAttr('aria-invalid aria-describedby');
+        return;
+      }
+      if (!warning.length) {
+        warning = $('<div class="box warningmessage proj-manag-constraint-unsupported"></div>')
+          .attr('id', 'proj-manag-constraint-unsupported-' + (++warningCount));
+        row.children('.proj-manag-constraint-value-container').after(warning);
+      }
+      warning.text(formatMessage('setConditionUnsupported', property));
+      operatorElem.attr({ 'aria-invalid': 'true', 'aria-describedby': warning.attr('id') });
+    };
     let displayValue = function (row, values, focus) {
       let property = getRowProperty(row);
       let type = getType(property);
@@ -293,6 +317,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       // Read before the field is cleaned.
       let valueOptions = type === 'list' && builder.sourceChanging ? getValueOptions(valElem, values) : [];
       row.toggleClass('proj-manag-constraint-excluding', EXCLUDING_OPERATORS.includes(operator));
+      updateSetConditionWarning(row, property, operator);
       filterDisplayer.clean(type, valElem, row.data('displayedOperator'));
       row.data('displayedOperator', operator);
       valElem.off('change.filterBuilder dateDisplayed.filterBuilder');

@@ -218,6 +218,9 @@ class OpenProjectQueryTest
                 + "supports on [status]: = or IN, != or NOT IN, = open, = closed, IS NOT EMPTY."),
             Arguments.of("summary = x", "The condition [summary =] isn't supported by OpenProject, which "
                 + "supports on [summary]: ~, !~."),
+            // The description isn't a column of the work package lists: it has a filter, but no field.
+            Arguments.of("description IS EMPTY", "The condition [description IS EMPTY] isn't supported by "
+                + "OpenProject, which supports on [description]: ~, !~."),
             Arguments.of("type ~ x", "The condition [type ~] isn't supported by OpenProject, which supports on [type]: "
                 + "= or IN, != or NOT IN."),
             Arguments.of("type ALL IN (1)", "The condition [type ALL IN] isn't supported by OpenProject, which supports "

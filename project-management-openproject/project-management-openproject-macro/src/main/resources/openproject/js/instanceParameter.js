@@ -20,7 +20,9 @@
 /*
  * Lays out the macro editor of the OpenProject work package macros: the Work Packages tab comes first and is active,
  * and the instance is displayed on top of it when the user has to choose the connection (no default connection and
- * not exactly one connection), the Connection tab being then hidden.
+ * not exactly one connection), the Connection tab being then hidden. In the macro editor of all the OpenProject
+ * macros, the fields that the pickers enhance are hidden from the assistive technologies (see
+ * macroEditorLayout.js#hideEnhancedFields).
  */
 (function () {
   const getResourceURL = function (resource) {
@@ -46,4 +48,7 @@ require(['projectmanagement-macro-editor-layout', 'openproject-connection'], fun
   };
   // The script is loaded by the instance field.
   layout.onMacroEditor(layout.forMacros(workPackageMacros), layOut);
+  // The macro editor of Create Work Package, which has no instance field, does the same (see createWorkPackage.js).
+  layout.onMacroEditor(editor => layout.getMacroId(editor.attr('data-macroId')).startsWith('openproject'),
+    layout.hideEnhancedFields);
 });

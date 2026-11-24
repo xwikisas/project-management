@@ -75,14 +75,17 @@
 
 /* The field searching a value follows the selected values on their line. Tom Select (XWiki 18+) gives it a minimum
    width of 7rem, which wrapped it below values leaving less, making the value field one line taller, e.g. with a user
-   name. While the value field is focused, the search field needs room for a few characters only, and no minimum width
-   otherwise, so that the values fitting on one line keep the value field one line high. Selectize (XWiki 15.10 to
-   17.10) sizes it to its text. */
+   name. While the value field is focused, the search field needs room for a few characters only. Otherwise it takes no
+   room on the line, so that the values fitting on one line keep the value field one line high, however little room
+   they leave: no minimum width, no width of its own (one character) and no margins (set with !important by Tom
+   Select). Selectize (XWiki 15.10 to 17.10) sizes it to its text. */
 .proj-manag-constraint-value-container .ts-wrapper.multi.has-items .ts-control > input {
   min-width: 4em;
 }
 .proj-manag-constraint-value-container .ts-wrapper.multi.has-items:not(.focus) .ts-control > input {
   min-width: 0;
+  flex-basis: 0;
+  margin: 0 !important;
 }
 
 /* The values excluded by their filter, e.g. "is not one of" (Selectize before XWiki 16, Tom Select after). */
@@ -148,12 +151,20 @@ select.proj-manag-add-filter {
   grid-column: 4;
 }
 
+/* The warning of a condition that can't be applied, in the column of the value, which its operator doesn't take, as
+   compact as the fields of the row. */
+.proj-manag-constraint > .proj-manag-constraint-unsupported {
+  grid-column: 3;
+  margin: 0;
+  padding: 6px 12px;
+}
+
 @media (max-width: 600px) {
   .proj-manag-constraint {
     grid-template-columns: minmax(0, 1fr) auto;
   }
   .proj-manag-constraint-title, .proj-manag-constraint-operator-container,
-  .proj-manag-constraint-value-container {
+  .proj-manag-constraint-value-container, .proj-manag-constraint > .proj-manag-constraint-unsupported {
     grid-column: 1;
   }
   .proj-manag-constraint-remove-container {
