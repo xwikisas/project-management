@@ -45,7 +45,9 @@ define('openproject-link-description', [], function () {
    * @param fetchDescription requests the description of a link: (requestUrl) => promise of the JSON description
    * @param delay the time to wait, in milliseconds, for the link to stop changing before requesting its description
    * @return a describeLink(restUrl, instance, url) function returning the promise of the description of the link, or of
-   *     null when the link is empty, or when a newer call replaced this one
+   *     null when the link is empty, or when a newer call replaced this one; the instance may be a function returning
+   *     the connection, called when the request is sent, so that the request uses the connection of the macro editor
+   *     at that time (e.g. once the macro editor has displayed the connection of the edited macro)
    */
   const createDescriber = function (fetchDescription, delay) {
     const wait = delay === undefined ? DEFAULT_DELAY : delay;
@@ -68,7 +70,8 @@ define('openproject-link-description', [], function () {
         resolveWaitingCall = resolve;
         timeout = setTimeout(function () {
           resolveWaitingCall = undefined;
-          fetchDescription(getRequestUrl(restUrl, instance, link)).then(function (description) {
+          const connection = typeof instance === 'function' ? instance() : instance;
+          fetchDescription(getRequestUrl(restUrl, connection, link)).then(function (description) {
             resolve(call === latestCall ? description : null);
           }, function (error) {
             if (call === latestCall) {

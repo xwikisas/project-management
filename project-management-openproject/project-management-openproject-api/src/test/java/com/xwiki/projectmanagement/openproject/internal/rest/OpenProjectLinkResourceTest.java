@@ -98,6 +98,12 @@ class OpenProjectLinkResourceTest
 
     private static final String UNAVAILABLE_KEY = "openproject.savedQuery.unavailable";
 
+    private static final String NOT_CONNECTED_KEY = "openproject.link.notConnected";
+
+    private static final String PROJECT_UNAVAILABLE_KEY = "openproject.link.projectUnavailable";
+
+    private static final String PROJECT_LIST_LINK = SERVER_URL + "/projects/demo/work_packages";
+
     private static final String TRANSLATED = "translated";
 
     private static final String DOCUMENT = "Space.Page";
@@ -160,7 +166,8 @@ class OpenProjectLinkResourceTest
     {
         when(this.pageEditRightChecker.canEdit(WIKI, DOCUMENT)).thenReturn(false);
 
-        assertEquals(403, this.resource.getLinkDescription(WIKI, INSTANCE, WORK_PACKAGE_LINK, DOCUMENT).getStatus());
+        assertEquals(403, this.resource.getLinkDescription(WIKI, INSTANCE, WORK_PACKAGE_LINK, DOCUMENT, null)
+            .getStatus());
         verifyNoInteractions(this.configuration);
     }
 
@@ -229,10 +236,59 @@ class OpenProjectLinkResourceTest
     void savedQueryWhenTheUserIsNotConnected()
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
-        when(this.l10n.getTranslationPlain(UNAVAILABLE_KEY, "5")).thenReturn(TRANSLATED);
+        when(this.l10n.getTranslationPlain(NOT_CONNECTED_KEY, "5")).thenReturn(TRANSLATED);
 
-        assertEquals(Map.of(KIND, "unavailable", LEVEL, WARNING, MESSAGE, TRANSLATED),
+        assertEquals(Map.of(KIND, "notConnected", LEVEL, WARNING, MESSAGE, TRANSLATED),
             describe(INSTANCE, SAVED_QUERY_LINK));
+    }
+
+    @Test
+    void savedQueryWhenTheTokenOfTheUserIsRejected() throws Exception
+    {
+        when(this.client.getQuery("5")).thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
+        when(this.l10n.getTranslationPlain(NOT_CONNECTED_KEY, "5")).thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, "notConnected", LEVEL, WARNING, MESSAGE, TRANSLATED),
+            describe(INSTANCE, SAVED_QUERY_LINK));
+    }
+
+    /**
+     * The chart and the calendar use the saved query as it is: they have no table showing its filters.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "openprojectcalendar", "openprojectchart" })
+    void savedQueryOfAMacroWithoutTable(String macro) throws Exception
+    {
+        when(this.client.getQuery("5")).thenReturn(query("{\"name\":\"Open tasks\",\"_links\":{"
+            + "\"project\":{\"href\":\"/api/v3/projects/9\",\"title\":\"Demo\"},"
+            + "\"results\":{\"href\":\"/api/v3/projects/9/work_packages?includeSubprojects=false\"}}}"));
+        when(this.l10n.getTranslationPlain(DESCRIBE + "savedQuery.withoutTable", QUERY_NAME, "Demo"))
+            .thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, SAVED_QUERY, LEVEL, INFO, MESSAGE, TRANSLATED, "name", QUERY_NAME),
+            describe(INSTANCE, SAVED_QUERY_LINK, macro));
+    }
+
+    @Test
+    void savedQueryOfAllTheProjectsOfAMacroWithoutTable() throws Exception
+    {
+        when(this.client.getQuery("5")).thenReturn(query("{\"name\":\"Open tasks\",\"_links\":{"
+            + "\"project\":{\"href\":null},\"results\":{\"href\":\"/api/v3/work_packages\"}}}"));
+        when(this.l10n.getTranslationPlain(DESCRIBE + "savedQuery.allProjects.withoutTable", QUERY_NAME))
+            .thenReturn(TRANSLATED);
+
+        assertEquals(TRANSLATED,
+            describe(INSTANCE, SERVER_URL + "/work_packages?query_id=5", "openprojectcalendar").get(MESSAGE));
+    }
+
+    @Test
+    void savedQueryOfTheTableMacro() throws Exception
+    {
+        when(this.client.getQuery("5")).thenReturn(query("{\"name\":\"Open tasks\",\"_links\":{"
+            + "\"project\":{\"href\":null},\"results\":{\"href\":\"/api/v3/work_packages\"}}}"));
+        when(this.l10n.getTranslationPlain(DESCRIBE + "savedQuery.allProjects", QUERY_NAME)).thenReturn(TRANSLATED);
+
+        assertEquals(TRANSLATED, describe(INSTANCE, SAVED_QUERY_LINK, "openproject").get(MESSAGE));
     }
 
     @Test
@@ -241,7 +297,7 @@ class OpenProjectLinkResourceTest
         when(this.client.getQuery("5"))
             .thenThrow(new WorkItemRetrievalException("Failed at https://op.example.com/secret", 500));
 
-        Response response = this.resource.getLinkDescription(WIKI, INSTANCE, SAVED_QUERY_LINK, DOCUMENT);
+        Response response = this.resource.getLinkDescription(WIKI, INSTANCE, SAVED_QUERY_LINK, DOCUMENT, null);
 
         assertEquals(500, response.getStatus());
         assertEquals("Failed to retrieve the saved query from OpenProject.", response.getEntity());
@@ -267,7 +323,42 @@ class OpenProjectLinkResourceTest
         when(this.l10n.getTranslationPlain(DESCRIBE + "project", "demo", 0)).thenReturn(TRANSLATED);
 
         assertEquals(Map.of(KIND, "project", LEVEL, INFO, MESSAGE, TRANSLATED, "filterCount", 0),
-            describe(INSTANCE, SERVER_URL + "/projects/demo/work_packages"));
+            describe(INSTANCE, PROJECT_LIST_LINK));
+    }
+
+    /**
+     * OpenProject answers 404 for the projects that don't exist and for the ones the user isn't allowed to see.
+     */
+    @ParameterizedTest
+    @ValueSource(ints = { 403, 404 })
+    void projectNotVisible(int statusCode) throws Exception
+    {
+        when(this.client.getProject("demo")).thenThrow(new WorkItemRetrievalException("Not found", statusCode));
+        when(this.l10n.getTranslationPlain(PROJECT_UNAVAILABLE_KEY, "demo")).thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, "unavailable", LEVEL, WARNING, MESSAGE, TRANSLATED),
+            describe(INSTANCE, PROJECT_LIST_LINK));
+    }
+
+    /**
+     * The project can't be checked: the link is described as when it's visible, the macro reporting the failure.
+     */
+    @Test
+    void projectWhenOpenProjectFails() throws Exception
+    {
+        when(this.client.getProject("demo")).thenThrow(new WorkItemRetrievalException("Failed", 500));
+        when(this.l10n.getTranslationPlain(DESCRIBE + "project", "demo", 0)).thenReturn(TRANSLATED);
+
+        assertEquals("project", describe(INSTANCE, PROJECT_LIST_LINK).get(KIND));
+    }
+
+    @Test
+    void projectWhenTheUserIsNotConnected()
+    {
+        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.l10n.getTranslationPlain(DESCRIBE + "project", "demo", 0)).thenReturn(TRANSLATED);
+
+        assertEquals("project", describe(INSTANCE, PROJECT_LIST_LINK).get(KIND));
     }
 
     @Test
@@ -291,13 +382,26 @@ class OpenProjectLinkResourceTest
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "", "5, 6", "op.example.com/work_packages",
-        SERVER_URL + "/work_packages?query_props=%5B%5D", SERVER_URL + "/work_packages?query_props=%7Bnot" })
+    @ValueSource(strings = { "", "5, 6", "op.example.com/work_packages" })
     void invalid(String link)
     {
         when(this.l10n.getTranslationPlain(DESCRIBE + "invalid")).thenReturn(TRANSLATED);
 
         assertEquals(Map.of(KIND, "invalid", LEVEL, WARNING, MESSAGE, TRANSLATED), describe(INSTANCE, link));
+    }
+
+    /**
+     * The macro can't read the parameters of these links either.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "/work_packages?query_props=%5B%5D", "/work_packages?query_props=%7Bnot",
+        "/projects/demo/work_packages?query_id=abc" })
+    void invalidParameters(String path)
+    {
+        when(this.l10n.getTranslationPlain("openproject.link.invalidParameters")).thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, "invalid", LEVEL, WARNING, MESSAGE, TRANSLATED), describe(INSTANCE,
+            SERVER_URL + path));
     }
 
     @Test
@@ -320,18 +424,24 @@ class OpenProjectLinkResourceTest
     @Test
     void noConnection()
     {
-        Response response = this.resource.getLinkDescription(WIKI, "unknown", SERVER_URL + "/wp/12", DOCUMENT);
+        Response response = this.resource.getLinkDescription(WIKI, "unknown", SERVER_URL + "/wp/12", DOCUMENT,
+            null);
 
         assertEquals(404, response.getStatus());
         assertNull(response.getEntity());
-        response = this.resource.getLinkDescription(WIKI, null, SERVER_URL + "/wp/12", DOCUMENT);
+        response = this.resource.getLinkDescription(WIKI, null, SERVER_URL + "/wp/12", DOCUMENT, null);
         assertEquals(404, response.getStatus());
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> describe(String instance, String link)
     {
-        Response response = this.resource.getLinkDescription(WIKI, instance, link, DOCUMENT);
+        return describe(instance, link, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> describe(String instance, String link, String macro)
+    {
+        Response response = this.resource.getLinkDescription(WIKI, instance, link, DOCUMENT, macro);
         assertEquals(200, response.getStatus());
         return (Map<String, Object>) response.getEntity();
     }

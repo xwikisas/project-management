@@ -88,6 +88,18 @@ describe("createDescriber", () => {
     expect(fetchDescription).toHaveBeenCalledTimes(1);
   });
 
+  it("reads the connection when the request is sent", async () => {
+    // The macro editor displays the connection of the edited macro after the link.
+    let connection = "";
+    const description = describeLink(REST_URL, () => connection, "https://op.example.com/wp/12");
+    connection = "OpenProject QA";
+    await vi.advanceTimersByTimeAsync(300);
+
+    await expect(description).resolves.toEqual({
+      requestUrl: REST_URL + "?instance=OpenProject+QA&url=https%3A%2F%2Fop.example.com%2Fwp%2F12"
+    });
+  });
+
   it("ignores the reply to an outdated request", async () => {
     let resolveFirst;
     fetchDescription.mockImplementationOnce(() => new Promise((resolve) => {
