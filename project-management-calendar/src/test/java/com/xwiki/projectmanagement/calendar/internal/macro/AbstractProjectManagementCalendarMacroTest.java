@@ -263,14 +263,20 @@ class AbstractProjectManagementCalendarMacroTest
         "20:00-00:00, 20:00, 24:00",
         "00:00-00:00, 00:00, 24:00",
         "6:00-0:00:00, 6:00, 24:00",
-        "-00:00, NULL, 24:00",
         "8:00-08:00:30, 8:00, 08:00:30",
         // The times that can't be read are passed to the calendar as they are.
         "20:00-6h, 20:00, 6h",
-        "07:00-, 07:00, NULL",
-        "-19:00, NULL, 19:00",
+        // Like in the macro editor, a missing start or end is the start or the end of the day, and a value without a
+        // dash is a start.
+        "07:00-, 07:00, 24:00",
+        "' 23:30 - ', 23:30, 24:00",
+        "07:00, 07:00, 24:00",
+        "6h-, 6h, 24:00",
+        "-19:00, 00:00, 19:00",
+        "-00:00, 00:00, 24:00",
+        // Without any time, the calendar displays its default hours.
         "' - ', NULL, NULL",
-        "07:00, NULL, NULL",
+        "' ', NULL, NULL",
         "'', NULL, NULL",
         "NULL, NULL, NULL"
     }, nullValues = "NULL")
@@ -292,7 +298,10 @@ class AbstractProjectManagementCalendarMacroTest
         "' 18:00 - 9:30 '",
         "20:00:30-20:00:15",
         "24:00-24:00",
-        "24:00-00:00"
+        "24:00-00:00",
+        // No end is the end of the day: no time is visible.
+        "24:00-",
+        "' 24:00:00 '"
     })
     void executeWithTimeIntervalEndingBeforeItStarts(String timeInterval)
     {

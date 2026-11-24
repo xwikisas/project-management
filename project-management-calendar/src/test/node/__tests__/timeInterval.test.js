@@ -69,7 +69,7 @@ describe("timeInterval", () => {
       ["06:00", "00:00", "06:00-24:00"],
       ["06:00", "00:00:00", "06:00-24:00"],
       ["00:00", "00:00", "00:00-24:00"],
-      // A missing time is the start or the end of the day: the calendar has other defaults.
+      // A missing time is the start or the end of the day.
       ["07:00", "", "07:00-24:00"],
       ["", "19:00", "00:00-19:00"],
       // No parameter.

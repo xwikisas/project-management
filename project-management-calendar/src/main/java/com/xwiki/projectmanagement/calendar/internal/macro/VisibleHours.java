@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.calendar.internal.macro;
 
 import java.time.Duration;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,8 +29,10 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 
 /**
  * The hours displayed by the week and day views of a calendar, written in the {@code timeInterval} parameter of the
- * calendar macros as a start and an end separated by a dash, e.g. {@code 06:00-20:00}. Both are optional. The end of
- * the day is {@code 24:00}, or {@code 00:00} as an end, which the time fields of the macro editor can hold.
+ * calendar macros as a start and an end separated by a dash, e.g. {@code 06:00-20:00}. The end of the day is
+ * {@code 24:00}, or {@code 00:00} as an end, which the time fields of the macro editor can hold. Like in the macro
+ * editor, a missing start or end is the start or the end of the day, and a value without a dash is a start; without
+ * any time, the calendar displays its default hours.
  *
  * @version $Id$
  * @since 1.5.0
@@ -42,6 +45,10 @@ final class VisibleHours
     private static final Pattern TIME = Pattern.compile("(\\d{1,2}):(\\d{2})(?::(\\d{2}))?");
 
     private static final Duration END_OF_DAY = Duration.ofDays(1);
+
+    private static final String START_OF_DAY_TIME = "00:00";
+
+    private static final String END_OF_DAY_TIME = "24:00";
 
     private final String start;
 
@@ -65,15 +72,9 @@ final class VisibleHours
      */
     static VisibleHours parse(String timeInterval) throws MacroExecutionException
     {
-        String start = null;
-        String end = null;
-        if (timeInterval != null) {
-            String[] parts = timeInterval.split("-", 2);
-            if (parts.length == 2) {
-                start = StringUtils.trimToNull(parts[0]);
-                end = StringUtils.trimToNull(parts[1]);
-            }
-        }
+        String[] times = split(timeInterval);
+        String start = times[0];
+        String end = times[1];
         Duration startTime = parseTime(start);
         Duration endTime = parseTime(end);
         if (isAfterEndOfDay(startTime) || isAfterEndOfDay(endTime)) {
@@ -82,7 +83,7 @@ final class VisibleHours
         }
         if (Duration.ZERO.equals(endTime)) {
             // The end of the day, which the calendar needs as 24:00.
-            end = "24:00";
+            end = END_OF_DAY_TIME;
             endTime = END_OF_DAY;
         }
         if (startTime != null && endTime != null && endTime.compareTo(startTime) <= 0) {
@@ -93,7 +94,7 @@ final class VisibleHours
     }
 
     /**
-     * @return the first visible hour, e.g. {@code 06:00}, or {@code null} for the default one
+     * @return the first visible hour, e.g. {@code 06:00}, or {@code null} for the default hours of the calendar
      */
     String getStart()
     {
@@ -101,11 +102,32 @@ final class VisibleHours
     }
 
     /**
-     * @return the end of the last visible hour, e.g. {@code 20:00}, or {@code null} for the default one
+     * @return the end of the last visible hour, e.g. {@code 20:00}, or {@code null} for the default hours of the
+     *     calendar
      */
     String getEnd()
     {
         return this.end;
+    }
+
+    /**
+     * @param timeInterval the value of the {@code timeInterval} parameter, or {@code null} when it isn't set
+     * @return the start and the end of the visible hours, the start or the end of the day standing for a missing one,
+     *     or two {@code null} when the parameter holds no time
+     */
+    private static String[] split(String timeInterval)
+    {
+        if (timeInterval == null) {
+            return new String[2];
+        }
+        int separator = timeInterval.indexOf('-');
+        String start = StringUtils.trimToNull(separator < 0 ? timeInterval : timeInterval.substring(0, separator));
+        String end = separator < 0 ? null : StringUtils.trimToNull(timeInterval.substring(separator + 1));
+        if (start == null && end == null) {
+            return new String[2];
+        }
+        return new String[] { Objects.requireNonNullElse(start, START_OF_DAY_TIME),
+            Objects.requireNonNullElse(end, END_OF_DAY_TIME) };
     }
 
     private static boolean isAfterEndOfDay(Duration time)

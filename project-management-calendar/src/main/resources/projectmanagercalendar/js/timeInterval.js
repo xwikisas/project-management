@@ -21,8 +21,7 @@
  * The editor of the Visible Hours (timeInterval parameter) of the calendar macros: two time inputs, the start and the
  * end, backed by the hidden input holding the value of the parameter, e.g. 06:00-20:00. A time input can't hold 24:00,
  * the end of the day: an end of 00:00 stands for it. An empty start or end is written as the start or the end of the
- * day, so that the parameter always holds both times: the calendar has other defaults for a missing one (e.g. its
- * last visible hour ends at 23:00).
+ * day, which is how the calendar macros read a missing one, so that the written parameter says it.
  */
 define('projectmanagement-calendar-time-interval', [], function() {
   'use strict';
