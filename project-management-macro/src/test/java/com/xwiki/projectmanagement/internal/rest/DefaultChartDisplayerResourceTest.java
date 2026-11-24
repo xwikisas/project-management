@@ -50,6 +50,8 @@ class DefaultChartDisplayerResourceTest
 
     private static final String LABEL = "label";
 
+    private static final String METRIC = "metric";
+
     @InjectMockComponents
     private DefaultChartDisplayerResource resource;
 
@@ -71,7 +73,7 @@ class DefaultChartDisplayerResourceTest
             .thenReturn("Hourly");
 
         Map<String, ChartDisplayerParameterInfo> parameters = new LinkedHashMap<>();
-        this.resource.getChartDisplayerInfo("line").forEach(info -> parameters.put(info.getId(), info));
+        this.resource.getChartDisplayerInfo("line", null).forEach(info -> parameters.put(info.getId(), info));
 
         ChartDisplayerParameterInfo period = parameters.get(PERIOD);
         assertEquals("Date Grouping", period.getLabel());
@@ -84,5 +86,29 @@ class DefaultChartDisplayerResourceTest
         assertEquals(List.of("HOURLY", "DAILY"), List.copyOf(period.getValueLabels().keySet()));
         // A parameter that takes any value has no value labels.
         assertNull(parameters.get(LABEL).getValueLabels());
+    }
+
+    @Test
+    void getChartDisplayerInfoUsesTheTextsOfTheClient() throws Exception
+    {
+        ChartTypeDisplayer displayer = this.componentManager.registerMockComponent(ChartTypeDisplayer.class, "pie");
+        when(displayer.getParameterTypeTemplate()).thenReturn(Map.of(METRIC, "count"));
+        when(displayer.getParameterTypeValues()).thenReturn(Map.of(METRIC, List.of("count")));
+        when(this.l10n.getTranslationPlain("projectmanagement.chart.pie.parameter.metric")).thenReturn("Measure");
+        when(this.l10n.getTranslationPlain("projectmanagement.chart.pie.parameter.metric.description"))
+            .thenReturn("Default: the number of work items.");
+        when(this.l10n.getTranslationPlain("openproject.chart.pie.parameter.metric.description"))
+            .thenReturn("Default: the number of work packages.");
+        when(this.l10n.getTranslationPlain("projectmanagement.chart.parameter.metric.value.count")).thenReturn("Count");
+
+        ChartDisplayerParameterInfo metric = this.resource.getChartDisplayerInfo("pie", "openproject").get(0);
+
+        // The client words the texts it has its own way, the other texts are the generic ones.
+        assertEquals("Default: the number of work packages.", metric.getDescription());
+        assertEquals("Measure", metric.getLabel());
+        assertEquals(Map.of("count", "Count"), metric.getValueLabels());
+        // Without client, the texts are the generic ones.
+        assertEquals("Default: the number of work items.",
+            this.resource.getChartDisplayerInfo("pie", "").get(0).getDescription());
     }
 }

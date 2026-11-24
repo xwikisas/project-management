@@ -24,8 +24,10 @@ import java.util.List;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 
 import org.xwiki.rest.XWikiRestException;
+import org.xwiki.stability.Unstable;
 
 import com.xwiki.projectmanagement.chart.model.ChartDisplayerParameterInfo;
 
@@ -39,9 +41,20 @@ import com.xwiki.projectmanagement.chart.model.ChartDisplayerParameterInfo;
 public interface ChartDisplayerResource
 {
     /**
-     * @param type the type of the chart displayer. It's id.
-     * @return a structure containing the
+     * Returns the parameters of a chart type (the Chart Options of the chart macro editor), with their labels.
+     *
+     * @param type the chart type, that is the hint of its {@code ChartTypeDisplayer}, for example {@code pie}
+     * @param client the client whose macro editor displays the parameters, for example {@code openproject}, or
+     *     {@code null}: each label, description and value label is the one of the client (the translation key
+     *     starting with {@code <client>.chart.}, for example {@code openproject.chart.}) if it has one, otherwise the
+     *     generic one (the same key starting with {@code projectmanagement.chart.})
+     * @return the parameters of the chart type, with their labels, descriptions and allowed values
+     * @throws XWikiRestException if the parameters can't be retrieved; an unknown chart type gives a {@code 404}
+     *     response instead
+     * @since 1.5.0
      */
+    @Unstable
     @GET
-    List<ChartDisplayerParameterInfo> getChartDisplayerInfo(@PathParam("type") String type) throws XWikiRestException;
+    List<ChartDisplayerParameterInfo> getChartDisplayerInfo(@PathParam("type") String type,
+        @QueryParam("client") String client) throws XWikiRestException;
 }

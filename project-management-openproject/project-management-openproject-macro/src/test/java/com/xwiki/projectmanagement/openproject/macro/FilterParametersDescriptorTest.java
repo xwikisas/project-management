@@ -42,6 +42,7 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.mockito.MockitoComponentManager;
 
+import com.xwiki.projectmanagement.openproject.OpenProjectChartTypeParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectWorkItemSource;
 
@@ -183,6 +184,34 @@ class FilterParametersDescriptorTest
         assertEquals(OpenProjectFilters.class, series.getDisplayType());
         assertFalse(series.isDisplayHidden());
         assertEquals(16, getOrder(series));
+    }
+
+    static Stream<Arguments> chartOptions()
+    {
+        return Stream.of(
+            Arguments.of(OpenProjectChartMacroParameters.class, List.of("display"), 50),
+            Arguments.of(OpenProjectOpenClosedMacroParameters.class, List.of(), 20));
+    }
+
+    @ParameterizedTest
+    @MethodSource("chartOptions")
+    void chartOptionsAreWordedForOpenProject(Class<?> parametersClass, List<String> group, int order) throws Exception
+    {
+        PropertyDescriptor chartOptions = this.componentManager.<BeanManager>getInstance(BeanManager.class)
+            .getBeanDescriptor(parametersClass).getProperty("typeParams");
+
+        // The widget of the options of the chart type displays the OpenProject texts, e.g. "work packages", at the
+        // same place as the generic one.
+        assertEquals(OpenProjectChartTypeParams.class, chartOptions.getDisplayType());
+        assertFalse(chartOptions.isDisplayHidden());
+        assertEquals(order, getOrder(chartOptions));
+        assertEquals(group, getGroup(chartOptions));
+    }
+
+    private static List<String> getGroup(PropertyDescriptor property)
+    {
+        return property.getGroupDescriptor() != null && property.getGroupDescriptor().getGroup() != null
+            ? property.getGroupDescriptor().getGroup() : List.of();
     }
 
     private static int getOrder(PropertyDescriptor property)
