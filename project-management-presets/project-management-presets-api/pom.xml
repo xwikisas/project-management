@@ -29,13 +29,24 @@
   <artifactId>project-management-presets-api</artifactId>
 
   <properties>
-    <xwiki.jacoco.instructionRatio>0.81</xwiki.jacoco.instructionRatio>
+    <xwiki.jacoco.instructionRatio>0.86</xwiki.jacoco.instructionRatio>
   </properties>
   <dependencies>
     <!-- Needed for the class initializer and the manager.  -->
     <dependency>
       <groupId>org.xwiki.platform</groupId>
       <artifactId>xwiki-platform-oldcore</artifactId>
+      <version>${platform.version}</version>
+    </dependency>
+    <!-- Needed to hide the existing presets when the presets are installed or upgraded. -->
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-extension-api</artifactId>
+      <version>${commons.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-wiki-api</artifactId>
       <version>${platform.version}</version>
     </dependency>
     <!--  Needed for the script service.  -->
