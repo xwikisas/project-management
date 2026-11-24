@@ -68,6 +68,7 @@ class ParameterOrderTest
     @ParameterizedTest
     @ValueSource(classes = {
         OpenProjectAssignedToMeMacroParameters.class,
+        OpenProjectCalendarMacroParameters.class,
         OpenProjectChartMacroParameters.class,
         OpenProjectCreateWorkPackageMacroParameters.class,
         OpenProjectMacroParameters.class,

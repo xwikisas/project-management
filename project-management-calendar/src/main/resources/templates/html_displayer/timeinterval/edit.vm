@@ -22,6 +22,9 @@
 ## Note: $displayer.value is null for class-based displayers, so the hidden field value
 ## is set via JavaScript sync from the time inputs instead.
 ## ---------------------------------------------------------------------------
+## The styles putting the two time inputs on one line. The calendar macro loads them too, but the macro editor can't rely
+## on it: the edited page may display no calendar (a new one, or one failing with an error).
+#set ($discard = $xwiki.ssrx.use('projectmanagercalendar/css/parameters.css'))
 ## Hidden input stores the combined value for the macro parameter.
 <input type="hidden" name="$escapetool.xml($displayer.parameters.name)"
   id="$!escapetool.xml($displayer.parameters.id)" class="time-interval-hidden"/>
