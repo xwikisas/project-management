@@ -124,12 +124,18 @@
   #set ($discard = $opts.put('removable', true))
   #set ($seriesTitle = $services.localization.render('projectmanagement.macro.chart.series', ['__N__']))
   #set ($seriesTitleAttribute = " data-series-title='$escapetool.xml($seriesTitle)'")
-  ## Without filter, a series counts all the work items selected by the chart (the client can name them its own way).
-  #set ($seriesNoFilterKey = "${client}.macro.chart.series.noFilter")
-  #if (!$services.localization.get($seriesNoFilterKey))
-    #set ($seriesNoFilterKey = 'projectmanagement.macro.chart.series.noFilter')
+  ## The summary of a series says that it counts the work items selected by the chart (the client can name them its
+  ## own way), by label of the filter builder.
+  #set ($seriesL10nKeys = {'summary': 'summary', 'summaryAll': 'noFilter'})
+  #set ($seriesL10n = {})
+  #foreach ($seriesL10nKey in $seriesL10nKeys.entrySet())
+    #set ($seriesKey = "${client}.macro.chart.series.$seriesL10nKey.value")
+    #if (!$services.localization.get($seriesKey))
+      #set ($seriesKey = "projectmanagement.macro.chart.series.$seriesL10nKey.value")
+    #end
+    #set ($discard = $seriesL10n.put($seriesL10nKey.key, $services.localization.render($seriesKey)))
   #end
-  #set ($discard = $opts.put('l10n', {'summaryAll': $services.localization.render($seriesNoFilterKey)}))
+  #set ($discard = $opts.put('l10n', $seriesL10n))
 #end
 &lt;dt&gt;$escapetool.xml($services.localization.render('projectmanagement.presets.filter'))&lt;/dt&gt;
 &lt;dd&gt;

@@ -23,12 +23,17 @@
 <div class="project-management-filters" data-builder-role="series"
   data-series-title="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.series', ['__N__']))">
 #set ($firstSeriesTitle = $services.localization.render('projectmanagement.macro.chart.series', [1]))
-## Without filter, a series counts all the work items selected by the chart (the client can name them its own way).
-#set ($seriesNoFilterKey = "${clientId}.macro.chart.series.noFilter")
-#if ("$!clientId" == '' || !$services.localization.get($seriesNoFilterKey))
-  #set ($seriesNoFilterKey = 'projectmanagement.macro.chart.series.noFilter')
+## The summary of a series says that it counts the work items selected by the chart (the client can name them its own
+## way), by label of the filter builder.
+#set ($seriesL10nKeys = {'summary': 'summary', 'summaryAll': 'noFilter'})
+#set ($seriesL10n = {})
+#foreach ($seriesL10nKey in $seriesL10nKeys.entrySet())
+  #set ($seriesKey = "${clientId}.macro.chart.series.$seriesL10nKey.value")
+  #if ("$!clientId" == '' || !$services.localization.get($seriesKey))
+    #set ($seriesKey = "projectmanagement.macro.chart.series.$seriesL10nKey.value")
+  #end
+  #set ($discard = $seriesL10n.put($seriesL10nKey.key, $services.localization.render($seriesKey)))
 #end
-#set ($seriesL10n = {'summaryAll': $services.localization.render($seriesNoFilterKey)})
 #filterBuilder({"client": "$!clientId", "title": $firstSeriesTitle, "removable": true, "l10n": $seriesL10n})
 </div>
 #set ($deps = {

@@ -57,6 +57,11 @@ class TranslationsTest
      */
     private static final String SERIES_NO_FILTER = "macro.chart.series.noFilter";
 
+    /**
+     * What a series of a chart with filters selects (see projectmanagementfilters/edit.vm).
+     */
+    private static final String SERIES_SUMMARY = "macro.chart.series.summary";
+
     private static final String OPENPROJECT_PREFIX = "openproject.";
 
     /**
@@ -90,7 +95,8 @@ class TranslationsTest
     {
         Properties translations = loadAllTranslations();
         Stream<String> filterBuilderKeys = Stream.concat(
-            FILTER_BUILDER_LABELS.stream().map(key -> "macro.filter." + key), Stream.of(SERIES_NO_FILTER));
+            FILTER_BUILDER_LABELS.stream().map(key -> "macro.filter." + key),
+            Stream.of(SERIES_NO_FILTER, SERIES_SUMMARY));
         Stream<String> sourceKeys = translations.stringPropertyNames().stream()
             .filter(key -> key.startsWith(GENERIC_PREFIX + "macro.source."))
             .map(key -> key.substring(GENERIC_PREFIX.length()));
@@ -106,7 +112,8 @@ class TranslationsTest
 
     /**
      * The filter builders without filter say what the macro selects in the same words, e.g. those of the filter
-     * presets as the macro, except the series of a chart, which count the charted work packages.
+     * presets as the macro, except the series of a chart, which count the charted work packages (see
+     * chartSeriesSummaries).
      */
     @Test
     void noFilterSummaries() throws Exception
@@ -117,6 +124,18 @@ class TranslationsTest
             translations.getProperty("openproject.macro.source.noFilter"));
         assertEquals(translations.getProperty("openproject.macro.source.noFilter"),
             translations.getProperty("openproject.macro.filter.summaryAll"));
+    }
+
+    /**
+     * The summary of a series of a chart says that it selects among the charted work packages, with or without filter.
+     */
+    @Test
+    void chartSeriesSummaries() throws Exception
+    {
+        Properties translations = loadAllTranslations();
+
+        assertEquals("Selects the charted work packages where {0}.",
+            translations.getProperty(OPENPROJECT_PREFIX + SERIES_SUMMARY));
         assertEquals("No filter: all the charted work packages.",
             translations.getProperty(OPENPROJECT_PREFIX + SERIES_NO_FILTER));
     }
