@@ -107,6 +107,20 @@ class SortPickerPageTest extends PageTest
             result.select("select option").stream().map(Element::val).collect(Collectors.toList()), result.html());
     }
 
+    @Test
+    void sortPickerIsNamedAfterTheLabelOfTheParameter() throws Exception
+    {
+        ScriptContext scriptContext =
+            this.componentManager.<ScriptContextManager>getInstance(ScriptContextManager.class).getScriptContext();
+        scriptContext.setAttribute("displayer", Map.of("parameters", new HashMap<>(Map.of("name", "sort"))),
+            ScriptContext.ENGINE_SCOPE);
+
+        Document result = Jsoup.parse(this.templateManager.render("html_displayer/openprojectsort/edit.vm"));
+
+        // The picker moves the label of the parameter (for its select) to its text input, giving it this id.
+        assertEquals("parameter-sort-ts-label", result.selectFirst("select").attr("aria-labelledby"), result.html());
+    }
+
     private static LiveDataPropertyDescriptor property(String id, Boolean sortable)
     {
         LiveDataPropertyDescriptor descriptor = new LiveDataPropertyDescriptor();
