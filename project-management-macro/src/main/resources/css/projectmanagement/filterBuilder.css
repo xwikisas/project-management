@@ -67,11 +67,16 @@
   min-width: 0;
 }
 
-/* The field searching a value stays on the line of the selected values while it has room for a few characters, instead
-   of wrapping below them when they leave less than the 7rem that Tom Select (XWiki 18+) gives it, which made the value
-   field one line taller, e.g. with a user name. */
+/* The field searching a value follows the selected values on their line. Tom Select (XWiki 18+) gives it a minimum
+   width of 7rem, which wrapped it below values leaving less, making the value field one line taller, e.g. with a user
+   name. While the value field is focused, the search field needs room for a few characters only, and no minimum width
+   otherwise, so that the values fitting on one line keep the value field one line high. Selectize (XWiki 15.10 to
+   17.10) sizes it to its text. */
 .proj-manag-constraint-value-container .ts-wrapper.multi.has-items .ts-control > input {
   min-width: 4em;
+}
+.proj-manag-constraint-value-container .ts-wrapper.multi.has-items:not(.focus) .ts-control > input {
+  min-width: 0;
 }
 
 /* The values excluded by their filter, e.g. "is not one of" (Selectize before XWiki 16, Tom Select after). */
