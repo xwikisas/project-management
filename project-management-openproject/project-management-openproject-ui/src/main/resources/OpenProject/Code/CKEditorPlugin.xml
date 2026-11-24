@@ -155,17 +155,31 @@ define('openproject.ckeditor.workPackageSearch', {
 });
 require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.ckeditor.workPackageSearch'],
     function (ckeditorPromise, $, pageRelation, l10n) {
+  // The id (e.g. 157) or the key (e.g. PROJ-42) of a work package, as the work package picker of the macro editor
+  // (workItemList.js) and OpenProjectClient#isWorkPackageIdOrKey check it.
+  const ID_OR_KEY = /^(\d+|[A-Za-z][A-Za-z0-9_]*-\d+)$/;
   // The instance parameter of the inserted macros is left out when the work packages come from the default connection,
   // so that the macros follow the default connection, as when they are inserted from the macro dialog.
   const search = function (text, callback, instance, isDefaultConnection) {
     let cfg = { query: { filters: [{ property: "summary", constraints: [{ operator: "contains", value: text }] }] } };
     const searchURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/openproject/workitems';
-    Promise.resolve($.getJSON(searchURL, { instance: instance, filter: JSON.stringify(cfg)}))
-      .then(function (results) {
+    // The search of the subjects doesn't match the ids: the work package whose id or key is typed is looked up too, as
+    // the picker of the macro editor does, and suggested first. A failed lookup (e.g. no work package has this id) only
+    // finds nothing, the search telling whether the work packages can be searched.
+    const typed = text.trim();
+    const lookup = ID_OR_KEY.test(typed)
+      ? Promise.resolve($.getJSON(searchURL + '/' + encodeURIComponent(typed), { instance: instance }))
+        .catch(() =&gt; null)
+      : Promise.resolve(null);
+    Promise.all([lookup, Promise.resolve($.getJSON(searchURL, { instance: instance, filter: JSON.stringify(cfg)}))])
+      .then(function ([found, results]) {
         if (!Array.isArray(results?.items)) {
           return [];
         }
-        return results.items.map(wp =&gt; {
+        const foundId = found?.identifier?.value;
+        const workPackages = foundId === undefined || foundId === null ? results.items
+          : [found, ...results.items.filter(wp =&gt; String(wp?.identifier?.value) !== String(foundId))];
+        return workPackages.map(wp =&gt; {
           return {
             id: wp.identifier.value,
             value: wp.identifier.value,
@@ -211,6 +225,15 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
   // identifier, and an identifier followed by a dash and digits.
   const IDENTIFIER = /^[A-Za-z][A-Za-z0-9_]*$/;
   const KEY_BEGINNING = /^[A-Za-z][A-Za-z0-9_]*(-\d*)?$/;
+  // A work package id, whose work package is looked up when it's typed.
+  const ID = /^\d+$/;
+  // Whether a text whose search found nothing can match a work package once it gets longer, although the search narrows
+  // as the text gets longer: the beginning of a key (e.g. XWI for XWIKI-123) is only searched in the subjects, and the
+  // beginning of an id (e.g. 150 for 1501) can be the id of no work package, or of one that the user can't see.
+  const canBecomeIdOrKey = function (searched, text) {
+    return (IDENTIFIER.test(searched) &amp;&amp; KEY_BEGINNING.test(text))
+      || (ID.test(searched) &amp;&amp; ID.test(text));
+  };
   // The text to search, typed after the marker, with the non-breaking spaces replaced.
   const getSearchText = function (query, marker) {
     return query.substring(marker.length).replaceAll('\u00A0', ' ');
@@ -423,7 +446,7 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
     // * Once a search returned no work package, the text that extends its query isn't matched anymore, since the search
     //   narrows as the query gets longer, so it can't match either (e.g. when the marker is followed by a sentence).
     //   Except for a query that can still become a work package key (e.g. XWI, then XWIKI-123), which is searched in
-    //   the keys too, see isStoppedBy.
+    //   the keys too, or a work package id (e.g. 150, then 1501), which is looked up, see canBecomeIdOrKey.
     // * Escape stops the search, as long as the text is typed after the same marker.
     // * The text is matched from the last occurrence of the marker, since AdvancedAutoComplete matches it from the first
     //   one of the 30 characters before the caret: the marker typed again on the same line starts a new search.
@@ -439,12 +462,11 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
         return search?.node === range.startContainer.$ &amp;&amp; search.offset === range.startOffset;
       };
       const isStoppedBy = function (search, text) {
-        // A text shaped like a work package key is searched in the keys, which a text without dash isn't, so the
-        // search of the beginning of a key (e.g. XWI for XWIKI-123) can return nothing while the key matches. A failed
+        // The search of the beginning of a key or of an id can return nothing while the key or the id matches. A failed
         // search fails for any text, though.
         return search != null &amp;&amp; text.startsWith(search.text)
-          &amp;&amp; !(!search.items.length &amp;&amp; text !== search.text &amp;&amp; IDENTIFIER.test(search.text)
-            &amp;&amp; KEY_BEGINNING.test(text));
+          &amp;&amp; !(!search.items.length &amp;&amp; text !== search.text
+            &amp;&amp; canBecomeIdOrKey(search.text, text));
       };
       const stopSearch = function (range, text, items) {
         // A stopped search isn't replaced by one that it already stops (e.g. the late response of a search done before
