@@ -30,7 +30,8 @@
  * - list: specific work items, listed in the content with the list source;
  * - url: the work items of a link to the tool (e.g. an OpenProject work package list), with the url source;
  * - advanced: any other source (e.g. filters, the Live Data JSON filters), or a content starting with a curly bracket
- *   without source (the advanced Live Data configuration of the macro), which is then locked: kept as it is.
+ *   without source (the advanced Live Data configuration of the macro), which is then locked: kept as it is, unless
+ *   the deprecated identifier is converted.
  */
 define([], function () {
   'use strict';
@@ -79,7 +80,8 @@ define([], function () {
    *     filters selecting the work items
    * @return {{way: string, locked: boolean, values: Object, initial: Object}} the state of the widget: the selected
    *     way, whether it's locked (the advanced Live Data configuration, kept as it is), the values of all the ways
-   *     ({query, presetId, legacyFilters, list, url, advanced: {source, content}, identifier}) and the initial fields
+   *     ({query, queryEdited, presetId, legacyFilters, unsupportedFilters, list, url, advanced: {source, content},
+   *     identifier}) and the initial fields
    */
   const readInitial = function (fields) {
     const initial = {
@@ -92,9 +94,15 @@ define([], function () {
     };
     const values = {
       query: '',
+      // Whether the user edited the query (its filters or its text), which then replaces the deprecated parameters,
+      // even when it's empty.
+      queryEdited: false,
       presetId: initial.presetId,
       // The deprecated filters parameter, edited by the filter builder of the query way.
       legacyFilters: initial.isChart ? '' : initial.filters,
+      // The conditions of the deprecated filters parameter that the filter builder can't show, as text (e.g.
+      // "Description empty"), which a query replacing them doesn't have.
+      unsupportedFilters: [],
       list: [],
       url: '',
       advanced: {source: '', content: ''},
@@ -124,6 +132,25 @@ define([], function () {
       values.advanced = {source: initial.source, content: initial.content};
     }
     return {way, locked, values, initial};
+  };
+
+  /**
+   * @param {Object} state the state of the widget
+   * @return {Array<string>} the macro parameters that the widget edits, hidden from the macro editor: the content, the
+   *     deprecated identifier, which the widget converts, and the deprecated filters, which the filter builder of the
+   *     query way imports (not the series of a chart)
+   */
+  const getEditedParameters = function (state) {
+    return state.initial.isChart ? ['$content', 'identifier'] : ['$content', 'identifier', 'filters'];
+  };
+
+  /**
+   * @param {Object} state the state of the widget
+   * @return {boolean} whether the query way shows the deprecated filters parameter, which the macro has without query
+   *     (unless the user emptied it): its filter builder imports them, and its query is the one of the imported filters
+   */
+  const showsLegacyFilters = function (state) {
+    return !state.values.queryEdited && trim(state.values.query) === '' && state.values.legacyFilters !== '';
   };
 
   /**
@@ -178,8 +205,8 @@ define([], function () {
     const content = getContent(state);
     const values = state.values;
     // The macros reject the deprecated identifier and filters parameters together with a content, and ignore the
-    // source without content.
-    const keepLegacy = content === '';
+    // source without content. The query that the user edited replaces them, even without filter (all the work items).
+    const keepLegacy = content === '' && !(state.way === QUERY && values.queryEdited);
     let filters = keepLegacy ? values.legacyFilters : '';
     if (state.initial.isChart) {
       filters = state.initial.filters;
@@ -198,7 +225,9 @@ define([], function () {
    * @param {Object} state the state of the widget
    * @return {Array<{type: string, value: string}>} the values that the user entered (or that the macro had) and that
    *     submitting the selected way drops: the values of the other ways, the preset (outside the Matching filters),
-   *     the deprecated filters and identifier parameters replaced by a content
+   *     the deprecated filters and identifier parameters replaced by a content. The query replacing the deprecated
+   *     filters is written from them (see showsLegacyFilters): only their conditions that the filter builder can't
+   *     show are dropped (unsupportedFilters)
    */
   const droppedValues = function (state) {
     if (state.locked) {
@@ -216,14 +245,25 @@ define([], function () {
     if (state.way !== URL && trim(values.url) !== '') {
       dropped.push({type: URL, value: trim(values.url)});
     }
-    if (state.way !== ADVANCED && trim(values.advanced.content) !== '') {
+    if (values.liveData) {
+      // The advanced Live Data configuration of a converted macro: only what no parameter holds is dropped.
+      if (state.way !== ADVANCED && values.liveData.rest !== '') {
+        dropped.push({type: 'liveData', value: values.liveData.rest});
+      }
+    } else if (state.way !== ADVANCED && trim(values.advanced.content) !== '') {
       dropped.push({type: ADVANCED, value: values.advanced.source});
     }
     if (values.presetId !== '' && fields.presetId === '') {
       dropped.push({type: 'preset', value: values.presetId});
     }
     if (values.legacyFilters !== '' && fields.filters === '') {
-      dropped.push({type: 'filters', value: values.legacyFilters});
+      const unsupported = values.unsupportedFilters || [];
+      // The query replacing them is written from them, unless the user removed all its filters.
+      if (state.way !== QUERY || fields.content === '') {
+        dropped.push({type: 'filters', value: values.legacyFilters});
+      } else if (unsupported.length > 0) {
+        dropped.push({type: 'unsupportedFilters', value: unsupported.join(', ')});
+      }
     }
     if (values.identifier !== '' && fields.identifier === '') {
       dropped.push({type: 'identifier', value: values.identifier});
@@ -240,11 +280,57 @@ define([], function () {
     return !state.locked && state.way === LIST && state.values.list.length === 0;
   };
 
+  const isObject = function (value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+  };
+
+  /**
+   * Splits the advanced Live Data configuration of a macro (its content, e.g. {"query":{"properties":["status"],
+   * "limit":3}}) into the values of the macro parameters holding the same settings, and the rest.
+   *
+   * @param {string} content the advanced Live Data configuration, as JSON
+   * @param {Array<string>} parameters the parameters that can hold its settings: properties (the properties of its
+   *     query) and limit (the limit of its query)
+   * @return {{parameters: Object, rest: string}} the values of the parameters, by name (e.g. {properties: 'status',
+   *     limit: '3'}), and the rest of the configuration as JSON, empty when nothing is left
+   */
+  const splitLiveDataConfiguration = function (content, parameters) {
+    let configuration;
+    try {
+      configuration = JSON.parse(content);
+    } catch (e) {
+      return {parameters: {}, rest: trim(content)};
+    }
+    if (!isObject(configuration) || !isObject(configuration.query)) {
+      return {parameters: {}, rest: trim(content)};
+    }
+    const query = Object.assign({}, configuration.query);
+    const values = {};
+    if ((parameters || []).includes('properties') && Array.isArray(query.properties) && query.properties.length
+        && query.properties.every(property => typeof property === 'string' && property.trim() !== '')) {
+      values.properties = query.properties.map(property => property.trim()).join(',');
+      delete query.properties;
+    }
+    if ((parameters || []).includes('limit') && Number.isInteger(query.limit) && query.limit > 0) {
+      values.limit = String(query.limit);
+      delete query.limit;
+    }
+    const rest = Object.assign({}, configuration, {query});
+    if (Object.keys(query).length === 0) {
+      delete rest.query;
+    }
+    return {parameters: values, rest: Object.keys(rest).length ? JSON.stringify(rest) : ''};
+  };
+
   /**
    * @param {Object} state the state of the widget
-   * @return {Object} the state where the deprecated identifier is converted to the way replacing it, selected
+   * @param {Array<string>} parameters the parameters that can hold the settings of the advanced Live Data
+   *     configuration of the macro, if it has one (see splitLiveDataConfiguration)
+   * @return {Object} the state where the deprecated identifier is converted to the way replacing it, selected. The
+   *     advanced Live Data configuration is unlocked, since the content now holds the converted value: its settings
+   *     that a parameter holds are in values.liveData.parameters, and the rest, dropped, in values.liveData.rest
    */
-  const withConvertedIdentifier = function (state) {
+  const withConvertedIdentifier = function (state, parameters) {
     if (state.values.identifier === '') {
       return state;
     }
@@ -255,7 +341,10 @@ define([], function () {
     } else {
       values.list = converted.list;
     }
-    return Object.assign({}, state, {way: converted.way, values});
+    if (state.locked) {
+      values.liveData = splitLiveDataConfiguration(state.values.advanced.content, parameters);
+    }
+    return Object.assign({}, state, {way: converted.way, locked: false, values});
   };
 
   return {
@@ -268,9 +357,12 @@ define([], function () {
     convertIdentifier,
     readInitial,
     hasAdvancedWay,
+    getEditedParameters,
+    showsLegacyFilters,
     toFields,
     droppedValues,
     isEmptyList,
+    splitLiveDataConfiguration,
     withConvertedIdentifier
   };
 });

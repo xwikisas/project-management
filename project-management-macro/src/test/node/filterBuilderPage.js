@@ -25,6 +25,7 @@ import moment from "moment";
 import TomSelect from "tom-select";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { loadQueryWriter } from "./queryWriter.js";
 
 const SOURCES = resolve(import.meta.dirname, "../../main/resources/js/projectmanagement");
 
@@ -135,7 +136,8 @@ export async function displayFilterBuilder(properties, l10n = {}) {
   evaluate("filterDisplayer.js", (dependencies, factory) => {
     filterDisplayer = factory(jquery, moment);
   }, require);
-  evaluate("filterBuilder.js", (name, dependencies, factory) => factory(jquery, filterDisplayer), require);
+  evaluate("filterBuilder.js", (name, dependencies, factory) => factory(jquery, filterDisplayer, loadQueryWriter()),
+    require);
   return window.FilterBuilder.instances.get(document.querySelector(".proj-manag-constraint-builder"));
 }
 

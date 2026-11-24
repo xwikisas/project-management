@@ -206,6 +206,113 @@ define([], function () {
     return constraint;
   };
 
+  // A whole number compared strictly is compared inclusively with the next (or previous) number, as in the OpenProject
+  // client: greater than 5 is at least 6. A decimal number is compared inclusively, as there.
+  let toInclusiveBound = function (value, step) {
+    let text = String(value).trim();
+    return /^-?\d+$/.test(text) ? String(parseInt(text, 10) + step) : text;
+  };
+
+  /*
+   * The operators of the builder replacing the generic operators of the Live Data (and the strict comparisons of the
+   * query), by type of filter, as the clients read them (see OpenProjectFilterTranslator): each function returns the
+   * constraint of the builder selecting the same work items, or nothing when the type has no equivalent.
+   */
+  const GENERIC_OPERATORS = {
+    text: {
+      contains: value => ({ operator: '~', value }),
+      // The project management tools have no prefix match on texts.
+      startsWith: value => ({ operator: '~', value }),
+      equals: (value, operators) => ({ operator: operators.includes('=') ? '=' : '~', value }),
+      notEquals: value => ({ operator: '!', value })
+    },
+    list: {
+      // A list filter matches the values picked in a list: containing a value, or starting with it, is equal to it.
+      equals: value => ({ operator: '=', value }),
+      contains: value => ({ operator: '=', value }),
+      startsWith: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value })
+    },
+    boolean: {
+      equals: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value })
+    },
+    number: {
+      equals: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value }),
+      greater: value => ({ operator: '>=', value: toInclusiveBound(value, 1) }),
+      '>': value => ({ operator: '>=', value: toInclusiveBound(value, 1) }),
+      less: value => ({ operator: '<=', value: toInclusiveBound(value, -1) }),
+      '<': value => ({ operator: '<=', value: toInclusiveBound(value, -1) })
+    },
+    date: {
+      after: value => toBuilderConstraint({ operator: 'after', value }),
+      before: value => toBuilderConstraint({ operator: 'before', value }),
+      // A range of dates, or a single day.
+      contains: value => ({ operator: String(value).includes('/') ? 'between' : '=d', value }),
+      equals: value => ({ operator: String(value).includes('/') ? 'between' : '=d', value })
+    }
+  };
+
+  /**
+   * Converts the constraints of a filter into the operators of the builder for its property, e.g. the filters
+   * parameter written by hand, or by an older version, with the generic operators of the Live Data (contains is ~
+   * for a text). The constraints whose operator is one of the property, or has no equivalent, are kept as they are.
+   *
+   * @param filter the Live Data filter, e.g. {property: 'summary', constraints: [{operator: 'contains', value: 'a'}]}
+   * @param type the type of the filter of the property, e.g. text, list, number, date or boolean
+   * @param operators the ids of the operators of the builder for the property, e.g. ['~', '!~']
+   * @return the filter, whose constraints use the operators of the builder when they have an equivalent
+   */
+  let toBuilderFilter = function (filter, type, operators) {
+    let available = operators || [];
+    let genericOperators = GENERIC_OPERATORS[type] || {};
+    let constraints = (filter.constraints || []).map(constraint => {
+      let operator = constraint.operator;
+      if (operator === null || operator === undefined || available.includes(operator)) {
+        return constraint;
+      }
+      let converted = operator === 'empty' ? { operator: '!*', value: '' }
+        : genericOperators.hasOwnProperty(operator) && genericOperators[operator](constraint.value, available);
+      return converted && available.includes(converted.operator) ? converted : constraint;
+    });
+    return Object.assign({}, filter, { constraints });
+  };
+
+  // The generic operators of the Live Data, which the clients replace by an operator of the property, ignoring the
+  // constraints of the properties without equivalent (or failing on them, for notEquals).
+  const LIVE_DATA_OPERATORS = ['equals', 'notEquals', 'contains', 'startsWith', 'empty', 'greater', 'less', 'before',
+    'after'];
+
+  /**
+   * Converts the constraints of a filter with toBuilderFilter, and splits them between the ones that the builder keeps
+   * and the others: those whose generic Live Data operator has no equivalent for the property, e.g. the empty operator
+   * of the filters parameter written by an older version on a text that the tool can't filter on being empty (the
+   * description in OpenProject), which the client ignores, while the query would write it. The other operators that
+   * the property doesn't have are the ones of the tool (e.g. >t- on a date), which the query writes as they are.
+   *
+   * @param filter the Live Data filter
+   * @param type the type of the filter of the property, e.g. text, list, number, date or boolean
+   * @param operators the ids of the operators of the builder for the property
+   * @return {{filter, unsupported}} the filter with the constraints that the builder keeps, and the other constraints,
+   *   as they were
+   */
+  let splitSupported = function (filter, type, operators) {
+    let available = operators || [];
+    let original = filter.constraints || [];
+    let converted = toBuilderFilter(filter, type, available);
+    let supported = [];
+    let unsupported = [];
+    converted.constraints.forEach((constraint, index) => {
+      if (LIVE_DATA_OPERATORS.includes(constraint.operator) && !available.includes(constraint.operator)) {
+        unsupported.push(original[index]);
+      } else {
+        supported.push(constraint);
+      }
+    });
+    return { filter: Object.assign({}, converted, { constraints: supported }), unsupported };
+  };
+
   /**
    * Reads the filters of a query, as parsed by the REST API: the constraints of the builder, and the values read as
    * names.
@@ -255,5 +362,5 @@ define([], function () {
     });
   };
 
-  return { toQuery, fromParsedFilters, takesValue, withValueNames };
+  return { toQuery, fromParsedFilters, takesValue, withValueNames, toBuilderFilter, splitSupported };
 });
