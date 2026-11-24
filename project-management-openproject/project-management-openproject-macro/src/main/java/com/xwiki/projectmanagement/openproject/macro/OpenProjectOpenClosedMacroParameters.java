@@ -23,9 +23,9 @@ import org.xwiki.properties.annotation.PropertyDisplayType;
 import org.xwiki.properties.annotation.PropertyHidden;
 import org.xwiki.properties.annotation.PropertyOrder;
 
-import com.xwiki.projectmanagement.ProjectManagementChartTypeParams;
 import com.xwiki.projectmanagement.internal.chart.displayer.LineChartDisplayer;
 import com.xwiki.projectmanagement.model.WorkItem;
+import com.xwiki.projectmanagement.openproject.OpenProjectChartTypeParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 
 /**
@@ -90,7 +90,7 @@ public class OpenProjectOpenClosedMacroParameters extends OpenProjectChartMacroP
 
     // The type params, the limit and the instance are overridden only to remove them from their parameter groups, so
     // that the few parameters of this macro are displayed together in the macro editor.
-    @PropertyDisplayType(ProjectManagementChartTypeParams.class)
+    @PropertyDisplayType(OpenProjectChartTypeParams.class)
     @PropertyOrder(20)
     @Override
     public void setTypeParams(String typeParams)

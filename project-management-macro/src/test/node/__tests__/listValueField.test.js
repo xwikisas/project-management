@@ -49,6 +49,13 @@ function getSearchMinWidth(tomSelect) {
   return parseFloat(getComputedStyle(tomSelect.control_input).minWidth);
 }
 
+// The room that the search field takes on the line of the values, before it grows into what they leave: its width,
+// then its left and right margins.
+function getSearchRoom(tomSelect) {
+  const style = getComputedStyle(tomSelect.control_input);
+  return [style.flexBasis, style.marginLeft, style.marginRight];
+}
+
 describe("the field searching the values of a list filter", () => {
   let tomSelect;
 
@@ -57,9 +64,10 @@ describe("the field searching the values of a list filter", () => {
   });
 
   it("takes no room on the line of the values while the value field isn't focused", () => {
-    // The values fitting on one line keep the value field one line high: the empty search field doesn't wrap below
-    // them.
+    // The values fitting on one line keep the value field one line high, however little room they leave, e.g. four
+    // statuses: the empty search field doesn't wrap below them.
     expect(getSearchMinWidth(tomSelect)).toBe(0);
+    expect(getSearchRoom(tomSelect)).toEqual(["0px", "0px", "0px"]);
   });
 
   it("has room for a few characters while the value field is focused", async () => {
@@ -69,6 +77,7 @@ describe("the field searching the values of a list filter", () => {
 
     expect(tomSelect.wrapper.classList.contains("focus")).toBe(true);
     expect(getComputedStyle(tomSelect.control_input).minWidth).toBe("4em");
+    expect(getSearchRoom(tomSelect)).toEqual(["auto", "4px", "4px"]);
   });
 
   it("keeps the minimum width of Tom Select without value", () => {

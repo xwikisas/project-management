@@ -38,16 +38,25 @@ define('projectmanagement.workItemPicker.messages', {
  * The picker tells whether the work items can be retrieved, so that the client can explain why they can't (e.g. the
  * user isn't authenticated to the tool): it triggers suggestionsLoaded on its element once a search or a lookup of a
  * work item answers, and suggestionsFailed, with the HTTP status, when one fails (a work item not found isn't a
- * failure).
+ * failure). The client can display a message in the element of the picker (e.g. above its field): the suggestions,
+ * displayed in the page body under the field, follow the field when the message moves it.
  */
 define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement.workItemPicker.messages',
     'xwiki-selectize'], function ($, workItemList, l10n) {
   const CLASS = 'pm-workitem-picker';
 
-  let createDOM = function (message) {
+  let createDOM = function (message, labelId) {
     let root = $('<div></div>').addClass(CLASS);
-    $('<input type="text"/>').addClass(CLASS + '-input').attr('aria-label', l10n.get('placeholder'))
-      .appendTo(root);
+    let input = $('<input type="text"/>').addClass(CLASS + '-input').appendTo(root);
+    if (labelId) {
+      // The field is named by the label displayed above it (WCAG 2.5.3, Label in Name), and described by the search
+      // hint that its placeholder shows (the hidden hint is only read as the description of the field).
+      let hintId = 'pm-workitem-picker-hint-' + Math.random().toString(36).substring(2);
+      $('<span hidden></span>').attr('id', hintId).text(l10n.get('placeholder')).appendTo(root);
+      input.attr({'aria-labelledby': labelId, 'aria-describedby': hintId});
+    } else {
+      input.attr('aria-label', l10n.get('placeholder'));
+    }
     $('<p class="xHint"></p>').addClass(CLASS + '-onlyFirst').text(l10n.get('onlyFirstShown')).hide()
       .appendTo(root);
     let paste = $('<div></div>').addClass(CLASS + '-paste').hide().appendTo(root);
@@ -115,10 +124,11 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
    *     initialIds: the ids picked initially, onChange(ids): called with the picked ids when the user changes them,
    *     waitForParameters: whether the picked work items are only resolved (labelled) once refresh() is called, e.g.
    *     once the client parameters of the URLs are known, messages: the messages worded by the client, by key, e.g.
-   *     {notFound: 'Work package {0} not found'}, see workItemList.clientMessages}
+   *     {notFound: 'Work package {0} not found'}, see workItemList.clientMessages, labelId: the id of the element
+   *     displaying the label of the picker, which names its field, if any}
    * @return the picker: {getIds(), setIds(ids), setSingle(single): shows that only the first work item is shown,
-   *     refresh(): resolves the picked work items again, e.g. once the URLs change, destroy()}; in text mode, the ids
-   *     are the ones typed in the text area
+   *     refresh(): searches the work items again and resolves the picked ones again, e.g. once the URLs change,
+   *     destroy()}; in text mode, the ids are the ones typed in the text area
    */
   let mount = function (container, options) {
     let settings = options || {};
@@ -127,7 +137,7 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       return typeof clientMessage === 'string' ? clientMessage.replace('{0}', () => parameter)
         : l10n.get(key, parameter);
     };
-    let root = createDOM(message).appendTo($(container).first());
+    let root = createDOM(message, settings.labelId).appendTo($(container).first());
     let input = root.find('.' + CLASS + '-input');
     let paste = root.find('.' + CLASS + '-paste');
     let textArea = paste.find('textarea');
@@ -163,6 +173,9 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
     // The ids typed by the user: once found, they're dropped if they're the work item of another pick, and replaced by
     // the key of their work item otherwise.
     let typedIds = new Set();
+    // Incremented when the parameters of the URLs change (e.g. the connection): the answers of the searches sent
+    // before are ignored.
+    let searchParameters = 0;
     input.xwikiSelectize({
       // A typed id (e.g. 236 or PROJ-42) is picked as typed, and replaced by the key of its work item, if it has one,
       // once the work item is found (e.g. AC-1 for 157 or ac-1), or kept as typed when it can't be. A key typed in
@@ -213,19 +226,29 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
         }
         let typed = text.trim();
         let searchPickCount = pickCount;
+        let sentParameters = searchParameters;
+        let current = () => sentParameters === searchParameters;
         // A failed request finds nothing, so that the loading ends: otherwise the picker stays in its loading state
         // and makes no more request.
         let get = url => Promise.resolve($.getJSON(url)).then(data => {
-          report();
+          if (current()) {
+            report();
+          }
           return data;
         }, xhr => {
-          report(getStatus(xhr));
+          if (current()) {
+            report(getStatus(xhr));
+          }
           return undefined;
         });
         // The search of the summaries doesn't match the ids: the work item whose id or key is typed is looked up too.
         let lookup = workItemList.isIdOrKey(typed) && typeof settings.itemUrl === 'function'
           ? get(settings.itemUrl(typed)) : Promise.resolve();
         Promise.all([lookup, get(settings.searchUrl(typed))]).then(function ([found, results]) {
+          if (!current()) {
+            callback();
+            return;
+          }
           // A found work item is picked by its key when it has one, as the # inserter writes it. The work items
           // already picked (by their id or their key) aren't suggested again.
           callback(workItemList.withItemFound(found, results?.items).filter(item => !isPicked(item))
@@ -240,6 +263,30 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       }
     });
     let selectize = input[0].selectize;
+    // The suggest widget gives its own field only the aria-label of the input (Selectize, XWiki 15.10, and Tom Select,
+    // XWiki 18.x).
+    let field = $(selectize.$control_input || selectize.control_input);
+    ['aria-labelledby', 'aria-describedby'].filter(name => input.attr(name))
+      .forEach(name => field.attr(name, input.attr(name)));
+
+    // The suggestions are displayed in the page body, under the field, where the suggest widget placed them when they
+    // opened: they're moved with the field when the client displays a message above it, or removes it.
+    let observer = new MutationObserver(function () {
+      if (selectize.isOpen) {
+        selectize.positionDropdown();
+      }
+    });
+    observer.observe(root[0], {childList: true});
+
+    // Forgets the work items found by the searches made so far, e.g. on another connection: the next searches are
+    // sent again rather than answered from the cache of the suggest widget. The picked work items are kept.
+    let forgetSearches = function () {
+      searchParameters++;
+      Object.keys(selectize.options).filter(value => !selectize.items.includes(value))
+        .forEach(value => selectize.removeOption(value, true));
+      selectize.loadedSearches = {};
+      selectize.lastQuery = null;
+    };
 
     let getPickedOptions = function () {
       return selectize.items.map(id => selectize.options[id]).filter(option => option);
@@ -389,12 +436,16 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
     return {
       getIds,
       setIds: ids => setIds(ids, true),
-      refresh: () => resolution.ready(selectize.items),
+      refresh: function () {
+        forgetSearches();
+        resolution.ready(selectize.items);
+      },
       setSingle: function (value) {
         single = !!value;
         root.find('.' + CLASS + '-onlyFirst').toggle(single && getIds().length > 1);
       },
       destroy: function () {
+        observer.disconnect();
         selectize.destroy();
         root.remove();
       }

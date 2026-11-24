@@ -258,13 +258,25 @@ class AbstractProjectManagementCalendarMacroTest
         "' 08:30 - 18:00 ', 08:30, 18:00",
         // Until midnight.
         "20:00-24:00, 20:00, 24:00",
+        "06:00-24:00:00, 06:00, 24:00:00",
+        // An end of 00:00 is the end of the day, which the time fields of the macro editor can't hold as 24:00.
+        "20:00-00:00, 20:00, 24:00",
+        "00:00-00:00, 00:00, 24:00",
+        "6:00-0:00:00, 6:00, 24:00",
         "8:00-08:00:30, 8:00, 08:00:30",
         // The times that can't be read are passed to the calendar as they are.
         "20:00-6h, 20:00, 6h",
-        "07:00-, 07:00, NULL",
-        "-19:00, NULL, 19:00",
+        // Like in the macro editor, a missing start or end is the start or the end of the day, and a value without a
+        // dash is a start.
+        "07:00-, 07:00, 24:00",
+        "' 23:30 - ', 23:30, 24:00",
+        "07:00, 07:00, 24:00",
+        "6h-, 6h, 24:00",
+        "-19:00, 00:00, 19:00",
+        "-00:00, 00:00, 24:00",
+        // Without any time, the calendar displays its default hours.
         "' - ', NULL, NULL",
-        "07:00, NULL, NULL",
+        "' ', NULL, NULL",
         "'', NULL, NULL",
         "NULL, NULL, NULL"
     }, nullValues = "NULL")
@@ -285,7 +297,11 @@ class AbstractProjectManagementCalendarMacroTest
         "08:00-08:00",
         "' 18:00 - 9:30 '",
         "20:00:30-20:00:15",
-        "20:00-00:00"
+        "24:00-24:00",
+        "24:00-00:00",
+        // No end is the end of the day: no time is visible.
+        "24:00-",
+        "' 24:00:00 '"
     })
     void executeWithTimeIntervalEndingBeforeItStarts(String timeInterval)
     {
@@ -297,6 +313,28 @@ class AbstractProjectManagementCalendarMacroTest
         // The calendar would display no time slot.
         assertEquals(String.format("The [timeInterval] parameter must end after it starts (e.g. 06:00-20:00), but is "
             + "[%s].", timeInterval), exception.getMessage());
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "06:00-24:30",
+        "06:00-24:00:01",
+        "' 06:00 - 25:00 '",
+        "24:30-",
+        "-99:00",
+        // 24:15: the calendar adds the minutes to the hours.
+        "06:00-23:75"
+    })
+    void executeWithTimeIntervalAfterTheEndOfTheDay(String timeInterval)
+    {
+        this.parameters.setTimeInterval(timeInterval);
+
+        MacroExecutionException exception = assertThrows(MacroExecutionException.class,
+            () -> this.macro.execute(this.parameters, null, this.macroTransformationContext));
+
+        // The calendar would display hours of the next day.
+        assertEquals(String.format("The [timeInterval] parameter must hold times between 00:00 and 24:00 (e.g. "
+            + "06:00-20:00), but is [%s].", timeInterval), exception.getMessage());
     }
 
     @Test

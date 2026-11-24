@@ -59,6 +59,11 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     // the chart types have the same options anyway.
     let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val() || 'line';
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
+    // The options are worded as the client of the macro words them, if it has its own texts (e.g. "work packages").
+    let client = $('.proj-manag-chart-type-params').attr('data-client');
+    if (client) {
+      getChartTypeParamsURL += '?client=' + encodeURIComponent(client);
+    }
     // Displaying the options of the chart type is a refresh of the editor, which only tells when it fails.
     $.getJSON(getChartTypeParamsURL)
       .done(function (paramTemplates) {

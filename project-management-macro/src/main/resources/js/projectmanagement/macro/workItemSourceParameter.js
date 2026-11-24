@@ -133,8 +133,10 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       initialIds,
       onChange,
       waitForParameters: widget.attr('data-source-parameters') === 'pending',
-      messages
+      messages,
+      labelId: widget.find('.pm-source-editor[data-way="list"] .pm-source-field-label').attr('id')
     });
+    // The work items found with the previous parameters (e.g. on another connection) aren't suggested anymore.
     widget.on('pm:sourceParametersChanged', function (event) {
       if (event.target === this) {
         picker.refresh();

@@ -45,11 +45,12 @@ jquery.fn.xwikiSelectize = function (settings) {
 };
 
 // The HTML of the editor of the parameter, without its Velocity code: the options are displayed in its first element,
-// from the template that follows it.
-function getEditorHTML() {
+// from the template that follows it. Its first element has the client of the macro, set by Velocity.
+function getEditorHTML(client) {
   const editor = readFileSync(resolve(RESOURCES,
     "templates/html_displayer/projectmanagementcharttypeparams/edit.vm"), "utf-8");
-  return editor.match(/<div class="proj-manag-chart-type-params[\s\S]*<\/template>/)[0];
+  return editor.match(/<div class="proj-manag-chart-type-params[\s\S]*<\/template>/)[0]
+    .replace("$!escapetool.xml($clientId)", client);
 }
 
 // The notifications of XWiki, recording their type, their text and whether they're shown.
@@ -80,14 +81,16 @@ function createNotificationClass(notifications) {
 /**
  * Displays the Chart Options of the chart macro editor, replacing the content of the page.
  *
- * @param chartOptions the options of each chart type, as returned by the REST resource listing them: the request of
- *   the options of a chart type missing from this object fails
+ * @param chartOptions the options of each chart type, as returned by the REST resource listing them, e.g. under
+ *   "line", or under "line?client=openproject" for the options worded by a client: the request of the options of a
+ *   chart type missing from this object fails
  * @param chartType the chart type selected in the editor
  * @param value the value of the parameter, e.g. {"metric":"cumulative"}
+ * @param client the client of the macro, e.g. openproject, or "" for none
  * @return the notifications displayed by the editor, as {type, text, shown}, the text being the translation key
  */
-export function displayChartOptions(chartOptions, chartType = "line", value = "") {
-  const typeOptions = Object.keys({ line: true, ...chartOptions })
+export function displayChartOptions(chartOptions, chartType = "line", value = "", client = "") {
+  const typeOptions = Object.keys({ line: true, ...chartOptions }).filter((type) => !type.includes("?"))
     .map((type) => `<option value="${type}">${type}</option>`).join("");
   document.body.innerHTML = `<div class="macro-editor-modal"><div class="macro-editor" data-macroId="openprojectchart">
     <div class="macro-parameter"><select name="type">${typeOptions}</select></div>
@@ -100,7 +103,7 @@ export function displayChartOptions(chartOptions, chartType = "line", value = ""
       </select>
     </div>
     <div class="macro-parameter">
-      ${getEditorHTML()}
+      ${getEditorHTML(client)}
       <textarea id="proj-manag-chart-type-params" class="hidden"></textarea>
     </div>
   </div></div>`;
