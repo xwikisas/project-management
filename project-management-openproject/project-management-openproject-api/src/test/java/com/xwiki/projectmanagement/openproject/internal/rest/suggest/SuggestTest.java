@@ -393,7 +393,10 @@ class SuggestTest
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", PAGE_SIZE, null);
 
-        assertEquals(List.of(suggestion(john1), suggestion(john2), namedSuggestion(jane)), response.getEntity());
+        // OpenProject doesn't give the login of the users to the current user: the users sharing a name are told apart
+        // by their id.
+        assertEquals(List.of(suggestion(john1, "#1"), suggestion(john2, "#2"), namedSuggestion(jane)),
+            response.getEntity());
     }
 
     @Test
@@ -421,25 +424,26 @@ class SuggestTest
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "j", PAGE_SIZE, "3");
 
         // The selected user is retrieved alone: the users having the same name are searched.
-        assertEquals(List.of(suggestion(jane)), response.getEntity());
+        assertEquals(List.of(suggestion(jane, "#3")), response.getEntity());
     }
 
     @Test
     void getSuggestionsForUsersWithTheirLogin() throws ProjectManagementException
     {
         User twin1 = createUser(5, "QA150 Twin", "qa150same1");
-        User twin2 = createUser(6, "QA150 Twin", "qa150same2");
-        // OpenProject gives the login of the users only to the users who can manage them.
-        User unique = createUser(7, "QA150 Unique");
+        // OpenProject gives the login of the users only to the users who can manage them, and could give it for some
+        // users only.
+        User twin2 = createUser(6, "QA150 Twin");
+        User unique = createUser(7, "QA150 Unique", "qa150uniq");
         when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter("qa150")))
             .thenReturn(new PaginatedResult<>(List.of(twin1, twin2, unique), 0, 3, 3));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "QA150", PAGE_SIZE, null);
 
-        // The users sharing a name are told apart by their login.
-        assertEquals(List.of(Map.of("value", "5", "label", "QA150 Twin", "url", "location5", "hint", "qa150same1"),
-            Map.of("value", "6", "label", "QA150 Twin", "url", "location6", "hint", "qa150same2"),
-            namedSuggestion(unique)), response.getEntity());
+        // The users sharing a name are told apart by their login, else by their id. A user whose name is unique needs
+        // no hint.
+        assertEquals(List.of(suggestion(twin1, "qa150same1"), suggestion(twin2, "#6"), namedSuggestion(unique)),
+            response.getEntity());
     }
 
     @Test
@@ -455,8 +459,21 @@ class SuggestTest
 
         // The label of a selected user (e.g. of a value of a filter) is loaded with the login, which tells the user
         // apart from the users sharing its name.
-        assertEquals(List.of(Map.of("value", "6", "label", "QA150 Twin", "url", "location6", "hint", "qa150same2")),
-            response.getEntity());
+        assertEquals(List.of(suggestion(twin, "qa150same2")), response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForSelectedUserWithAUniqueName() throws ProjectManagementException
+    {
+        User unique = createUser(7, "QA150 Unique", "qa150uniq");
+        when(this.openProjectApiClient.getUsers(eq(1), eq(PAGE_SIZE), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(unique), 0, 1, 1));
+        when(this.openProjectApiClient.getUsers(1, 100, nameFilter("qa150 unique")))
+            .thenReturn(new PaginatedResult<>(List.of(unique), 0, 1, 1));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "7");
+
+        assertEquals(List.of(namedSuggestion(unique)), response.getEntity());
     }
 
     @Test
@@ -667,6 +684,12 @@ class SuggestTest
     {
         return Map.of("value", object.getId().toString(), "label", object.getName(), "url",
             object.getSelf().getLocation());
+    }
+
+    private static Map<String, String> suggestion(BaseOpenProjectObject object, String hint)
+    {
+        return Map.of("value", object.getId().toString(), "label", object.getName(), "url",
+            object.getSelf().getLocation(), "hint", hint);
     }
 
     private static Map<String, String> namedSuggestion(BaseOpenProjectObject object)

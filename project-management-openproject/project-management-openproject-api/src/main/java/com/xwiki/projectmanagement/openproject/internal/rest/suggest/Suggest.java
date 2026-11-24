@@ -428,12 +428,25 @@ public class Suggest extends XWikiResource
         } else {
             uniqueNames = users.size() < pageSize ? getUniqueNames(users) : Collections.emptySet();
         }
-        // Users can share a name: their suggestions are told apart by the login of the users, when OpenProject gives
-        // it to the current user (who can then see it in OpenProject too). Their e-mail address is never shown.
+        // The suggestions of the users sharing their name with other suggested users are told apart by a hint. A
+        // selected user is retrieved alone: it shares its name when other users have it.
         List<Map<String, String>> suggestions = getNamedSuggestions(users, uniqueNames);
-        return IntStream.range(0, users.size())
-            .mapToObj(index -> withHint(suggestions.get(index), users.get(index).getLogin()))
-            .collect(Collectors.toList());
+        return IntStream.range(0, users.size()).mapToObj(index -> {
+            User user = users.get(index);
+            boolean sharedName = selected ? user.getName() == null
+                || !uniqueNames.contains(user.getName().toLowerCase()) : countSameName(users, user.getName()) > 1;
+            return sharedName ? withHint(suggestions.get(index), getUserHint(user)) : suggestions.get(index);
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * @return what tells a user apart from the users sharing its name: its login, when OpenProject gives it to the
+     *     current user (only to the users who can manage the users, who can see it in OpenProject too), else its id
+     *     (e.g. {@code #5}); never its e-mail address
+     */
+    private static String getUserHint(User user)
+    {
+        return StringUtils.isNotEmpty(user.getLogin()) ? user.getLogin() : "#" + user.getId();
     }
 
     private boolean isOnlyUserNamed(OpenProjectApiClient openProjectApiClient, String name)
