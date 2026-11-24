@@ -234,8 +234,11 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               let selectedItemParam = 'selectedItem=' + encodeURIComponent(selectedItem);
               searchURL += searchURL.indexOf('?') >= 0 ? '&' + selectedItemParam : '?' + selectedItemParam;
             }
+            // The field tells whether the suggestions could be retrieved, so that the source of the values can explain a
+            // failure (e.g. the user isn't authenticated to the tool).
             $.getJSON(searchURL)
               .then(function (results) {
+                inputElem.trigger('suggestionsLoaded');
                 if (Array.isArray(results)) {
                   callback(results);
                   return;
@@ -244,6 +247,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
             })
             .catch(function (e) {
               console.log(`error trying to retrieve selectize searchUrl ${searchURL} elements.` + e);
+              inputElem.trigger('suggestionsFailed', [e && e.status]);
               callback([]);
             });
           };
