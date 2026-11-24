@@ -63,7 +63,11 @@ public final class OpenProjectLink
     private static final Pattern WORK_PACKAGE_PATH_PATTERN =
         Pattern.compile("/(?:work_packages|wp)/(\\d+)(?:/[^/]+)?/?$");
 
-    private static final Pattern PROJECT_PATH_PATTERN = Pattern.compile("/projects/([^/]+)/");
+    /**
+     * The path of a page of a project, e.g. {@code /projects/demo/work_packages}, or of the project itself (its
+     * overview), with or without a trailing slash, e.g. {@code /projects/demo}.
+     */
+    private static final Pattern PROJECT_PATH_PATTERN = Pattern.compile("/projects/([^/]+)(?:/|$)");
 
     private static final Pattern SAVED_QUERY_PATTERN = Pattern.compile("^query_id=(\\d+)$");
 
@@ -178,8 +182,9 @@ public final class OpenProjectLink
     }
 
     /**
-     * @return the identifier (or id) of the project whose work packages the link lists, or {@code null} if it lists
-     *     the work packages of all the projects
+     * @return the identifier (or id) of the project whose work packages the link lists (the link of any page of a
+     *     project, e.g. its overview, lists its work packages), or {@code null} if it lists the work packages of all
+     *     the projects
      */
     public String getProject()
     {

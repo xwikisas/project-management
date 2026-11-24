@@ -52,3 +52,12 @@
 .pm-workitem-picker .pm-workitem-picker-pasteToggle {
   padding-left: 0;
 }
+
+/*
+ * A suggested work item with a long summary wraps, rather than being cut off at the edge of the suggestions (the
+ * suggestions are displayed in the page body, outside of the picker).
+ */
+.xwiki-selectize-option.pm-workitem-picker-option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

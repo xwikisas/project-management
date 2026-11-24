@@ -186,8 +186,9 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
                   source: 'list',
                   displayer: 'inline'
                 },
-                // The macro content is written only when it's a string.
-                content: String(wp.identifier.value)
+                // The macro content is written only when it's a string. The work package is listed by its key when
+                // it has one, as OpenProject displays it (and as the picker of the macro editor writes it).
+                content: String(wp.key || wp.identifier.value)
               }
             }
           };

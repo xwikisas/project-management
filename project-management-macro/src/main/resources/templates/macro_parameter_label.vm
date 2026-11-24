@@ -1,0 +1,35 @@
+## ---------------------------------------------------------------------------
+## See the NOTICE file distributed with this work for additional
+## information regarding copyright ownership.
+##
+## This is free software; you can redistribute it and/or modify it
+## under the terms of the GNU Lesser General Public License as
+## published by the Free Software Foundation; either version 2.1 of
+## the License, or (at your option) any later version.
+##
+## This software is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+## Lesser General Public License for more details.
+##
+## You should have received a copy of the GNU Lesser General Public
+## License along with this software; if not, write to the Free
+## Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+## ---------------------------------------------------------------------------
+#**
+ * Names the select of a picker of a macro parameter after the label that the macro editor displays for the parameter.
+ * The macro editor gives the id "parameter-" followed by the parameter name to the field named after the parameter,
+ * and labels it with a label for this id. The picker of recent XWiki versions (Tom Select) moves this label to its
+ * text input, giving the label the id of the select followed by "-ts-label": the select, hidden but still read by the
+ * screen readers, would have no name otherwise. Where the label isn't moved (Selectize, on older XWiki versions), the
+ * select keeps its label, the reference to a missing id being ignored.
+ *
+ * @param $parameters the attributes of the select, holding the name of the macro parameter (name), to which the
+ *   reference to the label is added; nothing is added when there is no name
+ *#
+#macro (pmLabelPickerAsParameter $parameters)
+  #if ("$!parameters.name" != '')
+    #set ($discard = $parameters.put('aria-labelledby', "parameter-${parameters.name}-ts-label"))
+  #end
+#end

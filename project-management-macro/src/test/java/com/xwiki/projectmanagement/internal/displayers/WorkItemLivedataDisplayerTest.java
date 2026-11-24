@@ -66,6 +66,10 @@ class WorkItemLivedataDisplayerTest
     @Named("ssrx")
     private SkinExtension ssrx;
 
+    @MockComponent
+    @Named("jsrx")
+    private SkinExtension jsrx;
+
     @Mock
     private Macro<ProjectManagementMacroParameters> liveDataMacro;
 
@@ -91,6 +95,8 @@ class WorkItemLivedataDisplayerTest
         assertEquals(25, this.parameters.getLimit());
         assertNull(this.parameters.getLayouts());
         assertNull(this.parameters.getShowPageSizeDropdown());
+        // The script tells the viewers why the work items couldn't be retrieved.
+        verify(this.jsrx).use("js/projectmanagement/liveDataErrors.js", Map.of("forceSkinAction", true));
     }
 
     @Test

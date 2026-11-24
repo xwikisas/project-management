@@ -31,6 +31,8 @@ require(['jquery'], function ($) {
     clone.find("input").attr('placeholder', (labels.attr('data-placeholder') || '').replace('__N__', number))
       .val(value).on('change', updateInput);
     clone.find(".proj-manag-chart-label-remove").on('click', (e) => {
+      // A link, to be reachable with the keyboard, that doesn't navigate.
+      e.preventDefault();
       $(e.target).closest('.proj-manag-chart-label').remove();
       updateInput();
     });

@@ -20,6 +20,8 @@
 ## The widget choosing how an OpenProject macro selects its work packages, with the OpenProject link way.
 #set ($clientId = 'openproject')
 #set ($linkWay = true)
+## The REST requests of the widget use the connection of the macro, given by filters.js.
+#set ($sourceParameters = true)
 ## Displayed by the JavaScript code when the macro has no connection and there is no default one: the values of the
 ## filters can't be suggested without a connection.
 <div class="box infomessage op-filters-no-connection hidden">$escapetool.xml(
