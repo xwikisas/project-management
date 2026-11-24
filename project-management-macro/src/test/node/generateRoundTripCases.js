@@ -86,9 +86,9 @@ function dateFilter(property) {
     case 1:
       return [filter(property, "between", `${lower}/${upper}`)];
     case 2:
-      return [filter(property, "between", `${lower}/3000-01-01`)];
+      return [filter(property, "after", lower)];
     case 3:
-      return [filter(property, "between", `1970-01-01/${upper}`)];
+      return [filter(property, "before", upper)];
     default:
       return [filter(property, pick("t", "w", "!*"), "")];
   }

@@ -75,6 +75,12 @@ describe("queryWriter", () => {
     [[filter("dueDate", "before", "2026-11-01")], "dueDate <= 2026-11-01"],
     [[filter("dueDate", "=d", "2026-11-21 10:00")], "dueDate = 2026-11-21"],
     [[filter("dueDate", "between", "2026-11-21")], "dueDate >= 2026-11-21 AND dueDate <= 2026-11-21"],
+    // The date picker gives the date with its time, of which the query keeps the day.
+    [[filter("dueDate", "before", "2026-12-31T00:00:00+01:00")], "dueDate <= 2026-12-31"],
+    [[filter("startDate", "after", "2026-11-01T10:30:00-05:00")], "startDate >= 2026-11-01"],
+    // A range open on one side.
+    [[filter("dueDate", "between", "1970-01-01/2026-11-30")], "dueDate <= 2026-11-30"],
+    [[filter("dueDate", "between", "2026-11-01/3000-01-01")], "dueDate >= 2026-11-01"],
     // The open, locked and closed versions (of the built-in version filter only).
     [[filter("targetVersion", "o", "")], "targetVersion = open"],
     [[filter("targetVersion", "l", "")], "targetVersion = locked"],
@@ -120,7 +126,8 @@ describe("toBuilderFilter", () => {
   const TEXT_ALL = ["~", "!~", "=", "!", "*", "!*"];
   const LIST = ["=", "!", "*", "!*"];
   const NUMBER = ["=", "!", ">=", "<=", "*", "!*"];
-  const DATE = ["t", "w", "=d", "between", "!*"];
+  const DATE = ["t", "w", "=d", "before", "after", "between", "!*"];
+  const DATE_WITHOUT_BOUNDS = ["t", "w", "=d", "between", "!*"];
   const BOOLEAN = ["=", "!"];
 
   it.each([
@@ -143,8 +150,14 @@ describe("toBuilderFilter", () => {
     ["number", NUMBER, "progress", "<", "9", "<=", "8", "progress <= 8"],
     ["number", NUMBER, "estimatedTime", "greater", "2.5", ">=", "2.5", "estimatedTime >= 2.5"],
     ["number", NUMBER, "progress", "empty", "", "!*", "", "progress IS EMPTY"],
-    ["date", DATE, "dueDate", "after", "2026-11-01", "between", "2026-11-01/3000-01-01", "dueDate >= 2026-11-01"],
-    ["date", DATE, "dueDate", "before", "2026-11-01", "between", "1970-01-01/2026-11-01", "dueDate <= 2026-11-01"],
+    // On or after, on or before a day.
+    ["date", DATE, "dueDate", "after", "2026-11-01", "after", "2026-11-01", "dueDate >= 2026-11-01"],
+    ["date", DATE, "dueDate", "before", "2026-11-01", "before", "2026-11-01", "dueDate <= 2026-11-01"],
+    // A property without these operators shows them as a range of dates.
+    ["date", DATE_WITHOUT_BOUNDS, "dueDate", "after", "2026-11-01", "between", "2026-11-01/3000-01-01",
+      "dueDate >= 2026-11-01"],
+    ["date", DATE_WITHOUT_BOUNDS, "dueDate", "before", "2026-11-01", "between", "1970-01-01/2026-11-01",
+      "dueDate <= 2026-11-01"],
     ["date", DATE, "dueDate", "contains", "2026-11-21", "=d", "2026-11-21", "dueDate = 2026-11-21"],
     ["date", DATE, "dueDate", "contains", "2026-11-01/2026-11-30", "between", "2026-11-01/2026-11-30",
       "dueDate >= 2026-11-01 AND dueDate <= 2026-11-30"],
@@ -163,6 +176,15 @@ describe("toBuilderFilter", () => {
     const builderFilter = queryWriter.toBuilderFilter(filter(property, operator, value), type, operators);
     expect(builderFilter).toEqual(filter(property, builderOperator, builderValue));
     expect(queryWriter.toQuery([builderFilter], new Map())).toBe(query);
+  });
+
+  it("shows the dates compared with <= or >= in the query as on or before, on or after", () => {
+    // The filters that the REST API parses from: dueDate <= 2026-12-31 AND startDate >= 2026-11-01
+    const parsed = [filter("dueDate", "before", "2026-12-31"), filter("startDate", "after", "2026-11-01")];
+    const builderFilters = queryWriter.fromParsedFilters(parsed, new Map())
+      .map((parsedFilter) => queryWriter.toBuilderFilter(parsedFilter, "date", DATE));
+    expect(builderFilters).toEqual(parsed);
+    expect(queryWriter.toQuery(builderFilters, new Map())).toBe("dueDate <= 2026-12-31 AND startDate >= 2026-11-01");
   });
 
   it("keeps the constraints without operator: the builder chooses the operator of their row", () => {
