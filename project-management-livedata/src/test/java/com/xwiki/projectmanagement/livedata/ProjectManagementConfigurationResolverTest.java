@@ -72,6 +72,16 @@ class ProjectManagementConfigurationResolverTest
 
     private static final String TARGET_VERSION = "targetVersion";
 
+    private static final String TYPE = "type";
+
+    private static final String PRIORITY = "priority";
+
+    private static final String OPTIONS = "options";
+
+    private static final String VALUE = "value";
+
+    private static final String LABEL = "label";
+
     @InjectMockComponents
     private ProjectManagementConfigurationResolver configurationResolver;
 
@@ -280,6 +290,48 @@ class ProjectManagementConfigurationResolverTest
             .map(LiveDataQuery.SortEntry::getProperty).collect(Collectors.toList()));
         assertEquals("Adding a descriptor to the work item properties [custom] sorted or filtered in the Live Data "
             + "[null], which have none.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void resolveAddsTheValuesOfTheListFiltersToTheirOptions() throws Exception
+    {
+        LiveDataConfiguration clientConfig = configuration(Map.of(), TYPE, PRIORITY, CUSTOM);
+        Map<String, LiveDataPropertyDescriptor> descriptors = clientConfig.getMeta().getPropertyDescriptors().stream()
+            .collect(Collectors.toMap(LiveDataPropertyDescriptor::getId, Function.identity()));
+        // The values of these list filters are only suggested through their search URL.
+        descriptors.get(TYPE).setFilter(listFilter());
+        descriptors.get(PRIORITY).setFilter(listFilter());
+        descriptors.get(PRIORITY).getFilter().getParameters().put(OPTIONS,
+            List.of(Map.of(VALUE, "8", LABEL, "High")));
+        descriptors.get(CUSTOM).setFilter(new LiveDataPropertyDescriptor.FilterDescriptor("text"));
+        LiveDataConfiguration input = configuration(Map.of("client", CLIENT));
+        // E.g. the filters of a macro: a type given by its id and a type given by its name.
+        LiveDataQuery.Filter typeFilter = new LiveDataQuery.Filter(TYPE, "=", "1");
+        typeFilter.getConstraints().add(new LiveDataQuery.Constraint("Task", "="));
+        typeFilter.getConstraints().add(new LiveDataQuery.Constraint("1", "!"));
+        input.getQuery().setFilters(List.of(typeFilter, new LiveDataQuery.Filter(PRIORITY, "=", "8"),
+            new LiveDataQuery.Filter(PRIORITY, "!*", ""), new LiveDataQuery.Filter(CUSTOM, "~", "text")));
+        registerClientConfiguration(input, clientConfig);
+
+        LiveDataConfiguration result = this.configurationResolver.resolve(input);
+
+        // Live Data on XWiki 18 before 18.10 displays the value of a list filter only when it's one of its options.
+        Map<String, LiveDataPropertyDescriptor> resultDescriptors = result.getMeta().getPropertyDescriptors().stream()
+            .collect(Collectors.toMap(LiveDataPropertyDescriptor::getId, Function.identity()));
+        assertEquals(List.of(Map.of(VALUE, "1", LABEL, "1"), Map.of(VALUE, "Task", LABEL, "Task")),
+            resultDescriptors.get(TYPE).getFilter().getParameters().get(OPTIONS));
+        // The known values and the empty value aren't added again.
+        assertEquals(List.of(Map.of(VALUE, "8", LABEL, "High")),
+            resultDescriptors.get(PRIORITY).getFilter().getParameters().get(OPTIONS));
+        assertNull(resultDescriptors.get(CUSTOM).getFilter().getParameters().get(OPTIONS));
+        assertEquals("/suggest/types", resultDescriptors.get(TYPE).getFilter().getParameters().get("searchURL"));
+    }
+
+    private static LiveDataPropertyDescriptor.FilterDescriptor listFilter()
+    {
+        LiveDataPropertyDescriptor.FilterDescriptor filter = new LiveDataPropertyDescriptor.FilterDescriptor("list");
+        filter.getParameters().put("searchURL", "/suggest/types");
+        return filter;
     }
 
     private void registerClientConfiguration(LiveDataConfiguration input, LiveDataConfiguration clientConfig)
