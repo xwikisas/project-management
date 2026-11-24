@@ -206,6 +206,11 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       maxItems: null,
       // The work items are searched once the user types: an empty search would list any work item.
       preload: false,
+      // The suggestions are only shown for a typed text (see the dropdown_open listener below). Each opening of the
+      // suggestions gives the focus to the field, which opens them again after a timeout when they're opened on focus:
+      // closed by the listener each time, they would open and close in a loop, e.g. while a search loads or once the
+      // field gets the focus back with work items found before. Same in Selectize (XWiki 15.10) and Tom Select (18.x).
+      openOnFocus: false,
       // The typed text is cleared once a work item is picked, so that the next one can be searched right away: by Tom
       // Select (XWiki 18.x), and by the item_add listener below for Selectize (XWiki 15.10), which ignores it.
       clearAfterSelect: true,

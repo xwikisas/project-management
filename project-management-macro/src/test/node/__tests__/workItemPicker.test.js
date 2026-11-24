@@ -79,15 +79,16 @@ async function type(selectize, text) {
   await vi.runAllTimersAsync();
 }
 
-// Types the given id in the picker and presses Enter at once, before the work items are found, as a user.
-async function typeAndEnter(selectize, id) {
+// Types the given id in the picker and presses Enter at once, before the work items are found, as a user, then waits
+// for the given time, or until no timer is left.
+async function typeAndEnter(selectize, id, time) {
   const input = selectize.control_input;
   input.value = id;
   input.dispatchEvent(new Event("input"));
   // The suggestions are displayed once the user stops typing, before the work items are searched.
   vi.advanceTimersByTime(selectize.settings.refreshThrottle);
   input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true }));
-  await vi.runAllTimersAsync();
+  await (time === undefined ? vi.runAllTimersAsync() : vi.advanceTimersByTimeAsync(time));
 }
 
 // Chooses another connection, as the user does in the macro editor.
@@ -95,6 +96,13 @@ async function changeConnection(picker, newConnection) {
   connection = newConnection;
   picker.refresh();
   await vi.runAllTimersAsync();
+}
+
+// Counts the openings of the suggestions of the picker.
+function countOpenings(selectize) {
+  const openings = { count: 0 };
+  selectize.on("dropdown_open", () => openings.count++);
+  return openings;
 }
 
 function getPickedLabels(selectize) {
@@ -268,6 +276,40 @@ describe("the work item picker", () => {
 
     expect(picker.getIds()).toEqual(["164"]);
     expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+  });
+
+  it("doesn't open and close its suggestions in a loop while a search loads after a pick", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // The search of the typed id doesn't answer.
+    answer = (url) => url.includes("filter=") ? new Promise(() => {}) : search(url);
+    selectize.control_input.focus();
+    const openings = countOpenings(selectize);
+
+    await typeAndEnter(selectize, "164", 2000);
+
+    expect(selectize.items).toEqual(["164"]);
+    // The suggestions of the typed id, closed once it's picked: nothing is typed while the search loads.
+    expect(openings.count).toBe(1);
+    expect(selectize.isOpen).toBe(false);
+  });
+
+  it("doesn't open and close its suggestions in a loop when it gets the focus back", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    selectize.control_input.focus();
+    // Work items found but not picked.
+    await type(selectize, "a");
+    await type(selectize, "");
+    selectize.control_input.dispatchEvent(new FocusEvent("blur"));
+    await vi.advanceTimersByTimeAsync(100);
+    const openings = countOpenings(selectize);
+
+    selectize.control_input.dispatchEvent(new FocusEvent("focus"));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(openings.count).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("keeps its suggestions under its field when a message is displayed above it", async () => {
