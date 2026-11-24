@@ -61,7 +61,9 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       style.id = STYLE_ID;
       style.textContent = '.pm-work-item-source .pm-source-ways { margin-bottom: 10px; }'
         + ' .pm-work-item-source .pm-source-way-select { width: auto; max-width: 100%; }'
-        + ' .pm-work-item-source .pm-source-field-label { display: block; font-weight: normal; }'
+        // The labels have no margin, as the names of the parameters in the macro editor, whose hint style
+        // (macro-parameter-description) the hints under them take, so that they're spaced the same.
+        + ' .pm-work-item-source .pm-source-field-label { display: block; font-weight: normal; margin: 0; }'
         + ' .pm-work-item-source .pm-source-toggle-text { padding-left: 0; }'
         + ' .modal-footer .' + DROPPED_CLASS + ' { text-align: left; }';
       document.head.appendChild(style);
@@ -300,6 +302,12 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
         write();
       }
     });
+    // The select is described by the hint of the parameter, which the macro editor displays above it.
+    const parameterHint = widget.closest('.macro-parameter').children('.macro-parameter-description').first();
+    if (parameterHint.length) {
+      parameterHint.attr('id', parameterHint.attr('id') || waySelect.attr('id') + '-hint');
+      waySelect.attr('aria-describedby', parameterHint.attr('id'));
+    }
 
     showValues();
     render();
