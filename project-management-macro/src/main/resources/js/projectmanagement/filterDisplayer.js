@@ -89,6 +89,34 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
       setTextAlternative(selectize.get$('control_input'), label);
     }
   };
+  /*
+   * A value of a list filter can be written in a query by the text written for it (the queryValue of its suggestion,
+   * e.g. the identifier of a project or the name of a status, whatever its case) instead of its id, e.g. by hand: the
+   * field then holds that text. The suggestions of such a value take the value that the field holds for it, so that
+   * the field has a single option per value: once picked, the value isn't suggested again, and can't be picked twice.
+   * The option of its id loaded before, if any and not picked, is removed. A value made of digits is an id, never the
+   * text written for another value.
+   */
+  let useWrittenValues = function (selectize, suggestions) {
+    if (!selectize) {
+      return suggestions;
+    }
+    let writtenValues = new Map(Object.keys(selectize.options).filter(value => !/^\d+$/.test(value))
+      .map(value => [value.toLowerCase(), value]));
+    return suggestions.map(suggestion => {
+      let value = suggestion && suggestion.value !== undefined && suggestion.value !== null
+        ? String(suggestion.value) : null;
+      let queryValue = suggestion && suggestion.queryValue;
+      let writtenValue = typeof queryValue === 'string' && writtenValues.get(queryValue.toLowerCase());
+      if (value === null || !writtenValue || writtenValue === value || selectize.items.includes(value)) {
+        return suggestion;
+      }
+      if (selectize.options.hasOwnProperty(value)) {
+        selectize.removeOption(value);
+      }
+      return Object.assign({}, suggestion, { value: writtenValue });
+    });
+  };
   let clean = function (type, inputElem, operator) {
     let parent = inputElem.parent();
     switch (type) {
@@ -240,7 +268,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               .then(function (results) {
                 inputElem.trigger('suggestionsLoaded');
                 if (Array.isArray(results)) {
-                  callback(results);
+                  callback(useWrittenValues(inputElem[0] && inputElem[0].selectize, results));
                   return;
                 }
                 callback([]);
