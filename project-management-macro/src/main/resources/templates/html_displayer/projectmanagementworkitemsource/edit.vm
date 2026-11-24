@@ -109,9 +109,15 @@
   </div>
   ## Matching filters: the filter builder, or the query as text.
   <div class="pm-source-editor" data-way="query">
+    ## The warnings displayed when the query can't be shown as filters: with the explanation of the server, with the
+    ## status of the failed request, or without reason (see filterParameter.js).
     <div class="pm-source-query-builder" data-builder-role="query"
       data-query-error="$escapetool.xml($services.localization.render(
-        'projectmanagement.macro.filter.queryNotEditable'))">
+        'projectmanagement.macro.filter.queryNotEditable'))"
+      data-query-failed="$escapetool.xml($services.localization.render(
+        'projectmanagement.macro.filter.queryNotRead'))"
+      data-query-failed-no-reason="$escapetool.xml($services.localization.render(
+        'projectmanagement.macro.filter.queryNotRead.noReason'))">
       ## Without filter, the summary of the builder tells what the macro selects.
       #pmSourceKey('noFilter')
       #filterBuilder({"client": "$!clientId", "l10n": {"summaryAll": $services.localization.render($pmSourceKey)}})

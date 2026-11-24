@@ -116,7 +116,10 @@ public class FilterBuilderParameter extends BaseElement
     public FilterBuilderFilter addFilter(String filterProperty)
     {
         WebElement builder = getContainer();
-        Select select = new Select(builder.findElement(By.className(ADD_FILTER_CLASS)));
+        WebElement addFilter = builder.findElement(By.className(ADD_FILTER_CLASS));
+        // No filter can be added while the filters or the properties of the builder are loading.
+        getDriver().waitUntilCondition(driver -> addFilter.isEnabled());
+        Select select = new Select(addFilter);
 
         try {
             select.selectByValue(filterProperty);
@@ -168,8 +171,8 @@ public class FilterBuilderParameter extends BaseElement
     }
 
     /**
-     * @return what the filters select, in plain words, once the labels of the filter values are loaded, and the dates
-     *     displayed by their date pickers
+     * @return what the filters select, in plain words, once the filters and the properties of the builder are loaded,
+     *     the labels of the filter values too, and the dates displayed by their date pickers
      * @since 1.4.0
      */
     public String getSummary()
@@ -179,6 +182,8 @@ public class FilterBuilderParameter extends BaseElement
         By loading = By.cssSelector(".proj-manag-constraint .loading");
         getDriver().waitUntilCondition(
             driver -> getDriver().findElementsWithoutWaiting(getContainer(), loading).isEmpty());
+        // The summary tells that the filters are loading while the filters or the properties of the builder load.
+        getDriver().waitUntilCondition(driver -> !"true".equals(getContainer().getAttribute("aria-busy")));
         return getContainer().findElement(By.className("proj-manag-filter-summary")).getText();
     }
 
