@@ -23,7 +23,13 @@
 <div class="project-management-filters" data-builder-role="series"
   data-series-title="$escapetool.xml($services.localization.render('projectmanagement.macro.chart.series', ['__N__']))">
 #set ($firstSeriesTitle = $services.localization.render('projectmanagement.macro.chart.series', [1]))
-#filterBuilder({"client": "$!clientId", "title": $firstSeriesTitle, "removable": true})
+## Without filter, a series counts all the work items selected by the chart (the client can name them its own way).
+#set ($seriesNoFilterKey = "${clientId}.macro.chart.series.noFilter")
+#if ("$!clientId" == '' || !$services.localization.get($seriesNoFilterKey))
+  #set ($seriesNoFilterKey = 'projectmanagement.macro.chart.series.noFilter')
+#end
+#set ($seriesL10n = {'summaryAll': $services.localization.render($seriesNoFilterKey)})
+#filterBuilder({"client": "$!clientId", "title": $firstSeriesTitle, "removable": true, "l10n": $seriesL10n})
 </div>
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')

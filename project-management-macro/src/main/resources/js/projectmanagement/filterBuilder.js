@@ -48,14 +48,19 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
   const EXCLUDING_OPERATORS = ['!', '!~'];
   // Marks a builder while the filters it's given are being read, e.g. the query of a macro (see setLoading).
   const LOADING_CLASS = 'proj-manag-query-loading';
+  // Marks a builder while its properties are loading (see setSourceParameters).
+  const PROPERTIES_LOADING_CLASS = 'proj-manag-properties-loading';
+  // The message telling that the properties couldn't be loaded.
+  const PROPERTIES_ERROR_CLASS = 'proj-manag-properties-error';
 
   let builders = (window.FilterBuilder && window.FilterBuilder.instances) || new Map();
   let initBuilder = (window.FilterBuilder && window.FilterBuilder.inializeBuilder) || function (element) {
     if (window.FilterBuilder && window.FilterBuilder.instances.has(element[0])) {
       return;
     }
-    // A copy of a builder, e.g. a new series, loads its own properties.
-    element.removeClass('proj-manag-properties-loading');
+    // A copy of a builder, e.g. a new series, loads its own properties, and is given no filters to read.
+    element.removeClass(PROPERTIES_LOADING_CLASS + ' ' + LOADING_CLASS);
+    element.find('.' + PROPERTIES_ERROR_CLASS).remove();
     let builder = {
       constraintBuilder: '',
       addButton: '',
@@ -69,7 +74,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       propertiesRequest: 0,
       // Whether the properties are those of the previous source (e.g. another OpenProject instance) while the ones of
       // the new source are loading: see setSourceParameters.
-      sourceChanging: false
+      sourceChanging: false,
+      // Whether the builder doesn't show the filters it was given: see setUnreadable.
+      unreadable: false
     };
 
     let getType = function (property) {
@@ -212,10 +219,20 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       return description + ' ' + values[0];
     };
-    // What the filters select, in plain words, or that they're being read (see setLoading).
+    // Whether the filters are being read (see setLoading), or the properties loading (see setSourceParameters).
+    let isLoading = function () {
+      return builder.constraintBuilder.hasClass(LOADING_CLASS)
+        || builder.constraintBuilder.hasClass(PROPERTIES_LOADING_CLASS);
+    };
+    // What the filters select, in plain words, or that they're loading (see isLoading). Nothing while the builder
+    // doesn't show the filters it was given (see setUnreadable).
     let updateSummary = function () {
-      if (builder.constraintBuilder.hasClass(LOADING_CLASS)) {
-        builder.constraintBuilder.find('.proj-manag-filter-summary').text(builder.l10n.summaryLoading || '');
+      let summaryElement = builder.constraintBuilder.find('.proj-manag-filter-summary');
+      if (isLoading()) {
+        summaryElement.text(builder.l10n.summaryLoading || '');
+        return;
+      } else if (builder.unreadable) {
+        summaryElement.text('');
         return;
       }
       let descriptions = getRows().map((index, row) => describeRow($(row))).get().filter(text => text !== null);
@@ -226,7 +243,15 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       if (incomplete > 0 && builder.l10n.summaryIncomplete) {
         summary += ' ' + builder.l10n.summaryIncomplete;
       }
-      builder.constraintBuilder.find('.proj-manag-filter-summary').text(summary);
+      summaryElement.text(summary);
+    };
+    // No filter can be added while the filters or the properties are loading: the filters being read would be lost,
+    // and the properties proposed would be incomplete, or those of another source.
+    let updateLoading = function () {
+      let loading = isLoading();
+      builder.constraintBuilder.attr('aria-busy', loading ? 'true' : null);
+      builder.addButton.prop('disabled', loading);
+      updateSummary();
     };
     let getJson = function () {
       let resultJson = {};
@@ -522,7 +547,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
     };
     /*
      * Loads the properties that can be filtered on for the given parameters of the livedata source, e.g. the instance
-     * of the client.
+     * of the client. While they load, the summary tells so and no filter can be added (see updateLoading). When they
+     * can't be loaded, a message tells so, and the builder keeps the properties it has.
      *
      * @param sourceParameters the parameters of the livedata source
      * @param redisplayRows whether the rows already added are displayed again with the new properties, see
@@ -538,8 +564,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
           client: builder.constraintBuilder.attr('data-client'),
           sourceParameters: JSON.stringify(sourceParameters || {})
         }));
-      // Marks the builder while its properties are loading.
-      builder.constraintBuilder.addClass('proj-manag-properties-loading');
+      // Marks the builder while its properties are loading. The message of a previous failure, if any, is removed.
+      builder.constraintBuilder.addClass(PROPERTIES_LOADING_CLASS).find('.' + PROPERTIES_ERROR_CLASS).remove();
+      updateLoading();
       if (redisplayRows && !builder.sourceChanging) {
         // Until the properties of the new source are loaded, the list rows, those already added and those added
         // meanwhile, suggest no value (see displayValue), and they're displayed again once the properties are loaded.
@@ -551,16 +578,28 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       return $.getJSON(url).then(function (properties) {
         // Only the properties of the last parameters are used.
-        if (request === builder.propertiesRequest && Array.isArray(properties) && properties.length > 0) {
-          let sourceChanged = builder.sourceChanging;
-          builder.sourceChanging = false;
-          setProperties(properties, redisplayRows || sourceChanged);
+        if (request !== builder.propertiesRequest) {
+          return;
         }
+        if (!Array.isArray(properties) || properties.length === 0) {
+          // The configuration of the client couldn't be resolved for these parameters (see filter_properties.vm).
+          throw new Error('No properties to filter on.');
+        }
+        let sourceChanged = builder.sourceChanging;
+        builder.sourceChanging = false;
+        setProperties(properties, redisplayRows || sourceChanged);
       }).catch(function () {
         console.error(`Failed to load the properties to filter on from [${url}].`);
+        // The builder keeps the properties it has, which can lack some properties (e.g. the custom fields of the
+        // instance): the user is told. The filters on the properties that it doesn't know are kept.
+        if (request === builder.propertiesRequest && builder.l10n.propertiesNotLoaded) {
+          builder.addPoint.before($('<div class="box warningmessage"></div>').addClass(PROPERTIES_ERROR_CLASS)
+            .text(builder.l10n.propertiesNotLoaded));
+        }
       }).then(function () {
         if (request === builder.propertiesRequest) {
-          builder.constraintBuilder.removeClass('proj-manag-properties-loading');
+          builder.constraintBuilder.removeClass(PROPERTIES_LOADING_CLASS);
+          updateLoading();
         }
       });
     };
@@ -573,8 +612,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
      * the filters being read would then be lost.
      */
     let setLoading = function (loading) {
-      builder.constraintBuilder.toggleClass(LOADING_CLASS, loading).attr('aria-busy', loading ? 'true' : null);
-      builder.addButton.prop('disabled', loading);
+      builder.constraintBuilder.toggleClass(LOADING_CLASS, loading);
+      updateLoading();
+    };
+    /*
+     * Marks the builder while it doesn't show the filters it was given, e.g. a query that it can't show, kept until
+     * the filters of the user replace it: its summary isn't displayed, since the filters that it shows don't select
+     * the work items.
+     */
+    let setUnreadable = function (unreadable) {
+      builder.unreadable = unreadable;
       updateSummary();
     };
     let init = function () {
@@ -642,7 +689,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
           builder.constraintBuilder.remove();
         });
       updateAddButton();
-      updateSummary();
+      updateLoading();
       $(document).trigger('filterBuilderInitialized', [builder.constraintBuilder]);
     };
 
@@ -672,7 +719,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       init: init,
       setTitle: setTitle,
       setSourceParameters: setSourceParameters,
-      setLoading: setLoading
+      setLoading: setLoading,
+      setUnreadable: setUnreadable
     });
   };
   /*

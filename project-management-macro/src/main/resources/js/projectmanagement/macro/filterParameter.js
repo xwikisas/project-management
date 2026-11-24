@@ -145,6 +145,7 @@ setTimeout(function () {
       let clearQueryWarning = function () {
         contentUnread = false;
         $('.proj-manag-query-error').remove();
+        builder.instances.forEach(bld => isQueryBuilder(bld) && bld.setUnreadable(false));
       };
       // The number of the last reading of the query: the result of a previous reading, e.g. of a query replaced
       // since, is ignored.
@@ -174,12 +175,30 @@ setTimeout(function () {
         clearQueryWarning();
         getQueryContainer(bld.element).trigger('pm:queryChanged', [getQuery(bld, filters)]);
       };
+      /*
+       * Tells why the query can't be shown: the explanation of the server (a sentence), else the status text of the
+       * failed request, if it has one (not the generic "error" of jQuery, e.g. for an HTTP/2 response, which has no
+       * status text).
+       *
+       * @param container the container of the builder, holding the templates of the warning
+       * @param response the failed request
+       * @return the text of the warning
+       */
+      let getQueryWarning = function (container, response) {
+        let reason = response.responseJSON && response.responseJSON.message;
+        let template = container.attr('data-query-error');
+        if (!reason) {
+          reason = response.status >= 400 && response.statusText !== 'error' ? (response.statusText || '').trim() : '';
+          template = container.attr(reason ? 'data-query-failed' : 'data-query-failed-no-reason');
+        }
+        return (template || '{0}').replace('{0}', () => reason);
+      };
       let showQueryWarning = function (bld, message) {
         clearQueryWarning();
-        let template = getQueryContainer(bld.element).attr('data-query-error') || '{0}';
-        bld.element.before($('<div class="box warningmessage proj-manag-query-error"></div>')
-          .text(template.replace('{0}', () => message)));
+        bld.element.before($('<div class="box warningmessage proj-manag-query-error"></div>').text(message));
         contentUnread = true;
+        // The builder shows no filter, while the query is kept: its summary would contradict the warning.
+        bld.setUnreadable(true);
         edits.clearEditedProperty(bld.element[0]);
         getQueryContainer(bld.element).trigger('pm:queryError', [message]);
       };
@@ -208,7 +227,7 @@ setTimeout(function () {
           if (request !== queryRequest) {
             return;
           }
-          showQueryWarning(bld, (response.responseJSON && response.responseJSON.message) || response.statusText);
+          showQueryWarning(bld, getQueryWarning(getQueryContainer(bld.element), response));
           // Editing the filters replaces the query that can't be read.
           setReadFilters(bld);
         });

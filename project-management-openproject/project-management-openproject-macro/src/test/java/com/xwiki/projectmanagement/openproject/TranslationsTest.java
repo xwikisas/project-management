@@ -50,7 +50,14 @@ class TranslationsTest
      * The labels of the filter builder that a client can word its own way (see filter_builder.vm).
      */
     private static final List<String> FILTER_BUILDER_LABELS = List.of("anotherCondition", "operatorLabel",
-        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between");
+        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between", "propertiesNotLoaded");
+
+    /**
+     * What a series of a chart without filter selects (see projectmanagementfilters/edit.vm).
+     */
+    private static final String SERIES_NO_FILTER = "macro.chart.series.noFilter";
+
+    private static final String OPENPROJECT_PREFIX = "openproject.";
 
     /**
      * The translations without parameter are rendered without being formatted: their apostrophes aren't doubled,
@@ -81,7 +88,44 @@ class TranslationsTest
     @Test
     void macroEditorLabelsNameTheWorkPackages() throws Exception
     {
-        // The generic labels are in the resources of the generic modules, on the class path too.
+        Properties translations = loadAllTranslations();
+        Stream<String> filterBuilderKeys = Stream.concat(
+            FILTER_BUILDER_LABELS.stream().map(key -> "macro.filter." + key), Stream.of(SERIES_NO_FILTER));
+        Stream<String> sourceKeys = translations.stringPropertyNames().stream()
+            .filter(key -> key.startsWith(GENERIC_PREFIX + "macro.source."))
+            .map(key -> key.substring(GENERIC_PREFIX.length()));
+
+        List<String> workItemLabels = Stream.concat(filterBuilderKeys, sourceKeys).sorted().filter(key -> {
+            String label = translations.getProperty(OPENPROJECT_PREFIX + key,
+                translations.getProperty(GENERIC_PREFIX + key, ""));
+            return label.toLowerCase().contains("work item");
+        }).collect(Collectors.toList());
+
+        assertEquals(List.of(), workItemLabels);
+    }
+
+    /**
+     * The filter builders without filter say what the macro selects in the same words, e.g. those of the filter
+     * presets as the macro, except the series of a chart, which count the charted work packages.
+     */
+    @Test
+    void noFilterSummaries() throws Exception
+    {
+        Properties translations = loadAllTranslations();
+
+        assertEquals("No filter: all the work packages you can see.",
+            translations.getProperty("openproject.macro.source.noFilter"));
+        assertEquals(translations.getProperty("openproject.macro.source.noFilter"),
+            translations.getProperty("openproject.macro.filter.summaryAll"));
+        assertEquals("No filter: all the charted work packages.",
+            translations.getProperty(OPENPROJECT_PREFIX + SERIES_NO_FILTER));
+    }
+
+    /**
+     * @return the translations of this module and of the generic modules, whose resources are on the class path too
+     */
+    private Properties loadAllTranslations() throws Exception
+    {
         Properties translations = new Properties();
         for (URL resource : Collections.list(
             getClass().getClassLoader().getResources("ApplicationResources.properties")))
@@ -90,17 +134,6 @@ class TranslationsTest
                 translations.load(input);
             }
         }
-        Stream<String> filterBuilderKeys = FILTER_BUILDER_LABELS.stream().map(key -> "macro.filter." + key);
-        Stream<String> sourceKeys = translations.stringPropertyNames().stream()
-            .filter(key -> key.startsWith(GENERIC_PREFIX + "macro.source."))
-            .map(key -> key.substring(GENERIC_PREFIX.length()));
-
-        List<String> workItemLabels = Stream.concat(filterBuilderKeys, sourceKeys).sorted().filter(key -> {
-            String label = translations.getProperty("openproject." + key,
-                translations.getProperty(GENERIC_PREFIX + key, ""));
-            return label.toLowerCase().contains("work item");
-        }).collect(Collectors.toList());
-
-        assertEquals(List.of(), workItemLabels);
+        return translations;
     }
 }
