@@ -19,6 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.model;
 
+import org.xwiki.stability.Unstable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
@@ -50,6 +52,11 @@ public class Version extends BaseOpenProjectObject
     private static final String STATUS = "status";
 
     /**
+     * The key identifying the name of the project defining the version.
+     */
+    private static final String DEFINING_PROJECT_NAME = "definingProjectName";
+
+    /**
      * Default constructor.
      */
     public Version()
@@ -68,6 +75,7 @@ public class Version extends BaseOpenProjectObject
         this.setStartDate(getTextOrNull(versionNode, START_DATE));
         this.setEndDate(getTextOrNull(versionNode, END_DATE));
         this.setStatus(versionNode.path(STATUS).asText());
+        this.setDefiningProjectName(getTextOrNull(versionNode.path("_links").path("definingProject"), "title"));
     }
 
     /**
@@ -132,6 +140,27 @@ public class Version extends BaseOpenProjectObject
     public void setStatus(String status)
     {
         put(STATUS, status);
+    }
+
+    /**
+     * @return the name of the project that defines the version (other projects can share it), or {@code null} when
+     *     it's unknown, e.g. when the current user can't see the project
+     * @since 1.5.0
+     */
+    @Unstable
+    public String getDefiningProjectName()
+    {
+        return (String) get(DEFINING_PROJECT_NAME);
+    }
+
+    /**
+     * @param definingProjectName see {@link #getDefiningProjectName()}
+     * @since 1.5.0
+     */
+    @Unstable
+    public void setDefiningProjectName(String definingProjectName)
+    {
+        put(DEFINING_PROJECT_NAME, definingProjectName);
     }
 
     private static String getTextOrNull(JsonNode node, String field)

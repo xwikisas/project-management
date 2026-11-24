@@ -75,6 +75,7 @@ import com.xwiki.projectmanagement.openproject.model.TimeEntry;
 import com.xwiki.projectmanagement.openproject.model.Type;
 import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.UserAvatar;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -494,6 +495,21 @@ class DefaultOpenProjectApiClientTest
         assertEquals("<p>Versions &gt;= 1.6</p>", project.getDescriptionHtml());
         assertEquals("Versions &gt;= 1.6", project.getDescription());
         assertEquals("doc", project.getIdentifier());
+    }
+
+    @Test
+    void getVersionsWithTheirProject() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"_embedded\": {\"elements\": ["
+            + "{\"id\": 10, \"name\": \"1.0\", \"_links\": {\"definingProject\": {\"href\": \"/api/v3/projects/7\", "
+            + "\"title\": \"Demo\"}}},"
+            + "{\"id\": 11, \"name\": \"1.0\", \"_links\": {}}]}}");
+
+        List<Version> versions = openProjectApiClient.getVersions().getItems();
+
+        assertEquals("Demo", versions.get(0).getDefiningProjectName());
+        // The project of a version isn't always known, e.g. when the current user can't see it.
+        assertNull(versions.get(1).getDefiningProjectName());
     }
 
     @Test

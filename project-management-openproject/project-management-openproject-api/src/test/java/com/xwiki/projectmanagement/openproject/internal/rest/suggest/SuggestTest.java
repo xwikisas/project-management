@@ -146,7 +146,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
             .thenReturn(workPackagePaginatedResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, 10, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, 10, null, null);
 
         verify(openProjectApiClient).getWorkPackages(
             1,
@@ -182,7 +182,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
             "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null, null);
 
         List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
         assertEquals(List.of("11", "5"),
@@ -200,7 +200,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE,
             "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING)).thenReturn(subjectResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", PAGE_SIZE, null, null);
 
         List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
         assertEquals(List.of("5"),
@@ -219,7 +219,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(1, 1, "[{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]",
             EMPTY_STRING)).thenReturn(subjectResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", 1, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", "11", 1, null, null);
 
         List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
         assertEquals(List.of("11"),
@@ -234,7 +234,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(anyInt(), anyInt(), anyString(), anyString()))
             .thenReturn(subjectResult);
 
-        suggest.getSuggestions(WIKI, INSTANCE, "id", "12345678901", PAGE_SIZE, null);
+        suggest.getSuggestions(WIKI, INSTANCE, "id", "12345678901", PAGE_SIZE, null, null);
 
         verify(this.openProjectApiClient, never()).getWorkPackages(eq(1), eq(1), anyString(), anyString());
     }
@@ -260,7 +260,7 @@ class SuggestTest
             "[" + typeFilter + ",{\"subject\":{\"operator\":\"~\",\"values\":[\"11\"]}}]", EMPTY_STRING))
             .thenReturn(subjectResult);
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", "11", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", "11", PAGE_SIZE, null, null);
 
         List<Map<String, String>> responseEntity = (List<Map<String, String>>) response.getEntity();
         assertEquals(List.of("#11: Eleventh", "#5: Fix the 11 failing tests"),
@@ -309,7 +309,7 @@ class SuggestTest
 
         stubbedCall.call(doReturn(paginatedResult).when(this.openProjectApiClient));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, property, SEARCH_STRING, 10, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, property, SEARCH_STRING, 10, null, null);
 
         expectedCall.call(verify(openProjectApiClient));
 
@@ -319,7 +319,7 @@ class SuggestTest
     @Test
     void getSuggestionsForUnknownPropertyReturnsNothing()
     {
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "unknown", SEARCH_STRING, 10, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "unknown", SEARCH_STRING, 10, null, null);
 
         verifySuccessResponse(response, List.of());
     }
@@ -330,7 +330,7 @@ class SuggestTest
         when(this.openProjectApiClient.getTypes()).thenThrow(new ProjectManagementException(
             "Failed to retrieve the OpenProject entities. [internal error details from http://openproject.local]."));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "types", SEARCH_STRING, 10, null, null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
         // The details of the failure are only logged, never sent to the client.
@@ -345,7 +345,7 @@ class SuggestTest
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "", SEARCH_STRING, 10, null, null);
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
     }
@@ -361,7 +361,7 @@ class SuggestTest
         when(this.openProjectApiClient.getVersions())
             .thenReturn(new PaginatedResult<>(List.of(version1, version2, version3, unnamed), 0, 4, 4));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "1.2", 1, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "1.2", 1, null, null);
 
         verifySuccessResponse(response, List.of(version1));
     }
@@ -369,17 +369,84 @@ class SuggestTest
     @Test
     void getSuggestionsForVersionsSharingTheirName() throws ProjectManagementException
     {
-        Version version1 = createVersion(1, "1.0");
-        Version version2 = createVersion(2, "1.0");
-        Version version3 = createVersion(3, "2.0");
+        Version version1 = createVersion(1, "1.0", "Demo");
+        Version version2 = createVersion(2, "1.0", "Scrum");
+        Version version3 = createVersion(3, "2.0", "Scrum");
         when(this.openProjectApiClient.getVersions())
             .thenReturn(new PaginatedResult<>(List.of(version1, version2, version3), 0, 3, 3));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, null, null);
 
-        // The versions whose name other versions have (e.g. in other projects) are written by id.
-        assertEquals(List.of(suggestion(version1), suggestion(version2), namedSuggestion(version3)),
+        // The versions whose name other versions have (e.g. in other projects) are written by id, and told apart by
+        // the name of their project.
+        assertEquals(List.of(
+            Map.of("value", "1", "label", "1.0", "url", "location1", "hint", "Demo"),
+            Map.of("value", "2", "label", "1.0", "url", "location2", "hint", "Scrum"),
+            Map.of("value", "3", "label", "2.0", "url", "location3", "queryValue", "2.0", "hint", "Scrum")),
             response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForVersionsOfProjects() throws ProjectManagementException
+    {
+        Version demo = createVersion(1, "1.0", "Demo");
+        Version scrum = createVersion(2, "1.0", "Scrum");
+        Version shared = createVersion(3, "2.0", "Scrum");
+        Version other = createVersion(4, "1.1", "Other");
+        when(this.openProjectApiClient.getVersions())
+            .thenReturn(new PaginatedResult<>(List.of(demo, scrum, shared, other), 0, 4, 4));
+        when(this.openProjectApiClient.getProject("demo-project")).thenReturn(createProject(5, "demo-project", "Demo"));
+        when(this.openProjectApiClient.getProjectVersions(5))
+            .thenReturn(new PaginatedResult<>(List.of(demo, shared), 0, 2, 2));
+        when(this.openProjectApiClient.getProjectVersions(6))
+            .thenReturn(new PaginatedResult<>(List.of(shared), 0, 1, 1));
+        when(this.openProjectApiClient.getProjectVersions(7))
+            .thenThrow(new WorkItemRetrievalException("Not found", 404));
+
+        // The projects are given by their identifier or their id; the projects that can't be found are ignored, as
+        // well as the values that are neither ids nor identifiers.
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, null,
+            List.of("demo-project", "6", "7", "use_selected_dashboard_project", "Not an identifier"));
+
+        // Only the versions available in the projects are suggested (a version shared with several projects once).
+        assertEquals(List.of("1", "3"), getValues(response));
+    }
+
+    @Test
+    void getSuggestionsForSelectedVersionOfAnotherProject() throws ProjectManagementException
+    {
+        Version demo = createVersion(1, "1.0", "Demo");
+        Version scrum = createVersion(2, "1.0", "Scrum");
+        when(this.openProjectApiClient.getVersions()).thenReturn(new PaginatedResult<>(List.of(demo, scrum), 0, 2, 2));
+        when(this.openProjectApiClient.getProjectVersions(5))
+            .thenReturn(new PaginatedResult<>(List.of(demo), 0, 1, 1));
+
+        // The pickers retrieve the label of their value by sending it along with an empty search.
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, "2", List.of("5"));
+
+        // The selected version is suggested first, even when it isn't a version of the given projects.
+        assertEquals(List.of("2", "1"), getValues(response));
+    }
+
+    @Test
+    void getSuggestionsForVersionsOfProjectsWhenTheProjectsFail() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getVersions()).thenReturn(new PaginatedResult<>(List.of(), 0, 0, 0));
+        when(this.openProjectApiClient.getProjectVersions(5))
+            .thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "versions", "", PAGE_SIZE, null, List.of("5"));
+
+        assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+        assertEquals("Failed to retrieve the [versions] suggestions from the OpenProject instance [instance]. "
+            + "Root cause: [WorkItemRetrievalException: Unauthorized]", this.logCapture.getMessage(0));
+    }
+
+    @SuppressWarnings("unchecked")
+    private static List<String> getValues(Response response)
+    {
+        return ((List<Map<String, String>>) response.getEntity()).stream().map(suggestion -> suggestion.get("value"))
+            .collect(Collectors.toList());
     }
 
     @Test
@@ -391,7 +458,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter("doe")))
             .thenReturn(new PaginatedResult<>(List.of(john1, john2, jane), 0, 3, 3));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", PAGE_SIZE, null, null);
 
         // OpenProject doesn't give the login of the users to the current user: the users sharing a name are told apart
         // by their id.
@@ -406,7 +473,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(1, 1, nameFilter("doe")))
             .thenReturn(new PaginatedResult<>(List.of(jane), 0, 1, 2));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", 1, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "Doe", 1, null, null);
 
         // Another user having the same name could be on the next page: the user is written by id.
         assertEquals(List.of(suggestion(jane)), response.getEntity());
@@ -421,7 +488,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(1, 100, nameFilter("jane doe")))
             .thenReturn(new PaginatedResult<>(List.of(jane, createUser(4, "Jane Doe")), 0, 2, 2));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "j", PAGE_SIZE, "3");
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "j", PAGE_SIZE, "3", null);
 
         // The selected user is retrieved alone: the users having the same name are searched.
         assertEquals(List.of(suggestion(jane, "#3")), response.getEntity());
@@ -438,7 +505,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter("qa150")))
             .thenReturn(new PaginatedResult<>(List.of(twin1, twin2, unique), 0, 3, 3));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "QA150", PAGE_SIZE, null);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "QA150", PAGE_SIZE, null, null);
 
         // The users sharing a name are told apart by their login, else by their id. A user whose name is unique needs
         // no hint.
@@ -455,7 +522,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(1, 100, nameFilter("qa150 twin")))
             .thenReturn(new PaginatedResult<>(List.of(createUser(5, "QA150 Twin", "qa150same1"), twin), 0, 2, 2));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "6");
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "6", null);
 
         // The label of a selected user (e.g. of a value of a filter) is loaded with the login, which tells the user
         // apart from the users sharing its name.
@@ -471,7 +538,7 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(1, 100, nameFilter("qa150 unique")))
             .thenReturn(new PaginatedResult<>(List.of(unique), 0, 1, 1));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "7");
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "7", null);
 
         assertEquals(List.of(namedSuggestion(unique)), response.getEntity());
     }
@@ -486,7 +553,7 @@ class SuggestTest
 
         // The picker retrieves the label of its value by searching the value.
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "demo-project", PAGE_SIZE,
-            "demo-project");
+            "demo-project", null);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(List.of(Map.of("value", "demo-project", "label", "Demo", "url", "location3", "queryValue",
@@ -505,7 +572,7 @@ class SuggestTest
                 List.of(createProject(4, "scrum", "Scrum"), createProject(3, "demo-project", "Demo")), 0, 2, 2));
 
         // The pickers send their value along with the text typed by the user.
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "s", PAGE_SIZE, selectedItem);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "s", PAGE_SIZE, selectedItem, null);
 
         // The selected project is suggested first, by the value of the picker, and only once. The projects are written
         // by their identifier in the query of a macro content.
@@ -528,7 +595,7 @@ class SuggestTest
         when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("unknown")))
             .thenReturn(new PaginatedResult<>(List.of(), 0, 0, 0));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "unknown", PAGE_SIZE, "unknown");
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "unknown", PAGE_SIZE, "unknown", null);
 
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         assertEquals(List.of(), response.getEntity());
@@ -541,7 +608,7 @@ class SuggestTest
             .thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
-            "demo-project");
+            "demo-project", null);
 
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
         assertEquals("Failed to retrieve the [projects] suggestions from the OpenProject instance [instance]. "
@@ -555,7 +622,7 @@ class SuggestTest
             .thenReturn(new PaginatedResult<>(List.of(createProject(4, "scrum", "Scrum")), 0, 1, 1));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
-            "use_selected_dashboard_project");
+            "use_selected_dashboard_project", null);
 
         assertEquals(List.of(Map.of("value", "4", "label", "Scrum", "url", "location4", "queryValue", "scrum")),
             response.getEntity());
@@ -573,7 +640,8 @@ class SuggestTest
         when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter(SEARCH_STRING.toLowerCase())))
             .thenReturn(new PaginatedResult<>(List.of(user), 0, 1, 1));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, PAGE_SIZE, selectedItem);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", SEARCH_STRING, PAGE_SIZE,
+            selectedItem, null);
 
         verifySuccessResponse(response, List.of(user));
     }
@@ -586,7 +654,7 @@ class SuggestTest
         when(this.openProjectApiClient.getWorkPackages(1, PAGE_SIZE, "[" + subjectFilter + "]", EMPTY_STRING))
             .thenReturn(new PaginatedResult<>(List.of(createWorkPackage(5, "Fifth")), 0, 1, 1));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, PAGE_SIZE, selectedItem);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "id", SEARCH_STRING, PAGE_SIZE, selectedItem, null);
 
         assertEquals(List.of(Map.of("value", "5", "label", "5", "url", "location5", "hint", "Fifth")),
             response.getEntity());
@@ -604,7 +672,8 @@ class SuggestTest
                 + "{\"subject\":{\"operator\":\"~\",\"values\":[\"searchstring\"]}}]", EMPTY_STRING))
             .thenReturn(new PaginatedResult<>(List.of(createWorkPackage(5, "Fifth")), 0, 1, 1));
 
-        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", SEARCH_STRING, PAGE_SIZE, selectedItem);
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "parent", SEARCH_STRING, PAGE_SIZE,
+            selectedItem, null);
 
         assertEquals(List.of(Map.of("value", "/api/v3/work_packages/5", "label", "#5: Fifth", "url", "location5",
             "hint", "Fifth")), response.getEntity());
@@ -664,6 +733,13 @@ class SuggestTest
         return version;
     }
 
+    private static Version createVersion(int id, String name, String projectName)
+    {
+        Version version = createVersion(id, name);
+        version.setDefiningProjectName(projectName);
+        return version;
+    }
+
     /**
      * Checks the suggestions of the given resources, the ones other than projects (written by their identifier, which
      * the test projects don't have) being written by their name in a query.
@@ -708,7 +784,7 @@ class SuggestTest
             return OpenProjectAccessResult.notConfigured();
         });
 
-        Response response = this.suggest.getSuggestions("subwiki", INSTANCE, "types", SEARCH_STRING, 10, null);
+        Response response = this.suggest.getSuggestions("subwiki", INSTANCE, "types", SEARCH_STRING, 10, null, null);
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), response.getStatus());
         assertEquals(List.of("subwiki"), connectionWikis);

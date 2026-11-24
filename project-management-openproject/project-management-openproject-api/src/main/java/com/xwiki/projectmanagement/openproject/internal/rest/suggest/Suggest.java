@@ -20,10 +20,10 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,7 +51,6 @@ import org.xwiki.component.annotation.Component;
 import org.xwiki.rest.XWikiResource;
 
 import com.xwiki.projectmanagement.exception.ProjectManagementException;
-import com.xwiki.projectmanagement.exception.WorkItemRetrievalException;
 import com.xwiki.projectmanagement.internal.rest.WikiRequestExecutor;
 import com.xwiki.projectmanagement.openproject.FilterBuilder;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
@@ -59,9 +58,8 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Project;
 import com.xwiki.projectmanagement.openproject.model.User;
+import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
-
-import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
 
 /**
  * Rest endpoint that suggests ids based on some query string.
@@ -128,12 +126,6 @@ public class Suggest extends XWikiResource
      */
     private static final Pattern ID_PATTERN = Pattern.compile("\\d{1,10}");
 
-    /**
-     * The identifiers of the OpenProject projects start with a lower case letter, followed by lower case letters,
-     * digits, dashes or underscores (for example {@code demo-project}).
-     */
-    private static final Pattern PROJECT_IDENTIFIER_PATTERN = Pattern.compile("[a-z][a-z0-9_-]*");
-
     @Inject
     private OpenProjectAccess openProjectAccess;
 
@@ -148,6 +140,8 @@ public class Suggest extends XWikiResource
      * @param pageSize the number of elements that should be returned.
      * @param selectedItem the id of the item that is already selected (or, for the projects, its id or its identifier).
      *     The result will contain its information.
+     * @param projects the ids or identifiers of the projects whose versions are suggested, e.g. the projects filtered
+     *     by the query being written; all the versions are suggested when there's none
      * @return a list of objects with the following properties: value, label, icon, url, hint.
      */
     @GET
@@ -158,15 +152,16 @@ public class Suggest extends XWikiResource
         @PathParam("suggest") @DefaultValue("") String suggest,
         @QueryParam("search") @DefaultValue("") String search,
         @QueryParam("pageSize") @DefaultValue("25") int pageSize,
-        @QueryParam("selectedItem") String selectedItem
+        @QueryParam("selectedItem") String selectedItem,
+        @QueryParam("projects") List<String> projects
     )
     {
         return this.wikiRequestExecutor.execute(wiki,
-            () -> getSuggestions(instance, suggest, search, pageSize, selectedItem));
+            () -> getSuggestions(instance, suggest, search, pageSize, selectedItem, projects));
     }
 
     private Response getSuggestions(String instance, String suggest, String search, int pageSize,
-        String selectedItem)
+        String selectedItem, List<String> projects)
     {
         OpenProjectApiClient openProjectApiClient;
 
@@ -181,7 +176,7 @@ public class Suggest extends XWikiResource
         List<Map<String, String>> response;
 
         try {
-            response = getSuggestions(openProjectApiClient, suggest, lowerSearch, pageSize, selectedItem);
+            response = getSuggestions(openProjectApiClient, suggest, lowerSearch, pageSize, selectedItem, projects);
         } catch (ProjectManagementException e) {
             // The exception message can hold the OpenProject URL and the body of its error response, which are only
             // meant for the administrators: log them and send a generic message to the client.
@@ -193,7 +188,7 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getSuggestions(OpenProjectApiClient openProjectApiClient, String suggest,
-        String lowerSearch, int pageSize, String selectedItem) throws ProjectManagementException
+        String lowerSearch, int pageSize, String selectedItem, List<String> projects) throws ProjectManagementException
     {
         // The selected item of the projects can be given by its identifier, all the other selected items are ids. A
         // selected item that isn't an id is ignored, instead of failing the request, so that the client still gets the
@@ -223,7 +218,7 @@ public class Suggest extends XWikiResource
                 response = getUsersSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedId);
                 break;
             case VERSIONS:
-                response = getVersionsSuggestions(openProjectApiClient, lowerSearch, pageSize);
+                response = getVersionsSuggestions(openProjectApiClient, lowerSearch, pageSize, selectedId, projects);
                 break;
             default:
                 response = Collections.emptyList();
@@ -318,7 +313,7 @@ public class Suggest extends XWikiResource
         // pickers send their value along with the text typed by the user. It keeps the value it is given (its id or its
         // identifier) so that the client can match it with the value of its input, while the other projects are
         // suggested by their id.
-        Project selectedProject = getSelectedProject(openProjectApiClient, selectedItem);
+        Project selectedProject = SuggestedProjects.getProject(openProjectApiClient, selectedItem);
         List<Map<String, String>> suggestions = new ArrayList<>();
         if (selectedProject != null && pageSize > 0) {
             suggestions.add(withQueryValue(
@@ -336,37 +331,6 @@ public class Suggest extends XWikiResource
             }
         }
         return suggestions;
-    }
-
-    /**
-     * @param selectedItem the id (for example {@code 3}) or the identifier (for example {@code demo-project}) of the
-     *     selected project, or any other value (for example the value of the "use the dashboard-selected project"
-     *     option), which is ignored
-     * @return the selected project, or {@code null} when there's none, or when it doesn't exist or isn't visible to
-     *     the current user
-     * @throws ProjectManagementException if OpenProject couldn't be reached or failed to answer
-     */
-    private Project getSelectedProject(OpenProjectApiClient openProjectApiClient, String selectedItem)
-        throws ProjectManagementException
-    {
-        if (getSelectedId(selectedItem) == null && (selectedItem == null
-            || !PROJECT_IDENTIFIER_PATTERN.matcher(selectedItem).matches()
-            || USE_SELECTED_DASHBOARD_PROJECT_VALUE.equals(selectedItem)))
-        {
-            return null;
-        }
-        try {
-            return openProjectApiClient.getProject(selectedItem);
-        } catch (WorkItemRetrievalException e) {
-            // OpenProject answers 404 both for the projects that don't exist and for those the user can't see: the
-            // client keeps showing the value it has.
-            if (Integer.valueOf(HttpURLConnection.HTTP_NOT_FOUND).equals(e.getStatusCode())) {
-                this.slf4Jlogger.debug("Failed to retrieve the selected project [{}]. Root cause: [{}]", selectedItem,
-                    ExceptionUtils.getRootCauseMessage(e));
-                return null;
-            }
-            throw e;
-        }
     }
 
     private List<Map<String, String>> getTypesSuggestions(OpenProjectApiClient openProjectApiClient)
@@ -476,15 +440,33 @@ public class Suggest extends XWikiResource
     }
 
     private List<Map<String, String>> getVersionsSuggestions(OpenProjectApiClient openProjectApiClient,
-        String searchString, int pageSize) throws ProjectManagementException
+        String searchString, int pageSize, Integer selectedId, List<String> projects) throws ProjectManagementException
     {
         // The versions API can't be filtered on the name, but all the versions are retrieved at once and cached. A
-        // version is written by name only when no other version has it (e.g. "1.0" in several projects).
-        List<? extends BaseOpenProjectObject> versions = openProjectApiClient.getVersions().getItems();
-        return getNamedSuggestions(versions.stream()
-            .filter(version -> version.getName() != null && version.getName().toLowerCase().contains(searchString))
-            .limit(pageSize)
-            .collect(Collectors.toList()), getUniqueNames(versions));
+        // version is written by name only when no other version has it (e.g. "1.0" in several projects), whatever the
+        // projects the suggestions are restricted to, since the query can be written without them afterwards.
+        List<Version> versions = openProjectApiClient.getVersions().getItems();
+        // The selected version is suggested first, whatever the search and the projects, so that the client always
+        // gets its label.
+        Map<Integer, Version> suggestedVersions = new LinkedHashMap<>();
+        versions.stream().filter(version -> selectedId != null && selectedId.equals(version.getId()))
+            .forEach(version -> suggestedVersions.put(version.getId(), version));
+        for (Version version : SuggestedProjects.getAvailableVersions(openProjectApiClient, projects, versions)) {
+            if (suggestedVersions.size() < pageSize && version.getName() != null
+                && version.getName().toLowerCase().contains(searchString))
+            {
+                suggestedVersions.putIfAbsent(version.getId(), version);
+            }
+        }
+        Set<String> uniqueNames = getUniqueNames(versions);
+        // Versions of different projects can have the same name: their suggestions are told apart by their project.
+        return suggestedVersions.values().stream().map(version -> {
+            Map<String, String> suggestion = new HashMap<>(getNamedSuggestion(version, uniqueNames));
+            if (StringUtils.isNotBlank(version.getDefiningProjectName())) {
+                suggestion.put(HINT, version.getDefiningProjectName());
+            }
+            return suggestion;
+        }).collect(Collectors.toList());
     }
 
     /**
@@ -495,15 +477,23 @@ public class Suggest extends XWikiResource
     private List<Map<String, String>> getNamedSuggestions(List<? extends BaseOpenProjectObject> openProjectObjects,
         Set<String> uniqueNames)
     {
-        return openProjectObjects.stream().map(object -> {
-            Map<String, String> suggestion = createSuggestion(String.valueOf(object.getId()), object.getName(),
-                object.getSelf().getLocation());
-            return object.getName() != null && uniqueNames.contains(object.getName().toLowerCase())
-                ? withQueryValue(suggestion, object.getName()) : suggestion;
-        }).collect(Collectors.toList());
+        return openProjectObjects.stream().map(object -> getNamedSuggestion(object, uniqueNames))
+            .collect(Collectors.toList());
     }
 
-    private Integer getSelectedId(String selectedItem)
+    private Map<String, String> getNamedSuggestion(BaseOpenProjectObject object, Set<String> uniqueNames)
+    {
+        Map<String, String> suggestion = createSuggestion(String.valueOf(object.getId()), object.getName(),
+            object.getSelf().getLocation());
+        return object.getName() != null && uniqueNames.contains(object.getName().toLowerCase())
+            ? withQueryValue(suggestion, object.getName()) : suggestion;
+    }
+
+    /**
+     * @param selectedItem a value given to the endpoint, e.g. the selected item
+     * @return the id that the value is, or {@code null} when it isn't an id
+     */
+    static Integer getSelectedId(String selectedItem)
     {
         // A number larger than the largest integer can't be an id.
         if (selectedItem != null && ID_PATTERN.matcher(selectedItem).matches()
