@@ -19,7 +19,7 @@
  */
 define('projectmanagement.chart.typeParams', {
   prefix: 'projectmanagement.macro.chart.typeParams.',
-  keys: ['loading', 'loaded', 'failed']
+  keys: ['failed']
 });
 
 require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selectize'], function ($, l10n) {
@@ -59,8 +59,7 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     // the chart types have the same options anyway.
     let chartType = $('.macro-editor-modal .macro-parameter :input[name=type]').val() || 'line';
     let getChartTypeParamsURL = XWiki.contextPath + '/rest/wikis/' + XWiki.currentWiki + '/projectmanagement/chart/displayers/' + chartType;
-    let notif = createNotification(l10n.get('loading'), 'inprogress');
-    notif.show();
+    // Displaying the options of the chart type is a refresh of the editor, which only tells when it fails.
     $.getJSON(getChartTypeParamsURL)
       .done(function (paramTemplates) {
         var htmlTemplate = document.getElementById("proj-manag-chart-type-param-template").content;
@@ -101,10 +100,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
             options: selectizeOptions
           });
         });
-        notif.replace(createNotification(l10n.get('loaded'), 'done'));
       })
       .fail(function () {
-        notif.replace(createNotification(l10n.get('failed'), 'error'));
+        createNotification(l10n.get('failed'), 'error').show();
         console.error("Failed to retrieve the chart type parameter.");
         paramsInput.toggleClass('hidden');
       });
