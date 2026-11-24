@@ -82,6 +82,12 @@ public class Suggest extends XWikiResource
 
     private static final String NAME = "name";
 
+    /**
+     * The filter of the projects whose name or identifier contains a text: the queries written by the filter builder
+     * hold the identifiers of the projects, which the users can type too.
+     */
+    private static final String NAME_AND_IDENTIFIER = "name_and_identifier";
+
     private static final String TYPES = "types";
 
     private static final String PARENT = "parent";
@@ -322,8 +328,8 @@ public class Suggest extends XWikiResource
                 createSuggestion(selectedItem, selectedProject.getName(), selectedProject.getSelf().getLocation()),
                 selectedProject.getIdentifier()));
         }
-        for (Project project : openProjectApiClient.getProjects(1, pageSize, buildFilter(NAME, searchString))
-            .getItems())
+        for (Project project : openProjectApiClient.getProjects(1, pageSize,
+            buildFilter(NAME_AND_IDENTIFIER, searchString)).getItems())
         {
             if (suggestions.size() < pageSize
                 && (selectedProject == null || !Objects.equals(selectedProject.getId(), project.getId())))

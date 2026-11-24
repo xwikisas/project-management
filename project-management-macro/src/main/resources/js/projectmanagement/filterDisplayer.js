@@ -234,6 +234,9 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           selectizeCfg.loadSelected = function (value, callback) {
             search('', value, callback);
           };
+          // The suggestions are filtered again on the text typed, by the field: on the text written for them in a query
+          // too (e.g. the identifier of a project), by which the tool can find them, so that it doesn't drop them.
+          selectizeCfg.searchField = ['value', 'label', 'hint', 'queryValue'];
         }
         inputElem.xwikiSelectize(selectizeCfg);
         setSuggestTextAlternative(inputElem, params.label);
