@@ -19,7 +19,8 @@
  */
 /**
  * Describes the OpenProject link typed in the macro editor, with the OpenProject link REST resource
- * (/wikis/{wiki}/openproject/link?instance=&url=), which answers {kind, level, message, name?, filterCount?}.
+ * (/wikis/{wiki}/openproject/link?instance=&url=), which answers {kind, level, message, name?, filterCount?,
+ * authenticationLink?}.
  * The requests are debounced while the link is typed, and only the reply to the latest call is returned: the promise
  * of a call replaced by a newer one resolves with null.
  */
@@ -106,9 +107,27 @@ define('openproject-link-description', [], function () {
     return level === 'info' ? 'box infomessage' : 'box warningmessage';
   };
 
+  /**
+   * @param description the description of a link
+   * @return the link completing the description when the current user has to authenticate to OpenProject to see what
+   *     the link selects, as the attributes and the text of an HTML link, or null; it opens in a new tab, so that the
+   *     edited macro isn't lost, and comes back to the edited page
+   */
+  const getAuthenticationLink = function (description) {
+    const link = description && description.authenticationLink;
+    if (!link || !link.url) {
+      return null;
+    }
+    return {
+      attributes: {href: link.url, target: '_blank', rel: 'noopener'},
+      text: link.label || link.url
+    };
+  };
+
   return {
     getRequestUrl,
     getMessageClass,
+    getAuthenticationLink,
     createDescriber,
     describeLink: createDescriber(fetchJson)
   };

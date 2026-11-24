@@ -62,6 +62,28 @@ describe("getMessageClass", () => {
   });
 });
 
+describe("getAuthenticationLink", () => {
+  const CONNECT_URL = "/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?connectionName=QA&redirectUrl=%2Fp";
+
+  it("opens the authentication in a new tab, so that the edited macro isn't lost", () => {
+    expect(linkDescription.getAuthenticationLink({
+      kind: "notConnected",
+      level: "warning",
+      message: "You need to be authenticated to OpenProject to see the work packages of the project demo.",
+      authenticationLink: { url: CONNECT_URL, label: "Click here to authenticate." },
+    })).toEqual({
+      attributes: { href: CONNECT_URL, target: "_blank", rel: "noopener" },
+      text: "Click here to authenticate.",
+    });
+  });
+
+  it("gives no link when the user can't authenticate or doesn't need to", () => {
+    expect(linkDescription.getAuthenticationLink({ kind: "notConnected", level: "warning", message: "m" })).toBeNull();
+    expect(linkDescription.getAuthenticationLink({ kind: "project", level: "info", message: "m" })).toBeNull();
+    expect(linkDescription.getAuthenticationLink(null)).toBeNull();
+  });
+});
+
 describe("createDescriber", () => {
   let fetchDescription;
   let describeLink;

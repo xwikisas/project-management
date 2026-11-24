@@ -64,8 +64,15 @@ require(['jquery', 'openproject-link-description'], function ($, linkDescription
   const show = function (widget, description) {
     const container = widget.find('.pm-source-url-description').empty();
     if (description && description.message) {
-      container.append($('<div></div>').addClass(linkDescription.getMessageClass(description.level))
-        .text(description.message));
+      const message = $('<div></div>').addClass(linkDescription.getMessageClass(description.level))
+        .text(description.message);
+      const authenticationLink = linkDescription.getAuthenticationLink(description);
+      if (authenticationLink) {
+        // The link is described again when the user comes back from the tab where they authenticate.
+        message.append(' ', $('<a></a>').attr(authenticationLink.attributes).text(authenticationLink.text)
+          .on('click', () => $(window).one('focus', () => describeCurrent(widget))));
+      }
+      container.append(message);
     }
   };
 

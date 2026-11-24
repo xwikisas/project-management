@@ -102,6 +102,16 @@ class OpenProjectLinkResourceTest
 
     private static final String PROJECT_UNAVAILABLE_KEY = "openproject.link.projectUnavailable";
 
+    private static final String PROJECT_NOT_CONNECTED_KEY = "openproject.link.projectNotConnected";
+
+    private static final String NOT_CONNECTED = "notConnected";
+
+    private static final String AUTHENTICATION_LINK = "authenticationLink";
+
+    private static final String CONNECT_URL = "/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?token=x";
+
+    private static final String CONNECT_LABEL = "Click here to authenticate.";
+
     private static final String PROJECT_LIST_LINK = SERVER_URL + "/projects/demo/work_packages";
 
     private static final String TRANSLATED = "translated";
@@ -159,6 +169,9 @@ class OpenProjectLinkResourceTest
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.authenticated(this.client));
         // The macro is edited on a page the current user can edit.
         when(this.pageEditRightChecker.canEdit(WIKI, DOCUMENT)).thenReturn(true);
+        // The current user can connect their OpenProject account to the connection, coming back to the edited page.
+        when(this.pageEditRightChecker.getConnectURL(INSTANCE, DOCUMENT)).thenReturn(CONNECT_URL);
+        when(this.l10n.getTranslationPlain("openproject.oauth.notauthorized.link")).thenReturn(CONNECT_LABEL);
     }
 
     @Test
@@ -232,14 +245,17 @@ class OpenProjectLinkResourceTest
             describe(INSTANCE, SAVED_QUERY_LINK));
     }
 
+    /**
+     * The description links to the authentication, as the macro does.
+     */
     @Test
     void savedQueryWhenTheUserIsNotConnected()
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
         when(this.l10n.getTranslationPlain(NOT_CONNECTED_KEY, "5")).thenReturn(TRANSLATED);
 
-        assertEquals(Map.of(KIND, "notConnected", LEVEL, WARNING, MESSAGE, TRANSLATED),
-            describe(INSTANCE, SAVED_QUERY_LINK));
+        assertEquals(Map.of(KIND, NOT_CONNECTED, LEVEL, WARNING, MESSAGE, TRANSLATED, AUTHENTICATION_LINK,
+            Map.of("url", CONNECT_URL, "label", CONNECT_LABEL)), describe(INSTANCE, SAVED_QUERY_LINK));
     }
 
     @Test
@@ -248,7 +264,21 @@ class OpenProjectLinkResourceTest
         when(this.client.getQuery("5")).thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
         when(this.l10n.getTranslationPlain(NOT_CONNECTED_KEY, "5")).thenReturn(TRANSLATED);
 
-        assertEquals(Map.of(KIND, "notConnected", LEVEL, WARNING, MESSAGE, TRANSLATED),
+        assertEquals(Map.of(KIND, NOT_CONNECTED, LEVEL, WARNING, MESSAGE, TRANSLATED, AUTHENTICATION_LINK,
+            Map.of("url", CONNECT_URL, "label", CONNECT_LABEL)), describe(INSTANCE, SAVED_QUERY_LINK));
+    }
+
+    /**
+     * E.g. the connection doesn't let the users connect their OpenProject account.
+     */
+    @Test
+    void savedQueryWhenTheUserCantConnectTheirAccount()
+    {
+        when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
+        when(this.pageEditRightChecker.getConnectURL(INSTANCE, DOCUMENT)).thenReturn(null);
+        when(this.l10n.getTranslationPlain(NOT_CONNECTED_KEY, "5")).thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, NOT_CONNECTED, LEVEL, WARNING, MESSAGE, TRANSLATED),
             describe(INSTANCE, SAVED_QUERY_LINK));
     }
 
@@ -352,13 +382,27 @@ class OpenProjectLinkResourceTest
         assertEquals("project", describe(INSTANCE, PROJECT_LIST_LINK).get(KIND));
     }
 
+    /**
+     * The project can't be checked: the description says why, with the link to authenticate, as the macro does.
+     */
     @Test
     void projectWhenTheUserIsNotConnected()
     {
         when(this.openProjectAccess.resolve(INSTANCE)).thenReturn(OpenProjectAccessResult.notConnected());
-        when(this.l10n.getTranslationPlain(DESCRIBE + "project", "demo", 0)).thenReturn(TRANSLATED);
+        when(this.l10n.getTranslationPlain(PROJECT_NOT_CONNECTED_KEY, "demo")).thenReturn(TRANSLATED);
 
-        assertEquals("project", describe(INSTANCE, PROJECT_LIST_LINK).get(KIND));
+        assertEquals(Map.of(KIND, NOT_CONNECTED, LEVEL, WARNING, MESSAGE, TRANSLATED, AUTHENTICATION_LINK,
+            Map.of("url", CONNECT_URL, "label", CONNECT_LABEL)), describe(INSTANCE, PROJECT_LIST_LINK));
+    }
+
+    @Test
+    void projectWhenTheTokenOfTheUserIsRejected() throws Exception
+    {
+        when(this.client.getProject("demo")).thenThrow(new WorkItemRetrievalException("Unauthorized", 401));
+        when(this.l10n.getTranslationPlain(PROJECT_NOT_CONNECTED_KEY, "demo")).thenReturn(TRANSLATED);
+
+        assertEquals(Map.of(KIND, NOT_CONNECTED, LEVEL, WARNING, MESSAGE, TRANSLATED, AUTHENTICATION_LINK,
+            Map.of("url", CONNECT_URL, "label", CONNECT_LABEL)), describe(INSTANCE, PROJECT_LIST_LINK));
     }
 
     @Test

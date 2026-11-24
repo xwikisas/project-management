@@ -61,12 +61,16 @@ import com.xwiki.projectmanagement.openproject.model.SavedQuery;
  * <ul>
  * <li>{@code kind}: one of {@code savedQuery}, {@code list}, {@code project}, {@code workPackage},
  * {@code otherServer}, {@code invalid}, {@code unavailable} (a saved query or a project the current user can't see)
- * and {@code notConnected} (a saved query, which the current user has to authenticate to OpenProject to see)</li>
+ * and {@code notConnected} (a saved query or a project, which the current user has to authenticate to OpenProject to
+ * see)</li>
  * <li>{@code level}: {@code info}, or {@code warning} when the macro wouldn't display the work packages of the
  * link</li>
  * <li>{@code message}: the description of the link, as translated plain text</li>
  * <li>{@code name}: the name of the saved query, for the {@code savedQuery} kind</li>
  * <li>{@code filterCount}: the number of filters of the link, for the {@code list} and {@code project} kinds</li>
+ * <li>{@code authenticationLink}: for the {@code notConnected} kind, when the current user can connect their
+ * OpenProject account, the link of the macros doing it, coming back to the page whose macro is edited: an object
+ * with the {@code url} and the {@code label} of the link</li>
  * </ul>
  *
  * @version $Id$
@@ -104,7 +108,13 @@ public class OpenProjectLinkResource extends XWikiResource
 
     private static final String KIND_PROJECT = "project";
 
+    private static final String KIND_NOT_CONNECTED = "notConnected";
+
     private static final String DESCRIBE_PREFIX = "openproject.link.describe.";
+
+    private static final String SAVED_QUERY_NOT_CONNECTED = "openproject.link.notConnected";
+
+    private static final String PROJECT_NOT_CONNECTED = "openproject.link.projectNotConnected";
 
     /**
      * The suffix of the descriptions of the saved queries for the macros that don't show the filters of a saved query
@@ -159,14 +169,16 @@ public class OpenProjectLinkResource extends XWikiResource
             if (!this.pageEditRightChecker.canEdit(wiki, document)) {
                 return Response.status(Response.Status.FORBIDDEN).build();
             }
-            return getLinkDescription(instance, url, StringUtils.isBlank(macro) || TABLE_MACRO.equals(macro));
+            return getLinkDescription(instance, url, document,
+                StringUtils.isBlank(macro) || TABLE_MACRO.equals(macro));
         });
     }
 
     /**
+     * @param document the page whose macro is edited
      * @param inTable whether the macro shows the filters of a saved query in its table
      */
-    private Response getLinkDescription(String instance, String url, boolean inTable)
+    private Response getLinkDescription(String instance, String url, String document, boolean inTable)
     {
         OpenProjectConnection connection = StringUtils.isBlank(instance) ? this.configuration.getDefaultConnection()
             : this.configuration.getConnection(instance);
@@ -186,14 +198,15 @@ public class OpenProjectLinkResource extends XWikiResource
             return describe(KIND_WORK_PACKAGE, INFO, getMessage(KIND_WORK_PACKAGE, workPackageId));
         }
         String queryId = link.getSavedQueryId();
-        return queryId != null ? describeSavedQuery(connection.getConnectionName(), link, queryId, inTable)
-            : describeList(connection.getConnectionName(), link);
+        return queryId != null
+            ? describeSavedQuery(connection.getConnectionName(), link, queryId, document, inTable)
+            : describeList(connection.getConnectionName(), link, document);
     }
 
     /**
      * @param link the link of a work package list, of all the projects or of a project
      */
-    private Response describeList(String connectionName, OpenProjectLink link)
+    private Response describeList(String connectionName, OpenProjectLink link, String document)
     {
         int filterCount;
         try {
@@ -203,8 +216,9 @@ public class OpenProjectLinkResource extends XWikiResource
             return describe(KIND_INVALID, WARNING, translate("openproject.link.invalidParameters"));
         }
         String project = link.getProject();
-        if (project != null && !isProjectVisible(connectionName, project)) {
-            return describe(KIND_UNAVAILABLE, WARNING, translate("openproject.link.projectUnavailable", project));
+        Response projectProblem = project != null ? checkProject(connectionName, project, document) : null;
+        if (projectProblem != null) {
+            return projectProblem;
         }
         Map<String, Object> description = project == null
             ? getDescription(KIND_LIST, INFO, getMessage(KIND_LIST, filterCount))
@@ -214,34 +228,41 @@ public class OpenProjectLinkResource extends XWikiResource
     }
 
     /**
-     * @return {@code false} if OpenProject answers that the project doesn't exist or that the current user isn't
-     *     allowed to see it (OpenProject answers 404 for both); {@code true} otherwise, including when the project
-     *     can't be checked (e.g. the current user has to authenticate to OpenProject first), the macro reporting the
-     *     failures on its own
+     * @return the description of a project that the macro wouldn't display: OpenProject answers that it doesn't exist
+     *     or that the current user isn't allowed to see it (404 for both), or the current user has to authenticate to
+     *     OpenProject to see it; {@code null} otherwise, including when OpenProject fails, the macro reporting the
+     *     failure on its own
      */
-    private boolean isProjectVisible(String connectionName, String project)
+    private Response checkProject(String connectionName, String project, String document)
     {
         OpenProjectApiClient client = this.openProjectAccess.resolve(connectionName).getClient();
         if (client == null) {
-            return true;
+            // The connection exists, but the current user has to authenticate to OpenProject, as the macro tells them.
+            return describeNotConnected(connectionName, document, PROJECT_NOT_CONNECTED, project);
         }
         try {
             client.getProject(project);
-            return true;
+            return null;
         } catch (ProjectManagementException e) {
             this.slf4Jlogger.debug("Failed to check the project [{}] of the OpenProject connection [{}]: [{}]", project,
                 connectionName, ExceptionUtils.getRootCauseMessage(e));
-            return !isNotFoundOrForbidden(e);
+            if (isNotFoundOrForbidden(e)) {
+                return describe(KIND_UNAVAILABLE, WARNING, translate("openproject.link.projectUnavailable", project));
+            } else if (hasStatus(e, Response.Status.UNAUTHORIZED)) {
+                // E.g. the OpenProject token of the user expired.
+                return describeNotConnected(connectionName, document, PROJECT_NOT_CONNECTED, project);
+            }
+            return null;
         }
     }
 
-    private Response describeSavedQuery(String connectionName, OpenProjectLink link, String queryId,
+    private Response describeSavedQuery(String connectionName, OpenProjectLink link, String queryId, String document,
         boolean inTable)
     {
         OpenProjectApiClient client = this.openProjectAccess.resolve(connectionName).getClient();
         if (client == null) {
             // The connection exists, but the current user has to authenticate to OpenProject, as the macro tells them.
-            return describeNotConnected(queryId);
+            return describeNotConnected(connectionName, document, SAVED_QUERY_NOT_CONNECTED, queryId);
         }
         SavedQuery query;
         try {
@@ -252,7 +273,7 @@ public class OpenProjectLinkResource extends XWikiResource
                 return describeUnavailable(queryId);
             } else if (hasStatus(e, Response.Status.UNAUTHORIZED)) {
                 // E.g. the OpenProject token of the user expired.
-                return describeNotConnected(queryId);
+                return describeNotConnected(connectionName, document, SAVED_QUERY_NOT_CONNECTED, queryId);
             }
             // The exception message can hold the OpenProject URL and the body of its error response, which are only
             // meant for the administrators: log them and send a generic message to the client.
@@ -297,9 +318,22 @@ public class OpenProjectLinkResource extends XWikiResource
         return describe(KIND_UNAVAILABLE, WARNING, translate("openproject.savedQuery.unavailable", queryId));
     }
 
-    private Response describeNotConnected(String queryId)
+    /**
+     * @param document the page whose macro is edited, to come back to once the OpenProject account is connected
+     * @param messageKey the translation key of the message, saying what the user has to authenticate to see
+     * @param subject what the user has to authenticate to see, e.g. the id of a saved query
+     */
+    private Response describeNotConnected(String connectionName, String document, String messageKey, String subject)
     {
-        return describe("notConnected", WARNING, translate("openproject.link.notConnected", queryId));
+        Map<String, Object> description = getDescription(KIND_NOT_CONNECTED, WARNING, translate(messageKey, subject));
+        String url = this.pageEditRightChecker.getConnectURL(connectionName, document);
+        if (url != null) {
+            Map<String, Object> link = new LinkedHashMap<>();
+            link.put("url", url);
+            link.put("label", translate("openproject.oauth.notauthorized.link"));
+            description.put("authenticationLink", link);
+        }
+        return Response.ok(description).build();
     }
 
     private static boolean isNotFoundOrForbidden(ProjectManagementException e)
