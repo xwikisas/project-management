@@ -208,6 +208,8 @@ public class OpenProjectChartMacroIT extends AbstractOpenProjectIT
         // The series are displayed under the field selecting the charted work packages, whatever the way.
         WorkItemSourceEditor source = modal.getWorkItemSource();
         assertEquals(List.of(Way.MATCHING_FILTERS, Way.SPECIFIC, Way.LINK), source.getWays());
+        // The field is named by the label displayed above it, specific to the chart.
+        assertEquals("Chart the work packages selected by", source.getWayLabel());
         assertEquals(1, modal.getSeries().size());
         assertEquals("Series 1", modal.getSeries().get(0).getTitle());
         source.selectWay(Way.SPECIFIC);

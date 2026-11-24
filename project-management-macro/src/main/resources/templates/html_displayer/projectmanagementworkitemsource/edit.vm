@@ -80,7 +80,8 @@
   ## advanced way is removed by the JavaScript code when the macro doesn't use it.
   <div class="pm-source-ways">
     #set ($waySelectId = "pm-source-way-$mathtool.random(1000, 1000000)")
-    ## The macro editor displays the name of the parameter above: the label is for assistive technologies.
+    ## The macro editor displays the name of the parameter above: the label is for assistive technologies, and
+    ## workItemSourceParameter.js replaces its text by that name, which depends on the macro.
     <label class="sr-only" for="$waySelectId">#pmSourceLabel('label')</label>
     ## No name: it's not a macro parameter, the macro editor doesn't submit it.
     <select id="$waySelectId" class="form-control pm-source-way-select">

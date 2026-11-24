@@ -182,7 +182,7 @@ class FilterParametersDescriptorTest
         // The filters of a chart are its series, displayed for every way of selecting the charted work packages.
         assertEquals(OpenProjectFilters.class, series.getDisplayType());
         assertFalse(series.isDisplayHidden());
-        assertEquals(50, getOrder(series));
+        assertEquals(16, getOrder(series));
     }
 
     private static int getOrder(PropertyDescriptor property)
