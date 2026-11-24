@@ -258,8 +258,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         filterBuilderParameter.addFilter("summary").setValue("sp");
         // The values of a filter are combined with OR.
         filterBuilderParameter.addFilter("status").setSuggestValue("In progress").setSuggestValue("New");
-        assertEquals("Selects the work items where Assignee is one of OpenProject Admin, and Subject contains \"sp\", "
-            + "and Status is one of In progress or New.", filterBuilderParameter.getSummary());
+        assertEquals("Selects the work packages where Assignee is one of OpenProject Admin, and Subject contains "
+            + "\"sp\", and Status is one of In progress or New.", filterBuilderParameter.getSummary());
         // The fields of a filter are named after its property, for assistive technologies.
         List<FilterBuilderFilter> addedFilters = filterBuilderParameter.getFilters();
         assertEquals("Operator for Assignee", addedFilters.get(0).getOperatorAccessibleName());
@@ -315,8 +315,8 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // The values of a filter are reloaded in the same row.
         assertEquals(List.of("In progress", "New"), filters.get(2).getSuggestValues());
         // The summary displays the labels of the reloaded values, not their ids.
-        assertEquals("Selects the work items where Assignee is one of OpenProject Admin, and Subject contains \"sp\", "
-            + "and Status is one of In progress or New.", filterBuilderParameter.getSummary());
+        assertEquals("Selects the work packages where Assignee is one of OpenProject Admin, and Subject contains "
+            + "\"sp\", and Status is one of In progress or New.", filterBuilderParameter.getSummary());
         // Editing the query in the content updates the filters, which don't rewrite it.
         String query = "status = " + NEW_STATUS_ID;
         modal.setContent(query);

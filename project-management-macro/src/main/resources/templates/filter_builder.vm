@@ -95,9 +95,15 @@
       #set ($discard = $l10n.put($operatorKey.key,
         $services.localization.render("projectmanagement.macro.filter.operator.$operatorKey.value")))
     #end
+    ## The client can word these labels its own way under "${clientId}.macro.filter.", e.g. the summary naming the work
+    ## items as the tool does ("work packages" for OpenProject).
     #foreach ($key in ['anotherCondition', 'operatorLabel', 'valueLabel', 'summary', 'summaryAll', 'summaryIncomplete',
         'and', 'or', 'between'])
-      #set ($discard = $l10n.put($key, $services.localization.render("projectmanagement.macro.filter.$key")))
+      #set ($filterBuilderLabelKey = "${clientId}.macro.filter.$key")
+      #if (!$services.localization.get($filterBuilderLabelKey))
+        #set ($filterBuilderLabelKey = "projectmanagement.macro.filter.$key")
+      #end
+      #set ($discard = $l10n.put($key, $services.localization.render($filterBuilderLabelKey)))
     #end
     ## The caller can replace some of these labels, e.g. the summary of no filter.
     #if ($parameters.l10n)
