@@ -65,6 +65,9 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
 
     private static final By NO_CONNECTION_HINT = By.cssSelector(".macro-editor-modal .op-filters-no-connection");
 
+    private static final By NOT_AUTHORIZED_MESSAGE =
+        By.cssSelector(".macro-editor-modal .op-filters-not-authorized");
+
     private WYSIWYGEditPage editPage;
 
     protected AbstractOpenProjectMacroEditModal()
@@ -343,6 +346,29 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
+     * Wait for the message telling why the values of the filters can't be suggested, displayed when the current user
+     * can't read the data of the connection (e.g. they must connect their OpenProject account).
+     *
+     * @return the message
+     * @since 1.5.0
+     */
+    public String getFiltersNotAuthorizedMessage()
+    {
+        return getDriver().findElementWithoutScrolling(NOT_AUTHORIZED_MESSAGE).getText();
+    }
+
+    /**
+     * @return the URL of the link of the message telling why the values of the filters can't be suggested, to connect
+     *     the OpenProject account of the current user
+     * @since 1.5.0
+     */
+    public String getFiltersNotAuthorizedLink()
+    {
+        return getDriver().findElementWithoutScrolling(NOT_AUTHORIZED_MESSAGE).findElement(By.tagName("a"))
+            .getAttribute("href");
+    }
+
+    /**
      * @return {@code true} if the message telling to choose a connection to get suggestions for the filter values is
      *     displayed
      * @since 1.4.0
@@ -524,6 +550,18 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     }
 
     /**
+     * Close this modal without applying its changes.
+     *
+     * @since 1.5.0
+     */
+    public void cancel()
+    {
+        closeSuggestDropdowns();
+        getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-header .close")).click();
+        getDriver().waitUntilElementDisappears(By.cssSelector(".macro-editor-modal"));
+    }
+
+    /**
      * Close this modal without applying its changes, then open the edit modal of the same macro again, in the same
      * editor.
      *
@@ -532,9 +570,7 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
      */
     public AbstractOpenProjectMacroEditModal cancelAndEditAgain()
     {
-        closeSuggestDropdowns();
-        getDriver().findElement(By.cssSelector(".macro-editor-modal .modal-header .close")).click();
-        getDriver().waitUntilElementDisappears(By.cssSelector(".macro-editor-modal"));
+        cancel();
         // The edited macro stays selected in the editor, so inserting a macro opens its edit modal.
         openMacroSelectModal();
         waitUntilReady();

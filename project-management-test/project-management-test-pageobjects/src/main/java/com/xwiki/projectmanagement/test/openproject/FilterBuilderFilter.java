@@ -81,6 +81,24 @@ public class FilterBuilderFilter extends BaseElement
     }
 
     /**
+     * Type a text in the field of a filter whose values are picked from a list of suggestions, which searches the
+     * values matching it, without picking one.
+     *
+     * @param text the text to type
+     * @return this object
+     * @since 1.5.0
+     */
+    public FilterBuilderFilter searchSuggestValues(String text)
+    {
+        WebElement valElem = getValueElement();
+        // Clicking from the suggest variable throws as exception.
+        getDriver().findElementWithoutWaiting(valElem,
+            By.xpath("following-sibling::*[contains(@class, 'selectize-control')][1]")).click();
+        new SuggestInputElement(valElem).sendKeys(text);
+        return this;
+    }
+
+    /**
      * @return the labels of the values picked from the suggestions, in their order
      * @since 1.4.0
      */
