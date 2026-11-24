@@ -504,12 +504,35 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       builder.cfg = builder.constraintBuilder.data('cfg');
       builder.l10n = builder.constraintBuilder.data('l10n') || {};
       // Choosing a property adds a row for it, the select going back to its placeholder.
-      builder.addButton.off('change.filterBuilder').on('change.filterBuilder', function (event) {
-        event.preventDefault();
-        let selectedVal = $(this).val();
+      let addSelectedProperty = function () {
+        let selectedVal = builder.addButton.val();
         if (selectedVal) {
           addFilter({ property: selectedVal }, true);
         }
+      };
+      /*
+       * A property picked with the mouse is added at once. The keys moving through the properties of the closed select
+       * (arrows, type-ahead) select each property they reach, which the browsers signal as a change before the key is
+       * released: the property is added on Enter instead, and the select goes back to its placeholder when it's left
+       * without adding it.
+       */
+      let keyDown = false;
+      builder.addButton.off('.filterBuilder').on('change.filterBuilder', function (event) {
+        event.preventDefault();
+        if (!keyDown) {
+          addSelectedProperty();
+        }
+      }).on('keydown.filterBuilder', function (event) {
+        if (event.key === 'Enter') {
+          addSelectedProperty();
+        } else {
+          keyDown = true;
+        }
+      }).on('keyup.filterBuilder mousedown.filterBuilder', function () {
+        keyDown = false;
+      }).on('blur.filterBuilder', function () {
+        keyDown = false;
+        $(this).val('');
       });
       // Enter on a list of the builder (the property to add a filter on, the operator of a filter) or on a date whose
       // date picker is open (Enter closing it) doesn't submit the form holding the builder, e.g. the macro editor:
