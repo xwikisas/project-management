@@ -79,7 +79,8 @@
   #else
     ## The labels displayed by the filter builder: the operators (by type of filter and operator id, the labels of
     ## the configuration being used for the other operators), the text alternatives of the fields of a filter, the
-    ## words of the summary of the filters and the message telling that the properties couldn't be loaded.
+    ## words of the summary of the filters, the warnings of the filters and the message telling that the properties
+    ## couldn't be loaded.
     ## The operator ids aren't valid in translation keys, so the operators are translated by name.
     #set ($operatorKeys = {
       'list.=': 'list.isOneOf', 'list.!': 'list.isNotOneOf', 'list.&=': 'list.hasAllOf', 'list.*': 'isSet',
@@ -100,7 +101,8 @@
     ## The client can word these labels its own way under "${clientId}.macro.filter.", e.g. the summary naming the work
     ## items as the tool does ("work packages" for OpenProject).
     #foreach ($key in ['anotherCondition', 'operatorLabel', 'valueLabel', 'summary', 'summaryAll', 'summaryIncomplete',
-        'summaryLoading', 'and', 'or', 'between', 'setConditionUnsupported', 'propertiesNotLoaded'])
+        'summaryLoading', 'summaryKept', 'and', 'or', 'between', 'setConditionUnsupported', 'keptCondition',
+        'propertiesNotLoaded'])
       #set ($filterBuilderLabelKey = "${clientId}.macro.filter.$key")
       #if (!$services.localization.get($filterBuilderLabelKey))
         #set ($filterBuilderLabelKey = "projectmanagement.macro.filter.$key")

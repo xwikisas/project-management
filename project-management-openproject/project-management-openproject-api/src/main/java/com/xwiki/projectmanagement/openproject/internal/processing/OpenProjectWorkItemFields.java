@@ -384,6 +384,19 @@ public final class OpenProjectWorkItemFields
     }
 
     /**
+     * @param property a generic work item property, for example {@code summary}
+     * @return the other names by which the query of a macro can filter on the property: its OpenProject filters (for
+     *     example {@code subject}), among the filters of the instance when they are known, since the others are
+     *     rejected as unknown properties (see {@link #isFilter(String)})
+     * @since 1.5.0
+     */
+    public List<String> getFilterAliases(String property)
+    {
+        return OpenProjectMapper.getOpenProjectNames(property).stream()
+            .filter(name -> this.filterKeys == null || this.filterKeys.contains(name)).collect(Collectors.toList());
+    }
+
+    /**
      * @param property a work item property, or an OpenProject filter
      * @return whether the filters on the property are kept (see {@link OpenProjectFilterTranslator}): the property
      *     exposes a field of this instance, or is a filter (see {@link #isFilter(String)})

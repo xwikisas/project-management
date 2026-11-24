@@ -93,6 +93,9 @@ class WorkPackageFieldDescriptorsTest
         assertNull(labels.getFilter().getParameters().get("multiValue"));
         // The custom options are written by id: their names aren't resolved.
         assertNull(labels.getFilter().getParameters().get("valueNames"));
+        // The query of a macro can filter on a custom field by its OpenProject filter too.
+        assertEquals(List.of("customField5"), labels.getFilter().getParameters().get("aliases"));
+        assertNull(descriptors.get(2).getFilter().getParameters().get("aliases"));
 
         // The values that aren't links are displayed as text.
         LiveDataPropertyDescriptor notes = descriptors.get(5);

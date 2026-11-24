@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.processing;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.xwiki.projectmanagement.model.WorkItem;
 
@@ -125,5 +126,20 @@ public final class OpenProjectMapper
     public static String mapOpenProjectName(String name)
     {
         return OPENPROJECT_KEY_MAPPING.getOrDefault(name, name);
+    }
+
+    /**
+     * Gets the OpenProject filters and columns named otherwise than a generic work item property, whose generic
+     * property it is (see {@link #mapOpenProjectName(String)}).
+     *
+     * @param property a work item property, for example {@code assignees}
+     * @return the OpenProject names of the property, sorted, for example {@code assigned_to} and {@code assignee}, or
+     *     an empty list when the property has the same name in OpenProject or isn't a generic work item property
+     * @since 1.5.0
+     */
+    public static List<String> getOpenProjectNames(String property)
+    {
+        return OPENPROJECT_KEY_MAPPING.entrySet().stream().filter(entry -> entry.getValue().equals(property))
+            .map(Map.Entry::getKey).sorted().collect(Collectors.toList());
     }
 }

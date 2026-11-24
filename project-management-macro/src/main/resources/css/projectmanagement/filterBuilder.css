@@ -49,7 +49,9 @@
   margin-bottom: .5em;
 }
 
-.proj-manag-constraint {
+/* A condition that the builder can't show is listed as a row too, with the condition as written instead of its operator
+   and value (see filterBuilder.js). */
+.proj-manag-constraint, .proj-manag-constraint-kept {
   display: grid;
   grid-template-columns: 8em 10em minmax(8em, 1fr) auto;
   gap: .5em;
@@ -159,12 +161,20 @@ select.proj-manag-add-filter {
   padding: 6px 12px;
 }
 
+.proj-manag-constraint-kept > .proj-manag-constraint-kept-message {
+  grid-column: 2 / span 2;
+  margin: 0;
+  padding: 6px 12px;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 600px) {
-  .proj-manag-constraint {
+  .proj-manag-constraint, .proj-manag-constraint-kept {
     grid-template-columns: minmax(0, 1fr) auto;
   }
   .proj-manag-constraint-title, .proj-manag-constraint-operator-container,
-  .proj-manag-constraint-value-container, .proj-manag-constraint > .proj-manag-constraint-unsupported {
+  .proj-manag-constraint-value-container, .proj-manag-constraint > .proj-manag-constraint-unsupported,
+  .proj-manag-constraint-kept > .proj-manag-constraint-kept-message {
     grid-column: 1;
   }
   .proj-manag-constraint-remove-container {

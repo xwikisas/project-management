@@ -144,6 +144,17 @@ public final class WorkPackageFieldDescriptors
             return null;
         }
         filter.setDefaultOperator(filter.getOperators().get(0).getId());
+        setParameters(filter, id, field, multiValue);
+        return filter;
+    }
+
+    /**
+     * Sets the parameters of the filter of a field that the filter builder of the macros reads.
+     */
+    private static void setParameters(LiveDataPropertyDescriptor.FilterDescriptor filter, String id,
+        WorkPackageField field, boolean multiValue)
+    {
+        String valueType = field.getFilterValueType();
         if (multiValue) {
             // Tells the filter builder that the field can be filtered on with several operators at once, e.g. the
             // work packages having one value and not another one.
@@ -158,7 +169,25 @@ public final class WorkPackageFieldDescriptors
         if (suggestion != null) {
             filter.getParameters().put("searchURL", String.format(SUGGEST_URL_FORMAT, suggestion));
         }
-        return filter;
+        // The query of a macro can also filter on the field by its OpenProject filter, e.g. customField5 for the custom
+        // field named Labels.
+        if (!id.equals(field.getFilterKey())) {
+            setAliases(filter, List.of(field.getFilterKey()));
+        }
+    }
+
+    /**
+     * Tells the filter builder the other names by which the query of a macro can filter on a property, e.g. its
+     * OpenProject filter, so that the filters read from a query under these names are shown on its rows.
+     *
+     * @param filter the filter of the property
+     * @param aliases the other names of the property, none being ignored
+     */
+    static void setAliases(LiveDataPropertyDescriptor.FilterDescriptor filter, List<String> aliases)
+    {
+        if (!aliases.isEmpty()) {
+            filter.getParameters().put("aliases", aliases);
+        }
     }
 
     private static void addOperators(LiveDataPropertyDescriptor.FilterDescriptor filter, WorkPackageField field,
