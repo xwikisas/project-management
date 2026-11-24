@@ -30,8 +30,9 @@
  * when it's displayed and when the user changes it.
  *
  * A warning in the footer of the macro editor lists the values that Submit drops, e.g. the work items picked before
- * the user chose the matching filters, and tells when the specific work items are selected without any work item
- * picked, all the work items being then displayed.
+ * the user chose the matching filters or the conditions that the edited series of a chart can't show (reported by
+ * filterParameter.js with the pm:unsupportedFilters event on their container), and tells when the specific work items
+ * are selected without any work item picked, all the work items being then displayed (see workItemSelection.js).
  */
 (function () {
   const getResourceURL = function (resource) {
@@ -205,30 +206,10 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
 
     const renderDropped = function () {
       removeDroppedWarning(editor);
-      if (!touched) {
-        return;
-      }
-      const messages = [];
-      const liveData = state.values.liveData;
-      if (liveData && state.way !== model.ADVANCED && Object.keys(liveData.parameters).length) {
-        messages.push(l10n['liveData.moved']);
-      }
-      if (model.isEmptyList(state)) {
-        messages.push(l10n.emptyList);
-      }
-      const dropped = model.droppedValues(state);
-      if (dropped.length) {
-        const items = dropped.map(item => {
-          if (item.type === 'preset') {
-            return l10n['dropped.preset'];
-          }
-          return format('dropped.' + item.type, item.value);
-        });
-        messages.push(format('dropped', items.join(l10n['dropped.separator'] || '; ')));
-      }
-      if (messages.length) {
+      const message = model.getWarning(state, l10n, touched);
+      if (message) {
         const warning = $('<div role="status" class="alert alert-warning"></div>').addClass(DROPPED_CLASS)
-          .text(messages.join(' '));
+          .text(message);
         editor.closest('.modal').find('.modal-footer').prepend(warning);
       }
     };
@@ -355,6 +336,13 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     queryContainer.on('pm:unsupportedFilters', function (event, conditions) {
       if (event.target === this) {
         state.values.unsupportedFilters = conditions || [];
+        renderDropped();
+      }
+    });
+    // The conditions that the series of a chart drop once the user edits them (see filterParameter.js).
+    editor.find('[data-builder-role="series"]').on('pm:unsupportedFilters', function (event, conditions) {
+      if (event.target === this) {
+        state.values.unsupportedSeries = conditions || [];
         renderDropped();
       }
     });
