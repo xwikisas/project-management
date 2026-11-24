@@ -81,7 +81,7 @@ define([], function () {
    * @return {{way: string, locked: boolean, values: Object, initial: Object}} the state of the widget: the selected
    *     way, whether it's locked (the advanced Live Data configuration, kept as it is), the values of all the ways
    *     ({query, queryEdited, presetId, legacyFilters, unsupportedFilters, list, url, advanced: {source, content},
-   *     identifier}) and the initial fields
+   *     identifier, unsupportedSeries}) and the initial fields
    */
   const readInitial = function (fields) {
     const initial = {
@@ -107,7 +107,10 @@ define([], function () {
       url: '',
       advanced: {source: '', content: ''},
       // The deprecated identifier parameter, kept until it's converted, or replaced by a content.
-      identifier: initial.identifier
+      identifier: initial.identifier,
+      // The conditions of the series of a chart that their filter builders can't show, as text, dropped from the
+      // series once the user edits them (see filterParameter.js).
+      unsupportedSeries: []
     };
     let way = QUERY;
     let locked = false;
@@ -204,20 +207,26 @@ define([], function () {
     }
     const content = getContent(state);
     const values = state.values;
-    // The macros reject the deprecated identifier and filters parameters together with a content, and ignore the
-    // source without content. The query that the user edited replaces them, even without filter (all the work items).
-    const keepLegacy = content === '' && !(state.way === QUERY && values.queryEdited);
-    let filters = keepLegacy ? values.legacyFilters : '';
+    // Only the selected way is written. The deprecated filters belong to the matching filters, whose builder shows
+    // them until the user edits the query (which then replaces them, even without filter), and the deprecated
+    // identifier to the way it converts to, which the macro opens on. The macros reject both with a content, and
+    // ignore the source without content: each is kept while its way is selected without content, and dropped
+    // otherwise.
+    const withoutContent = content === '';
+    const keepFilters = withoutContent && state.way === QUERY && !values.queryEdited;
+    const keepIdentifier = withoutContent && values.identifier !== ''
+      && state.way === convertIdentifier(values.identifier).way;
+    let filters = keepFilters ? values.legacyFilters : '';
     if (state.initial.isChart) {
       filters = state.initial.filters;
     }
     return {
       content,
-      source: keepLegacy && state.way !== ADVANCED ? '' : getSource(state),
+      source: withoutContent && state.way !== ADVANCED ? '' : getSource(state),
       // The preset is only combined with the filters (see the Matching filters way).
       presetId: state.way === QUERY ? values.presetId : '',
       filters,
-      identifier: keepLegacy ? values.identifier : ''
+      identifier: keepIdentifier ? values.identifier : ''
     };
   };
 
@@ -225,7 +234,7 @@ define([], function () {
    * @param {Object} state the state of the widget
    * @return {Array<{type: string, value: string}>} the values that the user entered (or that the macro had) and that
    *     submitting the selected way drops: the values of the other ways, the preset (outside the Matching filters),
-   *     the deprecated filters and identifier parameters replaced by a content. The query replacing the deprecated
+   *     the deprecated filters and identifier parameters not kept by toFields. The query replacing the deprecated
    *     filters is written from them (see showsLegacyFilters): only their conditions that the filter builder can't
    *     show are dropped (unsupportedFilters)
    */
@@ -273,11 +282,60 @@ define([], function () {
 
   /**
    * @param {Object} state the state of the widget
-   * @return {boolean} whether the specific work items are selected without any work item picked: the macro then
-   *     displays all the work items, which the user is warned about
+   * @return {boolean} whether the specific work items are selected without any work item picked, nor deprecated
+   *     identifier kept: the macro then displays all the work items, which the user is warned about
    */
   const isEmptyList = function (state) {
-    return !state.locked && state.way === LIST && state.values.list.length === 0;
+    return !state.locked && state.way === LIST && state.values.list.length === 0 && toFields(state).identifier === '';
+  };
+
+  const formatMessage = function (l10n, key, parameter) {
+    return String(l10n[key] || '').replace('{0}', () => parameter);
+  };
+
+  const describeDropped = function (item, l10n) {
+    if (item.type === 'preset') {
+      return l10n['dropped.preset'];
+    }
+    // A single picked work item has its own text, without number.
+    if (item.type === LIST && item.value === '1') {
+      return l10n['dropped.list.singular'];
+    }
+    return formatMessage(l10n, 'dropped.' + item.type, item.value);
+  };
+
+  /**
+   * @param {Object} state the state of the widget
+   * @param {Object} l10n the messages of the widget, by key (see projectmanagementworkitemsource/edit.vm), {0} being
+   *     replaced by their parameter
+   * @param {boolean} written whether the fields of the selected way are written, i.e. whether the user changed the
+   *     selection: otherwise, Submit keeps the macro parameters as they are
+   * @return {string} the warning displayed in the footer of the macro editor, empty when there's nothing to tell: what
+   *     Convert moved, that all the work items are displayed when no work item is picked, and what Submit drops, the
+   *     conditions dropped from the series of a chart included
+   */
+  const getWarning = function (state, l10n, written) {
+    const messages = [];
+    const dropped = [];
+    if (written) {
+      const liveData = state.values.liveData;
+      if (liveData && state.way !== ADVANCED && Object.keys(liveData.parameters).length) {
+        messages.push(l10n['liveData.moved']);
+      }
+      if (isEmptyList(state)) {
+        messages.push(l10n.emptyList);
+      }
+      dropped.push(...droppedValues(state));
+    }
+    const series = [...new Set(state.values.unsupportedSeries || [])];
+    if (series.length > 0) {
+      dropped.push({type: 'unsupportedSeries', value: series.join(', ')});
+    }
+    if (dropped.length > 0) {
+      messages.push(formatMessage(l10n, 'dropped',
+        dropped.map(item => describeDropped(item, l10n)).join(l10n['dropped.separator'] || '; ')));
+    }
+    return messages.join(' ');
   };
 
   const isObject = function (value) {
@@ -362,6 +420,7 @@ define([], function () {
     toFields,
     droppedValues,
     isEmptyList,
+    getWarning,
     splitLiveDataConfiguration,
     withConvertedIdentifier
   };

@@ -51,12 +51,13 @@
 ## The messages formatted by the JavaScript code, {0} being replaced by their parameter.
 #set ($messages = {})
 #foreach ($key in ['dropped', 'dropped.query', 'dropped.list', 'dropped.url', 'dropped.advanced', 'dropped.filters',
-    'dropped.identifier', 'dropped.liveData', 'dropped.unsupportedFilters', 'identifier.deprecated'])
+    'dropped.identifier', 'dropped.liveData', 'dropped.unsupportedFilters', 'dropped.unsupportedSeries',
+    'identifier.deprecated'])
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey, ['{0}'])))
 #end
-#foreach ($key in ['dropped.separator', 'dropped.preset', 'emptyList', 'editAsText', 'editAsFilters',
-    'liveData.moved'])
+#foreach ($key in ['dropped.separator', 'dropped.preset', 'dropped.list.singular', 'emptyList', 'editAsText',
+    'editAsFilters', 'liveData.moved'])
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey)))
 #end
@@ -132,7 +133,9 @@
   </div>
   ## Specific work items, picked by the work item picker (workItemPicker.js), mounted by workItemSourceParameter.js.
   <div class="pm-source-editor pm-hidden" data-way="list">
-    <span class="pm-source-field-label">#pmSourceLabel('list.inputLabel')</span>
+    ## The label names the field of the picker (its aria-labelledby).
+    #set ($listLabelId = "pm-source-list-label-$mathtool.random(1000, 1000000)")
+    <span class="pm-source-field-label" id="$listLabelId">#pmSourceLabel('list.inputLabel')</span>
     <div class="pm-source-list-picker"></div>
   </div>
   #if ($linkWay)

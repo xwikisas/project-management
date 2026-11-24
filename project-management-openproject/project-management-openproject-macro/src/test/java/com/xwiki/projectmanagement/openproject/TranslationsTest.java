@@ -76,7 +76,8 @@ class TranslationsTest
 
     /**
      * The macro editor names the work items as OpenProject does ("work packages"): the generic labels of the filter
-     * builder and of the source widget that name the work items are replaced by OpenProject ones.
+     * builder, of the source widget and of the chart options that name the work items are replaced by OpenProject
+     * ones.
      */
     @Test
     void macroEditorLabelsNameTheWorkPackages() throws Exception
@@ -91,11 +92,13 @@ class TranslationsTest
             }
         }
         Stream<String> filterBuilderKeys = FILTER_BUILDER_LABELS.stream().map(key -> "macro.filter." + key);
-        Stream<String> sourceKeys = translations.stringPropertyNames().stream()
-            .filter(key -> key.startsWith(GENERIC_PREFIX + "macro.source."))
+        // The options of the chart types (see DefaultChartDisplayerResource) are worded by the client as well.
+        Stream<String> sourceAndChartKeys = translations.stringPropertyNames().stream()
+            .filter(key -> key.startsWith(GENERIC_PREFIX + "macro.source.")
+                || key.startsWith(GENERIC_PREFIX + "chart."))
             .map(key -> key.substring(GENERIC_PREFIX.length()));
 
-        List<String> workItemLabels = Stream.concat(filterBuilderKeys, sourceKeys).sorted().filter(key -> {
+        List<String> workItemLabels = Stream.concat(filterBuilderKeys, sourceAndChartKeys).sorted().filter(key -> {
             String label = translations.getProperty("openproject." + key,
                 translations.getProperty(GENERIC_PREFIX + key, ""));
             return label.toLowerCase().contains("work item");

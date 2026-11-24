@@ -30,7 +30,9 @@
  *   are dropped, and reported, as text, with pm:unsupportedFilters(conditions), the whole list each time. The
  *   handlers of pm:collectQuery(holder) get the query of the filters shown by the builder, in holder.query.
  * - "series" (the series of a chart) and no role (e.g. the preset page): the filters are written as Live Data JSON in
- *   the .proj-manag-filter field, one configuration per builder when there are several.
+ *   the .proj-manag-filter field, one configuration per builder when there are several. The series read from the
+ *   macro are kept as they are until the user edits them, the conditions that their builders can't show being dropped
+ *   then, and reported with pm:unsupportedFilters(conditions) on the container of the series.
  */
 setTimeout(function () {
   let depsElem = document.querySelector('.proj-manag-filter[data-deps], .pm-work-item-source[data-deps]');
@@ -75,6 +77,26 @@ setTimeout(function () {
       // -------------------------------------------------------------------------------------------------------------
 
       let livedataCfgs = new Map();
+      const SERIES_CONTAINER = '[data-builder-role="series"]';
+      let isSeriesBuilder = function (bld) {
+        return bld.element.closest(SERIES_CONTAINER).length > 0;
+      };
+      // The series of a chart read from the macro are kept as they are until the user edits them: their builders don't
+      // show the conditions that they can't show (e.g. Description empty, written by an older version), which the
+      // client ignores. Once edited, the series are written from the builders, without these conditions, which are
+      // then reported, as text, with pm:unsupportedFilters(conditions) on the container of the series.
+      let seriesKept = false;
+      let seriesUnsupported = [];
+      let writeJsonField = function (seriesEdited) {
+        if (seriesKept && !seriesEdited) {
+          return;
+        }
+        if (seriesKept) {
+          seriesKept = false;
+          $(SERIES_CONTAINER).first().trigger('pm:unsupportedFilters', [seriesUnsupported.slice()]);
+        }
+        getJsonField().val(serializeFilters());
+      };
       // The filter builders of a chart are its series, titled from the translated template of their container.
       let setSeriesTitle = function (bld, number) {
         let titleTemplate = bld.element.closest('.project-management-filters').attr('data-series-title');
@@ -104,6 +126,9 @@ setTimeout(function () {
         let filterCfgs = JSON.parse(initialFilter);
         filterCfgs = filterCfgs instanceof Array ? filterCfgs : [filterCfgs];
         let firstBuilder = jsonBuilders[0];
+        let series = isSeriesBuilder(firstBuilder);
+        seriesKept = series;
+        seriesUnsupported = [];
         for (let i = 1; i < filterCfgs.length; i++) {
           let clone = firstBuilder.element.clone();
           firstBuilder.element.parent().append(clone);
@@ -113,7 +138,11 @@ setTimeout(function () {
           setSeriesTitle(bld, index + 1);
           let filterCfg = filterCfgs[index] || {};
           // The builder groups the values of a filter into rows.
-          ((filterCfg.query && filterCfg.query.filters) || []).forEach(filter => bld.addFilter(filter));
+          ((filterCfg.query && filterCfg.query.filters) || []).forEach(filter => bld.addFilter(series
+            ? Object.assign({}, filter, {dropUnsupported: true}) : filter));
+          if (series) {
+            setReadFilters(bld);
+          }
         });
       };
 
@@ -320,7 +349,7 @@ setTimeout(function () {
           updateQuery(bld, filters);
         } else {
           livedataCfgs.set(e.target, { query: { filters: filters } });
-          getJsonField().val(serializeFilters());
+          writeJsonField(!!bld && isSeriesBuilder(bld) && edits.isEdited(e.target, filters));
         }
       };
       let bindBuilder = function (builderElem) {
@@ -328,14 +357,17 @@ setTimeout(function () {
           updateFilterInput);
         builderElem.off('builderRemoved' + EVENT_NAMESPACE).on('builderRemoved' + EVENT_NAMESPACE, function (e) {
           livedataCfgs.delete(e.target);
-          getJsonField().val(serializeFilters());
+          writeJsonField(true);
         });
         builderElem.off('unsupportedConstraints' + EVENT_NAMESPACE).on('unsupportedConstraints' + EVENT_NAMESPACE,
           function (e, propertyName, constraints) {
             let bld = builder.instances.get(e.target);
+            let conditions = constraints.map(constraint => [propertyName, constraint.operator, constraint.value]
+              .filter(part => part !== undefined && part !== null && part !== '').join(' '));
             if (bld && isQueryBuilder(bld)) {
-              reportUnsupportedFilters(bld, constraints.map(constraint => [propertyName, constraint.operator,
-                constraint.value].filter(part => part !== undefined && part !== null && part !== '').join(' ')));
+              reportUnsupportedFilters(bld, conditions);
+            } else if (bld && isSeriesBuilder(bld)) {
+              seriesUnsupported.push(...conditions);
             }
           });
       };
@@ -363,7 +395,9 @@ setTimeout(function () {
       };
       $(document).on('click', '.project-management-new-dataset', function (e) {
         e.preventDefault();
-        builder.newBuilder($(this).parent().find('.project-management-filters').first());
+        let bld = builder.newBuilder($(this).parent().find('.project-management-filters').first());
+        // A new series has no filters: the ones added to it edit the series.
+        bld && setReadFilters(bld);
         setSeriesTitles();
       });
       // This script is loaded by the first macro editor (or page) displaying a filter builder, after it's displayed.
@@ -373,6 +407,8 @@ setTimeout(function () {
           return;
         }
         livedataCfgs.clear();
+        seriesKept = false;
+        seriesUnsupported = [];
         edits.clear();
         names.clear();
         unsupportedFilters = [];

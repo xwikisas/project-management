@@ -19,7 +19,8 @@
  */
 /*
  * Lays out the macro editor of the work item macros: hides parameters, orders and activates the tabs of the parameter
- * groups, moves parameters, groups the advanced parameters under a "More options" toggle.
+ * groups, moves parameters, groups the advanced parameters under a "More options" toggle, hides from the assistive
+ * technologies the fields that the pickers enhance.
  *
  * The macro editor differs between the XWiki versions:
  * - XWiki 17.10+ builds one tab strip (ul.macro-tabs) with one pane per parameter group, and submits all the inputs;
@@ -321,6 +322,63 @@ define(['jquery'], function ($) {
     refreshMoreOptions(editor);
   };
 
+  // The class that Tom Select, the picker of XWiki 18+, gives to the field it enhances: it hides the field visually
+  // only, so that the field stays in the accessibility tree next to the input of the picker, with the same name, and,
+  // for a select, with its options (plus one without text when nothing is selected). Selectize, the picker of the older
+  // XWiki versions, doesn't use it: it hides the field with display: none.
+  const ENHANCED_FIELD = 'ts-hidden-accessible';
+  // Marks the fields hidden from the assistive technologies by hideEnhancedFields, which shows them again.
+  const ENHANCED_FIELD_HIDDEN = 'data-pm-enhanced-hidden';
+
+  const updateEnhancedField = function (element) {
+    if (element.classList.contains(ENHANCED_FIELD)) {
+      if (!element.hasAttribute('aria-hidden')) {
+        element.setAttribute('aria-hidden', 'true');
+        element.setAttribute(ENHANCED_FIELD_HIDDEN, '');
+      }
+    } else if (element.hasAttribute(ENHANCED_FIELD_HIDDEN)) {
+      // The picker is destroyed: the field is displayed again.
+      element.removeAttribute('aria-hidden');
+      element.removeAttribute(ENHANCED_FIELD_HIDDEN);
+    }
+  };
+
+  /**
+   * Hides from the assistive technologies the fields of the given macro editor that the pickers enhance, now and once
+   * they're enhanced, as long as the editor displays the same macro (the macro editor is shared by the macros), so
+   * that each field is listed once, by the input of its picker. Such a field can't take the focus there: XWiki moves
+   * its focus to the picker. Idempotent.
+   *
+   * @param {jQuery} editor the macro editor
+   */
+  const hideEnhancedFields = function (editor) {
+    const element = editor[0];
+    if (!element) {
+      return;
+    }
+    element.pmEnhancedFieldsMacro = element.getAttribute('data-macroId');
+    element.querySelectorAll('.' + ENHANCED_FIELD).forEach(updateEnhancedField);
+    if (element.pmEnhancedFieldsObserver) {
+      return;
+    }
+    element.pmEnhancedFieldsObserver = new MutationObserver(function (records) {
+      if (element.getAttribute('data-macroId') !== element.pmEnhancedFieldsMacro) {
+        return;
+      }
+      records.forEach(record => {
+        if (record.type === 'attributes') {
+          updateEnhancedField(record.target);
+        } else {
+          Array.from(record.addedNodes).filter(node => node.nodeType === Node.ELEMENT_NODE).forEach(node => {
+            [node, ...node.querySelectorAll('.' + ENHANCED_FIELD)].forEach(updateEnhancedField);
+          });
+        }
+      });
+    });
+    element.pmEnhancedFieldsObserver.observe(element, {subtree: true, childList: true, attributes: true,
+      attributeFilter: ['class']});
+  };
+
   /**
    * Calls the callback with each macro editor (modal or in-place) displayed now and each time the macro editor
    * displays the parameters of a macro, when the editor is accepted.
@@ -369,6 +427,7 @@ define(['jquery'], function ($) {
     moveParameter,
     addMoreOptions,
     refreshMoreOptions,
+    hideEnhancedFields,
     onMacroEditor,
     forMacros
   };

@@ -25,8 +25,17 @@ require.config({
         XWiki.EntityType.DOCUMENT
       )
     )
-    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&minify=false')
+    .getURL('jsx', 'resource=js/openproject/createWorkPackagesUtils.js&minify=false'),
+    // The same path as in instanceParameter.js.
+    'projectmanagement-macro-editor-layout': new XWiki.Document(XWiki.Model.resolve('Main.WebHome',
+      XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=js/projectmanagement/macro/macroEditorLayout.js')
   }
+});
+
+// The macro editor has no instance field, whose script hides from the assistive technologies the fields that the
+// pickers of the OpenProject macros enhance (see instanceParameter.js).
+require(['projectmanagement-macro-editor-layout'], function (layout) {
+  layout.onMacroEditor(layout.forMacros(['openproject-create-work-package']), layout.hideEnhancedFields);
 });
 
 define("openproject.createworkpackage.macro", {
