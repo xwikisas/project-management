@@ -26,10 +26,16 @@ const workItemList = loadAmdModule("macro/workItemList.js");
 
 // The work items of each connection.
 const WORK_ITEMS = {
-  OpenProject: [{ identifier: { value: 157 }, key: "AC-1", summary: { value: "Mobile offline mode" },
-    project: { value: "Atlas CRM" } }],
-  "OpenProject QA": [{ identifier: { value: 242 }, summary: { value: "Alpha release" },
-    project: { value: "QA" } }],
+  OpenProject: [
+    { identifier: { value: 157 }, key: "AC-1", summary: { value: "Mobile offline mode" },
+      project: { value: "Atlas CRM" } },
+    { identifier: { value: 164 }, key: "AC-8", summary: { value: "Calendar sync" }, project: { value: "Atlas CRM" } },
+  ],
+  // The work items of this connection have no key.
+  "OpenProject QA": [
+    { identifier: { value: 242 }, summary: { value: "Alpha release" }, project: { value: "QA" } },
+    { identifier: { value: 164 }, summary: { value: "Bulk task 85" }, project: { value: "QA" } },
+  ],
 };
 
 // The connection of the macro.
@@ -71,6 +77,28 @@ async function type(selectize, text) {
   input.dispatchEvent(new Event("input"));
   // The work items are searched once the user stops typing.
   await vi.runAllTimersAsync();
+}
+
+// Types the given id in the picker and presses Enter at once, before the work items are found, as a user.
+async function typeAndEnter(selectize, id) {
+  const input = selectize.control_input;
+  input.value = id;
+  input.dispatchEvent(new Event("input"));
+  // The suggestions are displayed once the user stops typing, before the work items are searched.
+  vi.advanceTimersByTime(selectize.settings.refreshThrottle);
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true }));
+  await vi.runAllTimersAsync();
+}
+
+// Chooses another connection, as the user does in the macro editor.
+async function changeConnection(picker, newConnection) {
+  connection = newConnection;
+  picker.refresh();
+  await vi.runAllTimersAsync();
+}
+
+function getPickedLabels(selectize) {
+  return selectize.items.map((id) => selectize.options[id].label);
 }
 
 function getSuggestions(selectize) {
@@ -165,6 +193,81 @@ describe("the work item picker", () => {
     // Nor does it tell whether the work items of the new connection can be retrieved (e.g. so that the client removes
     // the message telling why they can't).
     expect(reports).toEqual([]);
+  });
+
+  it("searches again a text whose search failed", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // OpenProject doesn't answer, or the user isn't authenticated to it yet.
+    answer = () => Promise.reject({ status: 500 });
+    await type(selectize, "Bulk");
+    expect(getSuggestions(selectize)).toEqual([]);
+    await type(selectize, "");
+
+    answer = search;
+    requests = [];
+    await type(selectize, "Bulk");
+
+    expect(requests).toHaveLength(1);
+    expect(getSuggestions(selectize)).toEqual(["#164 Bulk task 85QA"]);
+  });
+
+  it("doesn't search again a text whose search found nothing", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // A work item not found isn't a failure.
+    await type(selectize, "999");
+    await type(selectize, "");
+
+    requests = [];
+    await type(selectize, "999");
+
+    expect(requests).toEqual([]);
+  });
+
+  it("replaces a typed id by the key of its work item", async () => {
+    const { picker, selectize } = mount();
+
+    await typeAndEnter(selectize, "164");
+
+    expect(picker.getIds()).toEqual(["AC-8"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+  });
+
+  it("keeps a typed id when the connection changes, looking its work item up on each connection", async () => {
+    const { picker, selectize } = mount();
+    connection = "OpenProject QA";
+    await typeAndEnter(selectize, "164");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["#164 Bulk task 85"]);
+
+    // On a connection where the work item has a key, the id isn't replaced by it.
+    await changeConnection(picker, "OpenProject");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+
+    await changeConnection(picker, "OpenProject QA");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["#164 Bulk task 85"]);
+    expect(selectize.options["164"].state).toBeUndefined();
+  });
+
+  it("ignores the answer of a lookup sent before the connection changed", async () => {
+    const { picker, selectize } = mount();
+    connection = "OpenProject QA";
+    // The lookup of the typed id answers late; the search of the typed text, which looks it up too, answers at once.
+    let answerLookup;
+    answer = (url) => !answerLookup && url.includes("/workitems/164?") ? new Promise((resolve) => {
+      answerLookup = resolve;
+    }) : search(url);
+    await typeAndEnter(selectize, "164");
+
+    await changeConnection(picker, "OpenProject");
+    answerLookup(WORK_ITEMS["OpenProject QA"][1]);
+    await vi.runAllTimersAsync();
+
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
   });
 
   it("keeps its suggestions under its field when a message is displayed above it", async () => {
