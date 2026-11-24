@@ -174,10 +174,9 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     }
     const queryText = widget.find('.pm-source-query-input');
 
-    // The layout: the widget edits the content, the preset is displayed under the filters, and the deprecated
-    // identifier is displayed by the widget, which converts it.
-    layout.hideParameter(editor, '$content');
-    layout.hideParameter(editor, 'identifier');
+    // The layout: the widget edits the content, the preset is displayed under the filters, the deprecated identifier
+    // is displayed by the widget, which converts it, and the deprecated filters by the filter builder.
+    model.getEditedParameters(state).forEach(name => layout.hideParameter(editor, name));
     layout.moveParameter(editor, 'presetId', widget.find('.pm-source-preset-slot'));
     layout.activateGroup(editor, 'filters');
 
@@ -242,7 +241,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
 
     // Gives the filter builder what to show; filterParameter.js keeps it until the builder is ready.
     const showInBuilder = function () {
-      const input = state.values.query.trim() === '' && state.values.legacyFilters !== ''
+      const input = model.showsLegacyFilters(state)
         ? {type: 'filters', value: state.values.legacyFilters} : {type: 'query', value: state.values.query};
       queryContainer.data('pmPendingInput', input);
       queryContainer.trigger(input.type === 'filters' ? 'pm:importFilters' : 'pm:setQuery', [input.value]);
@@ -296,7 +295,13 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     widget.on('click', '.pm-source-toggle-text', function () {
       textMode = !textMode;
       if (textMode) {
-        queryText.val(state.values.query);
+        // The deprecated filters are shown as the query of the filter builder importing them, which is only written
+        // once the user changes it.
+        const holder = {query: state.values.query};
+        if (model.showsLegacyFilters(state)) {
+          queryContainer.trigger('pm:collectQuery', [holder]);
+        }
+        queryText.val(holder.query);
       } else {
         showInBuilder();
       }
@@ -320,6 +325,12 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
         state.values.query = String(query || '');
         render();
         write();
+      }
+    });
+    queryContainer.on('pm:unsupportedFilters', function (event, conditions) {
+      if (event.target === this) {
+        state.values.unsupportedFilters = conditions || [];
+        renderDropped();
       }
     });
     fields.presetId.on('change', function () {

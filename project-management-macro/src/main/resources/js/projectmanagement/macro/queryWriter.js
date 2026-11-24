@@ -223,19 +223,23 @@ define([], function () {
       contains: value => ({ operator: '~', value }),
       // The project management tools have no prefix match on texts.
       startsWith: value => ({ operator: '~', value }),
-      equals: (value, operators) => ({ operator: operators.includes('=') ? '=' : '~', value })
+      equals: (value, operators) => ({ operator: operators.includes('=') ? '=' : '~', value }),
+      notEquals: value => ({ operator: '!', value })
     },
     list: {
       // A list filter matches the values picked in a list: containing a value, or starting with it, is equal to it.
       equals: value => ({ operator: '=', value }),
       contains: value => ({ operator: '=', value }),
-      startsWith: value => ({ operator: '=', value })
+      startsWith: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value })
     },
     boolean: {
-      equals: value => ({ operator: '=', value })
+      equals: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value })
     },
     number: {
       equals: value => ({ operator: '=', value }),
+      notEquals: value => ({ operator: '!', value }),
       greater: value => ({ operator: '>=', value: toInclusiveBound(value, 1) }),
       '>': value => ({ operator: '>=', value: toInclusiveBound(value, 1) }),
       less: value => ({ operator: '<=', value: toInclusiveBound(value, -1) }),
@@ -273,6 +277,40 @@ define([], function () {
       return converted && available.includes(converted.operator) ? converted : constraint;
     });
     return Object.assign({}, filter, { constraints });
+  };
+
+  // The generic operators of the Live Data, which the clients replace by an operator of the property, ignoring the
+  // constraints of the properties without equivalent (or failing on them, for notEquals).
+  const LIVE_DATA_OPERATORS = ['equals', 'notEquals', 'contains', 'startsWith', 'empty', 'greater', 'less', 'before',
+    'after'];
+
+  /**
+   * Converts the constraints of a filter with toBuilderFilter, and splits them between the ones that the builder keeps
+   * and the others: those whose generic Live Data operator has no equivalent for the property, e.g. the empty operator
+   * of the filters parameter written by an older version on a text that the tool can't filter on being empty (the
+   * description in OpenProject), which the client ignores, while the query would write it. The other operators that
+   * the property doesn't have are the ones of the tool (e.g. >t- on a date), which the query writes as they are.
+   *
+   * @param filter the Live Data filter
+   * @param type the type of the filter of the property, e.g. text, list, number, date or boolean
+   * @param operators the ids of the operators of the builder for the property
+   * @return {{filter, unsupported}} the filter with the constraints that the builder keeps, and the other constraints,
+   *   as they were
+   */
+  let splitSupported = function (filter, type, operators) {
+    let available = operators || [];
+    let original = filter.constraints || [];
+    let converted = toBuilderFilter(filter, type, available);
+    let supported = [];
+    let unsupported = [];
+    converted.constraints.forEach((constraint, index) => {
+      if (LIVE_DATA_OPERATORS.includes(constraint.operator) && !available.includes(constraint.operator)) {
+        unsupported.push(original[index]);
+      } else {
+        supported.push(constraint);
+      }
+    });
+    return { filter: Object.assign({}, converted, { constraints: supported }), unsupported };
   };
 
   /**
@@ -324,5 +362,5 @@ define([], function () {
     });
   };
 
-  return { toQuery, fromParsedFilters, takesValue, withValueNames, toBuilderFilter };
+  return { toQuery, fromParsedFilters, takesValue, withValueNames, toBuilderFilter, splitSupported };
 });

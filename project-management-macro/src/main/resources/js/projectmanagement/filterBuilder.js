@@ -46,6 +46,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
   const NO_VALUE_OPERATORS = ['*', '!*', 'o', 'c', 't', 'w', 'empty'];
   // The operators excluding the values of their row, whose values are highlighted.
   const EXCLUDING_OPERATORS = ['!', '!~'];
+  // Marks a builder while the filters it's given are being read, e.g. the query of a macro (see setLoading).
+  const LOADING_CLASS = 'proj-manag-query-loading';
 
   let builders = (window.FilterBuilder && window.FilterBuilder.instances) || new Map();
   let initBuilder = (window.FilterBuilder && window.FilterBuilder.inializeBuilder) || function (element) {
@@ -207,8 +209,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       return description + ' ' + values[0];
     };
-    // What the filters select, in plain words.
+    // What the filters select, in plain words, or that they're being read (see setLoading).
     let updateSummary = function () {
+      if (builder.constraintBuilder.hasClass(LOADING_CLASS)) {
+        builder.constraintBuilder.find('.proj-manag-filter-summary').text(builder.l10n.summaryLoading || '');
+        return;
+      }
       let descriptions = getRows().map((index, row) => describeRow($(row))).get().filter(text => text !== null);
       let incomplete = getRows().length - descriptions.length;
       let summary = descriptions.length > 0
@@ -364,14 +370,30 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
     /*
      * Adds the rows of a Live Data filter: one row per operator for a list, the values of an operator being in the
      * same row, and one row per constraint for the other types. A filter without constraints adds an empty row.
+     *
+     * The constraints of a filter flagged with dropUnsupported (e.g. read from the deprecated filters parameter) whose
+     * generic Live Data operator has no equivalent for the property (see queryWriter.splitSupported) are dropped, and
+     * reported by the unsupportedConstraints event (the name of the property, the dropped constraints) triggered on
+     * the builder.
      */
     let addFilter = function (filter, focus) {
       let property = builder.cfg.find(i => i.id == filter.property);
       if (property) {
         // The generic operators of the Live Data (e.g. contains, in the filters parameter written by an older version)
         // are shown with the operators of the property selecting the same work items (e.g. ~ for a text).
-        filter = queryWriter.toBuilderFilter(filter, getType(property),
-          property.filter.operators.map(operator => operator.id));
+        let operators = property.filter.operators.map(operator => operator.id);
+        if (filter.dropUnsupported) {
+          let split = queryWriter.splitSupported(filter, getType(property), operators);
+          if (split.unsupported.length > 0) {
+            builder.constraintBuilder.trigger('unsupportedConstraints', [getPropertyName(property), split.unsupported]);
+            if (split.filter.constraints.length === 0) {
+              return;
+            }
+          }
+          filter = split.filter;
+        } else {
+          filter = queryWriter.toBuilderFilter(filter, getType(property), operators);
+        }
       }
       let constraints = filter.constraints || [];
       if (!property) {
@@ -380,7 +402,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
           if (pendingFilter) {
             pendingFilter.constraints.push(...constraints);
           } else {
-            builder.pending.push({ property: filter.property, constraints: constraints.slice() });
+            // Added once its property is known, e.g. a custom field of the instance whose properties are loading.
+            builder.pending.push({ property: filter.property, constraints: constraints.slice(),
+              dropUnsupported: filter.dropUnsupported });
           }
           onChange();
         }
@@ -513,6 +537,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
     let setTitle = function (newTitle) {
       builder.constraintBuilder.find('.proj-manag-header-title').text(newTitle);
     };
+    /*
+     * Marks the builder while the filters it's given are being read, e.g. the query of a macro, parsed by the server:
+     * its summary tells so instead of describing the filters it has so far (none), and no filter can be added, since
+     * the filters being read would then be lost.
+     */
+    let setLoading = function (loading) {
+      builder.constraintBuilder.toggleClass(LOADING_CLASS, loading).attr('aria-busy', loading ? 'true' : null);
+      builder.addButton.prop('disabled', loading);
+      updateSummary();
+    };
     let init = function () {
       builder.constraintBuilder = element;
       builder.addButton = builder.constraintBuilder.find('.proj-manag-add-filter');
@@ -582,7 +616,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       cfg: builder.cfg,
       init: init,
       setTitle: setTitle,
-      setSourceParameters: setSourceParameters
+      setSourceParameters: setSourceParameters,
+      setLoading: setLoading
     });
   };
   /*

@@ -134,8 +134,12 @@ describe("toBuilderFilter", () => {
     ["list", LIST, "status", "contains", "12", "=", "12", "status = 12"],
     ["list", LIST, "status", "startsWith", "12", "=", "12", "status = 12"],
     ["list", LIST, "assignees", "empty", "", "!*", "", "assignees IS EMPTY"],
+    ["list", LIST, "status", "notEquals", "12", "!", "12", "status != 12"],
     ["boolean", BOOLEAN, "flagged", "equals", "true", "=", "true", "flagged = true"],
+    ["boolean", BOOLEAN, "flagged", "notEquals", "true", "!", "true", "flagged != true"],
     ["number", NUMBER, "progress", "equals", "50", "=", "50", "progress = 50"],
+    ["number", NUMBER, "progress", "notEquals", "50", "!", "50", "progress != 50"],
+    ["text", TEXT_ALL, "description", "notEquals", "task", "!", "task", "description != task"],
     // Strict, as in the OpenProject client: greater than 5 is at least 6.
     ["number", NUMBER, "progress", "greater", "5", ">=", "6", "progress >= 6"],
     ["number", NUMBER, "progress", ">", "5", ">=", "6", "progress >= 6"],
@@ -186,5 +190,53 @@ describe("toBuilderFilter", () => {
     // The user adds a filter on the status.
     builderFilters.push(filter("status", "o", ""));
     expect(queryWriter.toQuery(builderFilters, new Map())).toBe("project = 9 AND summary ~ task AND status = open");
+  });
+});
+
+/*
+ * The builder drops the conditions of the filters parameter whose generic operator has no equivalent for their
+ * property, which the OpenProject client ignores, instead of writing them in the query, which OpenProject would reject.
+ */
+describe("splitSupported", () => {
+  const TEXT = ["~", "!~"];
+  const LIST = ["=", "!", "o", "c", "*"];
+
+  it.each([
+    // OpenProject can't filter the description on being empty, nor the subject on not being equal to a text.
+    ["text", TEXT, filter("description", "empty", ""), [], [{ operator: "empty", value: "" }]],
+    ["text", TEXT, filter("summary", "notEquals", "task"), [], [{ operator: "notEquals", value: "task" }]],
+    ["text", TEXT, filter("summary", "contains", "task"), [{ operator: "~", value: "task" }], []],
+    ["list", LIST, filter("status", "notEquals", "1"), [{ operator: "!", value: "1" }], []],
+    ["list", LIST, filter("status", "empty", ""), [], [{ operator: "empty", value: "" }]],
+    // An operator of the tool that the builder doesn't propose is kept.
+    ["date", ["t", "w", "=d", "between"], filter("startDate", ">t-", "3"), [{ operator: ">t-", value: "3" }], []],
+  ])("splits a %s filter %j: %j", (type, operators, legacyFilter, supported, unsupported) => {
+    expect(queryWriter.splitSupported(legacyFilter, type, operators)).toEqual({
+      filter: { property: legacyFilter.property, constraints: supported },
+      unsupported,
+    });
+  });
+
+  it("splits each constraint of a filter, and keeps the ones without operator", () => {
+    const summaryFilter = { property: "summary", constraints: [{ operator: "contains", value: "a" },
+      { operator: "empty", value: "" }, { value: "b" }] };
+    expect(queryWriter.splitSupported(summaryFilter, "text", TEXT)).toEqual({
+      filter: { property: "summary", constraints: [{ operator: "~", value: "a" }, { value: "b" }] },
+      unsupported: [{ operator: "empty", value: "" }],
+    });
+  });
+
+  it("writes a query that OpenProject accepts once the filters parameter of 1.4.1 is edited", () => {
+    const legacy = JSON.parse('{"query":{"filters":[{"property":"project","constraints":[{"operator":"=","value":'
+      + '"9"}]},{"property":"description","constraints":[{"operator":"empty","value":""}]},{"property":"status",'
+      + '"constraints":[{"operator":"notEquals","value":"1"}]}]}}');
+    const types = { project: ["list", LIST], description: ["text", TEXT], status: ["list", LIST] };
+    const splits = legacy.query.filters.map((legacyFilter) =>
+      queryWriter.splitSupported(legacyFilter, ...types[legacyFilter.property]));
+    const builderFilters = splits.map((split) => split.filter);
+    // The user adds a filter on the assignees.
+    builderFilters.push(filter("assignees", "=", "me"));
+    expect(queryWriter.toQuery(builderFilters, new Map())).toBe("project = 9 AND status != 1 AND assignees = me");
+    expect(splits.flatMap((split) => split.unsupported)).toEqual([{ operator: "empty", value: "" }]);
   });
 });

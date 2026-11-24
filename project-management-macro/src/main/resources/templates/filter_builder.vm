@@ -96,7 +96,7 @@
         $services.localization.render("projectmanagement.macro.filter.operator.$operatorKey.value")))
     #end
     #foreach ($key in ['anotherCondition', 'operatorLabel', 'valueLabel', 'summary', 'summaryAll', 'summaryIncomplete',
-        'and', 'or', 'between'])
+        'summaryLoading', 'and', 'or', 'between'])
       #set ($discard = $l10n.put($key, $services.localization.render("projectmanagement.macro.filter.$key")))
     #end
     ## The caller can replace some of these labels, e.g. the summary of no filter.

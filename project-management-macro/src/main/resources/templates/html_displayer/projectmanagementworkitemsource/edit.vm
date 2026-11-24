@@ -49,7 +49,7 @@
 ## The messages formatted by the JavaScript code, {0} being replaced by their parameter.
 #set ($messages = {})
 #foreach ($key in ['dropped', 'dropped.query', 'dropped.list', 'dropped.url', 'dropped.advanced', 'dropped.filters',
-    'dropped.identifier', 'dropped.liveData', 'identifier.deprecated'])
+    'dropped.identifier', 'dropped.liveData', 'dropped.unsupportedFilters', 'identifier.deprecated'])
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey, ['{0}'])))
 #end
