@@ -34,7 +34,6 @@ import org.xwiki.ckeditor.test.po.MacroDialogSelectModal;
 import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.test.ui.TestUtils;
 import org.xwiki.test.ui.po.SuggestInputElement;
-import org.xwiki.test.ui.po.ViewPage;
 import org.xwiki.test.ui.po.editor.WYSIWYGEditPage;
 
 /**
@@ -86,8 +85,9 @@ public abstract class AbstractOpenProjectMacroEditModal extends MacroDialogEditM
     protected AbstractOpenProjectMacroEditModal(TestUtils setup, DocumentReference docRef, String macroName,
         int expectedMacroCount)
     {
-        ViewPage page = setup.gotoPage(docRef);
-        this.editPage = page.editWYSIWYG();
+        // Through the edit URL rather than the Edit menu, which has no WYSIWYG entry for the users in simple mode.
+        setup.gotoPage(docRef, "edit", "editor=wysiwyg");
+        this.editPage = new WYSIWYGEditPage();
         new CKEditor("content").waitToLoad();
         MacroDialogSelectModal selectModal = openMacroSelectModal();
         // CKEditor opens the macro selector, or directly the edit modal of the macro at the caret position.
