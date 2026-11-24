@@ -67,6 +67,13 @@
   min-width: 0;
 }
 
+/* The field searching a value stays on the line of the selected values while it has room for a few characters, instead
+   of wrapping below them when they leave less than the 7rem that Tom Select (XWiki 18+) gives it, which made the value
+   field one line taller, e.g. with a user name. */
+.proj-manag-constraint-value-container .ts-wrapper.multi.has-items .ts-control > input {
+  min-width: 4em;
+}
+
 /* The values excluded by their filter, e.g. "is not one of" (Selectize before XWiki 16, Tom Select after). */
 .proj-manag-constraint-excluding .selectize-input .item,
 .proj-manag-constraint-excluding .ts-control .item,
