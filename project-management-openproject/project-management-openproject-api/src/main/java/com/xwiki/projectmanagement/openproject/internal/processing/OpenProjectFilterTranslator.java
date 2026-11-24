@@ -518,7 +518,7 @@ public final class OpenProjectFilterTranslator
     {
         Map<String, List<String>> result = new LinkedHashMap<>();
         String filterType = getFilterType(propertyName);
-        Set<String> supportedOperators = TEXT_FILTERS.contains(propertyName) ? TEXT_FILTER_OPERATORS : null;
+        Set<String> supportedOperators = getTextFilterOperators(propertyName);
         for (LiveDataQuery.Constraint constraint : constraints) {
             LiveDataQuery.Constraint mappedConstraint =
                 mapConstraint(filterType, constraint, supportedOperators, propertyName);
@@ -534,6 +534,16 @@ public final class OpenProjectFilterTranslator
             result.computeIfAbsent(operator, key -> new ArrayList<>()).addAll(values);
         }
         return result;
+    }
+
+    /**
+     * @param propertyName a work item property, for example {@code description}
+     * @return the OpenProject operators of the filter of a generic work item property holding a text (the summary and
+     *     the description), which are the same on all the instances, or {@code null} for the other properties
+     */
+    static Set<String> getTextFilterOperators(String propertyName)
+    {
+        return TEXT_FILTERS.contains(propertyName) ? TEXT_FILTER_OPERATORS : null;
     }
 
     /**

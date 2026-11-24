@@ -151,12 +151,20 @@ select.proj-manag-add-filter {
   grid-column: 4;
 }
 
+/* The warning of a condition that can't be applied, in the column of the value, which its operator doesn't take, as
+   compact as the fields of the row. */
+.proj-manag-constraint > .proj-manag-constraint-unsupported {
+  grid-column: 3;
+  margin: 0;
+  padding: 6px 12px;
+}
+
 @media (max-width: 600px) {
   .proj-manag-constraint {
     grid-template-columns: minmax(0, 1fr) auto;
   }
   .proj-manag-constraint-title, .proj-manag-constraint-operator-container,
-  .proj-manag-constraint-value-container {
+  .proj-manag-constraint-value-container, .proj-manag-constraint > .proj-manag-constraint-unsupported {
     grid-column: 1;
   }
   .proj-manag-constraint-remove-container {

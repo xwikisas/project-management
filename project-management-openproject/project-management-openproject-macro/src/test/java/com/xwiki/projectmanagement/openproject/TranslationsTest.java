@@ -50,7 +50,7 @@ class TranslationsTest
      * The labels of the filter builder that a client can word its own way (see filter_builder.vm).
      */
     private static final List<String> FILTER_BUILDER_LABELS = List.of("anotherCondition", "operatorLabel",
-        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between");
+        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between", "setConditionUnsupported");
 
     /**
      * The translations without parameter are rendered without being formatted: their apostrophes aren't doubled,
