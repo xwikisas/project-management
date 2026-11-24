@@ -86,9 +86,9 @@ describe("toOption", () => {
       .toEqual({ value: "PROJ-42", label: "PROJ-42", hint: "" });
   });
 
-  it("shows the work item with the id it is listed with", () => {
+  it("shows the work item with the id it is listed with, and keeps its id so that searching the id finds it", () => {
     expect(workItemList.toOption({ identifier: { value: "12" }, key: "DP-12", summary: { value: "Upload" } }, "DP-12"))
-      .toEqual({ value: "DP-12", label: "DP-12 Upload", hint: "", key: "DP-12" });
+      .toEqual({ value: "DP-12", label: "DP-12 Upload", hint: "", key: "DP-12", id: "12" });
   });
 
   it("labels a work item listed by its id with its key", () => {
@@ -99,6 +99,96 @@ describe("toOption", () => {
   it("ignores a work item without id", () => {
     expect(workItemList.toOption({ summary: { value: "No id" } })).toBeUndefined();
     expect(workItemList.toOption(undefined)).toBeUndefined();
+  });
+});
+
+describe("findOption", () => {
+  const options = [
+    { value: "157", label: "AC-1 Mobile offline mode", key: "AC-1" },
+    { value: "AC-9", label: "AC-9 Export", key: "AC-9", id: "165" },
+    { value: "244", label: "#244 Beta" },
+  ];
+
+  it("finds the work item of a key typed in another case", () => {
+    expect(workItemList.findOption(options, "ac-9")).toBe(options[1]);
+  });
+
+  it("finds a work item picked by its id from its key, and the other way round", () => {
+    expect(workItemList.findOption(options, "AC-1")).toBe(options[0]);
+    expect(workItemList.findOption(options, " 165 ")).toBe(options[1]);
+  });
+
+  it("finds a work item by the id it is listed with", () => {
+    expect(workItemList.findOption(options, "244")).toBe(options[2]);
+  });
+
+  it("finds nothing for another or an empty text", () => {
+    expect(workItemList.findOption(options, "AC-10")).toBeUndefined();
+    expect(workItemList.findOption(options, "15")).toBeUndefined();
+    expect(workItemList.findOption(options, "")).toBeUndefined();
+    expect(workItemList.findOption(undefined, "AC-1")).toBeUndefined();
+  });
+});
+
+describe("withItemFound", () => {
+  const item = (id, summary) => ({ identifier: { value: id }, summary: { value: summary } });
+
+  it("suggests the work item with the typed id first, besides the work items whose summary contains it", () => {
+    expect(workItemList.withItemFound(item(24, "Fix"), [item(124, "Bulk task 24"), item(224, "Bulk task 224")]))
+      .toEqual([item(24, "Fix"), item(124, "Bulk task 24"), item(224, "Bulk task 224")]);
+  });
+
+  it("suggests the work item with the typed id once, when its summary contains it too", () => {
+    expect(workItemList.withItemFound(item("266", "Many 266"), [item(266, "Many 266"), item(7, "266 too")]))
+      .toEqual([item("266", "Many 266"), item(7, "266 too")]);
+  });
+
+  it("suggests the work items found by the search when no work item has the typed id", () => {
+    expect(workItemList.withItemFound(undefined, [item(7, "A")])).toEqual([item(7, "A")]);
+    expect(workItemList.withItemFound(item(24, "Fix"), undefined)).toEqual([item(24, "Fix")]);
+    expect(workItemList.withItemFound(undefined, undefined)).toEqual([]);
+  });
+});
+
+describe("resolution", () => {
+  it("resolves the picked work items only once the parameters of the requests are ready", () => {
+    const resolved = [];
+    const resolution = workItemList.resolution(id => resolved.push(id), true);
+    resolution.request("243");
+    resolution.request("244");
+    expect(resolved).toEqual([]);
+
+    resolution.ready(["243", "244", "243"]);
+    expect(resolved).toEqual(["243", "244"]);
+
+    resolution.request("245");
+    expect(resolved).toEqual(["243", "244", "245"]);
+  });
+
+  it("resolves right away when there is no parameter to wait for, and again when the parameters change", () => {
+    const resolved = [];
+    const resolution = workItemList.resolution(id => resolved.push(id), false);
+    resolution.request("243");
+    expect(resolved).toEqual(["243"]);
+
+    resolution.ready(["243"]);
+    expect(resolved).toEqual(["243", "243"]);
+  });
+});
+
+describe("clientMessages", () => {
+  it("takes the picker messages worded by the client from the messages of the widget", () => {
+    expect(workItemList.clientMessages({
+      "list.notFound": "Work package {0} not found",
+      "list.pasteLabel": "Work package ids",
+      "list.invalid": "",
+      emptyList: "No work package is picked",
+    })).toEqual({ notFound: "Work package {0} not found", pasteLabel: "Work package ids" });
+  });
+
+  it("has no message when the client words none", () => {
+    expect(workItemList.clientMessages({})).toEqual({});
+    expect(workItemList.clientMessages(undefined)).toEqual({});
   });
 });
 

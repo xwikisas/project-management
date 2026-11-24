@@ -32,6 +32,18 @@
        params.instance = instance;
      }
    });
+   /*
+    * The widget of the source parameter waits for this script, which can load after its own one, before resolving the
+    * picked work items: it's told that the connection can now be collected (see workItemSourceParameter.js).
+    */
+   let sourceParametersReady = function (widgets) {
+     widgets.filter('[data-source-parameters="pending"]').attr('data-source-parameters', 'ready')
+       .trigger('pm:sourceParametersChanged');
+   };
+   sourceParametersReady($('.macro-editor-modal .pm-work-item-source'));
+   $(document).on('xwiki:dom:updated', function (event, data) {
+     sourceParametersReady($((data && data.elements) || []).find('.pm-work-item-source'));
+   });
    // Without a connection, the values of the filters can't be suggested: the user is told to choose one.
    let updateNoConnectionHint = function () {
      $('.macro-editor-modal .op-filters-no-connection').toggleClass('hidden', getInstance() !== '');
@@ -77,6 +89,8 @@
    $(document).on('filterBuilderInitialized', init);
    $(document).on('change', '.macro-editor-modal :input[name="instance"]', function () {
      updateNoConnectionHint();
+     // The picked work items are shown as found on the chosen connection.
+     $(this).closest('.macro-editor-modal').find('.pm-work-item-source').trigger('pm:sourceParametersChanged');
      if (window.FilterBuilder) {
        window.FilterBuilder.instances.forEach(builder => loadInstanceProperties(builder.element, true));
      }
