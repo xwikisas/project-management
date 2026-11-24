@@ -192,6 +192,9 @@ class ChartEditorPageTest extends PageTest
         Element picker = result.selectFirst("select.op-preset-select");
         assertTrue(picker.hasAttr("disabled"), result.html());
         assertEquals("projectmanagement.macro.filter.preset.none.chart", picker.text());
+        // The macro editor labels the field of the parameter, which the disabled select is without holding its value.
+        assertEquals("parameter-presetId", picker.id());
+        assertFalse(picker.hasAttr("name"));
     }
 
     @Test
@@ -225,6 +228,8 @@ class ChartEditorPageTest extends PageTest
         Element picker = result.selectFirst("select.op-preset-select");
         assertFalse(picker.hasAttr("disabled"), result.html());
         assertEquals("3", picker.selectFirst("option[value=3]").val());
+        // The select keeps the name of the label of the parameter when the picker moves this label to its text input.
+        assertEquals("parameter-presetId-ts-label", picker.attr("aria-labelledby"));
     }
 
     @Test

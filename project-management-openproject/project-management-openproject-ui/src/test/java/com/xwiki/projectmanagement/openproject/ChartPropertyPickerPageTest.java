@@ -109,6 +109,21 @@ class ChartPropertyPickerPageTest extends PageTest
     }
 
     @Test
+    void chartPropertyPickerIsNamedAfterTheLabelOfTheParameter() throws Exception
+    {
+        ScriptContext scriptContext =
+            this.componentManager.<ScriptContextManager>getInstance(ScriptContextManager.class).getScriptContext();
+        scriptContext.setAttribute("displayer", Map.of("parameters", new HashMap<>(Map.of("name", "property"))),
+            ScriptContext.ENGINE_SCOPE);
+
+        Document result = render("html_displayer/openprojectproperty/edit.vm");
+
+        // The picker moves the label of the parameter (for its select) to its text input, giving it this id.
+        assertEquals("parameter-property-ts-label",
+            result.selectFirst("select.proj-manag-property-picker").attr("aria-labelledby"), result.html());
+    }
+
+    @Test
     void propertiesPickerProposesAllTheProperties() throws Exception
     {
         Document result = render("html_displayer/openprojectproperties/edit.vm");
