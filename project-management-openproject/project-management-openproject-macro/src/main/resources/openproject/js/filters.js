@@ -37,6 +37,18 @@
        params.instance = instance;
      }
    });
+   /*
+    * The widget of the source parameter waits for this script, which can load after its own one, before resolving the
+    * picked work items: it's told that the connection can now be collected (see workItemSourceParameter.js).
+    */
+   let sourceParametersReady = function (widgets) {
+     widgets.filter('[data-source-parameters="pending"]').attr('data-source-parameters', 'ready')
+       .trigger('pm:sourceParametersChanged');
+   };
+   sourceParametersReady($('.macro-editor-modal .pm-work-item-source'));
+   $(document).on('xwiki:dom:updated', function (event, data) {
+     sourceParametersReady($((data && data.elements) || []).find('.pm-work-item-source'));
+   });
    // Without a connection, the values of the filters can't be suggested: the user is told to choose one.
    let updateNoConnectionHint = function () {
      $('.macro-editor-modal .op-filters-no-connection').toggleClass('hidden', getInstance() !== '');
@@ -81,34 +93,59 @@
     * the message of the macros is displayed above the filters. Its link to connect the OpenProject account opens in a
     * new tab, so that the edited macro isn't lost, and comes back to the edited page.
     */
+   let getNotAuthorizedMessage = notAuthorizedMessage.createMessageLoader(function (instance) {
+     let pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
+       XWiki.currentDocument.documentReference);
+     let url = new XWiki.Document(pluginReference).getURL('get',
+       $.param({outputSyntax: 'plain', connection: instance}));
+     return Promise.resolve($.getJSON(url)).then(response => response && response.notAuthorizedMessage);
+   });
+   let createNotAuthorizedMessage = function (message, className) {
+     let container = $('<div></div>').addClass(className).html(message);
+     container.find('a[href]').each(function () {
+       $(this).attr({
+         href: notAuthorizedMessage.getLinkURL(this.href, window.location.href,
+           XWiki.currentDocument.getURL('view')),
+         target: '_blank',
+         rel: 'noopener'
+       });
+     });
+     return container;
+   };
    let notAuthorizedNotifier = notAuthorizedMessage.createNotifier({
      getConnection: getInstance,
-     getMessage: notAuthorizedMessage.createMessageLoader(function (instance) {
-       let pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
-         XWiki.currentDocument.documentReference);
-       let url = new XWiki.Document(pluginReference).getURL('get',
-         $.param({outputSyntax: 'plain', connection: instance}));
-       return Promise.resolve($.getJSON(url)).then(response => response && response.notAuthorizedMessage);
-     }),
+     getMessage: getNotAuthorizedMessage,
      show: function (message, builderElement) {
        if ($('.macro-editor-modal .op-filters-not-authorized').length) {
          return;
        }
-       let container = $('<div></div>').addClass('op-filters-not-authorized').html(message);
-       container.find('a[href]').each(function () {
-         $(this).attr({
-           href: notAuthorizedMessage.getLinkURL(this.href, window.location.href,
-             XWiki.currentDocument.getURL('view')),
-           target: '_blank',
-           rel: 'noopener'
-         });
-       });
-       builderElement.before(container);
+       builderElement.before(createNotAuthorizedMessage(message, 'op-filters-not-authorized'));
      },
      remove: function () {
        $('.macro-editor-modal .op-filters-not-authorized').remove();
      }
    });
+   /*
+    * The same message is displayed above the picker of the specific work packages when it can't search or look up
+    * the work packages (see workItemPicker.js), which then can't be found.
+    */
+   let pickerNotAuthorizedNotifier = notAuthorizedMessage.createNotifier({
+     getConnection: getInstance,
+     getMessage: getNotAuthorizedMessage,
+     show: function (message, picker) {
+       if (!picker.children('.op-picker-not-authorized').length) {
+         picker.prepend(createNotAuthorizedMessage(message, 'op-picker-not-authorized'));
+       }
+     },
+     remove: function () {
+       $('.macro-editor-modal .op-picker-not-authorized').remove();
+     }
+   });
+   $(document).on('suggestionsFailed', '.macro-editor-modal .pm-workitem-picker', function () {
+     pickerNotAuthorizedNotifier.suggestionsFailed($(this));
+   });
+   $(document).on('suggestionsLoaded', '.macro-editor-modal .pm-workitem-picker',
+     pickerNotAuthorizedNotifier.suggestionsLoaded);
    let init = function (event, builderElement) {
      let element = builderElement || (window.FilterBuilder && window.FilterBuilder.instances.size > 0
        && window.FilterBuilder.instances.values().next().value.element);
@@ -142,7 +179,10 @@
    $(document).on('filterBuilderInitialized', init);
    $(document).on('change', '.macro-editor-modal :input[name="instance"]', function () {
      updateNoConnectionHint();
+     // The picked work items are shown as found on the chosen connection.
+     $(this).closest('.macro-editor-modal').find('.pm-work-item-source').trigger('pm:sourceParametersChanged');
      notAuthorizedNotifier.connectionChanged();
+     pickerNotAuthorizedNotifier.connectionChanged();
      if (window.FilterBuilder) {
        window.FilterBuilder.instances.forEach(builder => loadInstanceProperties(builder.element, true));
      }

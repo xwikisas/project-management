@@ -664,7 +664,8 @@ class OpenProjectClientTest
     {
         when(this.executionContext.get(IDENTIFIER)).thenReturn(" XWIKI-123 , xwiki-456,1911,XWIKI-123,XWIKI-404 ");
         when(this.openProjectApiClient.getWorkPackage("XWIKI-123")).thenReturn(createWorkPackage(5));
-        when(this.openProjectApiClient.getWorkPackage("xwiki-456")).thenReturn(createWorkPackage(2));
+        // OpenProject matches the keys case-sensitively, and they're in upper case.
+        when(this.openProjectApiClient.getWorkPackage("XWIKI-456")).thenReturn(createWorkPackage(2));
         // OpenProject returns the work packages sorted by id.
         doReturn(workPackages(2, 5, 1911)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(3),
             argThat(idFilterOf5And2And1911()), eq(""));
@@ -1007,6 +1008,45 @@ class OpenProjectClientTest
     }
 
     @Test
+    void getWorkItemWhoseIdIsRejectedByOpenProject() throws ProjectManagementException
+    {
+        // OpenProject rejects the id filter of a work package that doesn't exist.
+        doThrow(new WorkItemRetrievalException("Id filter has invalid values.", 400)).when(this.openProjectApiClient)
+            .getWorkPackages(eq(1), eq(1),
+                argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"99999\"]}}]")), eq(NO_SORTING));
+        when(this.openProjectApiClient.getWorkPackage("99999")).thenReturn(null);
+
+        WorkItemNotFoundException exception =
+            assertThrows(WorkItemNotFoundException.class, () -> this.openProjectClient.getWorkItem("99999"));
+
+        assertEquals("Work Item with ID [99999] was not found.", exception.getMessage());
+    }
+
+    @Test
+    void getExistingWorkItemRejectedByOpenProject() throws ProjectManagementException
+    {
+        // The request is rejected for another reason than the id.
+        WorkItemRetrievalException rejection = new WorkItemRetrievalException("Invalid filter", 400);
+        doThrow(rejection).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
+        when(this.openProjectApiClient.getWorkPackage("42")).thenReturn(createWorkPackage(42));
+
+        assertSame(rejection,
+            assertThrows(WorkItemRetrievalException.class, () -> this.openProjectClient.getWorkItem("42")));
+    }
+
+    @Test
+    void getWorkItemWhenOpenProjectFails() throws ProjectManagementException
+    {
+        doThrow(new ProjectManagementException("Timeout")).when(this.openProjectApiClient).getWorkPackages(eq(1),
+            eq(1), argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
+
+        // The work item isn't said to be missing: it couldn't be retrieved.
+        assertThrows(WorkItemRetrievalException.class, () -> this.openProjectClient.getWorkItem("42"));
+        verify(this.openProjectApiClient, never()).getWorkPackage(anyString());
+    }
+
+    @Test
     void getWorkItemByKey() throws ProjectManagementException
     {
         when(this.openProjectApiClient.getWorkPackage("PROJ-7")).thenReturn(createWorkPackage(42));
@@ -1014,6 +1054,17 @@ class OpenProjectClientTest
             argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
 
         assertEquals("42", this.openProjectClient.getWorkItem("PROJ-7").getIdentifier().getValue());
+    }
+
+    @Test
+    void getWorkItemByKeyWrittenInAnotherCase() throws ProjectManagementException
+    {
+        // OpenProject matches the keys case-sensitively, and they're in upper case.
+        when(this.openProjectApiClient.getWorkPackage("PROJ-7")).thenReturn(createWorkPackage(42));
+        doReturn(workPackages(42)).when(this.openProjectApiClient).getWorkPackages(eq(1), eq(1),
+            argThat(jsonFilters("[{\"id\":{\"operator\":\"=\",\"values\":[\"42\"]}}]")), eq(NO_SORTING));
+
+        assertEquals("42", this.openProjectClient.getWorkItem("proj-7").getIdentifier().getValue());
     }
 
     @Test

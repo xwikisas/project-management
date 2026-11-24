@@ -94,20 +94,33 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
    * Mounts the work item picker of the specific work items. The client specific parameters of its REST requests
    * (e.g. the connection of OpenProject) are collected, on each request, from the handlers of the
    * pm:collectSourceParameters event triggered on the widget.
+   *
+   * The script of the client handling this event can load after this one: when the widget is rendered with
+   * data-source-parameters="pending", the picked work items are only resolved once the client sets it to "ready" and
+   * triggers pm:sourceParametersChanged on the widget, which it also triggers when its parameters change (e.g. the
+   * user chooses another connection).
    */
-  const mountPicker = function (widget, initialIds, onChange) {
+  const mountPicker = function (widget, initialIds, onChange, messages) {
     const urls = function () {
       const parameters = {};
       widget.trigger('pm:collectSourceParameters', [parameters]);
       return workItemList.restUrls(widget.attr('data-rest-url'), widget.attr('data-wiki'), widget.attr('data-client'),
         parameters);
     };
-    return workItemPicker.mount(widget.find('.pm-source-list-picker'), {
+    const picker = workItemPicker.mount(widget.find('.pm-source-list-picker'), {
       searchUrl: text => urls().searchUrl(text),
       itemUrl: id => urls().itemUrl(id),
       initialIds,
-      onChange
+      onChange,
+      waitForParameters: widget.attr('data-source-parameters') === 'pending',
+      messages
     });
+    widget.on('pm:sourceParametersChanged', function (event) {
+      if (event.target === this) {
+        picker.refresh();
+      }
+    });
+    return picker;
   };
 
   // The picker of the last bound widget: its suggestions are displayed in the page body, outside of the macro editor.
@@ -247,7 +260,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     const picker = mountPicker(widget, state.values.list, function (ids) {
       state.values.list = ids;
       write();
-    });
+    }, workItemList.clientMessages(l10n));
     mountedPicker = picker;
     // Only the first work item is shown by the displayers of a single work item.
     const displayerFields = editor.find(':input[name="displayer"], :input[name="workItemsDisplayer"]');

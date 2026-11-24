@@ -25,6 +25,8 @@
 ## Parameters (set by the template of the client including this one):
 ## $clientId the client, e.g. openproject; the labels are looked up under "${clientId}.macro.source." first
 ## $linkWay whether the work items can be selected by a link to the tool (the url source)
+## $sourceParameters whether the client gives parameters to the REST requests of the widget (e.g. the connection), with
+##   a script that tells when they're ready (see the pm:sourceParametersChanged event of workItemSourceParameter.js)
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/workItemSourceParameter.js', {'minify': false}))
 ## The filter builder of the matching filters is handled by filterParameter.js.
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/filterParameter.js', {'minify': true}))
@@ -57,13 +59,21 @@
   #pmSourceKey($key)
   #set ($discard = $messages.put($key, $services.localization.render($pmSourceKey)))
 #end
+## The messages of the work item picker that the client words in its own terms, if it does (see
+## workItemList.clientMessages); the picker has its own generic messages otherwise.
+#foreach ($key in ['list.notFound', 'list.notRetrieved', 'list.invalid', 'list.pasteLabel'])
+  #set ($pmClientKey = "${clientId}.macro.source.$key")
+  #if ($services.localization.get($pmClientKey))
+    #set ($discard = $messages.put($key, $services.localization.render($pmClientKey, ['{0}'])))
+  #end
+#end
 #set ($deps = {
   'daterangepicker': $services.webjars.url('bootstrap-daterangepicker', 'js/bootstrap-daterangepicker.js')
 })
 <div class="pm-work-item-source" data-client="$escapetool.xml($clientId)"
   data-rest-url="$escapetool.xml("$request.contextPath/rest")" data-wiki="$escapetool.xml($xcontext.database)"
   data-l10n="$escapetool.xml($jsontool.serialize($messages))"
-  data-deps="$escapetool.xml($jsontool.serialize($deps))">
+  data-deps="$escapetool.xml($jsontool.serialize($deps))"#if ($sourceParameters) data-source-parameters="pending"#end>
   <input type="hidden" value="$!escapetool.xml($displayer.value)"
     #foreach ($parameter in $displayer.parameters.entrySet())
       $escapetool.xml($parameter.key)="$!escapetool.xml($parameter.value)"
