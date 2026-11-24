@@ -30,14 +30,6 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     notification.element.down('.xnotification').textContent = text;
     return notification;
   };
-  // The picker hides the field it enhances. Tom Select (XWiki 18+) leaves it in the accessibility tree, next to the
-  // text input of the picker that has the same name: the field is hidden from the assistive technologies too, so that
-  // the option is listed once. It can't take the focus there: XWiki moves its focus to the picker.
-  let hideEnhancedField = function (field) {
-    if (field[0] && field[0].selectize) {
-      field.attr('aria-hidden', 'true');
-    }
-  };
   const SEPARATOR = ",";
   // The fields of the options get new ids each time they're displayed: the pickers of the previous ones can still be in
   // the page (their lists of values are appended to the body).
@@ -75,7 +67,7 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
         paramTemplates.forEach(template => {
           var clone = $(htmlTemplate).clone();
           // The name of the option labels its field. The picker moves this label to its own text input, the field
-          // keeping its name through aria-labelledby.
+          // keeping its name through aria-labelledby (Tom Select, on XWiki 18+, hides it but the screen readers see it).
           let fieldId = 'proj-manag-chart-type-param-' + (++fieldCount);
           let labelId = fieldId + '-label';
           clone.find('.proj-manag-chart-type-param-name').text(template.label || template.id)
@@ -101,14 +93,12 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
           let selectizeOptions = template.values ? template.values.map(val => {
             return { value: val, label: valueLabels[val] || val };
           }) : [];
-          let field = clone.find('input');
-          field.xwikiSelectize({
+          clone.find('input').xwikiSelectize({
             delimiter: SEPARATOR,
             create: template.values ? false : true,
             maxItems: template.multiple ? -1 : 1,
             options: selectizeOptions
           });
-          hideEnhancedField(field);
         });
       })
       .fail(function () {

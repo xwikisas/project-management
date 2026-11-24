@@ -78,11 +78,6 @@ require(['jquery'], function ($) {
       syncWithValueInput($(this));
     });
     element.xwikiSelectize(options);
-    // The picker hides the select it enhances. Tom Select (XWiki 18+) leaves it in the accessibility tree, with its
-    // options (and an option without text when nothing is selected), next to the text input of the picker that has the
-    // same name: the select is hidden from the assistive technologies too, so that the parameter is listed once. It
-    // can't take the focus there: XWiki moves its focus to the picker.
-    element.filter((index, select) => !!select.selectize).attr('aria-hidden', 'true');
     //delete $.fn.search;
     //delete $.fn.substring;
   };

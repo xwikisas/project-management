@@ -66,10 +66,13 @@ describe("the chart options", () => {
     expect(document.querySelector("input[name=metric]").value).toBe("cumulative");
   });
 
-  it("are listed once by the assistive technologies, as Group By", () => {
-    displayChartOptions({ line: LINE_OPTIONS }, "line");
+  it("are listed once by the assistive technologies, as Group By", async () => {
+    displayChartOptions({ line: LINE_OPTIONS, bar: LINE_OPTIONS }, "bar");
+    selectChartType("line");
     // Tom Select adds an option without text to the select it enhances when nothing is selected.
     document.querySelector("select[name=property]").selectize.clear();
+    // The fields enhanced by the pickers are observed asynchronously.
+    await new Promise((resolve) => setTimeout(resolve));
 
     // The text inputs of the pickers, not the fields that they hide (the chart type has no label here).
     expect(getAccessibleFields()).toEqual({ fields: ["", "Group By", "Measure", "Date Grouping"],
