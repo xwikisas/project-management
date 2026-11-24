@@ -285,7 +285,7 @@ class SuggestTest
                 (EntitiesCall) OpenProjectApiClient::getStatuses, (EntitiesCall) OpenProjectApiClient::getStatuses),
             Arguments.of("projects", new Project(), "project",
                 (EntitiesCall) c -> c.getProjects(anyInt(), anyInt(), anyString()),
-                (EntitiesCall) c -> c.getProjects(OFFSET, PAGE_SIZE, nameFilter)),
+                (EntitiesCall) c -> c.getProjects(OFFSET, PAGE_SIZE, projectFilter(SEARCH_STRING.toLowerCase()))),
             Arguments.of("types", new Type(), "type",
                 (EntitiesCall) OpenProjectApiClient::getTypes, (EntitiesCall) OpenProjectApiClient::getTypes),
             Arguments.of("users", new User(), "user",
@@ -548,7 +548,7 @@ class SuggestTest
     {
         Project demo = createProject(3, "demo-project", "Demo");
         when(this.openProjectApiClient.getProject("demo-project")).thenReturn(demo);
-        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("demo-project")))
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, projectFilter("demo-project")))
             .thenReturn(new PaginatedResult<>(List.of(demo), 0, 1, 1));
 
         // The picker retrieves the label of its value by searching the value.
@@ -561,13 +561,26 @@ class SuggestTest
             response.getEntity());
     }
 
+    @Test
+    void getSuggestionsForProjectsSearchesTheIdentifiers() throws ProjectManagementException
+    {
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, projectFilter("demo-")))
+            .thenReturn(new PaginatedResult<>(List.of(createProject(3, "demo-project", "Demo")), 0, 1, 1));
+
+        // The identifiers written in the queries are found as well as the names.
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "Demo-", PAGE_SIZE, null, null);
+
+        assertEquals(List.of(Map.of("value", "3", "label", "Demo", "url", "location3", "queryValue", "demo-project")),
+            response.getEntity());
+    }
+
     @ParameterizedTest
     @MethodSource("selectedProjects")
     void getSuggestionsForProjectsWhenSearchingWithASelectedProject(String selectedItem)
         throws ProjectManagementException
     {
         when(this.openProjectApiClient.getProject(selectedItem)).thenReturn(createProject(3, "demo-project", "Demo"));
-        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("s")))
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, projectFilter("s")))
             .thenReturn(new PaginatedResult<>(
                 List.of(createProject(4, "scrum", "Scrum"), createProject(3, "demo-project", "Demo")), 0, 2, 2));
 
@@ -592,7 +605,7 @@ class SuggestTest
     {
         when(this.openProjectApiClient.getProject("unknown"))
             .thenThrow(new WorkItemRetrievalException("Not found", 404));
-        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter("unknown")))
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, projectFilter("unknown")))
             .thenReturn(new PaginatedResult<>(List.of(), 0, 0, 0));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", "unknown", PAGE_SIZE, "unknown", null);
@@ -618,7 +631,7 @@ class SuggestTest
     @Test
     void getSuggestionsForProjectsWhenTheDashboardProjectIsSelected() throws ProjectManagementException
     {
-        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, nameFilter(EMPTY_STRING)))
+        when(this.openProjectApiClient.getProjects(1, PAGE_SIZE, projectFilter(EMPTY_STRING)))
             .thenReturn(new PaginatedResult<>(List.of(createProject(4, "scrum", "Scrum")), 0, 1, 1));
 
         Response response = suggest.getSuggestions(WIKI, INSTANCE, "projects", EMPTY_STRING, PAGE_SIZE,
@@ -682,6 +695,11 @@ class SuggestTest
     private static Stream<String> selectedItemsThatAreNotIds()
     {
         return Stream.of("admin", "1,2", "99999999999", "4294967296");
+    }
+
+    private static String projectFilter(String search)
+    {
+        return new FilterBuilder().addFilter("name_and_identifier", FilterBuilder.Operator.CONTAINS, search).build();
     }
 
     private static String nameFilter(String search)

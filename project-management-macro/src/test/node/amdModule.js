@@ -18,7 +18,8 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 // Loads the scripts served to the browsers that are AMD modules without dependency, so that they can be tested outside
-// of a browser.
+// of a browser. A script can also define named modules (the module whose factory is a function is returned) and require
+// them, which does nothing here.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -30,9 +31,13 @@ const SOURCES = resolve(import.meta.dirname, "../../main/resources/js/projectman
  */
 export function loadAmdModule(path) {
   let module;
-  const define = (dependencies, factory) => {
-    module = factory();
+  const define = (...args) => {
+    const factory = args[args.length - 1];
+    if (typeof factory === "function") {
+      module = factory();
+    }
   };
-  new Function("define", readFileSync(resolve(SOURCES, path), "utf-8"))(define);
+  const require = () => {};
+  new Function("define", "require", readFileSync(resolve(SOURCES, path), "utf-8"))(define, require);
   return module;
 }

@@ -212,10 +212,12 @@ class OpenProjectLinkQueryTest
         assertEquals(0, countFilters(PROJECT_LIST + "/5?query_props=" + encode("{\"f\":[{\"n\":\"status\"}]}")));
     }
 
-    @Test
-    void countFiltersOfAnInvalidLink()
+    @ParameterizedTest
+    @ValueSource(strings = { "?query_props=%5B%5D", "?query_id=abc", "?query_id=5&page=2", "?per_page=20" })
+    void countFiltersOfAnInvalidLink(String query)
     {
-        assertThrows(IllegalArgumentException.class, () -> countFilters(PROJECT_LIST + "?query_props=%5B%5D"));
+        // The client can't read the parameters of a work package list without query_props.
+        assertThrows(IllegalArgumentException.class, () -> countFilters(PROJECT_LIST + query));
     }
 
     private static int countFilters(String link)

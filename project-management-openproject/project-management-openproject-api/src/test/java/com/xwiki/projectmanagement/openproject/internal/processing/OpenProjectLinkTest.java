@@ -221,8 +221,26 @@ class OpenProjectLinkTest
     {
         assertEquals("demo", OpenProjectLink.parse(PROJECT_LINK).getProject());
         assertNull(OpenProjectLink.parse("https://op.example.com/work_packages").getProject());
-        // The overview of a project doesn't list its work packages.
-        assertNull(OpenProjectLink.parse("https://op.example.com/projects/demo").getProject());
+        assertNull(OpenProjectLink.parse("https://op.example.com/projects").getProject());
+    }
+
+    /**
+     * The address of a project, as in the address bar of the browser on its overview, selects its work packages.
+     */
+    @ParameterizedTest
+    @ValueSource(strings = { "https://op.example.com/projects/demo", "https://op.example.com/projects/demo/",
+        "https://op.example.com/projects/demo/work_packages/", "https://op.example.com/projects/demo?jump=overview",
+        "https://op.example.com/projects/demo#top" })
+    void getProjectOfTheAddressOfAProject(String link)
+    {
+        assertEquals("demo", OpenProjectLink.parse(link).getProject());
+    }
+
+    @Test
+    void toWorkPackageListOfTheAddressOfAProject()
+    {
+        assertEquals("http://example.org/openproject/projects/9/work_packages",
+            OpenProjectLink.parse("http://example.org/openproject/projects/demo").toWorkPackageList("9", null));
     }
 
     @ParameterizedTest

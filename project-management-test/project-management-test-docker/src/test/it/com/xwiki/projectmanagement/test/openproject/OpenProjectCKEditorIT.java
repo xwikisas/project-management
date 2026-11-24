@@ -225,6 +225,19 @@ public class OpenProjectCKEditorIT extends AbstractOpenProjectIT
         String pagePath = new URL(setup.getURL(testReference)).getPath().replaceFirst("WebHome$", "");
         assertThat(decodedLink, containsString("redirectUrl=" + pagePath));
         new WYSIWYGEditPage().clickCancel();
+
+        // The values of the filters of the OpenProject macro can't be suggested either: the macro editor tells to
+        // connect the OpenProject account, as the macros do, instead of suggesting nothing.
+        OpenProjectMacroEditModal modal = new OpenProjectMacroEditModal(setup, testReference);
+        modal.getFilterBuilder().addFilter("project").searchSuggestValues("dem");
+        assertEquals("You need to be authenticated to OpenProject in order to view the work packages. Click here to "
+            + "authenticate.", modal.getFiltersNotAuthorizedMessage());
+        String macroEditorLink = URLDecoder.decode(modal.getFiltersNotAuthorizedLink(), StandardCharsets.UTF_8);
+        assertThat(macroEditorLink, containsString("/OpenProject/Code/RenewOAuthConnection"));
+        assertThat(macroEditorLink, containsString("connectionName=" + CONNECTION_ID));
+        assertThat(macroEditorLink, containsString("redirectUrl=" + pagePath));
+        modal.cancel();
+        modal.getEditPage().clickCancel();
     }
 
     @Test
