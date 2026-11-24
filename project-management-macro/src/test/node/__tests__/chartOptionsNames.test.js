@@ -42,10 +42,20 @@ function getName(element) {
 function expectNamedOptions() {
   for (const [name, label] of [["metric", "Measure"], ["period", "Date Grouping"]]) {
     const field = document.querySelector(`.proj-manag-chart-type-param input[name=${name}]`);
-    // The field, hidden by the picker but seen by the screen readers, and the text input of the picker.
+    // The field, hidden by the picker, and the text input of the picker.
     expect(getName(field)).toBe(label);
     expect(getName(field.selectize.control_input)).toBe(label);
   }
+}
+
+// The fields of the page that the assistive technologies list, by name, and the options without name that they list.
+function getAccessibleFields() {
+  const accessible = (element) => !element.closest("[aria-hidden=true]");
+  const fields = [...document.querySelectorAll("input:not([type=hidden]), select, textarea:not(.hidden)")]
+    .filter(accessible).map(getName);
+  const unnamedOptions = [...document.querySelectorAll("option")]
+    .filter((option) => accessible(option) && option.textContent.trim() === "");
+  return { fields, unnamedOptions };
 }
 
 describe("the chart options", () => {
@@ -54,6 +64,16 @@ describe("the chart options", () => {
 
     expectNamedOptions();
     expect(document.querySelector("input[name=metric]").value).toBe("cumulative");
+  });
+
+  it("are listed once by the assistive technologies, as Group By", () => {
+    displayChartOptions({ line: LINE_OPTIONS }, "line");
+    // Tom Select adds an option without text to the select it enhances when nothing is selected.
+    document.querySelector("select[name=property]").selectize.clear();
+
+    // The text inputs of the pickers, not the fields that they hide (the chart type has no label here).
+    expect(getAccessibleFields()).toEqual({ fields: ["", "Group By", "Measure", "Date Grouping"],
+      unnamedOptions: [] });
   });
 
   it("keep their names when the chart type changes", () => {
