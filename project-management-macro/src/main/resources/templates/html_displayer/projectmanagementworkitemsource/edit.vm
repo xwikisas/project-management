@@ -104,10 +104,15 @@
       #filterBuilder({"client": "$!clientId", "l10n": {"summaryAll": $services.localization.render($pmSourceKey)}})
     </div>
     <div class="pm-source-query-text pm-hidden">
-      <label class="pm-source-field-label">#pmSourceLabel('query.textLabel')
-        <textarea class="form-control pm-source-query-input" rows="3"></textarea>
-      </label>
-      <p class="xHint">#pmSourceLabel('query.textHint')</p>
+      #set ($queryTextId = "pm-source-query-$mathtool.random(1000, 1000000)")
+      ## The hint is between the label and the field, as the macro editor displays the hints of the parameters, with
+      ## the same style.
+      <label class="pm-source-field-label" for="$queryTextId">#pmSourceLabel('query.textLabel')</label>
+      <div class="macro-parameter-description pm-source-field-hint" id="${queryTextId}-hint">
+        #pmSourceLabel('query.textHint')
+      </div>
+      <textarea id="$queryTextId" class="form-control pm-source-query-input" rows="3"
+        aria-describedby="${queryTextId}-hint"></textarea>
     </div>
     <button type="button" class="btn btn-link pm-source-toggle-text">#pmSourceLabel('editAsText')</button>
     ## The preset parameter is moved here.
@@ -121,10 +126,13 @@
   #if ($linkWay)
     ## A link to the tool, described by the client (see the pm:urlChanged event of workItemSourceParameter.js).
     <div class="pm-source-editor pm-hidden" data-way="url">
-      <label class="pm-source-field-label">#pmSourceLabel('url.inputLabel')
-        <input type="text" class="form-control pm-source-url-input" />
-      </label>
-      <p class="xHint">#pmSourceLabel('url.inputHint')</p>
+      #set ($urlInputId = "pm-source-url-$mathtool.random(1000, 1000000)")
+      <label class="pm-source-field-label" for="$urlInputId">#pmSourceLabel('url.inputLabel')</label>
+      <div class="macro-parameter-description pm-source-field-hint" id="${urlInputId}-hint">
+        #pmSourceLabel('url.inputHint')
+      </div>
+      <input type="text" id="$urlInputId" class="form-control pm-source-url-input"
+        aria-describedby="${urlInputId}-hint" />
       <div class="pm-source-url-description" aria-live="polite"></div>
     </div>
   #end

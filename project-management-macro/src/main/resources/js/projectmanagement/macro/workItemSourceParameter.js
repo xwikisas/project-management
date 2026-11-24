@@ -62,6 +62,8 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       style.textContent = '.pm-work-item-source .pm-source-ways { margin-bottom: 10px; }'
         + ' .pm-work-item-source .pm-source-way-select { width: auto; max-width: 100%; }'
         + ' .pm-work-item-source .pm-source-field-label { display: block; font-weight: normal; }'
+        // The hint sticks to the label above it and keeps the label's space before the field, as in the macro editor.
+        + ' .pm-work-item-source .pm-source-field-label + .pm-source-field-hint { margin: -5px 0 5px; }'
         + ' .pm-work-item-source .pm-source-toggle-text { padding-left: 0; }'
         + ' .modal-footer .' + DROPPED_CLASS + ' { text-align: left; }';
       document.head.appendChild(style);
