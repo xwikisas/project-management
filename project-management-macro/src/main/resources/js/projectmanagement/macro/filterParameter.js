@@ -28,7 +28,9 @@
  *   parameter itself. The query is parsed by the REST API, so that a single parser reads the queries. The conditions
  *   of the deprecated filters parameter that the builder can't show (e.g. an operator that the property doesn't have)
  *   are dropped, and reported, as text, with pm:unsupportedFilters(conditions), the whole list each time. The
- *   handlers of pm:collectQuery(holder) get the query of the filters shown by the builder, in holder.query.
+ *   handlers of pm:collectQuery(holder) get the query of the filters shown by the builder, in holder.query. The
+ *   widget gives the name of the filter preset chosen in the macro, if any, with pm:setPreset(name), kept as the
+ *   pmPendingPreset data of the container: the summary of the builder names it, its filters applying too.
  * - "series" (the series of a chart) and no role (e.g. the preset page): the filters are written as Live Data JSON in
  *   the .proj-manag-filter field, one configuration per builder when there are several. The series read from the
  *   macro are kept as they are until the user edits them, the conditions that their builders can't show being dropped
@@ -311,9 +313,17 @@ setTimeout(function () {
           let bld = getQueryBuilder(this);
           if (bld) {
             applyInput(bld, $(this).data('pmPendingInput'));
+            bld.setPreset($(this).data('pmPendingPreset') || '');
           }
         });
       };
+      $(document).on('pm:setPreset' + EVENT_NAMESPACE, QUERY_CONTAINER, function (e, name) {
+        if (e.target === this) {
+          $(this).data('pmPendingPreset', name);
+          let bld = getQueryBuilder(this);
+          bld && bld.setPreset(name);
+        }
+      });
       $(document).on('pm:setQuery' + EVENT_NAMESPACE, QUERY_CONTAINER, function (e, query) {
         if (e.target === this) {
           let input = {type: 'query', value: query};

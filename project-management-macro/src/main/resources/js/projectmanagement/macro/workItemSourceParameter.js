@@ -214,6 +214,28 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       }
     };
 
+    // The name of the chosen filter preset, as its field displays it (with Selectize, Tom Select or as a plain select),
+    // or an empty string when none is chosen.
+    const getPresetName = function () {
+      const value = getValue(fields.presetId);
+      if (!value) {
+        return '';
+      }
+      const selectize = fields.presetId[0].selectize;
+      const option = selectize && selectize.options[value];
+      const name = (option && option[selectize.settings.labelField])
+        || fields.presetId.find('option').filter((index, element) => element.value === value).first().text();
+      return String(name || value).replace(/\s+/g, ' ').trim();
+    };
+
+    // Tells the filter builder the chosen preset, whose filters apply with its own: its summary names it.
+    // filterParameter.js keeps it until the builder is ready.
+    const showPreset = function () {
+      const name = getPresetName();
+      queryContainer.data('pmPendingPreset', name);
+      queryContainer.trigger('pm:setPreset', [name]);
+    };
+
     const write = function () {
       touched = true;
       const values = model.toFields(state);
@@ -225,6 +247,8 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       }
       setValue(fields.identifier, values.identifier);
       renderDropped();
+      // The preset field is cleared when the way doesn't use it.
+      showPreset();
     };
 
     const render = function () {
@@ -352,6 +376,8 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       if (state.way === model.QUERY && presetId !== state.values.presetId) {
         state.values.presetId = presetId;
         write();
+      } else {
+        showPreset();
       }
     });
     // The select is described by the hint of the parameter, which the macro editor displays above it.
@@ -364,6 +390,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     showValues();
     render();
     showInBuilder();
+    showPreset();
   };
 
   // The macro editor is shared by the macros: the warning of the previous macro, if any, is removed.
