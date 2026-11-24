@@ -58,6 +58,8 @@ import com.xwiki.projectmanagement.openproject.config.OpenProjectAccessMode;
 import com.xwiki.projectmanagement.openproject.config.OpenProjectConnection;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -205,6 +207,18 @@ class OpenProjectDocumentConfigurationSourceTest
         assertEquals("connection2", connections.get(0).getConnectionName());
         assertEquals("Ignoring the OpenProject connection stored on [wiki:OpenProject.Doc1] because its author "
             + "[wiki:XWiki.User] doesn't have administration right on the wiki.", this.logCapture.getMessage(0));
+    }
+
+    @Test
+    void getCacheIdIsUniqueToTheInstance()
+    {
+        // One instance exists for each wiki where the extension is installed, while the cache and listener names are
+        // global.
+        String cacheId = this.openProjectDocumentConfigurationSource.getCacheId();
+
+        assertTrue(cacheId.startsWith("configuration.document.openproject."));
+        assertEquals(cacheId, this.openProjectDocumentConfigurationSource.getCacheId());
+        assertNotEquals(cacheId, new OpenProjectDocumentConfigurationSource().getCacheId());
     }
 
     private void mockAuthor(XWikiDocument document, DocumentReference author)

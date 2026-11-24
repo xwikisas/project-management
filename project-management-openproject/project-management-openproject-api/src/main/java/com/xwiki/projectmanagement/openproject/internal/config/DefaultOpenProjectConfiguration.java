@@ -59,9 +59,14 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     private static final LocalDocumentReference CONFIGURATION_CLASS =
         new LocalDocumentReference(CODE_SPACE, "OpenProjectConfigurationClass");
 
+    /**
+     * Looked up on each call rather than injected once: when the configuration source component is disposed and
+     * registered again (e.g. when an extension is installed or upgraded on the wiki), the disposed instance can't be
+     * used anymore since its cache is stopped.
+     */
     @Inject
     @Named("openproject")
-    private ConfigurationSource openProjectConfiguration;
+    private Provider<ConfigurationSource> openProjectConfigurationProvider;
 
     @Inject
     private Provider<XWikiContext> contextProvider;
@@ -72,7 +77,7 @@ public class DefaultOpenProjectConfiguration implements OpenProjectConfiguration
     @Override
     public List<OpenProjectConnection> getOpenProjectConnections()
     {
-        return openProjectConfiguration.getProperty("openprojectConnections");
+        return this.openProjectConfigurationProvider.get().getProperty("openprojectConnections");
     }
 
     @Override

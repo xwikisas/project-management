@@ -32,8 +32,10 @@ import org.xwiki.model.reference.EntityReference;
 import org.xwiki.test.LogLevel;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
 
 import com.xpn.xwiki.XWiki;
 import com.xpn.xwiki.XWikiContext;
@@ -67,6 +69,9 @@ class DefaultOpenProjectConfigurationTest
 
     @MockComponent
     private Provider<XWikiContext> contextProvider;
+
+    @InjectComponentManager
+    private MockitoComponentManager componentManager;
 
     @RegisterExtension
     private LogCaptureExtension logCapture = new LogCaptureExtension(LogLevel.WARN);
@@ -176,5 +181,20 @@ class DefaultOpenProjectConfigurationTest
         OpenProjectConnection result = configuration.getConnection(connectionName);
 
         assertNull(result);
+    }
+
+    @Test
+    void getConnectionAfterTheConfigurationSourceIsRegisteredAgain() throws Exception
+    {
+        assertSame(opConnection, this.configuration.getConnection(opConnection.getConnectionName()));
+
+        // The configuration source is disposed and registered again, e.g. when an extension is installed on the wiki.
+        ConfigurationSource newConfigurationSource = mock(ConfigurationSource.class);
+        OpenProjectConnection newConnection = new OpenProjectConnection(opConnection.getConnectionName(), "newURL",
+            "newClientId", "newClientSecret", "newInstanceId");
+        when(newConfigurationSource.getProperty("openprojectConnections")).thenReturn(List.of(newConnection));
+        this.componentManager.registerComponent(ConfigurationSource.class, "openproject", newConfigurationSource);
+
+        assertSame(newConnection, this.configuration.getConnection(opConnection.getConnectionName()));
     }
 }

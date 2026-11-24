@@ -22,6 +22,7 @@ package com.xwiki.projectmanagement.openproject.internal.config;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -82,6 +83,14 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
             OPEN_PROJECT_CONNECTION_CLASS
         );
 
+    /**
+     * The cache id is also the name of the event listener cleaning the cache, and both are global to the XWiki
+     * instance, while an instance of this component exists for each namespace where the extension is installed: a
+     * suffix unique to the instance prevents the instances from sharing (and disposing) each other's cache and
+     * listener.
+     */
+    private final String cacheId = "configuration.document.openproject." + UUID.randomUUID();
+
     @Inject
     private QueryManager queryManager;
 
@@ -113,7 +122,7 @@ public class OpenProjectDocumentConfigurationSource extends AbstractDocumentConf
     @Override
     protected String getCacheId()
     {
-        return "configuration.document.openproject";
+        return this.cacheId;
     }
 
     @Override
