@@ -25,7 +25,7 @@
 <template id="proj-manag-chart-type-param-template">
   <div class="proj-manag-chart-type-param">
     <div>
-      <div class="proj-manag-chart-type-param-name"></div>
+      <label class="proj-manag-chart-type-param-name"></label>
       <div class="proj-manag-chart-type-param-description"></div>
     </div>
     <input type="text" />

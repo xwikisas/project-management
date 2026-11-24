@@ -18,6 +18,7 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
+#template("macro_parameter_label.vm")
 #**
  * Generate a property picker for the client identified by its hint.
  *
@@ -74,5 +75,6 @@
     #set ($discard = $parameters.remove('multiple'))
   #end
   #set ($discard = $parameters.putAll($params))
+  #pmLabelPickerAsParameter($parameters)
   #suggestInput($parameters, 'staticPickerDisplayOptions')
 #end
