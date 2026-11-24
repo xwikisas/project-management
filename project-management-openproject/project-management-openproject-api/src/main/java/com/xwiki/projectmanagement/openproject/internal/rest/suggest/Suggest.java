@@ -23,6 +23,7 @@ package com.xwiki.projectmanagement.openproject.internal.rest.suggest;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -56,6 +58,7 @@ import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
 import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess;
 import com.xwiki.projectmanagement.openproject.model.BaseOpenProjectObject;
 import com.xwiki.projectmanagement.openproject.model.Project;
+import com.xwiki.projectmanagement.openproject.model.User;
 import com.xwiki.projectmanagement.openproject.model.WorkPackage;
 
 import static com.xwiki.projectmanagement.openproject.script.OpenProjectScriptService.USE_SELECTED_DASHBOARD_PROJECT_VALUE;
@@ -415,7 +418,7 @@ public class Suggest extends XWikiResource
         if (!selected) {
             filter = buildFilter(NAME, searchString);
         }
-        List<? extends BaseOpenProjectObject> users = openProjectApiClient.getUsers(1, pageSize, filter).getItems();
+        List<User> users = openProjectApiClient.getUsers(1, pageSize, filter).getItems();
         // A user is written by name only when no other user has the same name: the other users having it are among
         // the found ones (their name contains the searched text too), unless the search returned a full page.
         Set<String> uniqueNames;
@@ -425,7 +428,12 @@ public class Suggest extends XWikiResource
         } else {
             uniqueNames = users.size() < pageSize ? getUniqueNames(users) : Collections.emptySet();
         }
-        return getNamedSuggestions(users, uniqueNames);
+        // Users can share a name: their suggestions are told apart by the login of the users, when OpenProject gives
+        // it to the current user (who can then see it in OpenProject too). Their e-mail address is never shown.
+        List<Map<String, String>> suggestions = getNamedSuggestions(users, uniqueNames);
+        return IntStream.range(0, users.size())
+            .mapToObj(index -> withHint(suggestions.get(index), users.get(index).getLogin()))
+            .collect(Collectors.toList());
     }
 
     private boolean isOnlyUserNamed(OpenProjectApiClient openProjectApiClient, String name)
@@ -527,6 +535,16 @@ public class Suggest extends XWikiResource
         }
         return Map.of(VALUE, suggestion.get(VALUE), LABEL, suggestion.get(LABEL), URL, suggestion.get(URL),
             QUERY_VALUE, queryValue);
+    }
+
+    private static Map<String, String> withHint(Map<String, String> suggestion, String hint)
+    {
+        if (StringUtils.isEmpty(hint)) {
+            return suggestion;
+        }
+        Map<String, String> suggestionWithHint = new HashMap<>(suggestion);
+        suggestionWithHint.put(HINT, hint);
+        return suggestionWithHint;
     }
 
     private Map<String, String> createSuggestion(String value, String label, String url, String hint)

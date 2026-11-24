@@ -425,6 +425,41 @@ class SuggestTest
     }
 
     @Test
+    void getSuggestionsForUsersWithTheirLogin() throws ProjectManagementException
+    {
+        User twin1 = createUser(5, "QA150 Twin", "qa150same1");
+        User twin2 = createUser(6, "QA150 Twin", "qa150same2");
+        // OpenProject gives the login of the users only to the users who can manage them.
+        User unique = createUser(7, "QA150 Unique");
+        when(this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, nameFilter("qa150")))
+            .thenReturn(new PaginatedResult<>(List.of(twin1, twin2, unique), 0, 3, 3));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "QA150", PAGE_SIZE, null);
+
+        // The users sharing a name are told apart by their login.
+        assertEquals(List.of(Map.of("value", "5", "label", "QA150 Twin", "url", "location5", "hint", "qa150same1"),
+            Map.of("value", "6", "label", "QA150 Twin", "url", "location6", "hint", "qa150same2"),
+            namedSuggestion(unique)), response.getEntity());
+    }
+
+    @Test
+    void getSuggestionsForSelectedUserWithTheirLogin() throws ProjectManagementException
+    {
+        User twin = createUser(6, "QA150 Twin", "qa150same2");
+        when(this.openProjectApiClient.getUsers(eq(1), eq(PAGE_SIZE), anyString()))
+            .thenReturn(new PaginatedResult<>(List.of(twin), 0, 1, 1));
+        when(this.openProjectApiClient.getUsers(1, 100, nameFilter("qa150 twin")))
+            .thenReturn(new PaginatedResult<>(List.of(createUser(5, "QA150 Twin", "qa150same1"), twin), 0, 2, 2));
+
+        Response response = suggest.getSuggestions(WIKI, INSTANCE, "users", "q", PAGE_SIZE, "6");
+
+        // The label of a selected user (e.g. of a value of a filter) is loaded with the login, which tells the user
+        // apart from the users sharing its name.
+        assertEquals(List.of(Map.of("value", "6", "label", "QA150 Twin", "url", "location6", "hint", "qa150same2")),
+            response.getEntity());
+    }
+
+    @Test
     void getSuggestionsForProjectSelectedByIdentifier() throws ProjectManagementException
     {
         Project demo = createProject(3, "demo-project", "Demo");
@@ -574,6 +609,13 @@ class SuggestTest
         user.setId(id);
         user.setName(name);
         user.setSelf(new Linkable(String.valueOf(id), "location" + id));
+        return user;
+    }
+
+    private static User createUser(int id, String name, String login)
+    {
+        User user = createUser(id, name);
+        user.setLogin(login);
         return user;
     }
 

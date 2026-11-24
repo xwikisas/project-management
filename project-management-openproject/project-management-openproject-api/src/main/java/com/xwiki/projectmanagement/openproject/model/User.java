@@ -21,6 +21,8 @@ package com.xwiki.projectmanagement.openproject.model;
 
 import java.util.List;
 
+import org.xwiki.stability.Unstable;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.xwiki.projectmanagement.model.Linkable;
 
@@ -34,6 +36,8 @@ public class User extends BaseOpenProjectObject
 {
     private static final String KEY_ROLES = "roles";
 
+    private static final String KEY_LOGIN = "login";
+
     /**
      * Create a User object from a JsonNode.
      *
@@ -42,6 +46,10 @@ public class User extends BaseOpenProjectObject
     public User(JsonNode userJson)
     {
         super(userJson);
+        JsonNode login = userJson.path(KEY_LOGIN);
+        if (login.isTextual()) {
+            setLogin(login.asText());
+        }
     }
 
     /**
@@ -67,5 +75,26 @@ public class User extends BaseOpenProjectObject
     public void setRoles(List<Linkable> roles)
     {
         put(KEY_ROLES, roles);
+    }
+
+    /**
+     * @return the login of the user, or {@code null} when it's unknown: OpenProject only gives it to the users who can
+     *     manage the users (e.g. the administrators) and to the user himself
+     * @since 1.5.0
+     */
+    @Unstable
+    public String getLogin()
+    {
+        return (String) get(KEY_LOGIN);
+    }
+
+    /**
+     * @param login see {@link #getLogin()}
+     * @since 1.5.0
+     */
+    @Unstable
+    public void setLogin(String login)
+    {
+        put(KEY_LOGIN, login);
     }
 }
