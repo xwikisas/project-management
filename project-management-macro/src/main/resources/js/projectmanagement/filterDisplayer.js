@@ -144,6 +144,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
           let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val');
           setTextAlternative(dateInput, params.label);
+          // The date picker selects the saved dates, instead of the current day.
+          let pickerDates = getPickerDates(inputElem.val(), operator, dateFormat);
+          // Whether the filter had a date when its date picker was opened.
+          let hadDate;
           dateInput.on('change', function() {
             let valToSet = '';
             const daterangepicker = $(this).data("daterangepicker");
@@ -177,8 +181,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               format: dateFormat,
               cancelLabel: "Clear",
             },
-          // The date picker selects the saved dates, instead of the current day.
-          }, getPickerDates(inputElem.val(), operator, dateFormat))).on("hide.daterangepicker", function (e) {
+          }, pickerDates)).on("hide.daterangepicker", function (e) {
             // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
             // This removes the 'hide' function only for the event target.
             e.target.hide = undefined;
@@ -189,7 +192,21 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               // the prototype chain).
               delete e.target["hide"];
             }, 0);
+          }).on('show.daterangepicker', function () {
+            hadDate = inputElem.val() !== '';
+          }).on('cancel.daterangepicker', function () {
+            // Canceling the date picker of a filter without date doesn't give it the date selected by the date picker.
+            if (!hadDate) {
+              $(this).val('');
+              inputElem.val('').trigger('change');
+            }
           });
+          // Without saved dates, the field stays empty until a date is picked: the current day, which the date picker
+          // selects and displays in the field by default, isn't the value of the filter. Closing the date picker
+          // displays the date it selects in the field, and makes it the value of the filter.
+          if (!pickerDates.startDate) {
+            dateInput.val('');
+          }
           // The saved value is now displayed as the date picker formats it (e.g. in the summary of the filters).
           inputElem.removeClass('loading').trigger('dateDisplayed');
         }).catch(error => {
