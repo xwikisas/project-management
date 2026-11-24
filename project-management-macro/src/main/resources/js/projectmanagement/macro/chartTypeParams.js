@@ -31,6 +31,9 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
     return notification;
   };
   const SEPARATOR = ",";
+  // The fields of the options get new ids each time they're displayed: the pickers of the previous ones can still be in
+  // the page (their lists of values are appended to the body).
+  let fieldCount = 0;
   let updateInput = function () {
     let param = {};
     $('.proj-manag-chart-type-param input').each(function () {
@@ -64,7 +67,12 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
 
         paramTemplates.forEach(template => {
           var clone = $(htmlTemplate).clone();
-          clone.find('.proj-manag-chart-type-param-name').text(template.label || template.id);
+          // The name of the option labels its field. The picker moves this label to its own text input, the field
+          // keeping its name through aria-labelledby (Tom Select, on XWiki 18+, hides it but the screen readers see it).
+          let fieldId = 'proj-manag-chart-type-param-' + (++fieldCount);
+          let labelId = fieldId + '-label';
+          clone.find('.proj-manag-chart-type-param-name').text(template.label || template.id)
+            .attr({id: labelId, for: fieldId});
           var val = template.multiple && params[template.id] instanceof Array ?
             params[template.id].join(SEPARATOR) : params[template.id];
           if (template.description) {
@@ -72,7 +80,7 @@ require(['jquery', 'xwiki-l10n!projectmanagement.chart.typeParams', 'xwiki-selec
           }
           clone.find('input')
             .data('type', template.multiple ? 'array' : 'string')
-            .attr('name', template.id)
+            .attr({id: fieldId, name: template.id, 'aria-labelledby': labelId})
             .val(val)
             .on('change', updateInput);
 

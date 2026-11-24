@@ -31,6 +31,12 @@
   /* No right padding, so that the trash icon of the series is aligned with the trash icons of its filters. */
   padding: 5px 0 5px 5px;
 }
+/* The name of a chart option labels its field, without the look of the labels of the forms. */
+.proj-manag-chart-type-param-name {
+  display: block;
+  font-weight: normal;
+  margin-bottom: 0;
+}
 .proj-manag-chart-type-param-description {
   color: #555555;
   font-size: smaller;
