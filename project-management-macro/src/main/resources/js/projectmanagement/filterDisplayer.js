@@ -202,7 +202,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
         let selectizeCfg = {
           create: true,
           // A list filter can match several values (the value of the input holding them separated by commas).
-          maxItems: params.multiple ? null : 1
+          maxItems: params.multiple ? null : 1,
+          // The text searching a value is cleared once a value is picked, so that the next search doesn't start with
+          // it. Tom Select (XWiki 18+) keeps it by default, unlike Selectize, which ignores this setting.
+          clearAfterSelect: true
         };
         if (options.size() > 0) {
           selectizeCfg.options = options;
