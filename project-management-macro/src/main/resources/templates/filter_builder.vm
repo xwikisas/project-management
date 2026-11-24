@@ -88,8 +88,9 @@
       'text.*': 'isSet', 'text.!*': 'isNotSet',
       'number.=': 'number.equals', 'number.!': 'number.notEquals', 'number.>=': 'number.atLeast',
       'number.<=': 'number.atMost', 'number.*': 'isSet', 'number.!*': 'isNotSet',
-      'date.t': 'date.isToday', 'date.w': 'date.isThisWeek', 'date.=d': 'date.isOn', 'date.between': 'date.isBetween',
-      'date.!*': 'isNotSet', 'boolean.=': 'is', 'boolean.!': 'isNot'
+      'date.t': 'date.isToday', 'date.w': 'date.isThisWeek', 'date.=d': 'date.isOn', 'date.before': 'date.isOnOrBefore',
+      'date.after': 'date.isOnOrAfter', 'date.between': 'date.isBetween', 'date.!*': 'isNotSet',
+      'boolean.=': 'is', 'boolean.!': 'isNot'
     })
     #set ($l10n = {})
     #foreach ($operatorKey in $operatorKeys.entrySet())

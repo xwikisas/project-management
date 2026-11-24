@@ -111,6 +111,14 @@
               "name": "On"
             },
             {
+              "id": "before",
+              "name": "On or before"
+            },
+            {
+              "id": "after",
+              "name": "On or after"
+            },
+            {
               "id": "between",
               "name": "Between"
             },
@@ -140,6 +148,14 @@
             {
               "id": "=d",
               "name": "On"
+            },
+            {
+              "id": "before",
+              "name": "On or before"
+            },
+            {
+              "id": "after",
+              "name": "On or after"
             },
             {
               "id": "between",
@@ -210,6 +226,14 @@
               "name": "On"
             },
             {
+              "id": "before",
+              "name": "On or before"
+            },
+            {
+              "id": "after",
+              "name": "On or after"
+            },
+            {
               "id": "between",
               "name": "Between"
             }
@@ -235,6 +259,14 @@
             {
               "id": "=d",
               "name": "On"
+            },
+            {
+              "id": "before",
+              "name": "On or before"
+            },
+            {
+              "id": "after",
+              "name": "On or after"
             },
             {
               "id": "between",

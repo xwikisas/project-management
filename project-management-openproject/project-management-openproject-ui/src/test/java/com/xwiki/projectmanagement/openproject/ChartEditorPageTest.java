@@ -145,6 +145,10 @@ class ChartEditorPageTest extends PageTest
         assertTrue(l10n.contains("\"list.=\":\"projectmanagement.macro.filter.operator.list.isOneOf\""), l10n);
         assertTrue(l10n.contains("\"date.between\":\"projectmanagement.macro.filter.operator.date.isBetween\""),
             l10n);
+        assertTrue(l10n.contains("\"date.before\":\"projectmanagement.macro.filter.operator.date.isOnOrBefore\""),
+            l10n);
+        assertTrue(l10n.contains("\"date.after\":\"projectmanagement.macro.filter.operator.date.isOnOrAfter\""),
+            l10n);
         assertTrue(l10n.contains("\"summary\":\"projectmanagement.macro.filter.summary\""), l10n);
     }
 

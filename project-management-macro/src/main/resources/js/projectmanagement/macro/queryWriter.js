@@ -26,8 +26,9 @@
  * This module has no dependency, so that it can be run outside of a browser.
  */
 define([], function () {
-  // The bounds that the "between" operator of the builder takes for the ranges of dates open on one side, which the
-  // query writes with a single comparison, e.g. dueDate >= 2026-11-01 (the same as in the OpenProject client).
+  // The bounds that the "between" operator takes for the ranges of dates open on one side, on the date properties
+  // without "on or before" and "on or after" operators, which the query writes with a single comparison, e.g.
+  // dueDate >= 2026-11-01 (the same as in the OpenProject client).
   const NO_LOWER_BOUND = '1970-01-01';
   const NO_UPPER_BOUND = '3000-01-01';
   // The query parser also splits the words on the information separators (U+001C to U+001F).
@@ -155,6 +156,7 @@ define([], function () {
         case '=d':
           each(value => `${name} = ${toDate(value)}`);
           break;
+        // On or after a day, on or before a day.
         case 'after':
           each(value => `${name} >= ${toDate(value)}`);
           break;
@@ -196,8 +198,8 @@ define([], function () {
     return clauses.join(' AND ');
   };
 
-  // The builder only has the "between" operator for the ranges of dates.
-  let toBuilderConstraint = function (constraint) {
+  // A date property without "on or before" and "on or after" operators shows them as a range of dates.
+  let toRangeConstraint = function (constraint) {
     if (constraint.operator === 'after') {
       return { operator: 'between', value: constraint.value + '/' + NO_UPPER_BOUND };
     } else if (constraint.operator === 'before') {
@@ -246,8 +248,9 @@ define([], function () {
       '<': value => ({ operator: '<=', value: toInclusiveBound(value, -1) })
     },
     date: {
-      after: value => toBuilderConstraint({ operator: 'after', value }),
-      before: value => toBuilderConstraint({ operator: 'before', value }),
+      // The "on or after" and "on or before" operators of the properties that don't have them.
+      after: value => toRangeConstraint({ operator: 'after', value }),
+      before: value => toRangeConstraint({ operator: 'before', value }),
       // A range of dates, or a single day.
       contains: value => ({ operator: String(value).includes('/') ? 'between' : '=d', value }),
       equals: value => ({ operator: String(value).includes('/') ? 'between' : '=d', value })
@@ -320,14 +323,15 @@ define([], function () {
    * @param parsedFilters the filters returned by the REST API, whose constraints are flagged with "name: true" when
    *   their value is a name
    * @param names the values read as names, by property (a Map of Sets), to which the names of the filters are added
-   * @return the filters of the builder, e.g. a range of dates being a "between" constraint
+   * @return the filters of the builder, with the operators of the parsed filters, e.g. "before" (on or before) for
+   *   dueDate <= 2026-12-31, which toBuilderFilter converts for the properties that don't have them
    */
   let fromParsedFilters = function (parsedFilters, names) {
     return (parsedFilters || []).map(filter => {
       (filter.constraints || []).filter(constraint => constraint.name).forEach(constraint => {
         names.set(filter.property, (names.get(filter.property) || new Set()).add(String(constraint.value)));
       });
-      return { property: filter.property, constraints: (filter.constraints || []).map(toBuilderConstraint) };
+      return { property: filter.property, constraints: (filter.constraints || []).slice() };
     });
   };
 

@@ -60,6 +60,7 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -325,16 +326,40 @@ class OpenProjectLivedataConfigurationResolverTest
     @Test
     void configurationDeclaresEachPropertyOnce() throws Exception
     {
-        JsonNode descriptors;
-        try (InputStream configuration = getClass().getResourceAsStream("/openProjectLiveDataConfiguration.json")) {
-            descriptors = new ObjectMapper().readTree(configuration).path("meta").path("propertyDescriptors");
-        }
+        JsonNode descriptors = readPropertyDescriptors();
 
         // A property declared twice is proposed twice by the property pickers of the macros.
         List<String> ids = new ArrayList<>();
         descriptors.forEach(descriptor -> ids.add(descriptor.path("id").asText()));
         assertFalse(ids.isEmpty());
         assertEquals(new LinkedHashSet<>(ids).size(), ids.size(), ids.toString());
+    }
+
+    @Test
+    void configurationFiltersTheDatesOnOrBeforeAndOnOrAfterADay() throws Exception
+    {
+        JsonNode descriptors = readPropertyDescriptors();
+
+        // The filter builder of the macros shows and writes the dates compared with <= and >= in the query (for
+        // example dueDate <= 2026-12-31) with these operators, which OpenProject applies as ranges of dates.
+        List<String> dateProperties = new ArrayList<>();
+        descriptors.forEach(descriptor -> {
+            if ("date".equals(descriptor.path("filter").path("id").asText())) {
+                List<String> operators = new ArrayList<>();
+                descriptor.path("filter").path("operators").forEach(operator -> operators.add(
+                    operator.path("id").asText()));
+                assertTrue(operators.containsAll(List.of("before", "after")), descriptor.toString());
+                dateProperties.add(descriptor.path("id").asText());
+            }
+        });
+        assertEquals(List.of("startDate", "dueDate", "creationDate", "updateDate"), dateProperties);
+    }
+
+    private JsonNode readPropertyDescriptors() throws Exception
+    {
+        try (InputStream configuration = getClass().getResourceAsStream("/openProjectLiveDataConfiguration.json")) {
+            return new ObjectMapper().readTree(configuration).path("meta").path("propertyDescriptors");
+        }
     }
 
     private static LiveDataConfiguration getInput(String instance)
