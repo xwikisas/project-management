@@ -2,3 +2,4 @@ com.xwiki.projectmanagement.presets.PresetClassInitializer
 com.xwiki.projectmanagement.presets.internal.DefaultPresetsManager
 com.xwiki.projectmanagement.presets.script.PresetsScriptService
 com.xwiki.projectmanagement.presets.internal.PresetHiddenListener
+com.xwiki.projectmanagement.presets.internal.PresetsUpgradeListener

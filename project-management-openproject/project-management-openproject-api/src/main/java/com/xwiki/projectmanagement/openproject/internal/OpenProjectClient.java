@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -191,14 +192,7 @@ public class OpenProjectClient implements ProjectManagementClient
             if (!isWorkPackageIdOrKey(workItemId)) {
                 throw new WorkItemNotFoundException(notFound);
             }
-            WorkPackage workPackage;
-            try {
-                workPackage = getWorkPackage(resolveAccess().getClient(), workItemId, false);
-            } catch (WorkItemRetrievalException e) {
-                throw e;
-            } catch (ProjectManagementException e) {
-                throw new WorkItemRetrievalException("An error occurred while trying to get the work item", e);
-            }
+            WorkPackage workPackage = findWorkPackage(workItemId);
             if (workPackage == null) {
                 throw new WorkItemNotFoundException(notFound);
             }
@@ -210,14 +204,37 @@ public class OpenProjectClient implements ProjectManagementClient
         filter.setProperty(WorkItem.KEY_IDENTIFIER);
         filter.getConstraints().add(new LiveDataQuery.Constraint(id, EQUALS));
 
-        PaginatedResult<WorkItem> result =
-            getWorkItems(0, 1, Collections.singletonList(filter), Collections.emptyList());
+        PaginatedResult<WorkItem> result;
+        try {
+            result = getWorkItems(0, 1, Collections.singletonList(filter), Collections.emptyList());
+        } catch (WorkItemRetrievalException e) {
+            // OpenProject rejects the id filter of a work package that doesn't exist or that the user can't see.
+            if (isBadRequest(e) && findWorkPackage(id) == null) {
+                throw new WorkItemNotFoundException(notFound);
+            }
+            throw e;
+        }
 
         if (result.getItems().isEmpty()) {
             throw new WorkItemNotFoundException(notFound);
         }
 
         return result.getItems().get(0);
+    }
+
+    /**
+     * @return the work package with the given id or key, or {@code null} if it doesn't exist, if the user can't see it
+     *     or if OpenProject rejects the key
+     */
+    private WorkPackage findWorkPackage(String idOrKey) throws WorkItemRetrievalException
+    {
+        try {
+            return getWorkPackage(resolveAccess().getClient(), idOrKey, false);
+        } catch (WorkItemRetrievalException e) {
+            throw e;
+        } catch (ProjectManagementException e) {
+            throw new WorkItemRetrievalException("An error occurred while trying to get the work item", e);
+        }
     }
 
     @Override
@@ -316,6 +333,11 @@ public class OpenProjectClient implements ProjectManagementClient
     private static boolean isNotFound(WorkItemRetrievalException e)
     {
         return Integer.valueOf(HttpURLConnection.HTTP_NOT_FOUND).equals(e.getStatusCode());
+    }
+
+    private static boolean isBadRequest(WorkItemRetrievalException e)
+    {
+        return Integer.valueOf(HttpURLConnection.HTTP_BAD_REQUEST).equals(e.getStatusCode());
     }
 
     private static boolean isAuthenticationOrRightsFailure(WorkItemRetrievalException e)
@@ -586,7 +608,7 @@ public class OpenProjectClient implements ProjectManagementClient
         } catch (WorkItemRetrievalException e) {
             // OpenProject rejects the whole id filter when one of the work packages doesn't exist, or can't be seen by
             // the user: the other work packages are then displayed without it.
-            if (!Integer.valueOf(HttpURLConnection.HTTP_BAD_REQUEST).equals(e.getStatusCode())) {
+            if (!isBadRequest(e)) {
                 throw e;
             }
             List<String> existingIds = getExistingIds(openProjectApiClient, ids);
@@ -679,6 +701,10 @@ public class OpenProjectClient implements ProjectManagementClient
     }
 
     /**
+     * A key is looked up in upper case: OpenProject matches the keys case-sensitively, and they're in upper case (the
+     * semantic identifiers of the projects are made of upper case letters, digits and underscores), so a key written
+     * in another case (e.g. {@code proj-42}) finds its work package.
+     *
      * @param warn whether a key that OpenProject rejects is logged as a warning (e.g. a key listed by a macro) rather
      *     than for debugging (e.g. a key typed in the work item picker, which tells it's not found)
      * @return the work package with the given id or key, or {@code null} if it doesn't exist, if the user can't see
@@ -688,7 +714,7 @@ public class OpenProjectClient implements ProjectManagementClient
         throws ProjectManagementException
     {
         try {
-            return openProjectApiClient.getWorkPackage(key);
+            return openProjectApiClient.getWorkPackage(key.toUpperCase(Locale.ROOT));
         } catch (WorkItemRetrievalException e) {
             if (isAuthenticationOrRightsFailure(e)) {
                 throw e;

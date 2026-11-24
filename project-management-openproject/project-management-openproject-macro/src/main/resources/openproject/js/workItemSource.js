@@ -39,11 +39,13 @@ require(['jquery', 'openproject-link-description'], function ($, linkDescription
 
   const WIDGET = '.macro-editor-modal .pm-work-item-source';
 
-  // The resource only describes the link to the users who can edit the page of the macro.
+  // The resource only describes the link to the users who can edit the page of the macro. The description of a saved
+  // query depends on the macro, e.g. the calendar has no table showing its filters.
   const getRestUrl = function (widget) {
     const page = XWiki.Model.serialize(XWiki.currentDocument.documentReference);
+    const macro = String(widget.closest('.macro-editor').attr('data-macroId') || '').split('/')[0];
     return widget.attr('data-rest-url') + '/wikis/' + encodeURIComponent(widget.attr('data-wiki') || '')
-      + '/openproject/link?document=' + encodeURIComponent(page);
+      + '/openproject/link?document=' + encodeURIComponent(page) + '&macro=' + encodeURIComponent(macro);
   };
 
   // The connection used by the macro, given by the handlers of pm:collectSourceParameters (see filters.js).
@@ -53,20 +55,35 @@ require(['jquery', 'openproject-link-description'], function ($, linkDescription
     return parameters.instance || '';
   };
 
+  // Whether filters.js, which can load after this script, gives the connection (see the data-source-parameters
+  // attribute in workItemSourceParameter.js): it then triggers pm:sourceParametersChanged on the widget.
+  const isConnectionReady = function (widget) {
+    return widget.attr('data-source-parameters') !== 'pending';
+  };
+
   const show = function (widget, description) {
     const container = widget.find('.pm-source-url-description').empty();
     if (description && description.message) {
-      container.append($('<div></div>').addClass(linkDescription.getMessageClass(description.level))
-        .text(description.message));
+      const message = $('<div></div>').addClass(linkDescription.getMessageClass(description.level))
+        .text(description.message);
+      const authenticationLink = linkDescription.getAuthenticationLink(description);
+      if (authenticationLink) {
+        // The link is described again when the user comes back from the tab where they authenticate.
+        message.append(' ', $('<a></a>').attr(authenticationLink.attributes).text(authenticationLink.text)
+          .on('click', () => $(window).one('focus', () => describeCurrent(widget))));
+      }
+      container.append(message);
     }
   };
 
   const describe = function (widget, url) {
-    if (!widget.length) {
+    // The link is described once the connection is known: pm:sourceParametersChanged describes it then.
+    if (!widget.length || !isConnectionReady(widget)) {
       return;
     }
-    // An empty link cancels the request of the previous one, if any.
-    linkDescription.describeLink(getRestUrl(widget), getInstance(widget), url).then(function (description) {
+    // An empty link cancels the request of the previous one, if any. The connection is read when the request is sent,
+    // in case it changes meanwhile.
+    linkDescription.describeLink(getRestUrl(widget), () => getInstance(widget), url).then(function (description) {
       // Null for an empty link, and when a newer link replaced this one.
       if (description || String(url || '').trim() === '') {
         show(widget, description);
@@ -84,9 +101,12 @@ require(['jquery', 'openproject-link-description'], function ($, linkDescription
   $(document).on('pm:urlChanged', WIDGET, function (event, url) {
     describe($(this), url);
   });
-  // The same link can mean something else on another connection.
-  $(document).on('change', '.macro-editor-modal :input[name="instance"]', function () {
-    describeCurrent($(this).closest('.macro-editor-modal').find('.pm-work-item-source').first());
+  // Triggered by filters.js once the connection is known, and when the user chooses another connection, on which the
+  // same link can mean something else.
+  $(document).on('pm:sourceParametersChanged', WIDGET, function (event) {
+    if (event.target === this) {
+      describeCurrent($(this));
+    }
   });
   // The widget may have been bound before this script was loaded.
   describeCurrent($(WIDGET).first());

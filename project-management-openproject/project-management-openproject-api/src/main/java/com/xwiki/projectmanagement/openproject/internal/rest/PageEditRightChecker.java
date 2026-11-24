@@ -30,9 +30,12 @@ import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.security.authorization.ContextualAuthorizationManager;
 import org.xwiki.security.authorization.Right;
 
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+
 /**
  * Checks that the current user can edit a page of a given wiki, e.g. the page whose macro is edited, before giving
- * them information meant for the editors of the wiki (such as the server URL of an OpenProject connection).
+ * them information meant for the editors of the wiki (such as the server URL of an OpenProject connection), and links
+ * back to that page.
  *
  * @version $Id$
  * @since 1.5.0
@@ -48,6 +51,9 @@ public class PageEditRightChecker
     @Named("current")
     private DocumentReferenceResolver<String> documentReferenceResolver;
 
+    @Inject
+    private UserTokenChecker userTokenChecker;
+
     /**
      * @param wiki the wiki, which must be the current one
      * @param document the reference of the page, resolved in the current wiki
@@ -62,5 +68,17 @@ public class PageEditRightChecker
         DocumentReference documentReference = this.documentReferenceResolver.resolve(document);
         return documentReference.getWikiReference().getName().equals(wiki)
             && this.authorizationManager.hasAccess(Right.EDIT, documentReference);
+    }
+
+    /**
+     * @param connectionName the name of an OpenProject connection
+     * @param document the reference of the page, resolved in the current wiki, e.g. the page whose macro is edited
+     * @return the URL connecting the OpenProject account of the current user to the given connection, then coming back
+     *     to the given page, or {@code null} when they can't connect one (see
+     *     {@link UserTokenChecker#getConnectURL(String, DocumentReference)})
+     */
+    public String getConnectURL(String connectionName, String document)
+    {
+        return this.userTokenChecker.getConnectURL(connectionName, this.documentReferenceResolver.resolve(document));
     }
 }

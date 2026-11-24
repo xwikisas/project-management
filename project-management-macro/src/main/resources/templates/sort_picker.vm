@@ -18,6 +18,7 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
+#template("macro_parameter_label.vm")
 #**
  * Generate a property sort picker for the client identified by its hint.
  *
@@ -62,5 +63,6 @@
     'prefix': ' '
   })
   #set ($discard = $parameters.putAll($params))
+  #pmLabelPickerAsParameter($parameters)
   #staticSelectPicker($parameters)
 #end

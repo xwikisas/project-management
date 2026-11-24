@@ -45,10 +45,11 @@
  *
  * @param $parameters a map of parameters that can be used by the builder. The 'client' property will be used to
  *   retrieve the filterable livedata properties. The 'title' property will be used to set the title of the builder. The
- *   'removable' property will denote whether the builder can be removed or not. The 'readonly' property will make the
- *   filter builder un-editable. The optional 'sourceParameters' property holds the parameters of the livedata source
- *   the filterable properties depend on (see #getFilterableProperties), e.g. {'defaultInstance': true} to use the
- *   default instance of the client when the builder isn't tied to an instance, as for the filters of a preset.
+ *   'removable' property will denote whether the builder, a series of a chart, can be removed or not. The 'readonly'
+ *   property will make the filter builder un-editable. The optional 'sourceParameters' property holds the parameters
+ *   of the livedata source the filterable properties depend on (see #getFilterableProperties), e.g.
+ *   {'defaultInstance': true} to use the default instance of the client when the builder isn't tied to an instance, as
+ *   for the filters of a preset.
  *#
 #macro (filterBuilder $parameters)
 #picker_import
@@ -111,7 +112,8 @@
         <span class="proj-manag-header-title">$escapetool.xml($parameters.title)</span>
       #end
       #if ($parameters.removable && !$parameters.readonly)
-        <a class="proj-manag-remove-filter">$services.icon.renderHTML('trash')</a>
+        <a href="#" class="proj-manag-remove-filter" title="$escapetool.xml($services.localization.render(
+          'projectmanagement.macro.chart.removeSeries'))">$services.icon.renderHTML('trash')</a>
       #end
       </div>
       ## One row per filter: the property, the operator and the value(s).

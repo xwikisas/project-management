@@ -58,6 +58,7 @@ import com.xwiki.projectmanagement.openproject.internal.access.OpenProjectAccess
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -197,6 +198,32 @@ class UserTokenCheckerTest
         assertEquals("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection"
             + "?connectionName=a%26redirectUrl%3Dhttps%3A%2F%2Fexample.org%2F%23"
             + "&redirectUrl=%2Fxwiki%2Fbin%2Fview%2FSome%2FPage&token=csrf+token", link.getReference().getReference());
+    }
+
+    @Test
+    void connectURLComingBackToTheGivenPage()
+    {
+        DocumentReference page = new DocumentReference("wiki", "Edited", "Page");
+        when(this.xcontext.getWiki().getURL(page, "view", this.xcontext)).thenReturn("/xwiki/bin/view/Edited/Page");
+
+        assertEquals("/xwiki/bin/view/OpenProject/Code/RenewOAuthConnection?connectionName=main"
+            + "&redirectUrl=%2Fxwiki%2Fbin%2Fview%2FEdited%2FPage&token=csrf+token",
+            this.checker.getConnectURL(CONNECTION_NAME, page));
+    }
+
+    @Test
+    void noConnectURLWhenTheUserCantConnectTheirAccount()
+    {
+        DocumentReference page = new DocumentReference("wiki", "Edited", "Page");
+        assertNull(this.checker.getConnectURL("unknown", page));
+
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA);
+        assertNull(this.checker.getConnectURL(CONNECTION_NAME, page));
+
+        // Guests have no user to attach an OpenProject account to.
+        mockConnection(CONNECTION_NAME, OpenProjectAccessMode.PUBLIC_DATA_AND_USER_ACCOUNTS);
+        when(this.xcontext.getUserReference()).thenReturn(null);
+        assertNull(this.checker.getConnectURL(CONNECTION_NAME, page));
     }
 
     @Test
