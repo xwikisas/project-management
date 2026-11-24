@@ -102,6 +102,51 @@ describe("toOption", () => {
   });
 });
 
+describe("failureState", () => {
+  it("tells that a work item doesn't exist only when the server says so", () => {
+    expect(workItemList.failureState(404)).toBe("notFound");
+  });
+
+  it.each([500, 502, 401, 400, 0])("tells that the work item couldn't be retrieved after a %s", (status) => {
+    expect(workItemList.failureState(status)).toBe("notRetrieved");
+  });
+});
+
+describe("pickedOption", () => {
+  const mobile = { identifier: { value: 157 }, key: "AC-1", summary: { value: "Mobile offline mode" } };
+  const beta = { identifier: { value: 243 }, summary: { value: "Beta" } };
+
+  it("picks a typed id by the key of its work item, keeping the id so that searching it finds the work item", () => {
+    expect(workItemList.pickedOption(mobile, "157", true))
+      .toEqual({ value: "AC-1", label: "AC-1 Mobile offline mode", hint: "", key: "AC-1", id: "157" });
+  });
+
+  it("picks a key typed in another case by the key of its work item", () => {
+    expect(workItemList.pickedOption(mobile, "ac-1", true).value).toBe("AC-1");
+  });
+
+  it("keeps the id or key of a work item listed by the macro, rather than typed", () => {
+    expect(workItemList.pickedOption(mobile, "157", false))
+      .toEqual({ value: "157", label: "AC-1 Mobile offline mode", hint: "", key: "AC-1" });
+    expect(workItemList.pickedOption(mobile, "ac-1", false).value).toBe("ac-1");
+  });
+
+  it("keeps the typed id of a work item without key", () => {
+    expect(workItemList.pickedOption(beta, "243", true)).toEqual({ value: "243", label: "#243 Beta", hint: "" });
+  });
+
+  it("keeps the typed id of a work item that doesn't exist", () => {
+    expect(workItemList.pickedOption(undefined, "ac-99", true, 404))
+      .toEqual({ value: "ac-99", label: "ac-99", state: "notFound" });
+  });
+
+  it("keeps the typed id of a work item that couldn't be retrieved, without saying that it doesn't exist", () => {
+    expect(workItemList.pickedOption(undefined, "157", true, 500))
+      .toEqual({ value: "157", label: "157", state: "notRetrieved" });
+    expect(workItemList.pickedOption(undefined, "243", false, 0).state).toBe("notRetrieved");
+  });
+});
+
 describe("canShowSuggestions", () => {
   it("shows the suggestions of a typed text", () => {
     expect(workItemList.canShowSuggestions("2")).toBe(true);
@@ -193,10 +238,15 @@ describe("clientMessages", () => {
   it("takes the picker messages worded by the client from the messages of the widget", () => {
     expect(workItemList.clientMessages({
       "list.notFound": "Work package {0} not found",
-      "list.pasteLabel": "Work package ids",
+      "list.notRetrieved": "Work package {0} couldn't be retrieved",
+      "list.pasteLabel": "Work packages (ids or keys)",
       "list.invalid": "",
       emptyList: "No work package is picked",
-    })).toEqual({ notFound: "Work package {0} not found", pasteLabel: "Work package ids" });
+    })).toEqual({
+      notFound: "Work package {0} not found",
+      notRetrieved: "Work package {0} couldn't be retrieved",
+      pasteLabel: "Work packages (ids or keys)",
+    });
   });
 
   it("has no message when the client words none", () => {

@@ -61,7 +61,7 @@
 #end
 ## The messages of the work item picker that the client words in its own terms, if it does (see
 ## workItemList.clientMessages); the picker has its own generic messages otherwise.
-#foreach ($key in ['list.notFound', 'list.invalid', 'list.pasteLabel'])
+#foreach ($key in ['list.notFound', 'list.notRetrieved', 'list.invalid', 'list.pasteLabel'])
   #set ($pmClientKey = "${clientId}.macro.source.$key")
   #if ($services.localization.get($pmClientKey))
     #set ($discard = $messages.put($key, $services.localization.render($pmClientKey, ['{0}'])))

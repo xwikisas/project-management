@@ -112,6 +112,30 @@ define([], function () {
   };
 
   /**
+   * @param status the HTTP status of a failed request of the picker, e.g. 404, or 0 when the server didn't answer
+   * @return why the work item of a failed request can't be shown: notFound when it doesn't exist (or the user can't
+   *     see it), notRetrieved otherwise (e.g. the tool is unreachable, or the user isn't authenticated to it)
+   */
+  let failureState = function (status) {
+    return status === 404 ? 'notFound' : 'notRetrieved';
+  };
+
+  /**
+   * @param item the work item found by the lookup of a picked id, or undefined if the lookup failed
+   * @param id the picked id or key, e.g. 157 or ac-1
+   * @param typed whether the user picked the id by typing it, rather than finding it in the macro content: the work
+   *     item is then picked by its key when it has one, as the # inserter writes it
+   * @param status the HTTP status of the failed lookup, see failureState
+   * @return the option of the picker showing the picked work item: picked by the key of the work item when typed
+   *     (e.g. AC-1 for 157 or ac-1, in the case of the tool), and by the typed id when the work item can't be shown,
+   *     with the state telling why (see failureState)
+   */
+  let pickedOption = function (item, id, typed, status) {
+    let key = typed && typeof item?.key === 'string' && item.key !== '' ? item.key : undefined;
+    return toOption(item, key || id) || {value: id, label: id, state: failureState(status)};
+  };
+
+  /**
    * The picker only searches the work items once the user types: without a typed text, the suggestions would list the
    * work items found by the previous searches, e.g. when the suggest widget or a late answer of the search opens them
    * once a work item is picked (and the typed text cleared).
@@ -175,7 +199,7 @@ define([], function () {
   };
 
   // The messages of the picker that the client can word in its own terms, e.g. "Work package {0} not found".
-  const CLIENT_MESSAGES = ['notFound', 'invalid', 'pasteLabel'];
+  const CLIENT_MESSAGES = ['notFound', 'notRetrieved', 'invalid', 'pasteLabel'];
 
   /**
    * @param widgetMessages the messages of the widget of the source parameter, holding the client wording of the
@@ -223,6 +247,6 @@ define([], function () {
     };
   };
 
-  return {parseList, formatList, isIdOrKey, extend, toOption, canShowSuggestions, findOption, withItemFound,
-    resolution, clientMessages, restUrls};
+  return {parseList, formatList, isIdOrKey, extend, toOption, failureState, pickedOption, canShowSuggestions,
+    findOption, withItemFound, resolution, clientMessages, restUrls};
 });

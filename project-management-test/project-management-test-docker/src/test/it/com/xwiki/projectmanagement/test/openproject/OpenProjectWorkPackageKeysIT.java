@@ -219,6 +219,8 @@ public class OpenProjectWorkPackageKeysIT extends AbstractOpenProjectIT
         }
         editPage.clickSaveAndView();
 
+        // The work package is written by its key, as the picker of the macro editor writes it.
+        assertThat(setup.rest().<Page>get(testReference).getContent(), containsString("}}" + key + "{{/openproject}}"));
         List<OpenProjectMacroElement> macros = new ViewPageWithOpenProjectMacro().getOpenProjectMacros();
         assertEquals(1, macros.size());
         assertEquals(workPackage.get("subject").asText(), macros.get(0).getInlineWorkPackageSummary());
