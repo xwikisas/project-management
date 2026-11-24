@@ -28,7 +28,8 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 
 /**
  * The hours displayed by the week and day views of a calendar, written in the {@code timeInterval} parameter of the
- * calendar macros as a start and an end separated by a dash, e.g. {@code 06:00-20:00}. Both are optional.
+ * calendar macros as a start and an end separated by a dash, e.g. {@code 06:00-20:00}. Both are optional. The end of
+ * the day is {@code 24:00}, or {@code 00:00} as an end, which the time fields of the macro editor can hold.
  *
  * @version $Id$
  * @since 1.5.0
@@ -39,6 +40,8 @@ final class VisibleHours
      * A time of the day, in hours and minutes, with optional seconds.
      */
     private static final Pattern TIME = Pattern.compile("(\\d{1,2}):(\\d{2})(?::(\\d{2}))?");
+
+    private static final Duration END_OF_DAY = Duration.ofDays(1);
 
     private final String start;
 
@@ -51,13 +54,14 @@ final class VisibleHours
     }
 
     /**
-     * The calendar displays no time slot when its visible hours don't end after they start: this is reported as an
-     * invalid parameter, rather than displaying an empty week or day without explanation. The times that can't be
-     * read are passed to the calendar as they are.
+     * The calendar displays no time slot when its visible hours don't end after they start, and hours of the next day
+     * when they end after 24:00: both are reported as an invalid parameter, rather than displaying an empty or a wrong
+     * week or day without explanation. The times that can't be read are passed to the calendar as they are.
      *
      * @param timeInterval the value of the {@code timeInterval} parameter, or {@code null} when it isn't set
      * @return the visible hours
-     * @throws MacroExecutionException if the end of the visible hours doesn't come after their start
+     * @throws MacroExecutionException if a time of the visible hours comes after 24:00, or if their end doesn't come
+     *     after their start
      */
     static VisibleHours parse(String timeInterval) throws MacroExecutionException
     {
@@ -72,6 +76,15 @@ final class VisibleHours
         }
         Duration startTime = parseTime(start);
         Duration endTime = parseTime(end);
+        if (isAfterEndOfDay(startTime) || isAfterEndOfDay(endTime)) {
+            throw new MacroExecutionException(String.format("The [timeInterval] parameter must hold times between "
+                + "00:00 and 24:00 (e.g. 06:00-20:00), but is [%s].", timeInterval));
+        }
+        if (Duration.ZERO.equals(endTime)) {
+            // The end of the day, which the calendar needs as 24:00.
+            end = "24:00";
+            endTime = END_OF_DAY;
+        }
         if (startTime != null && endTime != null && endTime.compareTo(startTime) <= 0) {
             throw new MacroExecutionException(String.format("The [timeInterval] parameter must end after it starts "
                 + "(e.g. 06:00-20:00), but is [%s].", timeInterval));
@@ -93,6 +106,11 @@ final class VisibleHours
     String getEnd()
     {
         return this.end;
+    }
+
+    private static boolean isAfterEndOfDay(Duration time)
+    {
+        return time != null && time.compareTo(END_OF_DAY) > 0;
     }
 
     /**

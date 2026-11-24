@@ -45,10 +45,12 @@ import static org.mockito.Mockito.verify;
 class CalendarEditorPageTest extends PageTest
 {
     @Test
-    void visibleHoursEditorLoadsTheStylesOfItsTimes() throws Exception
+    void visibleHoursEditorLoadsTheStylesAndTheScriptOfItsTimes() throws Exception
     {
         SkinExtensionPluginApi ssrx = mock(SkinExtensionPluginApi.class);
         doReturn(ssrx).when(this.xwiki).getPluginApi("ssrx", this.context);
+        SkinExtensionPluginApi jsrx = mock(SkinExtensionPluginApi.class);
+        doReturn(jsrx).when(this.xwiki).getPluginApi("jsrx", this.context);
         ScriptContext scriptContext =
             this.componentManager.<ScriptContextManager>getInstance(ScriptContextManager.class).getScriptContext();
         scriptContext.setAttribute("displayer", Map.of("parameters", Map.of("name", "timeInterval")),
@@ -61,5 +63,8 @@ class CalendarEditorPageTest extends PageTest
         // The editor loads them because the edited page may display no calendar (a new one, or one failing).
         assertEquals(2, result.select(".time-interval-inputs input[type=time]").size(), result.html());
         verify(ssrx).use("projectmanagercalendar/css/parameters.css");
+        // The script displaying the value of the parameter, held by the hidden input, in the time inputs.
+        assertEquals(1, result.select("input[type=hidden][name=timeInterval].time-interval-hidden").size());
+        verify(jsrx).use("projectmanagercalendar/js/timeInterval.js");
     }
 }
