@@ -18,6 +18,7 @@
 ## 02110-1301 USA, or see the FSF site: http://www.fsf.org.
 ## ---------------------------------------------------------------------------
 #template("pickers_macros.vm")
+#template("macro_parameter_label.vm")
 #macro (displayPresetPicker $client $chart)
   #if ("$!chart" == '')
     #set ($chart = false)
@@ -32,6 +33,7 @@
     'class': 'op-preset-select'
   })
   #set ($discard = $parameters.putAll($displayer.parameters))
+  #pmLabelPickerAsParameter($parameters)
   #if ($options.isEmpty() && "$!displayer.value" == '')
     ## An empty picker would open no list: say why there's nothing to choose. The macros only list the presets of
     ## their kind (chart or not), so say which kind is missing: the other kind may exist.
@@ -39,7 +41,13 @@
     #if ($chart)
       #set ($noneKey = "${noneKey}.chart")
     #end
-    <select class="form-control op-preset-select" disabled="disabled">
+    ## The disabled select has no name, so that it holds no value, but has the id of the field of the parameter, which
+    ## the macro editor labels (see macro_parameter_label.vm).
+    #set ($idAttribute = '')
+    #if ("$!displayer.parameters.name" != '')
+      #set ($idAttribute = "id=""parameter-$escapetool.xml($displayer.parameters.name)""")
+    #end
+    <select $idAttribute class="form-control op-preset-select" disabled="disabled">
       <option>$escapetool.xml($services.localization.render($noneKey))</option>
     </select>
   #else

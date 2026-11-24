@@ -144,6 +144,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           let dateFormat = params.dateFormat ? moment.toMomentFormatString(params.dateFormat) : 'YYYY/MM/DD HH:mm';
           let dateInput = $('<input />').attr('type', 'text').addClass('proj-manag-date-val');
           setTextAlternative(dateInput, params.label);
+          // The date picker selects the saved dates, instead of the current day.
+          let pickerDates = getPickerDates(inputElem.val(), operator, dateFormat);
+          // Whether the filter had a date when its date picker was opened.
+          let hadDate;
           dateInput.on('change', function() {
             let valToSet = '';
             const daterangepicker = $(this).data("daterangepicker");
@@ -177,8 +181,7 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               format: dateFormat,
               cancelLabel: "Clear",
             },
-          // The date picker selects the saved dates, instead of the current day.
-          }, getPickerDates(inputElem.val(), operator, dateFormat))).on("hide.daterangepicker", function (e) {
+          }, pickerDates)).on("hide.daterangepicker", function (e) {
             // Overwrite at instance level the 'hide' function added by Prototype.js to the Element prototype.
             // This removes the 'hide' function only for the event target.
             e.target.hide = undefined;
@@ -189,7 +192,21 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
               // the prototype chain).
               delete e.target["hide"];
             }, 0);
+          }).on('show.daterangepicker', function () {
+            hadDate = inputElem.val() !== '';
+          }).on('cancel.daterangepicker', function () {
+            // Canceling the date picker of a filter without date doesn't give it the date selected by the date picker.
+            if (!hadDate) {
+              $(this).val('');
+              inputElem.val('').trigger('change');
+            }
           });
+          // Without saved dates, the field stays empty until a date is picked: the current day, which the date picker
+          // selects and displays in the field by default, isn't the value of the filter. Closing the date picker
+          // displays the date it selects in the field, and makes it the value of the filter.
+          if (!pickerDates.startDate) {
+            dateInput.val('');
+          }
           // The saved value is now displayed as the date picker formats it (e.g. in the summary of the filters).
           inputElem.removeClass('loading').trigger('dateDisplayed');
         }).catch(error => {
@@ -202,7 +219,10 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
         let selectizeCfg = {
           create: true,
           // A list filter can match several values (the value of the input holding them separated by commas).
-          maxItems: params.multiple ? null : 1
+          maxItems: params.multiple ? null : 1,
+          // The text searching a value is cleared once a value is picked, so that the next search doesn't start with
+          // it. Tom Select (XWiki 18+) keeps it by default, unlike Selectize, which ignores this setting.
+          clearAfterSelect: true
         };
         if (options.size() > 0) {
           selectizeCfg.options = options;
@@ -238,6 +258,9 @@ define(['jquery', 'moment', 'moment-jdateformatparser', 'xwiki-selectize'], func
           selectizeCfg.loadSelected = function (value, callback) {
             search('', value, callback);
           };
+          // The suggestions are filtered again on the text typed, by the field: on the text written for them in a query
+          // too (e.g. the identifier of a project), by which the tool can find them, so that it doesn't drop them.
+          selectizeCfg.searchField = ['value', 'label', 'hint', 'queryValue'];
         }
         inputElem.xwikiSelectize(selectizeCfg);
         setSuggestTextAlternative(inputElem, params.label);

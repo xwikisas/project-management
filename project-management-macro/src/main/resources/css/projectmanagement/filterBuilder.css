@@ -31,6 +31,12 @@
   /* No right padding, so that the trash icon of the series is aligned with the trash icons of its filters. */
   padding: 5px 0 5px 5px;
 }
+/* The name of a chart option labels its field, without the look of the labels of the forms. */
+.proj-manag-chart-type-param-name {
+  display: block;
+  font-weight: normal;
+  margin-bottom: 0;
+}
 .proj-manag-chart-type-param-description {
   color: #555555;
   font-size: smaller;
@@ -64,6 +70,18 @@
 
 .proj-manag-constraint-value-container {
   gap: .5em;
+  min-width: 0;
+}
+
+/* The field searching a value follows the selected values on their line. Tom Select (XWiki 18+) gives it a minimum
+   width of 7rem, which wrapped it below values leaving less, making the value field one line taller, e.g. with a user
+   name. While the value field is focused, the search field needs room for a few characters only, and no minimum width
+   otherwise, so that the values fitting on one line keep the value field one line high. Selectize (XWiki 15.10 to
+   17.10) sizes it to its text. */
+.proj-manag-constraint-value-container .ts-wrapper.multi.has-items .ts-control > input {
+  min-width: 4em;
+}
+.proj-manag-constraint-value-container .ts-wrapper.multi.has-items:not(.focus) .ts-control > input {
   min-width: 0;
 }
 

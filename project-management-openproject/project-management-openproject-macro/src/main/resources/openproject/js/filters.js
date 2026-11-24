@@ -21,12 +21,14 @@
    paths: {
      'openproject-connection': new XWiki.Document(XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT))
        .getURL('jsx', 'resource=openproject/js/connection.js'),
+     'openproject-version-suggestions': new XWiki.Document(XWiki.Model.resolve('Main.WebHome',
+       XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=openproject/js/versionSuggestions.js'),
      'openproject-not-authorized-message': new XWiki.Document(XWiki.Model.resolve('Main.WebHome',
        XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=openproject/js/notAuthorizedMessage.js')
    }
  });
- require(['jquery', 'openproject-connection', 'openproject-not-authorized-message'],
-   function ($, connection, notAuthorizedMessage) {
+ require(['jquery', 'openproject-connection', 'openproject-version-suggestions', 'openproject-not-authorized-message'],
+   function ($, connection, versionSuggestions, notAuthorizedMessage) {
    let getInstance = connection.getInstance;
    // The work items picked in the macro editor are searched on the connection used by the macro.
    $(document).on('pm:collectSourceParameters', '.macro-editor-modal .pm-work-item-source', function (event, params) {
@@ -65,6 +67,26 @@
        builderElement.data('instance', instance);
        builder.setSourceParameters(instance ? {instance: instance} : {}, connectionChanged);
      }
+   };
+   /*
+    * The versions suggested for a filter are the ones available in the projects that the builder filters on ("is"),
+    * if any. The projects are read each time the suggestions are requested, since the filter on the projects can
+    * change after the filter on the versions is displayed.
+    */
+   let restrictVersionsToFilteredProjects = function (builderElement, params) {
+     let descriptor = Object.getOwnPropertyDescriptor(params, 'searchURL');
+     if (!descriptor || descriptor.get || !versionSuggestions.isVersionSearch(params.searchURL)) {
+       return;
+     }
+     let searchURL = params.searchURL;
+     Object.defineProperty(params, 'searchURL', {
+       configurable: true,
+       enumerable: true,
+       get: function () {
+         let builder = window.FilterBuilder && window.FilterBuilder.instances.get(builderElement);
+         return versionSuggestions.getSearchURL(searchURL, builder && builder.getConstraints().project);
+       }
+     });
    };
    /*
     * When the values of a filter can't be suggested because the current user can't read the data of the connection,
@@ -138,6 +160,7 @@
              delete d.searchURL;
            }
          }
+         restrictVersionsToFilteredProjects(e.currentTarget, d);
        });
        element.off('suggestionsFailed.openproject').on('suggestionsFailed.openproject', function () {
          notAuthorizedNotifier.suggestionsFailed(element);

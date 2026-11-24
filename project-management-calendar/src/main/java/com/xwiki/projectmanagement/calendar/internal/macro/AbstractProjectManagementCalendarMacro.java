@@ -156,6 +156,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
     private List<Block> executeCalendar(T parameters, String content, MacroTransformationContext context)
         throws MacroExecutionException
     {
+        VisibleHours visibleHours = VisibleHours.parse(parameters.getTimeInterval());
         // An invalid content is reported as is: its message tells the user what to fix.
         WorkItemSourceResult source = readSource(parameters, content, filters -> resolveNames(parameters, filters));
         parameters.setFilters(source.getFilters());
@@ -168,7 +169,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
             // macro.
             URIBuilder uriBuilder = getUriBuilder(parameters, source);
             updateUrl(uriBuilder, parameters);
-            return Collections.singletonList(getCalendarBlock(parameters, uriBuilder, context));
+            return Collections.singletonList(getCalendarBlock(parameters, visibleHours, uriBuilder, context));
         } catch (Exception e) {
             throw new MacroExecutionException("Failed to execute the project management calendar macro.", e);
         }
@@ -322,7 +323,8 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         return this.loadErrorMessages.getHint(error);
     }
 
-    private Block getCalendarBlock(T parameters, URIBuilder uriBuilder, MacroTransformationContext context)
+    private Block getCalendarBlock(T parameters, VisibleHours visibleHours, URIBuilder uriBuilder,
+        MacroTransformationContext context)
     {
         String jsonURL = uriBuilder.toString();
         List<Block> children = new ArrayList<>();
@@ -338,7 +340,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
             messageParameters.put(hidden, hidden);
             children.add(new GroupBlock(getLoadErrorMessage(parameters, error, context), messageParameters));
         }
-        children.add(getMacroBlock(parameters, jsonURL));
+        children.add(getMacroBlock(parameters, visibleHours, jsonURL));
         Map<String, String> calendarParameters = new LinkedHashMap<>();
         calendarParameters.put(CLASS, "projectmanagement-calendar");
         // The script of the calendar recognizes the requests of its events by their URL.
@@ -346,7 +348,7 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         return new GroupBlock(children, calendarParameters);
     }
 
-    private MacroBlock getMacroBlock(T parameters, String jsonURL)
+    private MacroBlock getMacroBlock(T parameters, VisibleHours visibleHours, String jsonURL)
     {
 
         // Build the parameters to pass to the {{calendar}} wiki macro.
@@ -355,26 +357,14 @@ public abstract class AbstractProjectManagementCalendarMacro<T extends CalendarM
         if (parameters.getDefaultView() != null) {
             calendarParams.put("defaultView", parameters.getDefaultView().name());
         }
-        setTimeIntervals(parameters.getTimeInterval(), calendarParams);
+        if (visibleHours.getStart() != null) {
+            calendarParams.put("minTime", visibleHours.getStart());
+        }
+        if (visibleHours.getEnd() != null) {
+            calendarParams.put("maxTime", visibleHours.getEnd());
+        }
         calendarParams.put("editable", "false");
         calendarParams.put("firstDay", String.valueOf(parameters.getFirstDay().getDayValue()));
         return new MacroBlock("calendar", calendarParams, null, false);
-    }
-
-    private void setTimeIntervals(String timeInterval, Map<String, String> calendarParams)
-    {
-        if (timeInterval != null && !timeInterval.isEmpty()) {
-            String[] parts = timeInterval.split("-", 2);
-            if (parts.length == 2) {
-                String minTime = parts[0].trim();
-                String maxTime = parts[1].trim();
-                if (!minTime.isEmpty()) {
-                    calendarParams.put("minTime", minTime);
-                }
-                if (!maxTime.isEmpty()) {
-                    calendarParams.put("maxTime", maxTime);
-                }
-            }
-        }
     }
 }
