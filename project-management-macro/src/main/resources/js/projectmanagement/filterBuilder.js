@@ -20,7 +20,10 @@
 require.config({
   paths: {
     'filterDisplayer': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome', XWiki.EntityType.DOCUMENT)).getURL
-      ('jsx', 'resource=js/projectmanagement/filterDisplayer.js&minify=true')
+      ('jsx', 'resource=js/projectmanagement/filterDisplayer.js&minify=true'),
+    // The same path as in filterParameter.js.
+    'projectManagementQueryWriter': new XWiki.Document(new XWiki.Model.resolve('Main.WebHome',
+      XWiki.EntityType.DOCUMENT)).getURL('jsx', 'resource=js/projectmanagement/macro/queryWriter.js&minify=true')
   }
 });
 // TODO: All the dependencies are defined by the livedata so we can just require them. However, we might want to define
@@ -36,9 +39,11 @@ require.config({
  * The values of a list row are stored as one constraint per value, so a filter can hold the constraints of several
  * rows of its property.
  */
-define('project-management-filter-builder', ['jquery', 'filterDisplayer'], function ($, filterDisplayer) {
-  // The operators that take no value, e.g. "is not set" or "is open".
-  const NO_VALUE_OPERATORS = ['*', '!*', 'o', 'c', 't', 'w'];
+define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'projectManagementQueryWriter'],
+    function ($, filterDisplayer, queryWriter) {
+  // The operators that take no value, e.g. "is not set" or "is open" (or the generic "empty" of the Live Data, kept for
+  // the properties that have no "is not set").
+  const NO_VALUE_OPERATORS = ['*', '!*', 'o', 'c', 't', 'w', 'empty'];
   // The operators excluding the values of their row, whose values are highlighted.
   const EXCLUDING_OPERATORS = ['!', '!~'];
 
@@ -306,6 +311,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
         operatorElem.append($('<option></option>').attr('value', operator.id)
           .text(getOperatorLabel(property, operator)));
       });
+      // An operator that the property doesn't propose (e.g. of a filter written by hand) is kept, named by its id,
+      // rather than lost.
+      if (operatorId && !property.filter.operators.some(operator => operator.id == operatorId)) {
+        operatorElem.append($('<option></option>').attr('value', operatorId)
+          .text(getOperatorLabel(property, { id: operatorId })));
+      }
       let existingRows = getRows(property.id);
       if (!operatorId) {
         // The first operator that the other rows of the property don't use, preferably the bound completing a range
@@ -356,6 +367,12 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
      */
     let addFilter = function (filter, focus) {
       let property = builder.cfg.find(i => i.id == filter.property);
+      if (property) {
+        // The generic operators of the Live Data (e.g. contains, in the filters parameter written by an older version)
+        // are shown with the operators of the property selecting the same work items (e.g. ~ for a text).
+        filter = queryWriter.toBuilderFilter(filter, getType(property),
+          property.filter.operators.map(operator => operator.id));
+      }
       let constraints = filter.constraints || [];
       if (!property) {
         if (constraints.length > 0) {

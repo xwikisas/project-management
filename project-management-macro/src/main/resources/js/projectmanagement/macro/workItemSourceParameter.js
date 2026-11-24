@@ -85,6 +85,25 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     input.val(value).trigger('input');
   };
 
+  // Writes a parameter that may be a list of values separated by commas (e.g. the properties, picked in a list
+  // allowing several values), keeping the values that its list doesn't propose.
+  const setParameterValue = function (input, value) {
+    const selectize = input[0] && input[0].selectize;
+    if (!selectize || selectize.settings.maxItems === 1) {
+      setValue(input, value);
+      return;
+    }
+    const items = value.split(',');
+    items.filter(item => !selectize.options[item]).forEach(item => {
+      selectize.addOption({[selectize.settings.valueField]: item, [selectize.settings.labelField]: item});
+    });
+    selectize.setValue(items);
+  };
+
+  // The parameters that can hold the settings of the advanced Live Data configuration of a macro, see
+  // workItemSelection.js#splitLiveDataConfiguration.
+  const LIVE_DATA_PARAMETERS = ['properties', 'limit'];
+
   // The displayers showing only one work item.
   const SINGLE_DISPLAYERS = ['single', 'inline'];
 
@@ -168,6 +187,10 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
         return;
       }
       const messages = [];
+      const liveData = state.values.liveData;
+      if (liveData && state.way !== model.ADVANCED && Object.keys(liveData.parameters).length) {
+        messages.push(l10n['liveData.moved']);
+      }
       if (model.isEmptyList(state)) {
         messages.push(l10n.emptyList);
       }
@@ -280,7 +303,14 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       render();
     });
     widget.on('click', '.pm-source-convert', function () {
-      state = model.withConvertedIdentifier(state);
+      // The settings of the advanced Live Data configuration of the macro, which the content no longer holds, are
+      // moved to the parameters holding them, when the macro has them.
+      const parameters = LIVE_DATA_PARAMETERS.filter(name => editor.find(`:input[name="${name}"]`).length);
+      state = model.withConvertedIdentifier(state, parameters);
+      const liveData = state.values.liveData;
+      Object.entries((liveData && liveData.parameters) || {}).forEach(([name, value]) => {
+        setParameterValue(editor.find(`:input[name="${name}"]`), value);
+      });
       showValues();
       render();
       write();

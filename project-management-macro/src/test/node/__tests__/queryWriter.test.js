@@ -109,3 +109,82 @@ describe("queryWriter", () => {
       .toBe('project = "Atlas mobile app" AND status IN (New, "2024", 9) AND assignees = me AND summary ~ 5');
   });
 });
+
+/*
+ * The filters of the filters parameter written by hand or by an older version use the generic operators of the Live
+ * Data, that the builder shows with the operators of the properties (the ones of the OpenProject client here), and
+ * writes in the query with the same meaning, as the client reads them.
+ */
+describe("toBuilderFilter", () => {
+  const TEXT = ["~", "!~"];
+  const TEXT_ALL = ["~", "!~", "=", "!", "*", "!*"];
+  const LIST = ["=", "!", "*", "!*"];
+  const NUMBER = ["=", "!", ">=", "<=", "*", "!*"];
+  const DATE = ["t", "w", "=d", "between", "!*"];
+  const BOOLEAN = ["=", "!"];
+
+  it.each([
+    ["text", TEXT, "summary", "contains", "task", "~", "task", "summary ~ task"],
+    ["text", TEXT, "summary", "startsWith", "task", "~", "task", "summary ~ task"],
+    // The subject can't be equal to a text in OpenProject, only contain it.
+    ["text", TEXT, "summary", "equals", "task", "~", "task", "summary ~ task"],
+    ["text", TEXT_ALL, "description", "equals", "task", "=", "task", "description = task"],
+    ["text", TEXT_ALL, "description", "empty", "", "!*", "", "description IS EMPTY"],
+    ["list", LIST, "status", "equals", "12", "=", "12", "status = 12"],
+    ["list", LIST, "status", "contains", "12", "=", "12", "status = 12"],
+    ["list", LIST, "status", "startsWith", "12", "=", "12", "status = 12"],
+    ["list", LIST, "assignees", "empty", "", "!*", "", "assignees IS EMPTY"],
+    ["boolean", BOOLEAN, "flagged", "equals", "true", "=", "true", "flagged = true"],
+    ["number", NUMBER, "progress", "equals", "50", "=", "50", "progress = 50"],
+    // Strict, as in the OpenProject client: greater than 5 is at least 6.
+    ["number", NUMBER, "progress", "greater", "5", ">=", "6", "progress >= 6"],
+    ["number", NUMBER, "progress", ">", "5", ">=", "6", "progress >= 6"],
+    ["number", NUMBER, "progress", "less", "9", "<=", "8", "progress <= 8"],
+    ["number", NUMBER, "progress", "<", "9", "<=", "8", "progress <= 8"],
+    ["number", NUMBER, "estimatedTime", "greater", "2.5", ">=", "2.5", "estimatedTime >= 2.5"],
+    ["number", NUMBER, "progress", "empty", "", "!*", "", "progress IS EMPTY"],
+    ["date", DATE, "dueDate", "after", "2026-11-01", "between", "2026-11-01/3000-01-01", "dueDate >= 2026-11-01"],
+    ["date", DATE, "dueDate", "before", "2026-11-01", "between", "1970-01-01/2026-11-01", "dueDate <= 2026-11-01"],
+    ["date", DATE, "dueDate", "contains", "2026-11-21", "=d", "2026-11-21", "dueDate = 2026-11-21"],
+    ["date", DATE, "dueDate", "contains", "2026-11-01/2026-11-30", "between", "2026-11-01/2026-11-30",
+      "dueDate >= 2026-11-01 AND dueDate <= 2026-11-30"],
+    ["date", DATE, "dueDate", "equals", "2026-11-21", "=d", "2026-11-21", "dueDate = 2026-11-21"],
+    ["date", DATE, "dueDate", "empty", "", "!*", "", "dueDate IS EMPTY"],
+    // The operators of the property are kept.
+    ["text", TEXT, "summary", "!~", "task", "!~", "task", "summary !~ task"],
+    ["date", DATE, "dueDate", "between", "2026-11-01/2026-11-30", "between", "2026-11-01/2026-11-30",
+      "dueDate >= 2026-11-01 AND dueDate <= 2026-11-30"],
+    // Without equivalent for the property, the operator is kept, and written as it is.
+    ["date", ["t", "w", "=d", "between"], "startDate", "empty", "", "empty", "", "startDate IS EMPTY"],
+    ["text", TEXT, "summary", "empty", "", "empty", "", "summary IS EMPTY"],
+    ["date", DATE, "dueDate", ">t-", "3", ">t-", "3", "dueDate >= -3d AND dueDate <= 0d"],
+  ])("reads a %s filter %j on %s: %s %s as %s %s", (type, operators, property, operator, value, builderOperator,
+    builderValue, query) => {
+    const builderFilter = queryWriter.toBuilderFilter(filter(property, operator, value), type, operators);
+    expect(builderFilter).toEqual(filter(property, builderOperator, builderValue));
+    expect(queryWriter.toQuery([builderFilter], new Map())).toBe(query);
+  });
+
+  it("keeps the constraints without operator: the builder chooses the operator of their row", () => {
+    const withoutOperator = { property: "summary", constraints: [{ operator: null, value: "task" }] };
+    expect(queryWriter.toBuilderFilter(withoutOperator, "text", TEXT)).toEqual(withoutOperator);
+  });
+
+  it("converts each constraint of a filter", () => {
+    const statusFilter = { property: "status", constraints: [{ operator: "equals", value: "1" },
+      { operator: "!", value: "2" }, { operator: "contains", value: "3" }] };
+    expect(queryWriter.toQuery([queryWriter.toBuilderFilter(statusFilter, "list", LIST)], new Map()))
+      .toBe("status IN (1, 3) AND status != 2");
+  });
+
+  it("keeps the meaning of the filters parameter of 1.4.1 once the filters are edited", () => {
+    const legacy = JSON.parse('{"query":{"filters":[{"property":"project","constraints":[{"operator":"=","value":'
+      + '"9"}]},{"property":"summary","constraints":[{"operator":"contains","value":"task"}]}]}}');
+    const types = { project: ["list", LIST], summary: ["text", TEXT] };
+    const builderFilters = legacy.query.filters.map((legacyFilter) =>
+      queryWriter.toBuilderFilter(legacyFilter, ...types[legacyFilter.property]));
+    // The user adds a filter on the status.
+    builderFilters.push(filter("status", "o", ""));
+    expect(queryWriter.toQuery(builderFilters, new Map())).toBe("project = 9 AND summary ~ task AND status = open");
+  });
+});

@@ -208,4 +208,62 @@ describe("withConvertedIdentifier", () => {
     const state = model.readInitial({});
     expect(model.withConvertedIdentifier(state)).toBe(state);
   });
+
+  describe("of a macro with an advanced Live Data configuration", () => {
+    const LINK = "http://localhost:8084/projects/qa150-t3/work_packages";
+    const PARAMETERS = ["properties", "limit"];
+
+    it("moves its properties and limit to their parameters", () => {
+      const initial = model.readInitial({ identifier: LINK,
+        content: '{"query":{"properties":["identifier","summary","status"],"limit":3}}' });
+      expect(initial.locked).toBe(true);
+      const state = model.withConvertedIdentifier(initial, PARAMETERS);
+      expect(state.way).toBe("url");
+      expect(state.locked).toBe(false);
+      expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content: LINK, source: "url" });
+      expect(state.values.liveData).toEqual({ parameters: { properties: "identifier,summary,status", limit: "3" },
+        rest: "" });
+      expect(model.droppedValues(state)).toEqual([]);
+    });
+
+    it("drops the rest of its configuration", () => {
+      const state = model.withConvertedIdentifier(model.readInitial({ identifier: "12, 13",
+        content: '{"query":{"properties":["status"],"sort":[{"property":"status"}]},"meta":{"pagination":{}}}' }),
+      PARAMETERS);
+      expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content: "12, 13", source: "list" });
+      expect(state.values.liveData.parameters).toEqual({ properties: "status" });
+      expect(model.droppedValues(state)).toEqual([{ type: "liveData",
+        value: '{"query":{"sort":[{"property":"status"}]},"meta":{"pagination":{}}}' }]);
+    });
+
+    it("drops the settings that the macro has no parameter for", () => {
+      const state = model.withConvertedIdentifier(model.readInitial({ identifier: LINK,
+        content: '{"query":{"properties":["status"],"limit":3}}' }), ["limit"]);
+      expect(state.values.liveData.parameters).toEqual({ limit: "3" });
+      expect(model.droppedValues(state)).toEqual([{ type: "liveData", value: '{"query":{"properties":["status"]}}' }]);
+    });
+
+    it("keeps the configuration when the advanced way is chosen again", () => {
+      const content = '{"query":{"limit":3}}';
+      const state = model.withConvertedIdentifier(model.readInitial({ identifier: LINK, content }), PARAMETERS);
+      state.way = "advanced";
+      expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content });
+      expect(model.droppedValues(state)).toEqual([{ type: "url", value: LINK }]);
+    });
+  });
+});
+
+describe("splitLiveDataConfiguration", () => {
+  it.each([
+    ['{"query":{"properties":[" status ","type"],"limit":10,"offset":5}}', { properties: "status,type", limit: "10" },
+      '{"query":{"offset":5}}'],
+    // Values that the parameters can't hold are kept in the rest.
+    ['{"query":{"properties":[],"limit":0}}', {}, '{"query":{"properties":[],"limit":0}}'],
+    ['{"query":{"properties":"status","limit":"3"}}', {}, '{"query":{"properties":"status","limit":"3"}}'],
+    ['{"meta":{}}', {}, '{"meta":{}}'],
+    ["{not json", {}, "{not json"],
+    ["{}", {}, "{}"],
+  ])("splits %s", (content, parameters, rest) => {
+    expect(model.splitLiveDataConfiguration(content, ["properties", "limit"])).toEqual({ parameters, rest });
+  });
 });
