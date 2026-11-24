@@ -30,6 +30,9 @@ import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
 
+import com.xwiki.projectmanagement.openproject.internal.UserTokenChecker;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
@@ -50,6 +53,9 @@ class PageEditRightCheckerTest
     @MockComponent
     @Named("current")
     private DocumentReferenceResolver<String> documentReferenceResolver;
+
+    @MockComponent
+    private UserTokenChecker userTokenChecker;
 
     @InjectMockComponents
     private PageEditRightChecker checker;
@@ -89,5 +95,15 @@ class PageEditRightCheckerTest
     {
         assertFalse(this.checker.canEdit(WIKI, ""));
         assertFalse(this.checker.canEdit(WIKI, null));
+    }
+
+    @Test
+    void connectURLComingBackToThePage()
+    {
+        DocumentReference page = new DocumentReference(WIKI, "Space", "Page");
+        when(this.documentReferenceResolver.resolve("Space.Page")).thenReturn(page);
+        when(this.userTokenChecker.getConnectURL("main", page)).thenReturn("/connect");
+
+        assertEquals("/connect", this.checker.getConnectURL("main", "Space.Page"));
     }
 }

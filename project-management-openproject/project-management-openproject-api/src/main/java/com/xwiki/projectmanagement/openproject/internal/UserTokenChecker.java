@@ -36,6 +36,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.csrf.CSRFToken;
 import org.xwiki.localization.ContextualLocalizationManager;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.model.reference.LocalDocumentReference;
 import org.xwiki.rendering.block.Block;
 import org.xwiki.rendering.block.FormatBlock;
@@ -73,6 +74,8 @@ public class UserTokenChecker
     public static final String NOT_AUTHORIZED_HINT = "openproject.oauth.notauthorized.hint";
 
     private static final String CLASS = "class";
+
+    private static final String VIEW_ACTION = "view";
 
     private static final String ACCOUNT_REQUIRED = "openproject.oauth.accountrequired";
 
@@ -239,28 +242,52 @@ public class UserTokenChecker
             connectLink ? translationPrefix : null, context.isInline());
     }
 
+    /**
+     * @param instance the name of an OpenProject connection
+     * @param redirectDocument the page to come back to once the OpenProject account is connected, e.g. the page whose
+     *     macro is edited
+     * @return the URL connecting the OpenProject account of the current user to the given connection, as the link of
+     *     the warnings, or {@code null} when they can't connect one: they are a guest, or the connection doesn't exist
+     *     or doesn't let users connect their account
+     * @since 1.5.0
+     */
+    public String getConnectURL(String instance, DocumentReference redirectDocument)
+    {
+        OpenProjectConnection connection = this.openProjectConfiguration.getConnection(instance);
+        XWikiContext xContext = this.contextProvider.get();
+        if (connection == null || !connection.getAccessMode().allowsUserAccounts()
+            || xContext.getUserReference() == null)
+        {
+            return null;
+        }
+        return getConnectURL(instance, xContext.getWiki().getURL(redirectDocument, VIEW_ACTION, xContext), xContext);
+    }
+
+    private String getConnectURL(String connectionName, String redirectURL, XWikiContext xContext)
+    {
+        LocalDocumentReference connectionDocumentReference =
+            new LocalDocumentReference(OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
+        return xContext.getWiki().getURL(connectionDocumentReference, VIEW_ACTION, xContext)
+            + "?connectionName="
+            + URLEncoder.encode(StringUtils.defaultString(connectionName), StandardCharsets.UTF_8)
+            + "&redirectUrl="
+            + URLEncoder.encode(redirectURL, StandardCharsets.UTF_8)
+            + "&token="
+            + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+    }
+
     private List<Block> getMessageBlock(String connectionName, Block hint, String linkTranslationPrefix,
         boolean inline)
     {
         XWikiContext xContext = contextProvider.get();
-        String viewAction = "view";
 
         List<Block> message = new ArrayList<>();
         message.add(hint);
         // Guests have no user to attach an OpenProject account to.
         if (linkTranslationPrefix != null && xContext.getUserReference() != null) {
             message.add(new SpaceBlock());
-            String currentDocumentUrl = xContext.getDoc().getURL(viewAction, xContext);
-            LocalDocumentReference connectionDocumentReference = new LocalDocumentReference(
-                OPEN_PROJECT_CODE_SPACE, "RenewOAuthConnection");
             String redirectUrl =
-                xContext.getWiki().getURL(connectionDocumentReference, viewAction, xContext)
-                    + "?connectionName="
-                    + URLEncoder.encode(StringUtils.defaultString(connectionName), StandardCharsets.UTF_8)
-                    + "&redirectUrl="
-                    + URLEncoder.encode(currentDocumentUrl, StandardCharsets.UTF_8)
-                    + "&token="
-                    + URLEncoder.encode(csrfToken.getToken(), StandardCharsets.UTF_8);
+                getConnectURL(connectionName, xContext.getDoc().getURL(VIEW_ACTION, xContext), xContext);
 
             List<Block> linkContentBlocks =
                 Collections.singletonList(l10n.getTranslation(linkTranslationPrefix + ".link").render());
