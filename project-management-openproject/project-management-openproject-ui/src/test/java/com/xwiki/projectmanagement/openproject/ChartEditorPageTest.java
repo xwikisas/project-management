@@ -116,6 +116,17 @@ class ChartEditorPageTest extends PageTest
     }
 
     @Test
+    void seriesCanBeRemovedWithTheKeyboard() throws Exception
+    {
+        Document result = render("html_displayer/openprojectfilters/edit.vm");
+
+        // The remove icon of a series is a link, reachable with the keyboard, named for the assistive technologies.
+        Element remove = result.selectFirst(".proj-manag-header a.proj-manag-remove-filter");
+        assertEquals("#", remove.attr("href"), result.html());
+        assertEquals("projectmanagement.macro.chart.removeSeries", remove.attr("title"));
+    }
+
+    @Test
     void filtersEditorProposesTheFilterableProperties() throws Exception
     {
         Document result = render("html_displayer/openprojectfilters/edit.vm");
@@ -181,6 +192,11 @@ class ChartEditorPageTest extends PageTest
         assertEquals("projectmanagement.macro.chart.series [__N__]", labels.attr("data-placeholder"));
         assertEquals("projectmanagement.macro.chart.addSeriesName",
             result.selectFirst("button.proj-manag-chart-label-new.proj-manag-add-link").text());
+        // The remove icon of a series name is a link, reachable with the keyboard, named for the assistive
+        // technologies.
+        Element remove = result.selectFirst("#proj-manag-chart-label-template a.proj-manag-chart-label-remove");
+        assertEquals("#", remove.attr("href"));
+        assertEquals("projectmanagement.macro.chart.removeSeriesName", remove.attr("title"));
     }
 
     @Test

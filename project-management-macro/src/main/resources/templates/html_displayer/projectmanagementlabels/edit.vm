@@ -26,7 +26,8 @@
     <div class="proj-manag-chart-label proj-manag-macro-param">
       <div class="proj-manag-header">
         <label></label>
-        <a class="proj-manag-chart-label-remove">$services.icon.renderHTML('trash')</a>
+        <a href="#" class="proj-manag-chart-label-remove" title="$escapetool.xml($services.localization.render(
+          'projectmanagement.macro.chart.removeSeriesName'))">$services.icon.renderHTML('trash')</a>
       </div>
       <input type="text">
     </div>

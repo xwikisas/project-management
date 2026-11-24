@@ -581,7 +581,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer'], funct
       };
       builderElement.addEventListener('keydown', builderElement.preventSubmitOnEnter, true);
       builder.constraintBuilder.find('.proj-manag-remove-filter').off('click.filterBuilder')
-        .on('click.filterBuilder', function () {
+        .on('click.filterBuilder', function (event) {
+          // A link, to be reachable with the keyboard, that doesn't navigate.
+          event.preventDefault();
           builder.constraintBuilder.trigger('builderRemoved');
           if (window.FilterBuilder && window.FilterBuilder.instances) {
             window.FilterBuilder.instances.delete(builder.constraintBuilder[0]);
