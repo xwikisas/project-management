@@ -21,6 +21,7 @@ package com.xwiki.projectmanagement.internal.displayers;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -65,12 +66,18 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
      */
     private static final int DEFAULT_PAGE_SIZE = 25;
 
+    private static final Map<String, Object> FORCE_SKIN_ACTION = Collections.singletonMap("forceSkinAction", true);
+
     @Inject
     private ComponentManager componentManager;
 
     @Inject
     @Named("ssrx")
     private SkinExtension ssrx;
+
+    @Inject
+    @Named("jsrx")
+    private SkinExtension jsrx;
 
     /**
      * Default constructor.
@@ -105,11 +112,12 @@ public class WorkItemLivedataDisplayer extends AbstractMacro<ProjectManagementMa
                 // Live Data uses the page sizes only in its page size selector, which is hidden by default.
                 parameters.setShowPageSizeDropdown(true);
             }
+            // Tells the viewers why the work items couldn't be retrieved, e.g. a filter value rejected by the tool.
+            this.jsrx.use("js/projectmanagement/liveDataErrors.js", FORCE_SKIN_ACTION);
             if (WorkItemsDisplayer.CARDS.equals(parameters.getDisplayer())) {
                 parameters.setLayouts("cards,table");
                 // The style hides the labels of the properties without value in the cards.
-                this.ssrx.use("css/projectmanagement/displayer/cards.css",
-                    Collections.singletonMap("forceSkinAction", true));
+                this.ssrx.use("css/projectmanagement/displayer/cards.css", FORCE_SKIN_ACTION);
                 return Collections.singletonList(new GroupBlock(displayerMacro.execute(parameters, newContent, context),
                     Collections.singletonMap("class", "proj-manag-cards")));
             }
