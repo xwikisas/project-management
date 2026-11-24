@@ -164,6 +164,12 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     let textMode = false;
     const queryContainer = widget.find('[data-builder-role="query"]');
     const waySelect = widget.find('.pm-source-way-select');
+    // The select is named by the name of the parameter displayed above it, which depends on the macro (e.g. "Chart the
+    // work packages selected by"): the label of the widget is the generic one.
+    const parameterName = widget.closest('.macro-parameter').find('.macro-parameter-name').first().text().trim();
+    if (parameterName) {
+      widget.find('label[for="' + waySelect.attr('id') + '"]').text(parameterName);
+    }
     // The advanced way is only offered to the macros using it.
     if (!model.hasAdvancedWay(state)) {
       waySelect.find('option[value="advanced"]').remove();

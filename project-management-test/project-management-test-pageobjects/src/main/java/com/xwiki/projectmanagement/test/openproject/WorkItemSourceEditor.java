@@ -175,6 +175,16 @@ public class WorkItemSourceEditor extends BaseElement
     }
 
     /**
+     * @return the label of the field selecting the way, read by the assistive technologies
+     */
+    public String getWayLabel()
+    {
+        WebElement select = getWidget().findElement(WAY_SELECT);
+        return getWidget().findElement(By.cssSelector(String.format("label[for='%s']", select.getAttribute("id"))))
+            .getAttribute("textContent").trim();
+    }
+
+    /**
      * Pick specific work packages: search each given text (a subject, an id or a key) and pick the first work
      * package found, or the typed id or key itself.
      *
