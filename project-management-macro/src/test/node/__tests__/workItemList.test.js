@@ -102,6 +102,19 @@ describe("toOption", () => {
   });
 });
 
+describe("canShowSuggestions", () => {
+  it("shows the suggestions of a typed text", () => {
+    expect(workItemList.canShowSuggestions("2")).toBe(true);
+    expect(workItemList.canShowSuggestions(" ac-9 ")).toBe(true);
+  });
+
+  it("doesn't show the suggestions without a typed text, e.g. once a work item is picked and the text cleared", () => {
+    expect(workItemList.canShowSuggestions("")).toBe(false);
+    expect(workItemList.canShowSuggestions("  ")).toBe(false);
+    expect(workItemList.canShowSuggestions(undefined)).toBe(false);
+  });
+});
+
 describe("findOption", () => {
   const options = [
     { value: "157", label: "AC-1 Mobile offline mode", key: "AC-1" },

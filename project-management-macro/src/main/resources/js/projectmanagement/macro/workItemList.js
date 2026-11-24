@@ -112,6 +112,18 @@ define([], function () {
   };
 
   /**
+   * The picker only searches the work items once the user types: without a typed text, the suggestions would list the
+   * work items found by the previous searches, e.g. when the suggest widget or a late answer of the search opens them
+   * once a work item is picked (and the typed text cleared).
+   *
+   * @param typedText the text typed in the picker
+   * @return whether the suggestions can be shown for this text
+   */
+  let canShowSuggestions = function (typedText) {
+    return String(typedText || '').trim() !== '';
+  };
+
+  /**
    * @param options the options of the picker, e.g. the picked work items or the work items found by a search
    * @param text a typed id or key, e.g. 157 or ac-1
    * @return the option showing the work item with this id or key, whatever the case of the key (as the tool displays
@@ -211,6 +223,6 @@ define([], function () {
     };
   };
 
-  return {parseList, formatList, isIdOrKey, extend, toOption, findOption, withItemFound, resolution, clientMessages,
-    restUrls};
+  return {parseList, formatList, isIdOrKey, extend, toOption, canShowSuggestions, findOption, withItemFound,
+    resolution, clientMessages, restUrls};
 });

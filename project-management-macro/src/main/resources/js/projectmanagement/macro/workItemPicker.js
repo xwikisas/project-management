@@ -174,6 +174,9 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       maxItems: null,
       // The work items are searched once the user types: an empty search would list any work item.
       preload: false,
+      // The typed text is cleared once a work item is picked, so that the next one can be searched right away: by Tom
+      // Select (XWiki 18.x), and by the item_add listener below for Selectize (XWiki 15.10), which ignores it.
+      clearAfterSelect: true,
       placeholder: l10n.get('placeholder'),
       dropdownParent: 'body',
       // The suggest widget filters the found work items again: they're found by their key and their id too.
@@ -236,10 +239,15 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
     };
 
     let closeIfNothingTyped = function () {
-      if (getTypedText() === '') {
+      if (!workItemList.canShowSuggestions(getTypedText())) {
         selectize.close();
       }
     };
+
+    // The suggestions are only shown for a typed text: the suggest widget opens them once a work item is picked with
+    // Enter (Selectize, XWiki 15.10, after the item_add event), as does a late answer of a search, listing the work
+    // items found by the previous searches.
+    selectize.on('dropdown_open', closeIfNothingTyped);
 
     let getIds = function () {
       return textMode ? workItemList.parseList(textArea.val()) : selectize.items.slice();
