@@ -449,6 +449,20 @@ class DefaultOpenProjectApiClientTest
     }
 
     @Test
+    void getUsersWithTheirLogin() throws Exception
+    {
+        when(this.response.body()).thenReturn("{\"total\": 2, \"_embedded\": {\"elements\": ["
+            + "{\"id\": 5, \"name\": \"QA150 Twin\", \"login\": \"qa150same1\", \"_links\": {}},"
+            + "{\"id\": 6, \"name\": \"QA150 Twin\", \"_links\": {}}]}}");
+
+        List<User> users = this.openProjectApiClient.getUsers(OFFSET, PAGE_SIZE, "[]").getItems();
+
+        assertEquals("qa150same1", users.get(0).getLogin());
+        // OpenProject gives the login of the users only to the users who can manage them.
+        assertNull(users.get(1).getLogin());
+    }
+
+    @Test
     void getAvailableUsersParsesResponse() throws IOException, ProjectManagementException
     {
         when(this.response.body()).thenReturn(OpenProjectTestUtils.getUsersValidResponse());
