@@ -20,7 +20,9 @@
 #set ($discard = $xwiki.jsrx.use('js/projectmanagement/macro/chartTypeParams.js', {'minify': true}))
 ## Needed for the styling of the div.
 #set ($discard = $xwiki.ssrx.use('css/projectmanagement/filterBuilder.css'))
-<div class="proj-manag-chart-type-params proj-manag-macro-param">
+## $clientId, set by the template of the client including this one (e.g. openproject), is the client whose texts the
+## options display when it has its own (e.g. "work packages"), see ChartDisplayerResource.
+<div class="proj-manag-chart-type-params proj-manag-macro-param" data-client="$!escapetool.xml($clientId)">
 </div>
 <template id="proj-manag-chart-type-param-template">
   <div class="proj-manag-chart-type-param">

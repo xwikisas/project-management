@@ -29,6 +29,7 @@ import com.xwiki.projectmanagement.internal.chart.displayer.BarChartDisplayer;
 import com.xwiki.projectmanagement.macro.ProjectManagementChartMacroParameters;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectChartPreset;
+import com.xwiki.projectmanagement.openproject.OpenProjectChartTypeParams;
 import com.xwiki.projectmanagement.openproject.OpenProjectFilters;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstance;
 import com.xwiki.projectmanagement.openproject.OpenProjectInstanceHolder;
@@ -102,6 +103,16 @@ public class OpenProjectChartMacroParameters extends ProjectManagementChartMacro
     public void setProperty(String property)
     {
         super.setProperty(property);
+    }
+
+    // The options of the chart type are worded for OpenProject, e.g. "work packages".
+    @PropertyDisplayType(OpenProjectChartTypeParams.class)
+    @PropertyGroup("display")
+    @PropertyOrder(50)
+    @Override
+    public void setTypeParams(String typeParams)
+    {
+        super.setTypeParams(typeParams);
     }
 
     @PropertyHidden
