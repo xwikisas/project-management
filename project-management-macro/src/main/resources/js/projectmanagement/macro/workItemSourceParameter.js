@@ -289,6 +289,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     });
     widget.on('input', '.pm-source-query-input', function () {
       state.values.query = String($(this).val() || '');
+      state.values.queryEdited = true;
       render();
       write();
     });
@@ -323,6 +324,7 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
     queryContainer.on('pm:queryChanged', function (event, query) {
       if (event.target === this) {
         state.values.query = String(query || '');
+        state.values.queryEdited = true;
         render();
         write();
       }

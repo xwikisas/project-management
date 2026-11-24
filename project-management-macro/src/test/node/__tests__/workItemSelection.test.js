@@ -180,7 +180,19 @@ describe("toFields", () => {
       { type: "identifier", value: "12" },
     ]);
 
+    // Removing all the filters drops them too.
+    state.values.unsupportedFilters = [];
+    state.values.query = "";
+    state.values.queryEdited = true;
+    expect(model.toFields(state)).toEqual(EMPTY_FIELDS);
+    expect(model.showsLegacyFilters(state)).toBe(false);
+    expect(model.droppedValues(state)).toEqual([
+      { type: "filters", value: LEGACY_FILTERS },
+      { type: "identifier", value: "12" },
+    ]);
+
     // Another way drops them.
+    state.values.query = "status = open";
     state.way = "list";
     state.values.list = ["7"];
     expect(model.toFields(state)).toEqual({ ...EMPTY_FIELDS, content: "7", source: "list" });
