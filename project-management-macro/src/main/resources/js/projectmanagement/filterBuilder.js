@@ -82,7 +82,9 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       // the new source are loading: see setSourceParameters.
       sourceChanging: false,
       // Whether the builder doesn't show the filters it was given: see setUnreadable.
-      unreadable: false
+      unreadable: false,
+      // The name of the preset whose filters apply with the ones of the builder, if any: see setPreset.
+      preset: ''
     };
 
     let getType = function (property) {
@@ -230,8 +232,13 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       return builder.constraintBuilder.hasClass(LOADING_CLASS)
         || builder.constraintBuilder.hasClass(PROPERTIES_LOADING_CLASS);
     };
-    // What the filters select, in plain words, or that they're loading (see isLoading). Nothing while the builder
-    // doesn't show the filters it was given (see setUnreadable).
+    // Replaces {0}, {1}... in the given text by the given values, inserted as they are (e.g. a value holding $&).
+    let formatText = function (text, values) {
+      return text.replace(/\{(\d)\}/g, (match, index) => index < values.length ? values[index] : match);
+    };
+    // What the filters select, in plain words, with the preset whose filters apply too, if any (see setPreset), or that
+    // they're loading (see isLoading). Nothing while the builder doesn't show the filters it was given (see
+    // setUnreadable).
     let updateSummary = function () {
       let summaryElement = builder.constraintBuilder.find('.proj-manag-filter-summary');
       if (isLoading()) {
@@ -243,9 +250,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       let descriptions = getRows().map((index, row) => describeRow($(row))).get().filter(text => text !== null);
       let incomplete = getRows().length - descriptions.length;
-      let summary = descriptions.length > 0
-        ? (builder.l10n.summary || '{0}').replace('{0}', descriptions.join(', ' + builder.l10n.and + ' '))
-        : builder.l10n.summaryAll || '';
+      let conditions = descriptions.join(', ' + builder.l10n.and + ' ');
+      let summary;
+      if (builder.preset && descriptions.length > 0 && builder.l10n.summaryPreset) {
+        summary = formatText(builder.l10n.summaryPreset, [conditions, builder.preset]);
+      } else if (builder.preset && descriptions.length === 0 && builder.l10n.summaryAllPreset) {
+        summary = formatText(builder.l10n.summaryAllPreset, [builder.preset]);
+      } else {
+        summary = descriptions.length > 0 ? formatText(builder.l10n.summary || '{0}', [conditions])
+          : builder.l10n.summaryAll || '';
+      }
       if (incomplete > 0 && builder.l10n.summaryIncomplete) {
         summary += ' ' + builder.l10n.summaryIncomplete;
       }
@@ -649,6 +663,16 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       builder.unreadable = unreadable;
       updateSummary();
     };
+    /*
+     * Sets the preset whose filters apply with the ones of the builder, e.g. the filter preset chosen in a macro: the
+     * summary names it, since the builder doesn't know its filters.
+     *
+     * @param name the name of the preset, or an empty string when there is none
+     */
+    let setPreset = function (name) {
+      builder.preset = String(name || '');
+      updateSummary();
+    };
     let init = function () {
       builder.constraintBuilder = element;
       builder.addButton = builder.constraintBuilder.find('.proj-manag-add-filter');
@@ -745,7 +769,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       setTitle: setTitle,
       setSourceParameters: setSourceParameters,
       setLoading: setLoading,
-      setUnreadable: setUnreadable
+      setUnreadable: setUnreadable,
+      setPreset: setPreset
     });
   };
   /*

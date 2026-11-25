@@ -51,7 +51,7 @@ class TranslationsTest
      */
     private static final List<String> FILTER_BUILDER_LABELS = List.of("anotherCondition", "operatorLabel",
         "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between", "propertiesNotLoaded",
-        "setConditionUnsupported");
+        "setConditionUnsupported", "summaryPreset", "summaryAllPreset");
 
     /**
      * What a series of a chart without filter selects (see projectmanagementfilters/edit.vm).
@@ -142,6 +142,20 @@ class TranslationsTest
             translations.getProperty(OPENPROJECT_PREFIX + SERIES_SUMMARY));
         assertEquals("No filter: all the charted work packages.",
             translations.getProperty(OPENPROJECT_PREFIX + SERIES_NO_FILTER));
+    }
+
+    /**
+     * The summary of the filters of a macro names the filter preset chosen in the macro, whose filters apply too.
+     */
+    @Test
+    void presetSummaries() throws Exception
+    {
+        Properties translations = loadAllTranslations();
+
+        assertEquals("Selects the work packages of the preset \"{1}\" where {0}.",
+            translations.getProperty("openproject.macro.filter.summaryPreset"));
+        assertEquals("Selects the work packages of the preset \"{0}\".",
+            translations.getProperty("openproject.macro.filter.summaryAllPreset"));
     }
 
     /**
