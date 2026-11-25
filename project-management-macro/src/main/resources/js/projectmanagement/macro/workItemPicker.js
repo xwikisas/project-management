@@ -171,11 +171,12 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
     // pick (e.g. the search of the id typed and picked with Enter) are closed.
     let pickCount = 0;
     // The ids typed by the user: once found, they're dropped if they're the work item of another pick, and replaced by
-    // the key of their work item otherwise.
+    // the key of their work item otherwise. This is only done by the lookup on the connection on which they were
+    // typed: they're forgotten when the parameters of the URLs change.
     let typedIds = new Set();
-    // Incremented when the parameters of the URLs change (e.g. the connection): the answers of the searches sent
-    // before are ignored.
-    let searchParameters = 0;
+    // Incremented when the parameters of the URLs change (e.g. the connection): the answers of the searches and of the
+    // lookups sent before are ignored.
+    let requestParameters = 0;
     input.xwikiSelectize({
       // A typed id (e.g. 236 or PROJ-42) is picked as typed, and replaced by the key of its work item, if it has one,
       // once the work item is found (e.g. AC-1 for 157 or ac-1), or kept as typed when it can't be. A key typed in
@@ -205,6 +206,11 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       maxItems: null,
       // The work items are searched once the user types: an empty search would list any work item.
       preload: false,
+      // The suggestions are only shown for a typed text (see the dropdown_open listener below). Each opening of the
+      // suggestions gives the focus to the field, which opens them again after a timeout when they're opened on focus:
+      // closed by the listener each time, they would open and close in a loop, e.g. while a search loads or once the
+      // field gets the focus back with work items found before. Same in Selectize (XWiki 15.10) and Tom Select (18.x).
+      openOnFocus: false,
       // The typed text is cleared once a work item is picked, so that the next one can be searched right away: by Tom
       // Select (XWiki 18.x), and by the item_add listener below for Selectize (XWiki 15.10), which ignores it.
       clearAfterSelect: true,
@@ -226,8 +232,11 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
         }
         let typed = text.trim();
         let searchPickCount = pickCount;
-        let sentParameters = searchParameters;
-        let current = () => sentParameters === searchParameters;
+        let sentParameters = requestParameters;
+        let current = () => sentParameters === requestParameters;
+        // Whether a request failed (e.g. the tool is unreachable, or the user isn't authenticated to it yet), a work
+        // item not found being no failure.
+        let failed = false;
         // A failed request finds nothing, so that the loading ends: otherwise the picker stays in its loading state
         // and makes no more request.
         let get = url => Promise.resolve($.getJSON(url)).then(data => {
@@ -236,6 +245,7 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
           }
           return data;
         }, xhr => {
+          failed = failed || workItemList.failureState(getStatus(xhr)) === 'notRetrieved';
           if (current()) {
             report(getStatus(xhr));
           }
@@ -248,6 +258,11 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
           if (!current()) {
             callback();
             return;
+          }
+          // The suggest widget doesn't search again a text that it searched: a failed search is forgotten, so that
+          // the same text is searched again, e.g. once the tool answers again.
+          if (failed) {
+            delete selectize.loadedSearches[text];
           }
           // A found work item is picked by its key when it has one, as the # inserter writes it. The work items
           // already picked (by their id or their key) aren't suggested again.
@@ -281,7 +296,7 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
     // Forgets the work items found by the searches made so far, e.g. on another connection: the next searches are
     // sent again rather than answered from the cache of the suggest widget. The picked work items are kept.
     let forgetSearches = function () {
-      searchParameters++;
+      requestParameters++;
       Object.keys(selectize.options).filter(value => !selectize.items.includes(value))
         .forEach(value => selectize.removeOption(value, true));
       selectize.loadedSearches = {};
@@ -364,12 +379,19 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
           notify();
         }
       };
+      // The work item is looked up again once the parameters change: the answer of this lookup is then ignored, so
+      // that the work item isn't shown as found on the previous connection.
+      let sentParameters = requestParameters;
       $.getJSON(settings.itemUrl(id)).then(function (item) {
-        show(item);
-        report();
+        if (sentParameters === requestParameters) {
+          show(item);
+          report();
+        }
       }, function (xhr) {
-        show(undefined, getStatus(xhr));
-        report(getStatus(xhr));
+        if (sentParameters === requestParameters) {
+          show(undefined, getStatus(xhr));
+          report(getStatus(xhr));
+        }
       });
     };
     // The work items are resolved once the client parameters of the URLs (e.g. the connection) are known.
@@ -438,6 +460,9 @@ define(['jquery', 'projectManagementWorkItemList', 'xwiki-l10n!projectmanagement
       setIds: ids => setIds(ids, true),
       refresh: function () {
         forgetSearches();
+        // The picked work items keep their ids: an id typed on another connection isn't replaced by the key that its
+        // work item has on this one, which would select another work item, or none, on the other connection.
+        typedIds.clear();
         resolution.ready(selectize.items);
       },
       setSingle: function (value) {

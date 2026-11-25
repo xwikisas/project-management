@@ -26,10 +26,16 @@ const workItemList = loadAmdModule("macro/workItemList.js");
 
 // The work items of each connection.
 const WORK_ITEMS = {
-  OpenProject: [{ identifier: { value: 157 }, key: "AC-1", summary: { value: "Mobile offline mode" },
-    project: { value: "Atlas CRM" } }],
-  "OpenProject QA": [{ identifier: { value: 242 }, summary: { value: "Alpha release" },
-    project: { value: "QA" } }],
+  OpenProject: [
+    { identifier: { value: 157 }, key: "AC-1", summary: { value: "Mobile offline mode" },
+      project: { value: "Atlas CRM" } },
+    { identifier: { value: 164 }, key: "AC-8", summary: { value: "Calendar sync" }, project: { value: "Atlas CRM" } },
+  ],
+  // The work items of this connection have no key.
+  "OpenProject QA": [
+    { identifier: { value: 242 }, summary: { value: "Alpha release" }, project: { value: "QA" } },
+    { identifier: { value: 164 }, summary: { value: "Bulk task 85" }, project: { value: "QA" } },
+  ],
 };
 
 // The connection of the macro.
@@ -71,6 +77,36 @@ async function type(selectize, text) {
   input.dispatchEvent(new Event("input"));
   // The work items are searched once the user stops typing.
   await vi.runAllTimersAsync();
+}
+
+// Types the given id in the picker and presses Enter at once, before the work items are found, as a user, then waits
+// for the given time, or until no timer is left.
+async function typeAndEnter(selectize, id, time) {
+  const input = selectize.control_input;
+  input.value = id;
+  input.dispatchEvent(new Event("input"));
+  // The suggestions are displayed once the user stops typing, before the work items are searched.
+  vi.advanceTimersByTime(selectize.settings.refreshThrottle);
+  input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", keyCode: 13, bubbles: true }));
+  await (time === undefined ? vi.runAllTimersAsync() : vi.advanceTimersByTimeAsync(time));
+}
+
+// Chooses another connection, as the user does in the macro editor.
+async function changeConnection(picker, newConnection) {
+  connection = newConnection;
+  picker.refresh();
+  await vi.runAllTimersAsync();
+}
+
+// Counts the openings of the suggestions of the picker.
+function countOpenings(selectize) {
+  const openings = { count: 0 };
+  selectize.on("dropdown_open", () => openings.count++);
+  return openings;
+}
+
+function getPickedLabels(selectize) {
+  return selectize.items.map((id) => selectize.options[id].label);
 }
 
 function getSuggestions(selectize) {
@@ -165,6 +201,115 @@ describe("the work item picker", () => {
     // Nor does it tell whether the work items of the new connection can be retrieved (e.g. so that the client removes
     // the message telling why they can't).
     expect(reports).toEqual([]);
+  });
+
+  it("searches again a text whose search failed", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // OpenProject doesn't answer, or the user isn't authenticated to it yet.
+    answer = () => Promise.reject({ status: 500 });
+    await type(selectize, "Bulk");
+    expect(getSuggestions(selectize)).toEqual([]);
+    await type(selectize, "");
+
+    answer = search;
+    requests = [];
+    await type(selectize, "Bulk");
+
+    expect(requests).toHaveLength(1);
+    expect(getSuggestions(selectize)).toEqual(["#164 Bulk task 85QA"]);
+  });
+
+  it("doesn't search again a text whose search found nothing", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // A work item not found isn't a failure.
+    await type(selectize, "999");
+    await type(selectize, "");
+
+    requests = [];
+    await type(selectize, "999");
+
+    expect(requests).toEqual([]);
+  });
+
+  it("replaces a typed id by the key of its work item", async () => {
+    const { picker, selectize } = mount();
+
+    await typeAndEnter(selectize, "164");
+
+    expect(picker.getIds()).toEqual(["AC-8"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+  });
+
+  it("keeps a typed id when the connection changes, looking its work item up on each connection", async () => {
+    const { picker, selectize } = mount();
+    connection = "OpenProject QA";
+    await typeAndEnter(selectize, "164");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["#164 Bulk task 85"]);
+
+    // On a connection where the work item has a key, the id isn't replaced by it.
+    await changeConnection(picker, "OpenProject");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+
+    await changeConnection(picker, "OpenProject QA");
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["#164 Bulk task 85"]);
+    expect(selectize.options["164"].state).toBeUndefined();
+  });
+
+  it("ignores the answer of a lookup sent before the connection changed", async () => {
+    const { picker, selectize } = mount();
+    connection = "OpenProject QA";
+    // The lookup of the typed id answers late; the search of the typed text, which looks it up too, answers at once.
+    let answerLookup;
+    answer = (url) => !answerLookup && url.includes("/workitems/164?") ? new Promise((resolve) => {
+      answerLookup = resolve;
+    }) : search(url);
+    await typeAndEnter(selectize, "164");
+
+    await changeConnection(picker, "OpenProject");
+    answerLookup(WORK_ITEMS["OpenProject QA"][1]);
+    await vi.runAllTimersAsync();
+
+    expect(picker.getIds()).toEqual(["164"]);
+    expect(getPickedLabels(selectize)).toEqual(["AC-8 Calendar sync"]);
+  });
+
+  it("doesn't open and close its suggestions in a loop while a search loads after a pick", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    // The search of the typed id doesn't answer.
+    answer = (url) => url.includes("filter=") ? new Promise(() => {}) : search(url);
+    selectize.control_input.focus();
+    const openings = countOpenings(selectize);
+
+    await typeAndEnter(selectize, "164", 2000);
+
+    expect(selectize.items).toEqual(["164"]);
+    // The suggestions of the typed id, closed once it's picked: nothing is typed while the search loads.
+    expect(openings.count).toBe(1);
+    expect(selectize.isOpen).toBe(false);
+  });
+
+  it("doesn't open and close its suggestions in a loop when it gets the focus back", async () => {
+    const { selectize } = mount();
+    connection = "OpenProject QA";
+    selectize.control_input.focus();
+    // Work items found but not picked.
+    await type(selectize, "a");
+    await type(selectize, "");
+    selectize.control_input.dispatchEvent(new FocusEvent("blur"));
+    await vi.advanceTimersByTimeAsync(100);
+    const openings = countOpenings(selectize);
+
+    selectize.control_input.dispatchEvent(new FocusEvent("focus"));
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(openings.count).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it("keeps its suggestions under its field when a message is displayed above it", async () => {
