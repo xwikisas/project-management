@@ -61,8 +61,9 @@ function getPluginCode() {
  *
  * @param workPackages the work packages of the connection
  * @param access the access of the user to the connection, changed by the test: whether they can read its data
- *     (authorized), whether the searches fail for another reason (failing), and the number of times the message telling
- *     why they can't read it was requested (checks)
+ *     (authorized), whether the searches fail for another reason (failing), the number of times the message telling
+ *     why they can't read it was requested (checks), and the number of next requests of this message answered only
+ *     when the test calls the functions that they add to heldChecks with the message (held)
  * @return the autocomplete of the work package search, once created, with a type(text) method that types the text
  *     after the marker and returns the entries that it opens (null if it doesn't search them), and a newMarker() method
  *     that starts a new search, after a marker typed elsewhere
@@ -79,6 +80,10 @@ function startWorkPackageSearch(workPackages, access = { authorized: true, faili
     }
     if (url === "/xwiki/bin/get/OpenProject.Code.CKEditorPlugin?outputSyntax=plain&connection=" + CONNECTION) {
       access.checks++;
+      if (access.held > 0) {
+        access.held--;
+        return new Promise((resolve) => access.heldChecks.push((message) => resolve({ notAuthorizedMessage: message })));
+      }
       return Promise.resolve({ notAuthorizedMessage: access.authorized ? "" : NOT_AUTHORIZED });
     }
     if (url === WORK_ITEMS && data.instance === CONNECTION) {
@@ -271,6 +276,32 @@ describe("the message of the WYSIWYG editor telling that the user can't search t
     access.authorized = false;
     search.newMarker();
     expect(getEntryIds(await search.type("#abd"))).toEqual(["openproject-work-package-search-notAuthorized"]);
+    expect(access.checks).toBe(2);
+  });
+
+  it("is kept when requested again while an earlier request was answered", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const access = { authorized: false, failing: false, checks: 0, held: 2, heldChecks: [] };
+    const search = await startWorkPackageSearch([AC_1], access);
+    const firstFailure = search.type("#abc");
+    await vi.waitFor(() => expect(access.heldChecks).toHaveLength(1));
+
+    // A search succeeds while the message is requested, then the access of the user expires and a search fails.
+    access.authorized = true;
+    search.newMarker();
+    await search.type("#Mob");
+    access.authorized = false;
+    search.newMarker();
+    const secondFailure = search.type("#abd");
+    await vi.waitFor(() => expect(access.heldChecks).toHaveLength(2));
+    // The first answer tells the access of the user before the success.
+    access.heldChecks[0]("");
+    access.heldChecks[1](NOT_AUTHORIZED);
+
+    expect(getEntryIds(await firstFailure)).toEqual(["openproject-work-package-search-searchFailed"]);
+    expect(getEntryIds(await secondFailure)).toEqual(["openproject-work-package-search-notAuthorized"]);
+    search.newMarker();
+    expect(getEntryIds(await search.type("#abe"))).toEqual(["openproject-work-package-search-notAuthorized"]);
     expect(access.checks).toBe(2);
   });
 });
