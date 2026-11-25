@@ -214,9 +214,11 @@ class ChartEditorPageTest extends PageTest
         Element picker = result.selectFirst("select.op-preset-select");
         assertTrue(picker.hasAttr("disabled"), result.html());
         assertEquals("projectmanagement.macro.filter.preset.none.chart", picker.text());
-        // The macro editor labels the field of the parameter, which the disabled select is without holding its value.
+        // The macro editor labels the field of the parameter, and puts the preset of the edited macro in it, even one
+        // that isn't listed (e.g. deleted). Without preset, the field holds no value.
         assertEquals("parameter-presetId", picker.id());
-        assertFalse(picker.hasAttr("name"));
+        assertEquals("presetId", picker.attr("name"));
+        assertEquals("", picker.selectFirst("option").val());
     }
 
     @Test

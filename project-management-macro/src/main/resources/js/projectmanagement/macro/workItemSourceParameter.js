@@ -181,6 +181,11 @@ require(['jquery', 'projectmanagement-macro-editor-layout', 'projectmanagement-w
       presetId: getValue(fields.presetId),
       isChart
     });
+    // The Filter Preset field is disabled when it lists no preset, but still holds the preset of the macro, which the
+    // macro editor adds to it (e.g. a deleted preset): enabled, Submit keeps it and the user can clear it.
+    if (state.initial.presetId !== '') {
+      fields.presetId.filter('select:disabled').prop('disabled', false);
+    }
     // Whether the user changed the selection: the fields are only written, and the dropped values only reported, then.
     let touched = false;
     let textMode = false;
