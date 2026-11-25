@@ -213,6 +213,26 @@ describe("createMessageLoader", () => {
     expect(await Promise.all([getMessage("QA"), getMessage("QA")])).toEqual(["", ""]);
     expect(fetchMessage).toHaveBeenCalledTimes(1);
   });
+
+  it("keeps the message requested after a forget when an earlier request ends without message", async () => {
+    const answers = [];
+    // The first two requests answer when the test says so, the next ones at once.
+    const fetchMessage = vi.fn(() => answers.length < 2 ? new Promise((resolve) => answers.push(resolve))
+      : Promise.resolve(""));
+    const messages = notAuthorizedMessage.createMessageLoader(fetchMessage);
+    const first = messages.get("QA");
+    // A request on the connection succeeds while the message is loading, then another one fails.
+    messages.forget("QA");
+    const second = messages.get("QA");
+
+    answers[0]("");
+    answers[1](MESSAGE);
+
+    expect(await first).toBe("");
+    expect(await second).toBe(MESSAGE);
+    expect(await messages.get("QA")).toBe(MESSAGE);
+    expect(fetchMessage).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("getLinkURL", () => {

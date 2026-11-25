@@ -21,9 +21,10 @@
  * Tells the user of the macro editor why the values of the filters can't be suggested when they can't read the data of
  * the OpenProject connection (e.g. they must connect their OpenProject account): the message of the macros, rendered by
  * OpenProject.Code.CKEditorPlugin, is displayed once a suggestion request fails, and removed once the suggestions are
- * retrieved again or when the connection changes. Whether the user can read the data of the connection is checked
- * again on the next failure once a request succeeded, so that the message tells the current state (e.g. after the
- * user connected their account in another tab, or once their access expired).
+ * retrieved again or when the connection changes. The message is kept until a request on its connection succeeds
+ * (e.g. once the user connected their account in another tab), the next failure checking again whether the user can
+ * read the data; the absence of message isn't kept, so that a user whose access expired gets the message on the next
+ * failure.
  */
 define('openproject-not-authorized-message', [], function () {
   'use strict';
