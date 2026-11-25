@@ -176,6 +176,7 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
         if (!Array.isArray(results?.items)) {
           return [];
         }
+        forgetNotAuthorizedMessage(instance);
         const foundId = found?.identifier?.value;
         const workPackages = foundId === undefined || foundId === null ? results.items
           : [found, ...results.items.filter(wp =&gt; String(wp?.identifier?.value) !== String(foundId))];
@@ -340,23 +341,41 @@ require(['deferred!ckeditor', 'jquery', 'pageRelation', 'xwiki-l10n!openproject.
   };
   // The messages telling the current user why they can't search the work packages of a connection, as displayed by the
   // macros (e.g. with a link to connect their OpenProject account), or an empty string if there's none, by connection
-  // name. They're rendered by the content of this page, since this skin extension is cached by the browser, and kept
-  // for the lifetime of the page, as the other configurations fetched at runtime.
+  // name. They're rendered by the content of this page, since this skin extension is cached by the browser. A message
+  // is kept until a search on its connection succeeds (see forgetNotAuthorizedMessage), so that the searches failing
+  // meanwhile don't each request it. The absence of message isn't kept: the access of the user can expire. The searches
+  // failing at once share one request.
   const notAuthorizedMessages = {};
   const getNotAuthorizedMessage = function (connection) {
     if (!notAuthorizedMessages[connection]) {
       const pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
         XWiki.currentDocument.documentReference);
       const url = new XWiki.Document(pluginReference).getURL('get', $.param({outputSyntax: 'plain', connection}));
-      notAuthorizedMessages[connection] = Promise.resolve($.getJSON(url))
-        .then(response =&gt; typeof response?.notAuthorizedMessage === 'string' ? response.notAuthorizedMessage : '')
-        .catch(error =&gt; {
-          // The failure isn't cached, so that the next search tries again.
+      const forget = () =&gt; {
+        if (notAuthorizedMessages[connection] === request) {
           delete notAuthorizedMessages[connection];
+        }
+      };
+      const request = Promise.resolve($.getJSON(url))
+        .then(response =&gt; typeof response?.notAuthorizedMessage === 'string' ? response.notAuthorizedMessage : '')
+        .then(message =&gt; {
+          if (!message) {
+            forget();
+          }
+          return message;
+        }, error =&gt; {
+          // The failure isn't kept, so that the next search tries again.
+          forget();
           throw error;
         });
+      notAuthorizedMessages[connection] = request;
     }
     return notAuthorizedMessages[connection];
+  };
+  // Called when a search on the connection succeeds: the user can read its data now (e.g. they connected their
+  // OpenProject account from the message), so the next failure has another cause, which is requested again.
+  const forgetNotAuthorizedMessage = function (connection) {
+    delete notAuthorizedMessages[connection];
   };
   // The entry displayed instead of the work packages when their search failed: the message of the macros when the
   // current user can't read the data of the connection (e.g. they aren't connected to OpenProject, or the connection
