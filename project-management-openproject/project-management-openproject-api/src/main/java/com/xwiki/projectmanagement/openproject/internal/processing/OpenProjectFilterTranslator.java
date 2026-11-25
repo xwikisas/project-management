@@ -65,7 +65,9 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  * properties renamed after their OpenProject filter (for example {@code summary} to {@code subject}).</li>
  * </ol>
  * The second operator mapping only affects the operators left generic by the first one, the OpenProject operators
- * being kept as they are.
+ * being kept as they are. Beforehand, the constraints without operator, which the Live Data filter format allows, get
+ * the default operator of the Live Data filter of their property, as in the Live Data (for example {@code contains} on
+ * a text).
  *
  * @version $Id$
  * @since 1.5.0
@@ -197,6 +199,14 @@ public final class OpenProjectFilterTranslator
      */
     private static final Set<String> TEXT_FILTER_OPERATORS = Set.of(OP_CONTAINS, "!~");
 
+    /**
+     * The generic equivalents of the default operators of the Live Data filters (see the OpenProject Live Data
+     * configuration and the descriptors of the work package fields), by type of filter, the default operator of the
+     * other filters being {@value #OPERATOR_EQUALS}.
+     */
+    private static final Map<String, String> DEFAULT_OPERATORS = Map.of(OpenProjectMapper.FILTER_TEXT,
+        OPERATOR_CONTAINS, OpenProjectMapper.FILTER_DATE, OPERATOR_BETWEEN);
+
     private final OpenProjectWorkItemFields fields;
 
     private final OpenProjectApiClient client;
@@ -225,7 +235,7 @@ public final class OpenProjectFilterTranslator
      */
     public OpenProjectFilters translate(List<LiveDataQuery.Filter> filters) throws ProjectManagementException
     {
-        return toOpenProjectFilters(mapFilters(withTextValues(filters)));
+        return toOpenProjectFilters(mapFilters(normalize(filters, this.fields)));
     }
 
     /**
@@ -239,7 +249,7 @@ public final class OpenProjectFilterTranslator
      */
     public static OpenProjectFilters translateOtherFilters(List<LiveDataQuery.Filter> filters)
     {
-        return toOpenProjectFilters(withTextValues(filters));
+        return toOpenProjectFilters(normalize(filters, OpenProjectWorkItemFields.empty()));
     }
 
     /**
@@ -255,25 +265,47 @@ public final class OpenProjectFilterTranslator
         return value instanceof Number || value instanceof Boolean ? String.valueOf(value) : value;
     }
 
-    private static List<LiveDataQuery.Filter> withTextValues(List<LiveDataQuery.Filter> filters)
+    /**
+     * Writes the values as text (see {@link #toTextValue(Object)}) and gives the constraints without operator the
+     * default operator of their property (see {@link #getDefaultOperator(String, OpenProjectWorkItemFields)}).
+     */
+    private static List<LiveDataQuery.Filter> normalize(List<LiveDataQuery.Filter> filters,
+        OpenProjectWorkItemFields fields)
     {
-        boolean hasNonTextValue = filters.stream().flatMap(filter -> filter.getConstraints().stream())
-            .anyMatch(constraint -> toTextValue(constraint.getValue()) != constraint.getValue());
-        if (!hasNonTextValue) {
+        boolean normalized = filters.stream().flatMap(filter -> filter.getConstraints().stream())
+            .allMatch(constraint -> toTextValue(constraint.getValue()) == constraint.getValue()
+                && !StringUtils.isBlank(constraint.getOperator()));
+        if (normalized) {
             return filters;
         }
         List<LiveDataQuery.Filter> result = new ArrayList<>();
         for (LiveDataQuery.Filter filter : filters) {
-            LiveDataQuery.Filter textFilter = new LiveDataQuery.Filter();
-            textFilter.setProperty(filter.getProperty());
-            textFilter.setMatchAll(filter.isMatchAll());
+            LiveDataQuery.Filter normalizedFilter = new LiveDataQuery.Filter();
+            normalizedFilter.setProperty(filter.getProperty());
+            normalizedFilter.setMatchAll(filter.isMatchAll());
             for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
-                textFilter.getConstraints().add(
-                    new LiveDataQuery.Constraint(toTextValue(constraint.getValue()), constraint.getOperator()));
+                String operator = StringUtils.isBlank(constraint.getOperator())
+                    ? getDefaultOperator(filter.getProperty(), fields) : constraint.getOperator();
+                normalizedFilter.getConstraints().add(
+                    new LiveDataQuery.Constraint(toTextValue(constraint.getValue()), operator));
             }
-            result.add(textFilter);
+            result.add(normalizedFilter);
         }
         return result;
+    }
+
+    /**
+     * @param property a work item property, for example {@code summary}
+     * @param fields the work package fields of the instance
+     * @return the generic equivalent of the default operator of the Live Data filter of the property, used by the
+     *     constraints without operator, for example {@code contains} on a text, or {@value #OPERATOR_EQUALS} if the
+     *     filter of the property is unknown
+     */
+    private static String getDefaultOperator(String property, OpenProjectWorkItemFields fields)
+    {
+        WorkPackageField field = fields.getField(property);
+        String filterType = field == null ? getFilterType(property) : OpenProjectWorkItemFields.getFilterType(field);
+        return filterType == null ? OPERATOR_EQUALS : DEFAULT_OPERATORS.getOrDefault(filterType, OPERATOR_EQUALS);
     }
 
     private static OpenProjectFilters toOpenProjectFilters(List<LiveDataQuery.Filter> filters)
