@@ -149,7 +149,9 @@ class ChartEditorPageTest extends PageTest
             l10n);
         assertTrue(l10n.contains("\"date.after\":\"projectmanagement.macro.filter.operator.date.isOnOrAfter\""),
             l10n);
-        assertTrue(l10n.contains("\"summary\":\"projectmanagement.macro.filter.summary\""), l10n);
+        // A series counts among the charted work items: its summary says so.
+        assertTrue(l10n.contains("\"summary\":\"projectmanagement.macro.chart.series.summary\""), l10n);
+        assertTrue(l10n.contains("\"summaryAll\":\"projectmanagement.macro.chart.series.noFilter\""), l10n);
     }
 
     @Test

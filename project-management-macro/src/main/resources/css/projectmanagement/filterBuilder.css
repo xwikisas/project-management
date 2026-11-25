@@ -80,13 +80,27 @@
    name. While the value field is focused, the search field needs room for a few characters only. Otherwise it takes no
    room on the line, so that the values fitting on one line keep the value field one line high, however little room
    they leave: no minimum width, no width of its own (one character) and no margins (set with !important by Tom
-   Select). Selectize (XWiki 15.10 to 17.10) sizes it to its text. */
+   Select). */
 .proj-manag-constraint-value-container .ts-wrapper.multi.has-items .ts-control > input {
   min-width: 4em;
 }
 .proj-manag-constraint-value-container .ts-wrapper.multi.has-items:not(.focus) .ts-control > input {
   min-width: 0;
   flex-basis: 0;
+  margin: 0 !important;
+}
+
+/* The same with Selectize (XWiki 15.10 to 17.10). The values take the width of the value field, as with Tom Select:
+   the style sheet of XWiki (16.4+) leaves 32px on the right of a multi-value field for its loading indicator when it
+   comes after the one of Selectize (e.g. in the editor of an existing page, whose menu loads both), which wrapped
+   values fitting on one line. While the value field isn't focused, the search field takes no room: no width (set on
+   it by Selectize) and no margins (set with !important by Selectize). The selectors are more specific than the ones of
+   XWiki and Selectize, so they apply whatever the order of the style sheets. */
+.proj-manag-constraint-value-container .selectize-control.multi .selectize-input.has-items {
+  padding-right: 7px;
+}
+.proj-manag-constraint-value-container .selectize-control.multi .selectize-input.has-items:not(.focus) > input {
+  width: 0 !important;
   margin: 0 !important;
 }
 

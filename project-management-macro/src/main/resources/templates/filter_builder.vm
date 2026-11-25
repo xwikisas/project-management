@@ -102,7 +102,7 @@
     ## items as the tool does ("work packages" for OpenProject).
     #foreach ($key in ['anotherCondition', 'operatorLabel', 'valueLabel', 'summary', 'summaryAll', 'summaryIncomplete',
         'summaryLoading', 'summaryKept', 'and', 'or', 'between', 'setConditionUnsupported', 'keptCondition',
-        'propertiesNotLoaded'])
+        'propertiesNotLoaded', 'summaryPreset', 'summaryAllPreset'])
       #set ($filterBuilderLabelKey = "${clientId}.macro.filter.$key")
       #if (!$services.localization.get($filterBuilderLabelKey))
         #set ($filterBuilderLabelKey = "projectmanagement.macro.filter.$key")
