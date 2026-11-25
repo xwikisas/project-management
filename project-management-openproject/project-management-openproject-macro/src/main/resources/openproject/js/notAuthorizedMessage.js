@@ -21,7 +21,10 @@
  * Tells the user of the macro editor why the values of the filters can't be suggested when they can't read the data of
  * the OpenProject connection (e.g. they must connect their OpenProject account): the message of the macros, rendered by
  * OpenProject.Code.CKEditorPlugin, is displayed once a suggestion request fails, and removed once the suggestions are
- * retrieved again or when the connection changes.
+ * retrieved again or when the connection changes. The message is kept until a request on its connection succeeds
+ * (e.g. once the user connected their account in another tab), the next failure checking again whether the user can
+ * read the data; the absence of message isn't kept, so that a user whose access expired gets the message on the next
+ * failure.
  */
 define('openproject-not-authorized-message', [], function () {
   'use strict';
@@ -29,28 +32,39 @@ define('openproject-not-authorized-message', [], function () {
   /**
    * @param fetchMessage requests the message of a connection: (connection) => promise of the HTML of the message,
    *     empty when the current user can read the data of the connection
-   * @return a (connection) => promise of the message function, which requests the message of a connection once, and
-   *     again after a failure, a failure giving an empty message
+   * @return {get(connection): promise of the message of the connection, a failure giving an empty message,
+   *     forget(connection): requests the message of the connection again on the next get, e.g. once a request on the
+   *     connection succeeded}; the requests made at once share their answer, and only a message telling that the user
+   *     can't read the data of the connection is kept, until forgotten: the user can lose their access at any time
    */
   const createMessageLoader = function (fetchMessage) {
     const messages = {};
-    return function (connection) {
+    const get = function (connection) {
       if (!messages[connection]) {
-        messages[connection] = Promise.resolve(fetchMessage(connection))
-          .then(message => typeof message === 'string' ? message : '')
-          .catch(() => {
-            delete messages[connection];
-            return '';
+        const message = Promise.resolve(fetchMessage(connection))
+          .then(answer => typeof answer === 'string' ? answer : '', () => '')
+          .then(answer => {
+            if (!answer && messages[connection] === message) {
+              delete messages[connection];
+            }
+            return answer;
           });
+        messages[connection] = message;
       }
       return messages[connection];
     };
+    const forget = function (connection) {
+      delete messages[connection];
+    };
+    return {get, forget};
   };
 
   /**
    * @param options the environment of the message:
    *     - getConnection: () => the connection used by the edited macro, empty when there's none
-   *     - getMessage: (connection) => promise of the message of the connection (see createMessageLoader)
+   *     - getMessage: (connection) => promise of the message of the connection (see createMessageLoader#get)
+   *     - forgetMessage: (connection) => forgets the message of the connection, called once a request on it
+   *       succeeded: the user can read its data now (see createMessageLoader#forget)
    *     - show: (html, context) => displays the message, unless it's already displayed, the context being the one of
    *       the failure, e.g. the filters whose suggestions failed
    *     - remove: () => removes the message, if displayed
@@ -73,6 +87,10 @@ define('openproject-not-authorized-message', [], function () {
       },
       suggestionsLoaded: function () {
         options.remove();
+        const connection = options.getConnection();
+        if (connection) {
+          options.forgetMessage(connection);
+        }
       },
       connectionChanged: function () {
         options.remove();
