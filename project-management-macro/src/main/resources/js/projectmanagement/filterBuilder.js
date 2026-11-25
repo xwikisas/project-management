@@ -84,7 +84,10 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       // Whether the builder doesn't show the filters it was given: see setUnreadable.
       unreadable: false,
       // The name of the preset whose filters apply with the ones of the builder, if any: see setPreset.
-      preset: ''
+      preset: '',
+      // The other names under which the filters on properties were given (see addFilter), by property id: the filters
+      // of these properties are written under them, so that the filters given are written back as they were given.
+      givenNames: new Map()
     };
 
     let getType = function (property) {
@@ -250,20 +253,60 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       }
       let descriptions = getRows().map((index, row) => describeRow($(row))).get().filter(text => text !== null);
       let incomplete = getRows().length - descriptions.length;
+      let kept = getKeptRows().length > 0;
       let conditions = descriptions.join(', ' + builder.l10n.and + ' ');
-      let summary;
+      // The summary doesn't describe the conditions that the builder can't show: without a preset, it doesn't claim to
+      // describe all the selected work items when there are some.
+      let summary = '';
       if (builder.preset && descriptions.length > 0 && builder.l10n.summaryPreset) {
         summary = formatText(builder.l10n.summaryPreset, [conditions, builder.preset]);
       } else if (builder.preset && descriptions.length === 0 && builder.l10n.summaryAllPreset) {
         summary = formatText(builder.l10n.summaryAllPreset, [builder.preset]);
-      } else {
-        summary = descriptions.length > 0 ? formatText(builder.l10n.summary || '{0}', [conditions])
-          : builder.l10n.summaryAll || '';
+      } else if (descriptions.length > 0) {
+        summary = formatText(builder.l10n.summary || '{0}', [conditions]);
+      } else if (!kept) {
+        summary = builder.l10n.summaryAll || '';
       }
       if (incomplete > 0 && builder.l10n.summaryIncomplete) {
         summary += ' ' + builder.l10n.summaryIncomplete;
       }
-      summaryElement.text(summary);
+      if (kept && builder.l10n.summaryKept) {
+        summary += ' ' + builder.l10n.summaryKept;
+      }
+      summaryElement.text(summary.trim());
+    };
+    /*
+     * The filters on the properties that the builder doesn't have (e.g. a name that the tool doesn't know, written by
+     * hand in a query) can't be shown as rows, but are kept as they are: each one is listed as a row naming it, with
+     * the condition as written and a remove action, so that no condition is hidden. They aren't listed while the
+     * properties load, which may have them (e.g. a custom field of the chosen instance).
+     */
+    let getKeptRows = function () {
+      return builder.addPoint.children('.proj-manag-constraint-kept');
+    };
+    let updateKeptRows = function () {
+      let filters = builder.constraintBuilder.hasClass(PROPERTIES_LOADING_CLASS) ? [] : builder.pending;
+      let shown = getKeptRows().map((index, row) => $(row).data('keptCondition')).get();
+      let conditions = filters.map(filter => queryWriter.toQuery([filter]));
+      if (JSON.stringify(shown) === JSON.stringify(conditions)) {
+        return;
+      }
+      getKeptRows().remove();
+      filters.forEach((filter, index) => {
+        let row = builder.template.clone().removeAttr('id').removeClass('hidden').addClass('proj-manag-constraint-kept')
+          .data('keptCondition', conditions[index]);
+        row.children('.proj-manag-constraint-name, .proj-manag-constraint-operator-container,'
+          + ' .proj-manag-constraint-value-container').remove();
+        row.find('.proj-manag-constraint-title').text(filter.property).after($('<div></div>')
+          .addClass('box warningmessage proj-manag-constraint-kept-message')
+          .text((builder.l10n.keptCondition || '{0}').replace('{0}', () => conditions[index])));
+        row.find('.proj-manag-delete-filter').on('click', function (event) {
+          event.preventDefault();
+          builder.pending = builder.pending.filter(pending => pending !== filter);
+          onChange();
+        });
+        builder.addPoint.append(row);
+      });
     };
     // No filter can be added while the filters or the properties are loading: the filters being read would be lost,
     // and the properties proposed would be incomplete, or those of another source.
@@ -271,30 +314,37 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       let loading = isLoading();
       builder.constraintBuilder.attr('aria-busy', loading ? 'true' : null);
       builder.addButton.prop('disabled', loading);
+      updateKeptRows();
       updateSummary();
     };
+    // The filters of the rows, in their order, followed by the filters kept on the properties that the builder doesn't
+    // have, listed after the rows. The filters given under another name of their property keep it (see givenNames).
     let getJson = function () {
       let resultJson = {};
-      builder.pending.forEach(filter => {
-        resultJson[filter.property] = { property: filter.property, constraints: filter.constraints.slice() };
-      });
       getRows().each(function () {
         let row = $(this);
         let property = getRowProperty(row);
         if (!property) {
           return;
         }
+        let name = builder.givenNames.get(property.id) || property.id;
         let operator = getRowOperator(row);
-        let filter = resultJson[property.id] || { property: property.id, constraints: [] };
+        let filter = resultJson[name] || { property: name, constraints: [] };
         getRowValues(row).forEach(value => filter.constraints.push({ operator: operator, value: value }));
         if (filter.constraints.length > 0) {
-          resultJson[property.id] = filter;
+          resultJson[name] = filter;
         }
+      });
+      builder.pending.forEach(filter => {
+        let jsonFilter = resultJson[filter.property] || { property: filter.property, constraints: [] };
+        jsonFilter.constraints.push(...filter.constraints);
+        resultJson[filter.property] = jsonFilter;
       });
       return resultJson;
     };
     let onChange = function () {
       updateAddButton();
+      updateKeptRows();
       updateSummary();
       builder.constraintBuilder.trigger('constraintsUpdated', [getJson()]);
     };
@@ -457,9 +507,18 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
      * generic Live Data operator has no equivalent for the property (see queryWriter.splitSupported) are dropped, and
      * reported by the unsupportedConstraints event (the name of the property, the dropped constraints) triggered on
      * the builder.
+     *
+     * The property of the filter is found by its id, or by one of the other names that a query can give it (the
+     * "aliases" parameter of its filter, e.g. the name of its filter in the tool), under which its filters are then
+     * written. The filters on the other properties are kept as they are (see updateKeptRows).
      */
     let addFilter = function (filter, focus) {
-      let property = builder.cfg.find(i => i.id == filter.property);
+      let property = builder.cfg.find(i => i.id == filter.property) || builder.cfg.find(i => i.filter
+        && Array.isArray(i.filter.aliases) && i.filter.aliases.some(alias => alias == filter.property));
+      if (property && property.id != filter.property) {
+        builder.givenNames.set(property.id, filter.property);
+        filter = Object.assign({}, filter, { property: property.id });
+      }
       if (property) {
         // The generic operators of the Live Data (e.g. contains, in the filters parameter written by an older version)
         // are shown with the operators of the property selecting the same work items (e.g. ~ for a text).
@@ -535,6 +594,7 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       clean();
       getRows().remove();
       builder.pending = [];
+      builder.givenNames.clear();
       onChange();
     };
     /*

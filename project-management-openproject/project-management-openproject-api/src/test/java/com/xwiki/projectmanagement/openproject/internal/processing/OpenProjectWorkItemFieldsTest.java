@@ -150,6 +150,23 @@ class OpenProjectWorkItemFieldsTest
     }
 
     @Test
+    void getFilterAliases()
+    {
+        // The filters of an OpenProject 17 instance name the assignee filter "assignee", not "assigned_to".
+        OpenProjectWorkItemFields withFilters =
+            new OpenProjectWorkItemFields(List.of(), List.of("subject", "assignee", "id", "status", "createdAt"));
+
+        assertEquals(List.of("subject"), withFilters.getFilterAliases("summary"));
+        assertEquals(List.of("assignee"), withFilters.getFilterAliases("assignees"));
+        assertEquals(List.of("createdAt"), withFilters.getFilterAliases("creationDate"));
+        // Named the same in OpenProject, or not a generic property.
+        assertEquals(List.of(), withFilters.getFilterAliases("status"));
+        assertEquals(List.of(), withFilters.getFilterAliases("Labels"));
+        // The filters of the instance couldn't be retrieved: all the OpenProject names may be filters.
+        assertEquals(List.of("assigned_to", "assignee"), this.fields.getFilterAliases("assignees"));
+    }
+
+    @Test
     void isSortable()
     {
         // The generic properties and OpenProject columns that can be sorted, as kept by mapSortEntries.

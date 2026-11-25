@@ -149,6 +149,13 @@ public class OpenProjectLivedataConfigurationResolver implements LiveDataConfigu
         }
         try {
             OpenProjectWorkItemFields fields = this.workPackageFieldsCache.getFields(instance, access);
+            // The generic properties can be filtered on by their OpenProject filter too, e.g. subject for summary.
+            for (LiveDataPropertyDescriptor descriptor : configuration.getMeta().getPropertyDescriptors()) {
+                if (descriptor.getFilter() != null) {
+                    WorkPackageFieldDescriptors.setAliases(descriptor.getFilter(),
+                        fields.getFilterAliases(descriptor.getId()));
+                }
+            }
             configuration.getMeta().getPropertyDescriptors().addAll(
                 WorkPackageFieldDescriptors.getDescriptors(fields, getMultiValueFields(instance, client, fields)));
             moveTheIgnoredSortEntriesLast(input, fields);

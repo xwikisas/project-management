@@ -50,8 +50,8 @@ class TranslationsTest
      * The labels of the filter builder that a client can word its own way (see filter_builder.vm).
      */
     private static final List<String> FILTER_BUILDER_LABELS = List.of("anotherCondition", "operatorLabel",
-        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "and", "or", "between", "propertiesNotLoaded",
-        "setConditionUnsupported", "summaryPreset", "summaryAllPreset");
+        "valueLabel", "summary", "summaryAll", "summaryIncomplete", "summaryKept", "and", "or", "between",
+        "propertiesNotLoaded", "setConditionUnsupported", "keptCondition", "summaryPreset", "summaryAllPreset");
 
     /**
      * What a series of a chart without filter selects (see projectmanagementfilters/edit.vm).

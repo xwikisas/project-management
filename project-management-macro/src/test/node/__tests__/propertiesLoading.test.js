@@ -38,6 +38,7 @@ const L10N = {
   summary: "Selects the work items where {0}.",
   summaryAll: "No filter: all the work items you can see.",
   summaryLoading: "Loading the filters…",
+  summaryKept: "The conditions that the filters can't show are kept as written.",
   propertiesNotLoaded: "Some properties couldn't be loaded.",
   and: "and",
   or: "or",
@@ -145,7 +146,10 @@ describe("a filter builder loading its properties", () => {
     // The builder proposes the properties it has.
     expect(getAddFilter().prop("disabled")).toBe(false);
     expect(getProposedProperties()).toEqual(["project"]);
-    expect(getSummary()).toBe("No filter: all the work items you can see.");
+    // The filter on the property that the builder doesn't have is listed and kept: the summary doesn't claim to
+    // describe all the selected work items.
+    expect($(".proj-manag-constraint-kept .proj-manag-constraint-title").text()).toBe("sprint");
+    expect(getSummary()).toBe("The conditions that the filters can't show are kept as written.");
     expect(builder.getConstraints()).toEqual({
       sprint: { property: "sprint", constraints: [{ operator: "=", value: "3" }] },
     });
@@ -157,6 +161,9 @@ describe("a filter builder loading its properties", () => {
     await reloaded;
     expect(getMessage()).toBe("");
     expect(getProposedProperties()).toEqual(["project", "sprint"]);
+    // The filter is now shown on the row of its property.
+    expect($(".proj-manag-constraint-kept").length).toBe(0);
+    expect($(".proj-manag-constraint .proj-manag-constraint-title").text()).toBe("Sprint");
   });
 
   it("tells when no property is loaded", async () => {

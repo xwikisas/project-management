@@ -141,6 +141,30 @@ class OpenProjectLivedataConfigurationResolverTest
     }
 
     @Test
+    void resolveGivesTheOpenProjectFiltersOfTheGenericProperties() throws Exception
+    {
+        when(this.stringLiveDataConfigResolver.resolve(anyString())).thenAnswer(invocation -> {
+            LiveDataConfiguration configuration = new LiveDataConfiguration();
+            configuration.setMeta(new LiveDataMeta());
+            configuration.getMeta().setPropertyDescriptors(new ArrayList<>(List.of(getListProperty("summary", null),
+                getListProperty("status", null))));
+            return configuration;
+        });
+        when(this.client.getWorkPackageFields()).thenReturn(new PaginatedResult<>(List.of(), 0, 0, 0));
+
+        LiveDataConfiguration configuration = this.resolver.resolve(getInput(INSTANCE));
+
+        // The query of a macro can filter on the summary by its OpenProject filter, subject.
+        List<LiveDataPropertyDescriptor> descriptors =
+            new ArrayList<>(configuration.getMeta().getPropertyDescriptors());
+        assertEquals(List.of("subject"), descriptors.get(0).getFilter().getParameters().get("aliases"));
+        assertNull(descriptors.get(1).getFilter().getParameters().get("aliases"));
+        // Without connection, the filters of the instance are unknown.
+        assertNull(this.resolver.resolve(getInput(null)).getMeta().getPropertyDescriptors().iterator().next()
+            .getFilter().getParameters().get("aliases"));
+    }
+
+    @Test
     void resolveMovesTheIgnoredSortEntriesLast() throws Exception
     {
         mockTargetVersionsField();
