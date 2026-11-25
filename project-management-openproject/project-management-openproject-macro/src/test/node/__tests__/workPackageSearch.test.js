@@ -22,7 +22,7 @@
 // JavaScript tests: the script served to the browsers is run here, with a fake CKEditor and fake REST resources.
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 const PLUGIN_PAGE = resolve(import.meta.dirname,
   "../../../../../project-management-openproject-ui/src/main/resources/OpenProject/Code/CKEditorPlugin.xml");
@@ -45,6 +45,8 @@ const AC_1 = getWorkPackage("157", "AC-1", "Mobile offline mode");
 
 const RELEASE = getWorkPackage("12", "AC-12", "Release 157 notes");
 
+const NOT_AUTHORIZED = '<div class="box warningmessage">You need to be authenticated to OpenProject.</div>';
+
 // The code of the skin extension of the page, as served to the browsers.
 function getPluginCode() {
   const page = readFileSync(PLUGIN_PAGE, "utf-8");
@@ -58,12 +60,32 @@ function getPluginCode() {
  * marker is #.
  *
  * @param workPackages the work packages of the connection
+ * @param access the access of the user to the connection, changed by the test: whether they can read its data
+ *     (authorized), whether the searches fail for another reason (failing), the number of times the message telling
+ *     why they can't read it was requested (checks), and the number of next requests of this message answered only
+ *     when the test calls the functions that they add to heldChecks with the message (held)
  * @return the autocomplete of the work package search, once created, with a type(text) method that types the text
- *     after the marker and returns the entries that it opens (null if it doesn't search them)
+ *     after the marker and returns the entries that it opens (null if it doesn't search them), and a newMarker() method
+ *     that starts a new search, after a marker typed elsewhere
  */
-function startWorkPackageSearch(workPackages) {
-  // The REST resources: the work packages whose subject contains a text, and the work package of an id or key.
+function startWorkPackageSearch(workPackages, access = { authorized: true, failing: false, checks: 0 }) {
+  // The REST resources: the work packages whose subject contains a text, the work package of an id or key, and the
+  // message telling the user why they can't read the data of the connection (rendered by the plugin page).
   const getJSON = (url, data) => {
+    if (url.startsWith(WORK_ITEMS) && !access.authorized) {
+      return Promise.reject({ status: 401 });
+    }
+    if (url.startsWith(WORK_ITEMS) && access.failing) {
+      return Promise.reject({ status: 500 });
+    }
+    if (url === "/xwiki/bin/get/OpenProject.Code.CKEditorPlugin?outputSyntax=plain&connection=" + CONNECTION) {
+      access.checks++;
+      if (access.held > 0) {
+        access.held--;
+        return new Promise((resolve) => access.heldChecks.push((message) => resolve({ notAuthorizedMessage: message })));
+      }
+      return Promise.resolve({ notAuthorizedMessage: access.authorized ? "" : NOT_AUTHORIZED });
+    }
     if (url === WORK_ITEMS && data.instance === CONNECTION) {
       const text = JSON.parse(data.filter).query.filters[0].constraints[0].value;
       return Promise.resolve({ items: workPackages.filter((workPackage) => workPackage.summary.value.includes(text)) });
@@ -79,7 +101,21 @@ function startWorkPackageSearch(workPackages) {
     }
     return Promise.reject({ status: 500 });
   };
-  const $ = { getJSON, param: (params) => new URLSearchParams(params).toString() };
+  // The element displaying a message, without the links that the script changes.
+  const getElement = () => {
+    let html = "";
+    const element = {
+      html(value) {
+        html = value ?? html;
+        return value === undefined ? html : element;
+      },
+      children: () => ({ length: 0 }),
+      find: () => ({ each: () => {} }),
+      text: () => html.replace(/<[^>]*>/g, ""),
+    };
+    return element;
+  };
+  const $ = Object.assign(getElement, { getJSON, param: (params) => new URLSearchParams(params).toString() });
   const XWiki = {
     contextPath: "/xwiki",
     currentWiki: "xwiki",
@@ -128,6 +164,12 @@ function startWorkPackageSearch(workPackages) {
       }
       return new Promise((resolve) => this.model.dataCallback({ query: match.text, range: match.range }, resolve));
     }
+
+    // Types the marker elsewhere: the text typed after it is searched again.
+    newMarker() {
+      typed = "";
+      range.startOffset++;
+    }
   }
   const editor = { status: "ready", on: () => {} };
   const ckeditor = {
@@ -141,6 +183,10 @@ function startWorkPackageSearch(workPackages) {
   require.config = () => {};
   new Function("require", "define", "XWiki", getPluginCode())(require, () => {}, XWiki);
   return autoCompleteCreated;
+}
+
+function getEntryIds(entries) {
+  return entries.map((entry) => entry.id);
 }
 
 function getSuggestions(entries) {
@@ -187,5 +233,75 @@ describe("the work package search of the WYSIWYG editor", () => {
     // The text that extends a query without match isn't searched, unless it can still be an id.
     expect(getSuggestions(await search.type("1"))).toEqual([{ value: "1501", label: "Login page", content: "AC-2" }]);
     expect(await search.type(" is")).toBeNull();
+  });
+});
+
+describe("the message of the WYSIWYG editor telling that the user can't search the work packages", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("is requested again once a search succeeded", async () => {
+    // The failed searches are logged.
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const access = { authorized: false, failing: false, checks: 0 };
+    const search = await startWorkPackageSearch([AC_1], access);
+
+    expect(getEntryIds(await search.type("#abc"))).toEqual(["openproject-work-package-search-notAuthorized"]);
+    search.newMarker();
+    expect(getEntryIds(await search.type("#abd"))).toEqual(["openproject-work-package-search-notAuthorized"]);
+    expect(access.checks).toBe(1);
+
+    // The user connects their OpenProject account from the message.
+    access.authorized = true;
+    search.newMarker();
+    expect(getSuggestions(await search.type("#Mob"))).toEqual([
+      { value: "157", label: "Mobile offline mode", content: "AC-1" },
+    ]);
+
+    // A search failing for another reason.
+    access.failing = true;
+    search.newMarker();
+    expect(getEntryIds(await search.type("#xyz"))).toEqual(["openproject-work-package-search-searchFailed"]);
+    expect(access.checks).toBe(2);
+  });
+
+  it("is displayed once the access of the user expired", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const access = { authorized: true, failing: true, checks: 0 };
+    const search = await startWorkPackageSearch([AC_1], access);
+
+    expect(getEntryIds(await search.type("#abc"))).toEqual(["openproject-work-package-search-searchFailed"]);
+
+    access.authorized = false;
+    search.newMarker();
+    expect(getEntryIds(await search.type("#abd"))).toEqual(["openproject-work-package-search-notAuthorized"]);
+    expect(access.checks).toBe(2);
+  });
+
+  it("is kept when requested again while an earlier request was answered", async () => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    const access = { authorized: false, failing: false, checks: 0, held: 2, heldChecks: [] };
+    const search = await startWorkPackageSearch([AC_1], access);
+    const firstFailure = search.type("#abc");
+    await vi.waitFor(() => expect(access.heldChecks).toHaveLength(1));
+
+    // A search succeeds while the message is requested, then the access of the user expires and a search fails.
+    access.authorized = true;
+    search.newMarker();
+    await search.type("#Mob");
+    access.authorized = false;
+    search.newMarker();
+    const secondFailure = search.type("#abd");
+    await vi.waitFor(() => expect(access.heldChecks).toHaveLength(2));
+    // The first answer tells the access of the user before the success.
+    access.heldChecks[0]("");
+    access.heldChecks[1](NOT_AUTHORIZED);
+
+    expect(getEntryIds(await firstFailure)).toEqual(["openproject-work-package-search-searchFailed"]);
+    expect(getEntryIds(await secondFailure)).toEqual(["openproject-work-package-search-notAuthorized"]);
+    search.newMarker();
+    expect(getEntryIds(await search.type("#abe"))).toEqual(["openproject-work-package-search-notAuthorized"]);
+    expect(access.checks).toBe(2);
   });
 });
