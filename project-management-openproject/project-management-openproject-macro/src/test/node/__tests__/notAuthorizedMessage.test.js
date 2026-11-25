@@ -42,16 +42,31 @@ const notAuthorizedMessage = loadNotAuthorizedMessage();
  * @return a notifier whose connection is the given one (changeable through the returned state), recording what it
  *     displays
  */
-function createNotifier(connection, getMessage) {
+function createNotifier(connection, getMessage, forgetMessage = vi.fn()) {
   const state = { connection, displayed: [] };
   state.notifier = notAuthorizedMessage.createNotifier({
     getConnection: () => state.connection,
     getMessage,
+    forgetMessage,
     show: (message, context) => state.displayed.push({ message, context }),
     remove: () => {
       state.displayed = [];
     },
   });
+  return state;
+}
+
+/**
+ * @param answers the successive answers of the check of the connection: the message telling that the user can't read
+ *     its data, or an empty message when they can
+ * @return a notifier of the QA connection whose messages are loaded by a message loader, with the checks it requested
+ */
+function createLoadingNotifier(...answers) {
+  const fetchMessage = vi.fn();
+  answers.forEach((answer) => fetchMessage.mockReturnValueOnce(Promise.resolve(answer)));
+  const messages = notAuthorizedMessage.createMessageLoader(fetchMessage);
+  const state = createNotifier("QA", messages.get, messages.forget);
+  state.checks = fetchMessage.mock.calls;
   return state;
 }
 
@@ -100,6 +115,40 @@ describe("createNotifier", () => {
     expect(state.displayed).toEqual([]);
   });
 
+  it("checks again whether the user can read the data once the suggestions were retrieved", async () => {
+    // The user isn't authenticated to OpenProject, then connects their account in another tab.
+    const state = createLoadingNotifier(MESSAGE, "");
+    await state.notifier.suggestionsFailed("picker");
+    state.notifier.suggestionsLoaded();
+
+    // E.g. OpenProject fails to answer.
+    await state.notifier.suggestionsFailed("picker");
+
+    expect(state.checks).toEqual([["QA"], ["QA"]]);
+    expect(state.displayed).toEqual([]);
+  });
+
+  it("displays the message once the user can't read the data anymore", async () => {
+    // E.g. OpenProject fails to answer, then the access of the user expires.
+    const state = createLoadingNotifier("", MESSAGE);
+    await state.notifier.suggestionsFailed("picker");
+    expect(state.displayed).toEqual([]);
+
+    await state.notifier.suggestionsFailed("picker");
+
+    expect(state.checks).toEqual([["QA"], ["QA"]]);
+    expect(state.displayed).toEqual([{ message: MESSAGE, context: "picker" }]);
+  });
+
+  it("checks once whether the user can read the data until the suggestions are retrieved", async () => {
+    const state = createLoadingNotifier(MESSAGE, MESSAGE);
+
+    await state.notifier.suggestionsFailed("picker");
+    await state.notifier.suggestionsFailed("filters");
+
+    expect(state.checks).toEqual([["QA"]]);
+  });
+
   it("removes the message once the suggestions are retrieved", async () => {
     const state = createNotifier("QA", () => Promise.resolve(MESSAGE));
     await state.notifier.suggestionsFailed("filters");
@@ -114,7 +163,7 @@ describe("createNotifier", () => {
 describe("createMessageLoader", () => {
   it("requests the message of each connection once", async () => {
     const fetchMessage = vi.fn((connection) => Promise.resolve(MESSAGE + connection));
-    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage);
+    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage).get;
 
     expect(await getMessage("QA")).toBe(MESSAGE + "QA");
     expect(await getMessage("QA")).toBe(MESSAGE + "QA");
@@ -127,16 +176,42 @@ describe("createMessageLoader", () => {
     const fetchMessage = vi.fn()
       .mockReturnValueOnce(Promise.reject(new Error("Not found")))
       .mockReturnValueOnce(Promise.resolve(MESSAGE));
-    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage);
+    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage).get;
 
     expect(await getMessage("QA")).toBe("");
     expect(await getMessage("QA")).toBe(MESSAGE);
   });
 
   it("gives no message for a response without message", async () => {
-    const getMessage = notAuthorizedMessage.createMessageLoader(() => Promise.resolve(undefined));
+    const getMessage = notAuthorizedMessage.createMessageLoader(() => Promise.resolve(undefined)).get;
 
     expect(await getMessage("QA")).toBe("");
+  });
+
+  it("requests the message again after an empty message", async () => {
+    const fetchMessage = vi.fn().mockReturnValueOnce(Promise.resolve("")).mockReturnValueOnce(Promise.resolve(MESSAGE));
+    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage).get;
+
+    expect(await getMessage("QA")).toBe("");
+    expect(await getMessage("QA")).toBe(MESSAGE);
+  });
+
+  it("requests the message again once forgotten", async () => {
+    const fetchMessage = vi.fn().mockReturnValueOnce(Promise.resolve(MESSAGE)).mockReturnValueOnce(Promise.resolve(""));
+    const messages = notAuthorizedMessage.createMessageLoader(fetchMessage);
+    expect(await messages.get("QA")).toBe(MESSAGE);
+
+    messages.forget("QA");
+
+    expect(await messages.get("QA")).toBe("");
+  });
+
+  it("shares the answer of the requests made at once", async () => {
+    const fetchMessage = vi.fn(() => Promise.resolve(""));
+    const getMessage = notAuthorizedMessage.createMessageLoader(fetchMessage).get;
+
+    expect(await Promise.all([getMessage("QA"), getMessage("QA")])).toEqual(["", ""]);
+    expect(fetchMessage).toHaveBeenCalledTimes(1);
   });
 });
 

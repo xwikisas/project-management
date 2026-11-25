@@ -93,7 +93,7 @@
     * the message of the macros is displayed above the filters. Its link to connect the OpenProject account opens in a
     * new tab, so that the edited macro isn't lost, and comes back to the edited page.
     */
-   let getNotAuthorizedMessage = notAuthorizedMessage.createMessageLoader(function (instance) {
+   let notAuthorizedMessages = notAuthorizedMessage.createMessageLoader(function (instance) {
      let pluginReference = XWiki.Model.resolve('OpenProject.Code.CKEditorPlugin', XWiki.EntityType.DOCUMENT,
        XWiki.currentDocument.documentReference);
      let url = new XWiki.Document(pluginReference).getURL('get',
@@ -114,7 +114,8 @@
    };
    let notAuthorizedNotifier = notAuthorizedMessage.createNotifier({
      getConnection: getInstance,
-     getMessage: getNotAuthorizedMessage,
+     getMessage: notAuthorizedMessages.get,
+     forgetMessage: notAuthorizedMessages.forget,
      show: function (message, builderElement) {
        if ($('.macro-editor-modal .op-filters-not-authorized').length) {
          return;
@@ -131,7 +132,8 @@
     */
    let pickerNotAuthorizedNotifier = notAuthorizedMessage.createNotifier({
      getConnection: getInstance,
-     getMessage: getNotAuthorizedMessage,
+     getMessage: notAuthorizedMessages.get,
+     forgetMessage: notAuthorizedMessages.forget,
      show: function (message, picker) {
        if (!picker.children('.op-picker-not-authorized').length) {
          picker.prepend(createNotAuthorizedMessage(message, 'op-picker-not-authorized'));
