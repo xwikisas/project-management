@@ -79,12 +79,26 @@ function bindBuilder() {
     (run) => run(), require, XWIKI);
 }
 
-// The macro editor of a work item macro: the widget of the source parameter, its matching filters (without builder:
-// the widget only talks to their container), the content and the Filter Preset field.
-function getMacroEditorHTML(presetId) {
+// The Filter Preset field listing the presets.
+function getPresetPickerHTML(presetId) {
   const option = (value, name) => `<option value="${value}"${value === presetId ? " selected" : ""}>
     ${name}
   </option>`;
+  return `<select name="presetId">${option("", "")}${option("1", "Open bugs")}${option("2", "Closed tasks")}</select>`;
+}
+
+// The Filter Preset field listing no preset, as the macro editor fills it for a macro with the given preset: it adds
+// the missing option of the preset.
+function getNoPresetFieldHTML(presetId) {
+  const option = presetId ? `<option value="${presetId}" selected>${presetId}</option>` : "";
+  return `<select id="parameter-presetId" name="presetId" class="form-control op-preset-select" disabled="disabled">
+    <option value="">No preset available for this macro</option>${option}
+  </select>`;
+}
+
+// The macro editor of a work item macro: the widget of the source parameter, its matching filters (without builder:
+// the widget only talks to their container), the content and the Filter Preset field.
+function getMacroEditorHTML(presetField) {
   return `<div class="modal macro-editor-modal">
     <div class="macro-editor">
       <div class="macro-parameter">
@@ -105,7 +119,7 @@ function getMacroEditorHTML(presetId) {
         </div>
       </div>
       <textarea name="$content"></textarea>
-      <select name="presetId">${option("", "")}${option("1", "Open bugs")}${option("2", "Closed tasks")}</select>
+      ${presetField}
     </div>
     <div class="modal-footer"></div>
   </div>`;
@@ -116,10 +130,11 @@ function getMacroEditorHTML(presetId) {
  * (workItemSourceParameter.js).
  *
  * @param presetId the preset of the macro
+ * @param presetField the HTML of the Filter Preset field holding this preset, the field listing the presets by default
  * @return the container of the matching filters
  */
-function editMacro(presetId) {
-  document.body.innerHTML = getMacroEditorHTML(presetId);
+function editMacro(presetId, presetField = getPresetPickerHTML(presetId)) {
+  document.body.innerHTML = getMacroEditorHTML(presetField);
   let bindEditor;
   const layout = {
     hideParameter() {},
@@ -229,5 +244,24 @@ describe("the widget of the source parameter", () => {
 
     $("select[name='presetId']").val("2").trigger("change");
     expect(container.data("pmPendingPreset")).toBe("Closed tasks");
+  });
+
+  it("keeps a preset that the field doesn't list, the user being able to clear it", () => {
+    // E.g. a deleted preset, the last one of the wiki: the field lists none.
+    const container = editMacro("4201", getNoPresetFieldHTML("4201"));
+
+    // The macro editor writes the fields it can submit, which a disabled field isn't.
+    expect($(".macro-editor :input").serializeArray()).toContainEqual({ name: "presetId", value: "4201" });
+    expect(container.data("pmPendingPreset")).toBe("4201");
+
+    $("select[name='presetId']").val("").trigger("change");
+    expect(container.data("pmPendingPreset")).toBe("");
+  });
+
+  it("leaves the field listing no preset disabled for a macro without preset", () => {
+    editMacro("", getNoPresetFieldHTML(""));
+
+    expect($("select[name='presetId']").prop("disabled")).toBe(true);
+    expect($(".macro-editor :input").serializeArray().map((parameter) => parameter.name)).not.toContain("presetId");
   });
 });

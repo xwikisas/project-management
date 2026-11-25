@@ -41,14 +41,18 @@
     #if ($chart)
       #set ($noneKey = "${noneKey}.chart")
     #end
-    ## The disabled select has no name, so that it holds no value, but has the id of the field of the parameter, which
-    ## the macro editor labels (see macro_parameter_label.vm).
-    #set ($idAttribute = '')
+    ## The disabled select has the name and the id of the field of the parameter, which the macro editor labels (see
+    ## macro_parameter_label.vm). The macro editor renders this field once for all the macros, without their values,
+    ## then puts the preset of the edited macro in it, adding its option: a macro can use a preset that isn't listed
+    ## here (deleted, not viewable by the current user). The widget of the source parameter then enables the field
+    ## (see workItemSourceParameter.js), so that Submit keeps the preset, a disabled field holding no value.
+    #set ($nameAttributes = '')
     #if ("$!displayer.parameters.name" != '')
-      #set ($idAttribute = "id=""parameter-$escapetool.xml($displayer.parameters.name)""")
+      #set ($name = $escapetool.xml($displayer.parameters.name))
+      #set ($nameAttributes = "id=""parameter-$name"" name=""$name""")
     #end
-    <select $idAttribute class="form-control op-preset-select" disabled="disabled">
-      <option>$escapetool.xml($services.localization.render($noneKey))</option>
+    <select $nameAttributes class="form-control op-preset-select" disabled="disabled">
+      <option value="">$escapetool.xml($services.localization.render($noneKey))</option>
     </select>
   #else
     #staticSelectPicker($parameters)
