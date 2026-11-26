@@ -181,7 +181,9 @@ public final class OpenProjectConditionChecker
         throws OpenProjectFilterValueException
     {
         Collection<String> supportedOperators = getSupportedOperators(property, field);
-        if (supportedOperators.isEmpty()) {
+        // A condition without operator gets the default operator of its property (see OpenProjectFilterTranslator),
+        // which the property supports.
+        if (supportedOperators.isEmpty() || StringUtils.isBlank(operator)) {
             return;
         }
         if (field != null && (GREATER.equals(operator) || LOWER.equals(operator))) {

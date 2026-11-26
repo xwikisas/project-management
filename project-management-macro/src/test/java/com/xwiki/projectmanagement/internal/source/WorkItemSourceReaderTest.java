@@ -30,11 +30,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.xwiki.component.descriptor.ComponentDescriptor;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.icon.IconManager;
 import org.xwiki.livedata.LiveDataQuery;
+import org.xwiki.livedata.internal.StringLiveDataConfigurationResolver;
 import org.xwiki.rendering.macro.MacroExecutionException;
+import org.xwiki.test.annotation.ComponentList;
 import org.xwiki.test.junit5.mockito.ComponentTest;
+import org.xwiki.test.junit5.mockito.InjectComponentManager;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.test.mockito.MockitoComponentManager;
 
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
 import com.xwiki.projectmanagement.source.WorkItemName;
@@ -57,6 +62,7 @@ import static org.mockito.Mockito.when;
  * @version $Id$
  */
 @ComponentTest
+@ComponentList({ FiltersWorkItemSource.class, StringLiveDataConfigurationResolver.class })
 class WorkItemSourceReaderTest
 {
     private static final String STATUS_FILTER =
@@ -71,6 +77,12 @@ class WorkItemSourceReaderTest
     @MockComponent
     @Named("context")
     private ComponentManager componentManager;
+
+    @InjectComponentManager
+    private MockitoComponentManager mockitoComponentManager;
+
+    @MockComponent
+    private IconManager iconManager;
 
     private final WorkItemSource source = mock(WorkItemSource.class);
 
@@ -242,6 +254,33 @@ class WorkItemSourceReaderTest
         assertNull(exception.getCause().getCause());
     }
 
+    /**
+     * The operator of a Live Data constraint is optional, as in the example of the filters source: the filters
+     * without operator are passed as they are to the Live Data, whose source applies the default operators.
+     */
+    @Test
+    void readsTheFiltersWithoutOperatorOfTheFiltersSource() throws Exception
+    {
+        useFiltersSource();
+        String filters = "{\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":[{\"value\":\"1\"}]}]}}";
+
+        WorkItemSourceResult result = this.reader.read(new WorkItemSourceRequest().source("filters").content(filters));
+
+        assertEquals(filters, result.getFilters());
+    }
+
+    @Test
+    void failsWhenARepeatedFilterOfTheFiltersSourceHasNoOperator() throws Exception
+    {
+        useFiltersSource();
+        String filters = "{\"query\":{\"filters\":[{\"property\":\"status\",\"constraints\":[{\"value\":\"1\"}]},"
+            + "{\"property\":\"status\",\"constraints\":[{\"operator\":\"!\",\"value\":\"2\"}]}]}}";
+        WorkItemSourceRequest request = new WorkItemSourceRequest().source("filters").content(filters);
+
+        assertEquals("The conditions on [status] can't be combined: each of them must have an operator.",
+            assertThrows(MacroExecutionException.class, () -> this.reader.read(request)).getMessage());
+    }
+
     @Test
     void failsWhenTheNameResolverFails() throws Exception
     {
@@ -334,6 +373,13 @@ class WorkItemSourceReaderTest
 
         assertEquals("Unexpected [)] at position 3.", exception.getMessage());
         assertSame(error, exception.getCause());
+    }
+
+    private void useFiltersSource() throws Exception
+    {
+        WorkItemSource filtersSource = this.mockitoComponentManager.getInstance(WorkItemSource.class, "filters");
+        when(this.componentManager.hasComponent(WorkItemSource.class, "filters")).thenReturn(true);
+        when(this.componentManager.getInstance(WorkItemSource.class, "filters")).thenReturn(filtersSource);
     }
 
     private static List<LiveDataQuery.Filter> statusFilter()

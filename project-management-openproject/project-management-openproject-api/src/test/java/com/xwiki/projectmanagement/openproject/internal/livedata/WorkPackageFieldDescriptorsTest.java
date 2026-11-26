@@ -111,6 +111,25 @@ class WorkPackageFieldDescriptorsTest
         assertFalse(descriptors.get(8).isFilterable());
     }
 
+    @Test
+    void getDefaultOperator()
+    {
+        assertEquals("~", WorkPackageFieldDescriptors.getDefaultOperator(
+            field("customField6", "Notes", "[1]String", ALL_OPERATORS), false));
+        // The first operator of the filter that the field supports.
+        assertEquals("=", WorkPackageFieldDescriptors.getDefaultOperator(
+            field("customField6", "Notes", "[1]String", List.of("!", "=")), false));
+        // "All of" is only offered on the fields having several values.
+        WorkPackageField labels = field("customField5", "Labels", "[]CustomOption", List.of("&=", "!"));
+        assertEquals("!", WorkPackageFieldDescriptors.getDefaultOperator(labels, false));
+        assertEquals("&=", WorkPackageFieldDescriptors.getDefaultOperator(labels, true));
+        // The fields that can't be filtered on.
+        assertNull(WorkPackageFieldDescriptors.getDefaultOperator(
+            field("customField8", "Deadline", "[1]Date", ALL_OPERATORS), true));
+        assertNull(WorkPackageFieldDescriptors.getDefaultOperator(
+            field("customField9", "Odd", "[1]String", List.of("o")), true));
+    }
+
     private static List<String> getOperators(LiveDataPropertyDescriptor descriptor)
     {
         return descriptor.getFilter().getOperators().stream().map(LiveDataPropertyDescriptor.OperatorDescriptor::getId)

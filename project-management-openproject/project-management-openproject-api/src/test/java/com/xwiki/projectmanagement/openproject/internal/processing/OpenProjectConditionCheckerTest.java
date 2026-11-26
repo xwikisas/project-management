@@ -67,6 +67,17 @@ class OpenProjectConditionCheckerTest
     }
 
     @Test
+    void checkAcceptsTheConditionsWithoutOperator()
+    {
+        // The operator of a Live Data constraint is optional: the default operator of the property is then used.
+        LiveDataQuery.Filter filter = new LiveDataQuery.Filter();
+        filter.setProperty("status");
+        filter.getConstraints().add(new LiveDataQuery.Constraint("1", null));
+
+        assertDoesNotThrow(() -> this.checker.check(List.of(filter)));
+    }
+
+    @Test
     void checkRejectsAnUnsupportedOperator()
     {
         List<LiveDataQuery.Filter> filters = List.of(new LiveDataQuery.Filter("startDate", "t", ""));

@@ -179,6 +179,25 @@ class WorkItemFilterCombinerTest
             describe(WorkItemFilterCombiner.combine(List.of(new LiveDataQuery.Filter("progress", ">=", "5"), filter))));
     }
 
+    /**
+     * The operator of a Live Data constraint is optional (for example in the content of the filters source), and its
+     * default depends on the tool, so the filters on a property, one having a constraint without operator, can't be
+     * combined.
+     */
+    @Test
+    void failsWhenAFilterOnARepeatedPropertyHasNoOperator() throws Exception
+    {
+        LiveDataQuery.Filter withoutOperator = new LiveDataQuery.Filter();
+        withoutOperator.setProperty("status");
+        withoutOperator.getConstraints().add(new LiveDataQuery.Constraint("1", null));
+        List<LiveDataQuery.Filter> filters = List.of(withoutOperator, new LiveDataQuery.Filter("status", "!", "2"));
+
+        assertEquals("The conditions on [status] can't be combined: each of them must have an operator.",
+            assertThrows(WorkItemSourceException.class, () -> WorkItemFilterCombiner.combine(filters)).getMessage());
+        // A filter without operator that isn't repeated is kept as it is.
+        assertEquals("status: null 1", describe(WorkItemFilterCombiner.combine(List.of(withoutOperator))));
+    }
+
     @ParameterizedTest
     @MethodSource("combinableQueries")
     void combinesTheFiltersOnTheSameProperty(String query, String expectedFilters) throws Exception

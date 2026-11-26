@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.livedata.LiveDataQuery;
 
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
@@ -47,6 +48,8 @@ import com.xwiki.projectmanagement.exception.WorkItemSourceException;
  * <li>a lower bound ({@code >=} or {@code >}) and an upper bound ({@code <=} or {@code <}) of a number make a range,
  * held by a filter with both constraints;</li>
  * <li>a filter repeated as it is counts once;</li>
+ * <li>the filters having a constraint without operator can't be combined, since the default operator of a property
+ * depends on the tool;</li>
  * <li>the other filters can't be combined: for example two conditions on a number, or on a text.</li>
  * </ul>
  * The values are compared as they are, so the names must have been resolved into ids beforehand.
@@ -116,7 +119,11 @@ final class WorkItemFilterCombiner
         String property = filters.get(0).getProperty();
         Set<String> operators = filters.stream().flatMap(filter -> filter.getConstraints().stream())
             .map(LiveDataQuery.Constraint::getOperator).collect(Collectors.toSet());
-        if (Set.of(REQUIRING_OPERATOR).equals(operators)) {
+        if (operators.stream().anyMatch(StringUtils::isBlank)) {
+            // The default operator of a property depends on the tool (for example "contains" on a text).
+            throw new WorkItemSourceException(String.format("The conditions on [%s] can't be combined: each of them "
+                + "must have an operator.", property));
+        } else if (Set.of(REQUIRING_OPERATOR).equals(operators)) {
             return newFilter(property, REQUIRING_OPERATOR, getValues(filters, REQUIRING_OPERATOR));
         } else if (operators.stream().allMatch(
             operator -> INCLUDING_OPERATORS.contains(operator) || EXCLUDING_OPERATOR.equals(operator)))

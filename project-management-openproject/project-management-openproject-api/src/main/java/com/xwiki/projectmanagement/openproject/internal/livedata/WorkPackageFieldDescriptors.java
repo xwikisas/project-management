@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.xwiki.livedata.LiveDataPropertyDescriptor;
 
 import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectFilterValueResolver;
@@ -143,7 +144,7 @@ public final class WorkPackageFieldDescriptors
         if (filter.getOperators() == null || filter.getOperators().isEmpty()) {
             return null;
         }
-        filter.setDefaultOperator(filter.getOperators().get(0).getId());
+        filter.setDefaultOperator(getDefaultOperator(field, multiValue));
         setParameters(filter, id, field, multiValue);
         return filter;
     }
@@ -194,14 +195,37 @@ public final class WorkPackageFieldDescriptors
         boolean multiValue)
     {
         for (Map.Entry<String, String> operator : OPERATORS.get(filter.getId()).entrySet()) {
-            // OpenProject proposes "All of" on every list filter, but only a work package having several values for
-            // the field can match more than one value.
-            if (field.getFilterOperators().contains(operator.getKey())
-                && (multiValue || !OPERATOR_ALL_OF.equals(operator.getKey())))
-            {
+            if (isOffered(operator.getKey(), field, multiValue)) {
                 filter.addOperator(operator.getKey(), operator.getValue());
             }
         }
+    }
+
+    /**
+     * @param field a work package field, for example a custom field holding a text
+     * @param multiValue whether a work package can have several values for the field; when unknown, {@code true}
+     *     keeps the "All of" operator ({@code &=}), which matches the same work packages as {@code =} for a single
+     *     value
+     * @return the default operator of the Live Data filter of the field: the first of the operators offered by the
+     *     filter, in the order they are listed (for example {@code ~} for a text field supporting it, else {@code =}),
+     *     or {@code null} if the field can't be filtered on
+     */
+    public static String getDefaultOperator(WorkPackageField field, boolean multiValue)
+    {
+        Map<String, String> operators = OPERATORS.get(StringUtils.defaultString(
+            OpenProjectWorkItemFields.getFilterType(field)));
+        if (operators == null) {
+            return null;
+        }
+        return operators.keySet().stream().filter(operator -> isOffered(operator, field, multiValue)).findFirst()
+            .orElse(null);
+    }
+
+    private static boolean isOffered(String operator, WorkPackageField field, boolean multiValue)
+    {
+        // OpenProject proposes "All of" on every list filter, but only a work package having several values for the
+        // field can match more than one value.
+        return field.getFilterOperators().contains(operator) && (multiValue || !OPERATOR_ALL_OF.equals(operator));
     }
 
     private static Map<String, String> orderedMap(String... keysAndValues)
