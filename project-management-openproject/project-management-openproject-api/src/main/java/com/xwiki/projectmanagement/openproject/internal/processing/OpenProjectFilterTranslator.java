@@ -43,6 +43,7 @@ import com.xwiki.projectmanagement.exception.ProjectManagementException;
 import com.xwiki.projectmanagement.model.PaginatedResult;
 import com.xwiki.projectmanagement.model.WorkItem;
 import com.xwiki.projectmanagement.openproject.OpenProjectApiClient;
+import com.xwiki.projectmanagement.openproject.internal.livedata.WorkPackageFieldDescriptors;
 import com.xwiki.projectmanagement.openproject.model.Version;
 import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
 
@@ -66,8 +67,8 @@ import com.xwiki.projectmanagement.openproject.model.WorkPackageField;
  * </ol>
  * The second operator mapping only affects the operators left generic by the first one, the OpenProject operators
  * being kept as they are. Beforehand, the constraints without operator, which the Live Data filter format allows, get
- * the default operator of the Live Data filter of their property, as in the Live Data (for example {@code contains} on
- * a text).
+ * a default operator (see {@link #getDefaultOperator(String, Object, OpenProjectWorkItemFields)}): mostly the default
+ * operator of the Live Data filter of their property, except on the texts and on the single dates.
  *
  * @version $Id$
  * @since 1.5.0
@@ -200,12 +201,24 @@ public final class OpenProjectFilterTranslator
     private static final Set<String> TEXT_FILTER_OPERATORS = Set.of(OP_CONTAINS, "!~");
 
     /**
-     * The generic equivalents of the default operators of the Live Data filters (see the OpenProject Live Data
-     * configuration and the descriptors of the work package fields), by type of filter, the default operator of the
-     * other filters being {@value #OPERATOR_EQUALS}.
+     * The default operators of the constraints without operator on the generic work item properties, by type of
+     * filter, the default operator of the other filters being {@value #OPERATOR_EQUALS}. They are the generic
+     * equivalents of the default operators of the OpenProject Live Data configuration, except on the texts: the Live
+     * Data default is {@code ~}, but {@value #OPERATOR_CONTAINS} also searches a work package key written in the
+     * summary (for example {@code PROJ-42}) with the filter of the OpenProject work package pickers.
      */
     private static final Map<String, String> DEFAULT_OPERATORS = Map.of(OpenProjectMapper.FILTER_TEXT,
         OPERATOR_CONTAINS, OpenProjectMapper.FILTER_DATE, OPERATOR_BETWEEN);
+
+    /**
+     * The OpenProject operator matching the work packages of a day, used for a single date without operator.
+     */
+    private static final String OP_ON_DAY = "=d";
+
+    /**
+     * The separator of the bounds of a range of dates, which is an ISO 8601 time interval.
+     */
+    private static final String INTERVAL_SEPARATOR = "/";
 
     private final OpenProjectWorkItemFields fields;
 
@@ -266,8 +279,8 @@ public final class OpenProjectFilterTranslator
     }
 
     /**
-     * Writes the values as text (see {@link #toTextValue(Object)}) and gives the constraints without operator the
-     * default operator of their property (see {@link #getDefaultOperator(String, OpenProjectWorkItemFields)}).
+     * Writes the values as text (see {@link #toTextValue(Object)}) and gives the constraints without operator a
+     * default operator (see {@link #getDefaultOperator(String, Object, OpenProjectWorkItemFields)}).
      */
     private static List<LiveDataQuery.Filter> normalize(List<LiveDataQuery.Filter> filters,
         OpenProjectWorkItemFields fields)
@@ -285,7 +298,8 @@ public final class OpenProjectFilterTranslator
             normalizedFilter.setMatchAll(filter.isMatchAll());
             for (LiveDataQuery.Constraint constraint : filter.getConstraints()) {
                 String operator = StringUtils.isBlank(constraint.getOperator())
-                    ? getDefaultOperator(filter.getProperty(), fields) : constraint.getOperator();
+                    ? getDefaultOperator(filter.getProperty(), constraint.getValue(), fields)
+                    : constraint.getOperator();
                 normalizedFilter.getConstraints().add(
                     new LiveDataQuery.Constraint(toTextValue(constraint.getValue()), operator));
             }
@@ -296,16 +310,33 @@ public final class OpenProjectFilterTranslator
 
     /**
      * @param property a work item property, for example {@code summary}
+     * @param value the value of the constraint without operator, for example {@code 2026-11-24}
      * @param fields the work package fields of the instance
-     * @return the generic equivalent of the default operator of the Live Data filter of the property, used by the
-     *     constraints without operator, for example {@code contains} on a text, or {@value #OPERATOR_EQUALS} if the
-     *     filter of the property is unknown
+     * @return the operator of a constraint without operator: on a field of the instance, the default operator of its
+     *     Live Data filter (for example {@code ~} on a text custom field, or {@code =} if it can't contain a text); on
+     *     a generic work item property, the operator of {@link #DEFAULT_OPERATORS}, except that a single date (not a
+     *     range such as {@code 2026-11-01/2026-11-30}) matches that day, rather than the days from that date on;
+     *     {@value #OPERATOR_EQUALS} if the filter of the property is unknown
      */
-    private static String getDefaultOperator(String property, OpenProjectWorkItemFields fields)
+    private static String getDefaultOperator(String property, Object value, OpenProjectWorkItemFields fields)
     {
         WorkPackageField field = fields.getField(property);
-        String filterType = field == null ? getFilterType(property) : OpenProjectWorkItemFields.getFilterType(field);
-        return filterType == null ? OPERATOR_EQUALS : DEFAULT_OPERATORS.getOrDefault(filterType, OPERATOR_EQUALS);
+        String operator = null;
+        if (field != null) {
+            // "All of" a single value matches the same work packages as "equals" it.
+            operator = WorkPackageFieldDescriptors.getDefaultOperator(field, true);
+        }
+        if (operator == null) {
+            String filterType =
+                field == null ? getFilterType(property) : OpenProjectWorkItemFields.getFilterType(field);
+            operator = DEFAULT_OPERATORS.getOrDefault(StringUtils.defaultString(filterType), OPERATOR_EQUALS);
+        }
+        if (OPERATOR_BETWEEN.equals(operator) && value instanceof String
+            && !((String) value).contains(INTERVAL_SEPARATOR))
+        {
+            operator = OP_ON_DAY;
+        }
+        return operator;
     }
 
     private static OpenProjectFilters toOpenProjectFilters(List<LiveDataQuery.Filter> filters)
@@ -608,7 +639,7 @@ public final class OpenProjectFilterTranslator
         // dates since November 1st). The other operators take a single date, which isn't split even when it contains a
         // slash (for example a date formatted as 2026/11/10).
         if (OP_BETWEEN.equals(operator)) {
-            String[] parts = values.split("/", -1);
+            String[] parts = values.split(INTERVAL_SEPARATOR, -1);
             if (parts.length > 1) {
                 return Arrays.asList(parts[0], parts[1]);
             }

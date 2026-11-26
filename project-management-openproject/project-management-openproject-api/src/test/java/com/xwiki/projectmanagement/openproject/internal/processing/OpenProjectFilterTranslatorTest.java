@@ -808,6 +808,55 @@ class OpenProjectFilterTranslatorTest
             OpenProjectFilterTranslator.translateOtherFilters(List.of(blankOperator)).toJson());
     }
 
+    /**
+     * A constraint without operator on a field of the instance gets the default operator of the Live Data filter of
+     * the field, which the field supports, rather than a generic operator that the field may not support (the
+     * constraint being then dropped, the filter would match all the work packages).
+     */
+    @Test
+    void translateConstraintsWithoutOperatorOnFieldsWithFewOperators() throws Exception
+    {
+        WorkPackageField code = field("customField1", "Code", "customField1", "[1]String");
+        code.setFilterOperators(List.of("=", "!"));
+        WorkPackageField labels = field("customField2", "Labels", "customField2", "[]CustomOption");
+        labels.setFilterOperators(List.of("&=", "!"));
+        WorkPackageField approved = field("customField3", "Approved", "customField3", "[1]Boolean");
+        approved.setFilterOperators(List.of("=", "!"));
+        OpenProjectWorkItemFields instanceFields = new OpenProjectWorkItemFields(List.of(code, labels, approved));
+
+        OpenProjectFilters openProjectFilters = new OpenProjectFilterTranslator(instanceFields, this.client)
+            .translate(List.of(withoutOperator("Code", "A1"), withoutOperator("Labels", "7"),
+                withoutOperator("Approved", true), new LiveDataQuery.Filter("Approved", "", "false")));
+
+        assertJsonEquals("["
+            + "{\"customField1\":{\"operator\":\"=\",\"values\":[\"A1\"]}},"
+            // "All of" a single value matches the work packages having this value.
+            + "{\"customField2\":{\"operator\":\"&=\",\"values\":[\"7\"]}},"
+            + "{\"customField3\":{\"operator\":\"=\",\"values\":[\"t\"]}},"
+            // An empty operator is a missing operator.
+            + "{\"customField3\":{\"operator\":\"=\",\"values\":[\"f\"]}}"
+            // No constraint is dropped: the log capture would fail on the warning.
+            + "]", openProjectFilters.toJson());
+    }
+
+    /**
+     * A single date without operator matches that day, while the {@code between} operator with a single date matches
+     * the days from that date on.
+     */
+    @Test
+    void translateSingleDatesWithoutOperator() throws Exception
+    {
+        OpenProjectFilters openProjectFilters = translate(List.of(withoutOperator("dueDate", "2026-11-24"),
+            new LiveDataQuery.Filter("updateDate", "", "2026-11-25"),
+            new LiveDataQuery.Filter("creationDate", "between", "2026-11-26")));
+
+        assertJsonEquals("["
+            + "{\"dueDate\":{\"operator\":\"=d\",\"values\":[\"2026-11-24\"]}},"
+            + "{\"updatedAt\":{\"operator\":\"=d\",\"values\":[\"2026-11-25\"]}},"
+            + "{\"createdAt\":{\"operator\":\"<>d\",\"values\":[\"2026-11-26\"]}}"
+            + "]", openProjectFilters.toJson());
+    }
+
     @Test
     void isEmpty() throws Exception
     {
