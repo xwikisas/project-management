@@ -31,10 +31,20 @@
  * the next task. An event sent for the result itself doesn't count either: the Live Data only initializes the elements
  * inside the updated ones.
  *
+ * The page loads the script when it displays a work item macro, and the asynchronous results bring it too, once they
+ * are inserted, to a page that had none (e.g. when saving the in-place editor after inserting the first macro): when it
+ * starts, the script also sends the event for the wrappers of a placeholder (marked by the macros) whose result is
+ * already inserted, since nothing initialized them. The script runs once, even when the page loads it twice.
+ *
  * Remove this script and the wrapper once the minimal supported XWiki version sends the event for the rendered content
  * (XWIKI-25675, https://jira.xwiki.org/browse/XWIKI-25675).
  */
 require(['jquery'], function ($) {
+  if (window.projectManagementAsyncFix) {
+    return;
+  }
+  window.projectManagementAsyncFix = true;
+
   const WRAPPER = 'proj-manag-async-wrapper';
 
   // The wrappers whose result was inserted and initialized: the placeholder of a wrapper is replaced once.
@@ -67,4 +77,8 @@ require(['jquery'], function ($) {
       }
     });
   }).observe(document.documentElement, {childList: true, subtree: true});
+
+  // The results that replaced their placeholder before the script started.
+  $('.' + WRAPPER + '[data-async-placeholder]').filter((index, wrapper) => !$(wrapper).children('.xwiki-async').length)
+    .each((index, wrapper) => onResultInserted(wrapper));
 });

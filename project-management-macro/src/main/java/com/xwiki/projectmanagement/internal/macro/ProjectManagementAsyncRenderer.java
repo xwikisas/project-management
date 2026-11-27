@@ -72,6 +72,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private static final String ASYNC_ERROR_SCRIPT = "js/projectmanagement/asyncError.js";
 
+    private static final String ASYNC_FIX_SCRIPT = "js/projectmanagement/asyncFix.js";
+
     private static final String ASYNC_ERROR_CLASS = "proj-manag-async-error";
 
     private static final String CLASS_PARAMETER = "class";
@@ -146,6 +148,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             }
             if (async) {
                 result = transform(result);
+                // The page that receives the result may not have loaded the script, e.g. when the in-place editor
+                // reloads the content of a page that had no work item macro: the result brings it.
+                this.jsrx.use(ASYNC_FIX_SCRIPT);
             }
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));

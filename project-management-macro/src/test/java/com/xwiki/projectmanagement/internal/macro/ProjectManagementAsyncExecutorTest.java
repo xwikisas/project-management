@@ -20,6 +20,7 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.inject.Named;
@@ -140,6 +141,22 @@ class ProjectManagementAsyncExecutorTest
     }
 
     @Test
+    void executeMarksTheWrapperOfAPlaceholder() throws Exception
+    {
+        Block placeholder = new GroupBlock(Map.of("class", "xwiki-async", "data-xwiki-async-id", "job"));
+        when(this.blockAsyncRendererExecutor.execute(same(this.asyncRenderer), any(AsyncRendererConfiguration.class)))
+            .thenReturn(placeholder);
+
+        List<Block> blocks = execute(true);
+
+        // The script initializes the result that replaces the placeholder before the script is loaded, e.g. when the
+        // result brings the script to a page that had no work item macro.
+        assertEquals(List.of(new GroupBlock(List.of(placeholder),
+            Map.of("class", "proj-manag-async-wrapper", "data-async-placeholder", "true"))), blocks);
+        verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
+    }
+
+    @Test
     void executeWhenTheRendererDoesNotAllowAsyncRendering() throws Exception
     {
         // E.g. when the WYSIWYG editor renders the macro: nothing would fill the placeholder.
@@ -169,7 +186,8 @@ class ProjectManagementAsyncExecutorTest
         // The wrapper lets the script initialize the result once it replaces its placeholder (XWIKI-25675).
         assertEquals(1, blocks.size());
         assertInstanceOf(wrapperClass, blocks.get(0));
-        assertEquals("proj-manag-async-wrapper", blocks.get(0).getParameter("class"));
+        // The page initializes the result displayed without placeholder.
+        assertEquals(Map.of("class", "proj-manag-async-wrapper"), blocks.get(0).getParameters());
         assertEquals(List.of(this.result), blocks.get(0).getChildren());
         verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
     }
