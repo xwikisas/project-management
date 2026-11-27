@@ -43,9 +43,11 @@ Even then, the XWiki under test resolves the dependencies of the installed exten
 ### Release
 
 ```
-mvn release:prepare -Pintegration-tests -DskipTests -Darguments="-N"
-mvn release:perform -Pintegration-tests -DskipTests -Darguments="-DskipTests"
+mvn release:prepare -Pintegration-tests,docker -DskipTests -Darguments="-N"
+mvn release:perform -Pintegration-tests,docker -DskipTests -Darguments="-DskipTests"
 ```
+
+Both profiles are needed: `integration-tests` adds `project-management-test` to the build and `docker` adds `project-management-test-docker` to it, so without `docker` the release plugin doesn't update the version of the `project-management-test-docker` pom.
 
 ## Architecture
 
