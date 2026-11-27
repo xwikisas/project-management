@@ -19,11 +19,8 @@
  */
 package com.xwiki.projectmanagement.openproject.internal.mentions;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.inject.Inject;
@@ -38,6 +35,7 @@ import org.xwiki.rendering.macro.MacroExecutionException;
 import com.xpn.xwiki.doc.XWikiDocument;
 import com.xwiki.commons.document.MacroBlockFinder;
 import com.xwiki.projectmanagement.exception.WorkItemSourceException;
+import com.xwiki.projectmanagement.openproject.internal.processing.OpenProjectLink;
 import com.xwiki.projectmanagement.source.WorkItemSource;
 import com.xwiki.projectmanagement.source.WorkItemSourceContext;
 
@@ -55,7 +53,10 @@ import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProj
 @Singleton
 public class WorkPackageMentionFinder
 {
-    private static final Pattern WORK_PACKAGE_URL_ID_PATTERN = Pattern.compile(".*/work_packages/(\\d+).*");
+    // ASCII digits only: Character.isDigit accepts other digits.
+    private static final Pattern NUMERIC_ID_PATTERN = Pattern.compile("^[0-9]+$");
+
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s");
 
     private static final String IDENTIFIER = "identifier";
 
@@ -87,8 +88,10 @@ public class WorkPackageMentionFinder
                 return MacroBlockFinder.Lookup.CONTINUE;
             }
 
-            // The filters can exclude the work package.
-            if (!StringUtils.isEmpty(macroBlock.getParameter("filters"))) {
+            // The filters, including the ones of a preset, can exclude the work package.
+            if (!StringUtils.isEmpty(macroBlock.getParameter("filters"))
+                || !StringUtils.isEmpty(macroBlock.getParameter("presetId")))
+            {
                 return MacroBlockFinder.Lookup.CONTINUE;
             }
 
@@ -122,7 +125,9 @@ public class WorkPackageMentionFinder
         if ("list".equalsIgnoreCase(source)) {
             return getListedWorkPackageId(content);
         } else if ("url".equalsIgnoreCase(source)) {
-            return getWorkPackageIdFromURL(content.trim());
+            // The url source accepts a single link, without spaces.
+            String url = content.trim();
+            return WHITESPACE_PATTERN.matcher(url).find() ? null : getWorkPackageIdFromLink(url);
         }
         return null;
     }
@@ -136,8 +141,8 @@ public class WorkPackageMentionFinder
     {
         try {
             List<String> ids = this.listSource.read(content, new WorkItemSourceContext(OPENPROJECT)).getIds();
-            if (ids.size() == 1 && isNumericId(ids.get(0))) {
-                return ids.get(0);
+            if (ids.size() == 1) {
+                return getNumericId(ids.get(0));
             }
         } catch (WorkItemSourceException e) {
             // The content lists no work package.
@@ -147,36 +152,39 @@ public class WorkPackageMentionFinder
 
     private String getWorkPackageId(String identifierParam)
     {
-        if (StringUtils.isEmpty(identifierParam)) {
+        String identifier = StringUtils.trim(identifierParam);
+        if (StringUtils.isEmpty(identifier)) {
             return null;
         }
-        // The id parameter can be either an URL that might point to a single work package.
-        String workPackageId = getWorkPackageIdFromURL(identifierParam);
-        if (workPackageId != null) {
-            return workPackageId;
+        // The identifier can be a link, e.g. of a work package.
+        OpenProjectLink link = OpenProjectLink.parse(identifier);
+        if (link != null) {
+            return link.getWorkPackageId();
         }
-        // Or it can be a single id or a list of ids. We are only interested if it displays a single id.
-        return isNumericId(identifierParam) ? identifierParam : null;
+        // Or a list of work packages: only a single numeric id is a mention.
+        return getNumericId(identifier);
     }
 
-    private String getWorkPackageIdFromURL(String url)
+    /**
+     * @return the id of the work package of the link, read as the macros read it, if it's the link of a work package,
+     *     {@code null} otherwise
+     */
+    private static String getWorkPackageIdFromLink(String url)
     {
-        try {
-            new URL(url);
-            Matcher matcher = WORK_PACKAGE_URL_ID_PATTERN.matcher(url);
-            return matcher.find() ? matcher.group(1) : null;
-        } catch (MalformedURLException ignored) {
+        OpenProjectLink link = OpenProjectLink.parse(url);
+        return link == null ? null : link.getWorkPackageId();
+    }
+
+    /**
+     * @return the id without its leading zeros, as stored by OpenProject and searched by the mentions resource (e.g.
+     *     {@code 12} for {@code 012}), if it's a numeric id, {@code null} otherwise
+     */
+    private static String getNumericId(String id)
+    {
+        if (!NUMERIC_ID_PATTERN.matcher(id).matches()) {
             return null;
         }
-    }
-
-    private static boolean isNumericId(String id)
-    {
-        try {
-            Integer.parseInt(id);
-            return true;
-        } catch (NumberFormatException ignored) {
-            return false;
-        }
+        String normalizedId = StringUtils.stripStart(id, "0");
+        return normalizedId.isEmpty() ? "0" : normalizedId;
     }
 }

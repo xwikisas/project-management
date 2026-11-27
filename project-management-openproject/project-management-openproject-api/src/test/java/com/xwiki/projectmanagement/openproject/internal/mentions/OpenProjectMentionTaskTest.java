@@ -190,13 +190,13 @@ class OpenProjectMentionTaskTest
     {
         savePage();
         String version = getPage().getVersion();
-        withMacros(macro("12", INSTANCE), macro("http://op.example.org/projects/demo/work_packages/34/activity",
-            "other"));
+        withMacros(macro(" 12 ", INSTANCE), macro("http://op.example.org/projects/demo/work_packages/34/activity",
+            "other"), macro("https://op.example.org/wp/56", INSTANCE));
 
         this.task.consume(PAGE, version);
 
         // The id of a work package URL is extracted.
-        assertEquals(List.of("12@test", "34@other"), getStoredMentions());
+        assertEquals(List.of("12@test", "34@other", "56@test"), getStoredMentions());
         assertSavedByTheTask(version);
     }
 
@@ -207,7 +207,8 @@ class OpenProjectMentionTaskTest
         MacroBlock withFilter = macro("12", INSTANCE);
         withFilter.setParameter("filters", "{}");
         withMacros(macro("12", null), withFilter, macro("1,2,3", INSTANCE), macro(null, INSTANCE),
-            macro("http://op.example.org/projects/demo/work_packages", INSTANCE),
+            macro("http://op.example.org/projects/demo/work_packages", INSTANCE), macro("+12", INSTANCE),
+            macro("http://op.example.org/work_packages/12,http://op.example.org/work_packages/34", INSTANCE),
             new MacroBlock("openprojectchart", Map.of("identifier", "12", PROP_INSTANCE, INSTANCE), false),
             macro("56", INSTANCE));
 
@@ -221,12 +222,14 @@ class OpenProjectMentionTaskTest
     {
         savePage();
         String version = getPage().getVersion();
-        withMacros(sourceMacro("list", "12", INSTANCE), sourceMacro(" LIST ", "\n 34, \n", "other"),
-            sourceMacro("url", " http://op.example.org/projects/demo/work_packages/56/activity ", INSTANCE));
+        withMacros(sourceMacro("list", "12", INSTANCE), sourceMacro(" LIST ", "\n 034, \n", "other"),
+            sourceMacro("url", " http://op.example.org/projects/demo/work_packages/56/activity ", INSTANCE),
+            sourceMacro("url", "https://op.example.org/wp/78", INSTANCE));
 
         this.task.consume(PAGE, version);
 
-        assertEquals(List.of("12@test", "34@other", "56@test"), getStoredMentions());
+        // The ids are stored without their leading zeros, as OpenProject searches them.
+        assertEquals(List.of("12@test", "34@other", "56@test", "78@test"), getStoredMentions());
         assertSavedByTheTask(version);
     }
 
@@ -238,6 +241,8 @@ class OpenProjectMentionTaskTest
         withFilters.setParameter("filters", "{}");
         MacroBlock withIdentifier = sourceMacro("list", "12", INSTANCE);
         withIdentifier.setParameter("identifier", "12");
+        MacroBlock withPreset = sourceMacro("list", "12", INSTANCE);
+        withPreset.setParameter("presetId", "3");
         withMacros(
             // A query, the default source.
             sourceMacro(null, "12", INSTANCE), sourceMacro("query", "id = 12", INSTANCE),
@@ -248,7 +253,17 @@ class OpenProjectMentionTaskTest
             sourceMacro("list", "http://op.example.org/projects/demo/work_packages/12", INSTANCE),
             sourceMacro("url", "http://op.example.org/projects/demo/work_packages", INSTANCE),
             sourceMacro("url", "12", INSTANCE), sourceMacro("unknown", "12", INSTANCE),
-            sourceMacro("list", "12", null), withFilters, withIdentifier);
+            sourceMacro("url", "http://op.example.org/projects/demo/work_packages?query_id=5", INSTANCE),
+            // The url source rejects a link on two lines, the macro fails.
+            sourceMacro("url", "http://op.example.org/work_packages/12\nhttp://op.example.org/work_packages/34",
+                INSTANCE),
+            sourceMacro("url", "http://op.example.org/work_packages/12abc", INSTANCE),
+            sourceMacro("url", "http://op.example.org/work_packages/12/activity/details", INSTANCE),
+            sourceMacro("url", "ftp://op.example.org/work_packages/12", INSTANCE),
+            sourceMacro("list", "+12", INSTANCE), sourceMacro("list", "-12", INSTANCE),
+            // Non-ASCII digits.
+            sourceMacro("list", "\u0661\u0662", INSTANCE),
+            sourceMacro("list", "12", null), withFilters, withIdentifier, withPreset);
 
         this.task.consume(PAGE, "1.1");
 
