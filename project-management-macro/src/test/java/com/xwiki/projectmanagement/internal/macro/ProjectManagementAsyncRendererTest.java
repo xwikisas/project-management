@@ -94,6 +94,9 @@ class ProjectManagementAsyncRendererTest
     @MockComponent
     private TransformationManager transformationManager;
 
+    @MockComponent
+    private AsyncResultEventChecker eventChecker;
+
     @Mock
     private Macro<ProjectManagementAsyncMacroParams> displayer;
 
@@ -190,6 +193,51 @@ class ProjectManagementAsyncRendererTest
 
         assertEquals(List.of(block), this.renderer.execute(true, false).getChildren());
         assertEquals("processed", this.parameters.getSourceParameters());
+    }
+
+    @Test
+    void executeAsynchronouslyWhenXWikiSendsTheEventForTheResult() throws Exception
+    {
+        when(this.eventChecker.isEventSentForTheResult()).thenReturn(true);
+        Block block = new WordBlock("item");
+        when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
+
+        // Since XWiki 18.10, XWiki sends the event for the elements of the result, and the scripts initialize the
+        // elements inside them (e.g. a Live Data table that would be the top element of the result): the result has a
+        // single top element. The result doesn't need the script sending the event.
+        assertEquals(List.of(new GroupBlock(List.of(block), Map.of("class", "proj-manag-async-result"))),
+            this.renderer.execute(true, false).getChildren());
+        verifyNoInteractions(this.jsrx);
+    }
+
+    @Test
+    void executeAsynchronouslyInlineWhenXWikiSendsTheEventForTheResult() throws Exception
+    {
+        when(this.eventChecker.isEventSentForTheResult()).thenReturn(true);
+        MacroTransformationContext context = new MacroTransformationContext();
+        context.setInline(true);
+        this.renderer.initialize(this.displayer, this.parameters, CONTENT, context, null);
+        Block block = new WordBlock("item");
+        when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
+
+        assertEquals(List.of(new FormatBlock(List.of(block), Format.NONE, Map.of("class", "proj-manag-async-result"))),
+            this.renderer.execute(true, false).getChildren());
+    }
+
+    @Test
+    void executeAsyncWhenTheDisplayerFailsAndXWikiSendsTheEventForTheResult() throws Exception
+    {
+        when(this.eventChecker.isEventSentForTheResult()).thenReturn(true);
+        when(this.displayer.execute(any(), any(), any())).thenThrow(new MacroExecutionException("Failed"));
+        Block errorBlock = new WordBlock("error");
+        when(this.errorBlockGenerator.generateErrorBlocks(anyBoolean(), any(), any(), any(), any()))
+            .thenReturn(List.of(errorBlock));
+
+        // The error is already a single element, which XWiki's event makes expandable: the scripts sending the event
+        // would notify it a second time.
+        assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))),
+            this.renderer.execute(true, false).getChildren());
+        verifyNoInteractions(this.jsrx);
     }
 
     @Test

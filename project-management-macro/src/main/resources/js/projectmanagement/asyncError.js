@@ -18,13 +18,14 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 /**
- * The platform inserts the result of an asynchronous rendering in the page without notifying the page scripts, so the
- * errors it displays don't get the click listener that shows their details. Notify them for the errors displayed by
- * the project management macros, unless the page scripts already did it.
+ * Before XWiki 18.10.0-rc-1, the platform inserts the result of an asynchronous rendering in the page without notifying
+ * the page scripts about it, so the errors it displays don't get the click listener that shows their details. Notify
+ * them for the errors displayed by the project management macros, unless the page scripts already did it.
  *
  * This works around XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous rendering targets the removed
- * placeholder instead of the rendered content, https://jira.xwiki.org/browse/XWIKI-25675): remove this script once the
- * minimal supported XWiki version includes its fix.
+ * placeholder instead of the rendered content, https://jira.xwiki.org/browse/XWIKI-25675), fixed in XWiki
+ * 18.10.0-rc-1, where the macros don't use this script: remove it once the minimal supported XWiki version includes
+ * this fix.
  */
 require(['jquery'], function($) {
   'use strict';

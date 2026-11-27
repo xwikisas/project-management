@@ -85,6 +85,9 @@ class ProjectManagementAsyncExecutorTest
     @Named("jsrx")
     private SkinExtension jsrx;
 
+    @MockComponent
+    private AsyncResultEventChecker eventChecker;
+
     @Mock
     private Macro<ProjectManagementAsyncMacroParams> displayer;
 
@@ -154,6 +157,19 @@ class ProjectManagementAsyncExecutorTest
         assertEquals(List.of(new GroupBlock(List.of(placeholder),
             Map.of("class", "proj-manag-async-wrapper", "data-proj-manag-async-placeholder", "true"))), blocks);
         verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
+    }
+
+    @Test
+    void executeWhenXWikiSendsTheEventForTheResult() throws Exception
+    {
+        // Since XWiki 18.10, sending the event for the wrapper too would initialize the result twice (e.g. draw a
+        // chart twice).
+        when(this.eventChecker.isEventSentForTheResult()).thenReturn(true);
+
+        assertEquals(List.of(this.result), execute(true));
+
+        assertTrue(getConfiguration().isPlaceHolderForced());
+        verify(this.jsrx, never()).use(anyString());
     }
 
     @Test

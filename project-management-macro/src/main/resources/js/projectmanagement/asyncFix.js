@@ -21,11 +21,11 @@
  * Some results of the project management macros are initialized by JavaScript code on page load and on the
  * xwiki:dom:updated event, in the updated elements: e.g. the charts, drawn by the Chart.js application, and the Live
  * Data tables. When a macro is rendered asynchronously, XWiki sends no event once the placeholder is replaced by the
- * result (before XWiki 18.6), or sends it for the removed placeholder (XWIKI-25675, since XWiki 18.6), so a result
- * inserted after the page load (e.g. when saving the in-place editor, or inside another asynchronous rendering) isn't
- * initialized: the Live Data keeps loading. The macros wrap their asynchronous result, and this script sends the event
- * for the wrapper once its placeholder is replaced, except when XWiki already sent it, after the replacement, for the
- * wrapper or one of its ancestors, which would initialize the result twice (e.g. draw a chart twice). An event sent
+ * result (before XWiki 18.6), or sends it for the removed placeholder (from XWiki 18.6 to 18.9, XWIKI-25675), so a
+ * result inserted after the page load (e.g. when saving the in-place editor, or inside another asynchronous rendering)
+ * isn't initialized: the Live Data keeps loading. The macros wrap their asynchronous result, and this script sends the
+ * event for the wrapper once its placeholder is replaced, except when XWiki already sent it, after the replacement, for
+ * the wrapper or one of its ancestors, which would initialize the result twice (e.g. draw a chart twice). An event sent
  * while the placeholder was still there doesn't count, whenever the result arrives: e.g. the in-place editor sends it
  * for the whole content, which still holds the placeholder, and the result can arrive before or after the browser runs
  * the next task. An event sent for the result itself doesn't count either: the Live Data only initializes the elements
@@ -41,8 +41,9 @@
  * twice (e.g. by the page and by an asynchronous result, or by two results), so the second copy costs only its
  * download, cached by the browser.
  *
- * Remove this script and the wrapper once the minimal supported XWiki version sends the event for the rendered content
- * (XWIKI-25675, https://jira.xwiki.org/browse/XWIKI-25675).
+ * XWiki 18.10.0-rc-1 sends the event for the inserted result (XWIKI-25675, https://jira.xwiki.org/browse/XWIKI-25675):
+ * there, the macros neither wrap their result nor use this script, which would initialize the result a second time.
+ * Remove this script and the wrapper once the minimal supported XWiki version includes this fix.
  */
 require(['jquery'], function ($) {
   if (window.projectManagementAsyncFix) {

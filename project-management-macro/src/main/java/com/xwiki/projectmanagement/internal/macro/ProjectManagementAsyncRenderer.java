@@ -90,6 +90,9 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
     @Named("jsrx")
     private SkinExtension jsrx;
 
+    @Inject
+    private AsyncResultEventChecker eventChecker;
+
     private Macro<ProjectManagementAsyncMacroParams> workItemsDisplayer;
 
     private ProjectManagementAsyncMacroParams parameters;
@@ -147,8 +150,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
                 result = workItemsDisplayer.execute(this.parameters, this.content, this.transformationContext);
             }
             if (async) {
-                result = transform(result);
-                useAsyncFixScript();
+                result = prepareForInitialization(transform(result));
             }
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
@@ -158,27 +160,37 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             if (!async) {
                 throw new RenderingException("Failed to render asynchronously the work items displayer [{}].", e);
             }
-            // Display the failure like the macro transformation does for a synchronous macro: the message contains
-            // the root cause and the details (the stack trace) are displayed when clicking on it.
-            // The failure is displayed with its details, so it's not logged above debug: logging it each time the page
-            // is viewed would be costly, like for the failures of the synchronous macros, which aren't logged.
-            MacroBlock macroBlock = this.transformationContext.getCurrentMacroBlock();
-            this.logger.debug(ERROR_MESSAGE, e);
-            List<Block> errorBlocks = macroBlock != null
-                ? this.errorBlockGenerator.generateErrorBlocks(this.inline, MACRO_ERROR_MESSAGE_ID, MACRO_ERROR_MESSAGE,
-                    null, macroBlock.getId(), e)
-                : this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
-            // The script makes the error expandable once the asynchronous result is inserted in the page.
+            return displayAsyncFailure(e);
+        }
+    }
+
+    /**
+     * Display the failure like the macro transformation does for a synchronous macro: the message contains the root
+     * cause and the details (the stack trace) are displayed when clicking on it. The failure is displayed with its
+     * details, so it's not logged above debug: logging it each time the page is viewed would be costly, like for the
+     * failures of the synchronous macros, which aren't logged.
+     */
+    private Block displayAsyncFailure(Exception e)
+    {
+        MacroBlock macroBlock = this.transformationContext.getCurrentMacroBlock();
+        this.logger.debug(ERROR_MESSAGE, e);
+        List<Block> errorBlocks = macroBlock != null
+            ? this.errorBlockGenerator.generateErrorBlocks(this.inline, MACRO_ERROR_MESSAGE_ID, MACRO_ERROR_MESSAGE,
+                null, macroBlock.getId(), e)
+            : this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
+        // When XWiki doesn't send the xwiki:dom:updated event for the asynchronous result, the script makes the error
+        // expandable once it is inserted in the page. When XWiki sends it, the event makes the error expandable.
+        if (!this.eventChecker.isEventSentForTheResult()) {
             this.jsrx.use(ASYNC_ERROR_SCRIPT);
             useAsyncFixScript();
-            Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, ASYNC_ERROR_CLASS);
-            Block error = this.inline ? new FormatBlock(errorBlocks, Format.NONE, wrapperParameters)
-                : new GroupBlock(errorBlocks, wrapperParameters);
-            if (this.transformationContext.getCurrentMacroBlock() != null) {
-                error = wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), List.of(error));
-            }
-            return new CompositeBlock(List.of(error));
         }
+        Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, ASYNC_ERROR_CLASS);
+        Block error = this.inline ? new FormatBlock(errorBlocks, Format.NONE, wrapperParameters)
+            : new GroupBlock(errorBlocks, wrapperParameters);
+        if (macroBlock != null) {
+            error = wrapInMacroMarker(macroBlock, List.of(error));
+        }
+        return new CompositeBlock(List.of(error));
     }
 
     /**
@@ -248,6 +260,24 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         context.setId(pageContext.getId());
         transform(xdom, context);
         return xdom.getChildren();
+    }
+
+    /**
+     * Some results are initialized by JavaScript code on the xwiki:dom:updated event, in the updated elements (e.g. the
+     * charts and the Live Data tables, which look for their elements inside the updated ones). When XWiki sends the
+     * event for the elements of the asynchronous result, the result is wrapped in a single element, so that the event
+     * initializes the whole result (e.g. a Live Data table that would be the top element of the result). Otherwise,
+     * the macros send the event for the wrapper of the result, see {@link ProjectManagementAsyncExecutor}.
+     */
+    private List<Block> prepareForInitialization(List<Block> blocks)
+    {
+        if (this.eventChecker.isEventSentForTheResult()) {
+            Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, "proj-manag-async-result");
+            return List.of(this.inline ? new FormatBlock(blocks, Format.NONE, wrapperParameters)
+                : new GroupBlock(blocks, wrapperParameters));
+        }
+        useAsyncFixScript();
+        return blocks;
     }
 
     /**
