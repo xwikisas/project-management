@@ -32,10 +32,10 @@
   <version>1.5.0-SNAPSHOT</version>
   <name>Project Management - Parent POM</name>
   <properties>
-    <xwikipro.commons.version>1.4.0</xwikipro.commons.version>
-    <licensing.version>1.32.3</licensing.version>
-    <urlshortener.version>1.3.4</urlshortener.version>
-    <fullcalendar.version>2.5.4</fullcalendar.version>
+    <xwikipro.commons.version>1.5.0</xwikipro.commons.version>
+    <licensing.version>1.33.1</licensing.version>
+    <urlshortener.version>1.5.1</urlshortener.version>
+    <fullcalendar.version>2.5.5</fullcalendar.version>
     <!-- The JavaScript unit tests (src/test/node of the modules declaring the frontend-maven-plugin), run with
          Vitest. -->
     <node.version>v22.12.0</node.version>
