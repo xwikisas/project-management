@@ -8,6 +8,6 @@
   },
   "devDependencies": {
     "jsdom": "31.0.1",
-    "vitest": "4.1.11"
+    "vitest": "4.1.12"
   }
 }
