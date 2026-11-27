@@ -12,6 +12,7 @@ com.xwiki.projectmanagement.openproject.internal.mentions.DefaultOpenProjectMent
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionSchedulingListener
 com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionTask
+com.xwiki.projectmanagement.openproject.internal.mentions.WorkPackageMentionFinder
 com.xwiki.projectmanagement.openproject.internal.access.DefaultOpenProjectAccess
 com.xwiki.projectmanagement.openproject.internal.access.PublicDataCacheInvalidationListener
 com.xwiki.projectmanagement.openproject.internal.access.PublicDataClientProvider

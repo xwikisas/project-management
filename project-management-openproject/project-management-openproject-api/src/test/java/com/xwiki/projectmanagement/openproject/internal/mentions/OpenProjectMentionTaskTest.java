@@ -54,6 +54,7 @@ import com.xpn.xwiki.test.junit5.mockito.InjectMockitoOldcore;
 import com.xpn.xwiki.test.junit5.mockito.OldcoreTest;
 import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import com.xwiki.commons.document.MacroBlockFinder;
+import com.xwiki.projectmanagement.internal.source.ListWorkItemSource;
 import com.xwiki.projectmanagement.openproject.internal.DocumentModificationLock;
 
 import static com.xwiki.projectmanagement.openproject.internal.mentions.OpenProjectMentionClassInitializer.PROP_INSTANCE;
@@ -77,7 +78,7 @@ import static org.mockito.Mockito.when;
  */
 @OldcoreTest
 @ReferenceComponentList
-@ComponentList(DocumentModificationLock.class)
+@ComponentList({ DocumentModificationLock.class, WorkPackageMentionFinder.class, ListWorkItemSource.class })
 class OpenProjectMentionTaskTest
 {
     private static final DocumentReference PAGE = new DocumentReference("xwiki", "Space", "Page");
@@ -189,13 +190,13 @@ class OpenProjectMentionTaskTest
     {
         savePage();
         String version = getPage().getVersion();
-        withMacros(macro("12", INSTANCE), macro("http://op.example.org/projects/demo/work_packages/34/activity",
-            "other"));
+        withMacros(macro(" 12 ", INSTANCE), macro("http://op.example.org/projects/demo/work_packages/34/activity",
+            "other"), macro("https://op.example.org/wp/56", INSTANCE));
 
         this.task.consume(PAGE, version);
 
         // The id of a work package URL is extracted.
-        assertEquals(List.of("12@test", "34@other"), getStoredMentions());
+        assertEquals(List.of("12@test", "34@other", "56@test"), getStoredMentions());
         assertSavedByTheTask(version);
     }
 
@@ -204,15 +205,96 @@ class OpenProjectMentionTaskTest
     {
         savePage();
         MacroBlock withFilter = macro("12", INSTANCE);
-        withFilter.setParameter("filter", "{}");
+        withFilter.setParameter("filters", "{}");
         withMacros(macro("12", null), withFilter, macro("1,2,3", INSTANCE), macro(null, INSTANCE),
-            macro("http://op.example.org/projects/demo/work_packages", INSTANCE),
+            macro("http://op.example.org/projects/demo/work_packages", INSTANCE), macro("+12", INSTANCE),
+            macro("http://op.example.org/work_packages/12,http://op.example.org/work_packages/34", INSTANCE),
             new MacroBlock("openprojectchart", Map.of("identifier", "12", PROP_INSTANCE, INSTANCE), false),
             macro("56", INSTANCE));
 
         this.task.consume(PAGE, "1.1");
 
         assertEquals(List.of("56@test"), getStoredMentions());
+    }
+
+    @Test
+    void macrosSelectingASingleWorkPackageInTheirContent() throws Exception
+    {
+        savePage();
+        String version = getPage().getVersion();
+        withMacros(sourceMacro("list", "12", INSTANCE), sourceMacro(" LIST ", "\n 034, \n", "other"),
+            sourceMacro("url", " http://op.example.org/projects/demo/work_packages/56/activity ", INSTANCE),
+            sourceMacro("url", "https://op.example.org/wp/78", INSTANCE));
+
+        this.task.consume(PAGE, version);
+
+        // The ids are stored without their leading zeros, as OpenProject searches them.
+        assertEquals(List.of("12@test", "34@other", "56@test", "78@test"), getStoredMentions());
+        assertSavedByTheTask(version);
+    }
+
+    @Test
+    void macrosNotSelectingASingleWorkPackageInTheirContentAreIgnored() throws Exception
+    {
+        savePage("12", INSTANCE);
+        MacroBlock withFilters = sourceMacro("list", "12", INSTANCE);
+        withFilters.setParameter("filters", "{}");
+        MacroBlock withIdentifier = sourceMacro("list", "12", INSTANCE);
+        withIdentifier.setParameter("identifier", "12");
+        MacroBlock withPreset = sourceMacro("list", "12", INSTANCE);
+        withPreset.setParameter("presetId", "3");
+        withMacros(
+            // A query, the default source.
+            sourceMacro(null, "12", INSTANCE), sourceMacro("query", "id = 12", INSTANCE),
+            sourceMacro("filters", "[]", INSTANCE),
+            sourceMacro("list", "12, 34", INSTANCE), sourceMacro("list", " , ", INSTANCE),
+            // Resolving a key would need a call to OpenProject.
+            sourceMacro("list", "DA-71", INSTANCE),
+            sourceMacro("list", "http://op.example.org/projects/demo/work_packages/12", INSTANCE),
+            sourceMacro("url", "http://op.example.org/projects/demo/work_packages", INSTANCE),
+            sourceMacro("url", "12", INSTANCE), sourceMacro("unknown", "12", INSTANCE),
+            sourceMacro("url", "http://op.example.org/projects/demo/work_packages?query_id=5", INSTANCE),
+            // The url source rejects a link on two lines, the macro fails.
+            sourceMacro("url", "http://op.example.org/work_packages/12\nhttp://op.example.org/work_packages/34",
+                INSTANCE),
+            sourceMacro("url", "http://op.example.org/work_packages/12abc", INSTANCE),
+            sourceMacro("url", "http://op.example.org/work_packages/12/activity/details", INSTANCE),
+            sourceMacro("url", "ftp://op.example.org/work_packages/12", INSTANCE),
+            sourceMacro("list", "+12", INSTANCE), sourceMacro("list", "-12", INSTANCE),
+            // Non-ASCII digits.
+            sourceMacro("list", "\u0661\u0662", INSTANCE),
+            sourceMacro("list", "12", null), withFilters, withIdentifier, withPreset);
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of(), getStoredMentions());
+    }
+
+    @Test
+    void macroWithEmptyContentUsesTheIdentifier() throws Exception
+    {
+        savePage("12", INSTANCE);
+        MacroBlock macro = sourceMacro("list", " ", INSTANCE);
+        macro.setParameter("identifier", "12");
+        withMacros(macro);
+
+        this.task.consume(PAGE, "1.1");
+
+        assertEquals(List.of("12@test"), getStoredMentions());
+        assertNotSavedAgain();
+    }
+
+    @Test
+    void macroSelectionMovedFromTheIdentifierToTheContent() throws Exception
+    {
+        savePage("12", INSTANCE);
+        withMacros(sourceMacro("list", "12", INSTANCE));
+
+        this.task.consume(PAGE, "1.1");
+
+        // The mention is the same.
+        assertEquals(List.of("12@test"), getStoredMentions());
+        assertNotSavedAgain();
     }
 
     @Test
@@ -372,5 +454,17 @@ class OpenProjectMentionTaskTest
             parameters.put(PROP_INSTANCE, instance);
         }
         return new MacroBlock("openproject", parameters, false);
+    }
+
+    private static MacroBlock sourceMacro(String source, String content, String instance)
+    {
+        Map<String, String> parameters = new HashMap<>();
+        if (source != null) {
+            parameters.put("source", source);
+        }
+        if (instance != null) {
+            parameters.put(PROP_INSTANCE, instance);
+        }
+        return new MacroBlock("openproject", parameters, content, false);
     }
 }
