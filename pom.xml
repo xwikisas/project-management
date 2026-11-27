@@ -43,6 +43,19 @@
     <!-- Set by the profiles skipping the tests, so that Node and the dependencies aren't installed either. -->
     <projectmanagement.js.tests.skip>false</projectmanagement.js.tests.skip>
   </properties>
+  <dependencyManagement>
+    <dependencies>
+      <!-- The OAuth2 client (used by the OpenProject integration and so by its functional tests) depends on two
+        versions of nimbus-jose-jwt: oidc-provider asks for a newer one than the one of the oauth2-oidc-sdk it also
+        uses, which fails the upper bound check. Use the newer one, which is also the one installed in XWiki. Remove
+        when the OAuth2 client dependencies agree again. -->
+      <dependency>
+        <groupId>com.nimbusds</groupId>
+        <artifactId>nimbus-jose-jwt</artifactId>
+        <version>10.10</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <packaging>pom</packaging>
   <issueManagement>
     <system>GitHub</system>
