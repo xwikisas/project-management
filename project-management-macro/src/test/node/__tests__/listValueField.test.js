@@ -49,6 +49,12 @@ function getSearchMinWidth(tomSelect) {
   return parseFloat(getComputedStyle(tomSelect.control_input).minWidth);
 }
 
+// The given length in units of the font size of the given element (em), or of the root element (rem): jsdom computes
+// the lengths in pixels.
+function toPixels(length, element) {
+  return `${length * parseFloat(getComputedStyle(element).fontSize)}px`;
+}
+
 // The room that the search field takes on the line of the values, before it grows into what they leave: its width,
 // then its left and right margins.
 function getSearchRoom(tomSelect) {
@@ -76,13 +82,13 @@ describe("the field searching the values of a list filter", () => {
     await new Promise((resolve) => setTimeout(resolve));
 
     expect(tomSelect.wrapper.classList.contains("focus")).toBe(true);
-    expect(getComputedStyle(tomSelect.control_input).minWidth).toBe("4em");
+    expect(getComputedStyle(tomSelect.control_input).minWidth).toBe(toPixels(4, tomSelect.control_input));
     expect(getSearchRoom(tomSelect)).toEqual(["auto", "4px", "4px"]);
   });
 
   it("keeps the minimum width of Tom Select without value", () => {
     tomSelect.clear();
 
-    expect(getComputedStyle(tomSelect.control_input).minWidth).toBe("7rem");
+    expect(getComputedStyle(tomSelect.control_input).minWidth).toBe(toPixels(7, document.documentElement));
   });
 });
