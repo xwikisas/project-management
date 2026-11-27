@@ -80,6 +80,9 @@ public class ProjectManagementAsyncExecutor
     @Named("jsrx")
     private SkinExtension jsrx;
 
+    @Inject
+    private AsyncResultEventChecker eventChecker;
+
     /**
      * @param displayerMacro the macro that will be executed asynchronously.
      * @param parameters the parameters of the macro.
@@ -111,7 +114,7 @@ public class ProjectManagementAsyncExecutor
             Block result = executor.execute(asyncRenderer, configuration);
             List<Block> blocks =
                 result instanceof CompositeBlock ? result.getChildren() : Collections.singletonList(result);
-            return asyncAllowed ? wrap(blocks, context) : blocks;
+            return asyncAllowed && !this.eventChecker.isEventSentForTheResult() ? wrap(blocks, context) : blocks;
         } catch (ComponentLookupException e) {
             // Shouldn't happen.
             throw new RuntimeException("We are doomed.", e);
@@ -124,9 +127,11 @@ public class ProjectManagementAsyncExecutor
      * event after an asynchronous rendering (before XWiki 18.6) or sends it for the placeholder replaced by the result,
      * which isn't in the page anymore: the wrapper lets the script send the event for the result. The wrapper of a
      * placeholder is marked, so that the script initializes the results that replaced their placeholder before it was
-     * loaded (e.g. when the result brings the script), which XWiki doesn't initialize. Remove them once the minimal
-     * supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous
-     * rendering targets the removed placeholder instead of the rendered content).
+     * loaded (e.g. when the result brings the script), which XWiki doesn't initialize. XWiki 18.10.0-rc-1 sends the
+     * event for the result (XWIKI-25675, The xwiki:dom:updated event sent after an asynchronous rendering targets the
+     * removed placeholder instead of the rendered content), so the result isn't wrapped there: the script would
+     * initialize it a second time (e.g. draw a chart twice). Remove the wrapper and the script once the minimal
+     * supported XWiki version includes this fix.
      */
     private List<Block> wrap(List<Block> blocks, MacroTransformationContext context)
     {

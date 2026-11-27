@@ -7,6 +7,7 @@ com.xwiki.projectmanagement.internal.chart.displayer.PieChartDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsSingleDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemLivedataDisplayer
 com.xwiki.projectmanagement.internal.displayers.WorkItemInlineDisplayer
+com.xwiki.projectmanagement.internal.macro.AsyncResultEventChecker
 com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncExecutor
 com.xwiki.projectmanagement.internal.macro.ProjectManagementAsyncRenderer
 com.xwiki.projectmanagement.internal.displayers.WorkItemsListDisplayer
