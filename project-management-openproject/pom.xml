@@ -42,17 +42,5 @@
   <properties>
     <contrib.oauth2.version>2.31.0</contrib.oauth2.version>
   </properties>
-  <dependencyManagement>
-    <dependencies>
-      <!-- The OAuth2 client depends on two versions of nimbus-jose-jwt: oidc-provider asks for a newer one than the
-        one of the oauth2-oidc-sdk it also uses, which fails the upper bound check. Use the newer one, which is also
-        the one installed in XWiki. Remove when the OAuth2 client dependencies agree again. -->
-      <dependency>
-        <groupId>com.nimbusds</groupId>
-        <artifactId>nimbus-jose-jwt</artifactId>
-        <version>10.10</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
 </project>
