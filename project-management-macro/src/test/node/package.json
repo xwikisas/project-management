@@ -10,9 +10,9 @@
   "devDependencies": {
     "daterangepicker": "3.1.0",
     "jquery": "4.1.0",
-    "jsdom": "26.1.0",
+    "jsdom": "31.0.1",
     "moment": "2.31.0",
-    "tom-select": "2.6.2",
+    "tom-select": "2.7.0",
     "vitest": "4.1.11"
   }
 }

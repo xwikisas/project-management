@@ -49,6 +49,14 @@
       "matchPackagePrefixes": ["org.xwiki.commons:", "org.xwiki.rendering:", "org.xwiki.platform:", "org.xwiki.enterprise:",
         "com.xwiki.parent:"],
       "enabled": false
+    },
+
+    // The JavaScript unit tests use the date range picker that XWiki gives the browsers: the bootstrap-daterangepicker
+    // webjar 3.1. The 4.x versions behave differently (e.g. they pick a date by default).
+    {
+      "matchPackageNames": ["daterangepicker"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
