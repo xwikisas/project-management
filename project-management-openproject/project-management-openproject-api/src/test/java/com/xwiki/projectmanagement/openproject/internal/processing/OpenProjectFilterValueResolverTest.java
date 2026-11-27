@@ -190,6 +190,26 @@ class OpenProjectFilterValueResolverTest
     }
 
     @Test
+    void resolveProjectsByTheirIdentifierAsWrittenThenInLowerCase() throws Exception
+    {
+        // An instance using semantic identifiers, in upper case, finds a project only by its identifier as written.
+        when(this.client.getProject("DA")).thenReturn(project(31, "DA", "Documentation Application"));
+        when(this.client.getProject("da")).thenThrow(new WorkItemRetrievalException("Not found", 404));
+        when(this.client.getProject("Documentation-Application"))
+            .thenThrow(new WorkItemRetrievalException("Not found", 404));
+        when(this.client.getProjects(eq(1), anyInt(), anyString())).thenReturn(result(project(32, "da-old", "da")));
+        LiveDataQuery.Filter projects = new LiveDataQuery.Filter("project", "=", name("DA"));
+        projects.getConstraints().add(new LiveDataQuery.Constraint(name("Documentation-Application"), "="));
+        // A name differing by its case matches another project, by name.
+        projects.getConstraints().add(new LiveDataQuery.Constraint(name("da"), "="));
+        projects.getConstraints().add(new LiveDataQuery.Constraint(name("DA"), "="));
+
+        assertEquals(List.of("project = 31", "project = 14", "project = 32", "project = 31"),
+            toStrings(this.resolver.resolve(List.of(projects))));
+        verify(this.client, times(1)).getProject("DA");
+    }
+
+    @Test
     void resolveVersionsWithinTheFilteredProjects() throws Exception
     {
         // The project filter comes after the version filter, but restricts it.

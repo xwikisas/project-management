@@ -53,11 +53,12 @@ import com.xwiki.projectmanagement.source.WorkItemName;
  * macro content, for example the status {@code Closed} or the project {@code documentation-application}) into the ids
  * of the matching OpenProject resources, since the OpenProject API only takes ids in its filters. The rules are:
  * <ul>
- * <li>the names are matched exactly but ignoring the case: a project by its identifier (when the name can be one),
- * else by its name; a version by its name, among the versions of the projects the filters are restricted to, or among
- * all the versions when the filters aren't restricted to some projects; a status, a type or a priority by its name; a
- * user by its full name (the current user, {@code me}, being a keyword written without quotes, it's never a
- * name);</li>
+ * <li>a project is matched by its identifier (when the name can be one), as written or else in lower case, else by
+ * its name, ignoring the case;</li>
+ * <li>the other names are matched exactly but ignoring the case: a version by its name, among the versions of the
+ * projects the filters are restricted to, or among all the versions when the filters aren't restricted to some
+ * projects; a status, a type or a priority by its name; a user by its full name (the current user, {@code me}, being
+ * a keyword written without quotes, it's never a name);</li>
  * <li>a name matching no resource, or several (except for the versions of several filtered projects), is an error,
  * naming the property and the value;</li>
  * <li>the names of the other properties (for example the text of a custom field) are kept as text, and the values
@@ -74,9 +75,10 @@ public final class OpenProjectFilterValueResolver
     private static final String ASCII_DIGITS = "0123456789";
 
     /**
-     * The characters of the OpenProject project identifiers: lower case letters, digits, dashes and underscores.
+     * The characters of the OpenProject project identifiers: letters (upper case ones being found in the semantic
+     * identifiers), digits, dashes and underscores.
      */
-    private static final Pattern PROJECT_IDENTIFIER = Pattern.compile("[a-z0-9_-]+");
+    private static final Pattern PROJECT_IDENTIFIER = Pattern.compile("[A-Za-z0-9_-]+");
 
     /**
      * The maximum number of projects or users whose name contains the searched name, among which the ones having
@@ -368,33 +370,47 @@ public final class OpenProjectFilterValueResolver
     }
 
     /**
-     * Finds a project by identifier, else by name. The identifiers being in lower case, the identifier is looked up in
-     * lower case, and only when the name can be an identifier: OpenProject fails, instead of answering that the
-     * project doesn't exist, when the identifier holds some characters, for example accented letters.
+     * Finds a project by identifier, else by name. The identifier is looked up as written, then in lower case: the
+     * identifiers are in lower case, except the semantic identifiers of the instances configured so (for example
+     * {@code DA}). It's looked up only when the name can be an identifier: OpenProject fails, instead of answering
+     * that the project doesn't exist, when the identifier holds some characters, for example accented letters.
      */
     private Project findProject(String property, String name) throws ProjectManagementException
     {
-        String key = name.toLowerCase(Locale.ROOT);
-        Project project = this.projects.get(key);
+        // Two names differing by their case can match different projects: one by its identifier, the other by name.
+        Project project = this.projects.get(name);
         if (project == null) {
             // OpenProject also finds a project by its id, which a name made of digits isn't: the project identifiers
             // can't be made of digits only.
-            if (!isId(name) && PROJECT_IDENTIFIER.matcher(key).matches()) {
-                try {
-                    project = this.client.getProject(key);
-                } catch (WorkItemRetrievalException e) {
-                    // Not an identifier: the project may be named so.
-                    if (!isNotFound(e)) {
-                        throw e;
-                    }
+            if (!isId(name) && PROJECT_IDENTIFIER.matcher(name).matches()) {
+                project = getProjectByIdentifier(name);
+                String lowerCaseName = name.toLowerCase(Locale.ROOT);
+                if (project == null && !lowerCaseName.equals(name)) {
+                    project = getProjectByIdentifier(lowerCaseName);
                 }
             }
             if (project == null) {
                 project = findProjectByName(property, name);
             }
-            this.projects.put(key, project);
+            this.projects.put(name, project);
         }
         return project;
+    }
+
+    /**
+     * @return the project having this identifier, or {@code null} if there's none
+     */
+    private Project getProjectByIdentifier(String identifier) throws ProjectManagementException
+    {
+        try {
+            return this.client.getProject(identifier);
+        } catch (WorkItemRetrievalException e) {
+            // Not an identifier: the project may be named so.
+            if (!isNotFound(e)) {
+                throw e;
+            }
+            return null;
+        }
     }
 
     private Project findProjectByName(String property, String name) throws ProjectManagementException
