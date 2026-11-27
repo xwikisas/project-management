@@ -37,8 +37,8 @@
     <urlshortener.version>1.5.1</urlshortener.version>
     <fullcalendar.version>2.5.5</fullcalendar.version>
     <!-- The JavaScript unit tests (src/test/node of the modules declaring the frontend-maven-plugin), run with
-         Vitest. -->
-    <node.version>v22.12.0</node.version>
+         Vitest. Node must satisfy the engines of the test dependencies (see the pnpm-lock.yaml files), e.g. jsdom. -->
+    <node.version>v24.22.3</node.version>
     <pnpm.version>9.15.9</pnpm.version>
     <!-- Set by the profiles skipping the tests, so that Node and the dependencies aren't installed either. -->
     <projectmanagement.js.tests.skip>false</projectmanagement.js.tests.skip>
