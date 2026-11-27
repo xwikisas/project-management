@@ -38,8 +38,8 @@
  * started. Only asyncError.js may have sent one, for the error displayed instead of the result: the errors it processed
  * are marked, the script leaves their wrapper alone, and it marks the errors of the wrappers it sends the event for, so
  * that asyncError.js leaves them alone, whichever script runs first. The script runs once, even when the page loads it
- * twice (e.g. by the page and by an asynchronous result, or by two results), so the second copy costs only its download,
- * cached by the browser.
+ * twice (e.g. by the page and by an asynchronous result, or by two results), so the second copy costs only its
+ * download, cached by the browser.
  *
  * Remove this script and the wrapper once the minimal supported XWiki version sends the event for the rendered content
  * (XWIKI-25675, https://jira.xwiki.org/browse/XWIKI-25675).
@@ -89,6 +89,7 @@ require(['jquery'], function ($) {
   }).observe(document.documentElement, {childList: true, subtree: true});
 
   // The results that replaced their placeholder before the script started.
-  $('.' + WRAPPER + '[data-proj-manag-async-placeholder]').filter((index, wrapper) => !$(wrapper).children('.xwiki-async').length)
+  $('.' + WRAPPER + '[data-proj-manag-async-placeholder]')
+    .filter((index, wrapper) => !$(wrapper).children('.xwiki-async').length)
     .each((index, wrapper) => onResultInserted(wrapper));
 });
