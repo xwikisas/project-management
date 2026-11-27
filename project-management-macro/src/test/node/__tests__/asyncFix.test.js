@@ -40,6 +40,8 @@ beforeEach(() => {
   window = new JSDOM("<!DOCTYPE html><html><body></body></html>", { runScripts: "outside-only" }).window;
   document = window.document;
   window.eval(JQUERY);
+  // Unlike RequireJS, which calls it later, the stub calls the script's callback right away: a test controls when the
+  // script starts by loading it.
   window.require = (dependencies, factory) => factory(window.jQuery);
   events = [];
   window.jQuery(document).on("xwiki:dom:updated", (event, data) => events.push(data.elements));
@@ -56,7 +58,7 @@ function mutationsReported() {
 }
 
 function wrapper(content, placeholder = true) {
-  return `<div class="proj-manag-async-wrapper"${placeholder ? ' data-async-placeholder="true"' : ""}>${content}</div>`;
+  return `<div class="proj-manag-async-wrapper"${placeholder ? ' data-proj-manag-async-placeholder="true"' : ""}>${content}</div>`;
 }
 
 function replacePlaceholder() {
@@ -74,6 +76,31 @@ describe("asyncFix", () => {
     await mutationsReported();
 
     expect(events).toEqual([[document.querySelector(".proj-manag-async-wrapper")]]);
+  });
+
+  it("doesn't notify again an error that asyncError.js notified before the script was loaded", async () => {
+    // E.g. the error of a macro arrives before the result of another macro, which brings the script.
+    document.body.innerHTML = wrapper(PLACEHOLDER);
+    document.querySelector(".xwiki-async").outerHTML =
+      '<div class="proj-manag-async-error" data-proj-manag-async-error-processed="true">Failed</div>';
+
+    loadScript();
+    await mutationsReported();
+
+    // A second event would add a second click listener to the error, which then can't be expanded.
+    expect(events).toEqual([]);
+  });
+
+  it("marks the errors that it notifies, so that asyncError.js doesn't notify them again", async () => {
+    document.body.innerHTML = wrapper(PLACEHOLDER);
+    loadScript();
+
+    document.querySelector(".xwiki-async").outerHTML = '<div class="proj-manag-async-error">Failed</div>';
+    await mutationsReported();
+
+    expect(events).toEqual([[document.querySelector(".proj-manag-async-wrapper")]]);
+    expect(document.querySelector(".proj-manag-async-error").getAttribute("data-proj-manag-async-error-processed"))
+      .toBe("true");
   });
 
   it("doesn't initialize again a result displayed without placeholder", async () => {

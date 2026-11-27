@@ -124,7 +124,7 @@ public class ProjectManagementAsyncExecutor
      * event after an asynchronous rendering (before XWiki 18.6) or sends it for the placeholder replaced by the result,
      * which isn't in the page anymore: the wrapper lets the script send the event for the result. The wrapper of a
      * placeholder is marked, so that the script initializes the results that replaced their placeholder before it was
-     * loaded (e.g. when the result brings the script), which nothing initialized. Remove them once the minimal
+     * loaded (e.g. when the result brings the script), which XWiki doesn't initialize. Remove them once the minimal
      * supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous
      * rendering targets the removed placeholder instead of the rendered content).
      */
@@ -134,7 +134,7 @@ public class ProjectManagementAsyncExecutor
         Map<String, String> parameters = new LinkedHashMap<>();
         parameters.put(CLASS_PARAMETER, "proj-manag-async-wrapper");
         if (blocks.size() == 1 && ASYNC_PLACEHOLDER_CLASS.equals(blocks.get(0).getParameter(CLASS_PARAMETER))) {
-            parameters.put("data-async-placeholder", "true");
+            parameters.put("data-proj-manag-async-placeholder", "true");
         }
         Block wrapper = context.isInline() ? new FormatBlock(blocks, Format.NONE, parameters)
             : new GroupBlock(blocks, parameters);

@@ -208,7 +208,9 @@ class ProjectManagementAsyncRendererTest
         // The error is wrapped, so that the script made available makes it expandable once inserted in the page.
         assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))), result);
         verify(this.jsrx).use("js/projectmanagement/asyncError.js");
-
+        // Every asynchronous result brings the script that initializes the results, an error included: the two
+        // scripts mark the errors they notify, so that the other one leaves them alone.
+        verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
     }
 
     @Test

@@ -152,7 +152,7 @@ class ProjectManagementAsyncExecutorTest
         // The script initializes the result that replaces the placeholder before the script is loaded, e.g. when the
         // result brings the script to a page that had no work item macro.
         assertEquals(List.of(new GroupBlock(List.of(placeholder),
-            Map.of("class", "proj-manag-async-wrapper", "data-async-placeholder", "true"))), blocks);
+            Map.of("class", "proj-manag-async-wrapper", "data-proj-manag-async-placeholder", "true"))), blocks);
         verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
     }
 

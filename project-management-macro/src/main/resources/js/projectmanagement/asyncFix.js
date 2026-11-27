@@ -31,10 +31,15 @@
  * the next task. An event sent for the result itself doesn't count either: the Live Data only initializes the elements
  * inside the updated ones.
  *
- * The page loads the script when it displays a work item macro, and the asynchronous results bring it too, once they
- * are inserted, to a page that had none (e.g. when saving the in-place editor after inserting the first macro): when it
+ * The page loads the script when it displays a work item macro, and each asynchronous result brings it too, once it is
+ * inserted, to a page that had none (e.g. when saving the in-place editor after inserting the first macro): when it
  * starts, the script also sends the event for the wrappers of a placeholder (marked by the macros) whose result is
- * already inserted, since nothing initialized them. The script runs once, even when the page loads it twice.
+ * already inserted, since XWiki doesn't initialize them and the script can't know about the events sent before it
+ * started. Only asyncError.js may have sent one, for the error displayed instead of the result: the errors it processed
+ * are marked, the script leaves their wrapper alone, and it marks the errors of the wrappers it sends the event for, so
+ * that asyncError.js leaves them alone, whichever script runs first. The script runs once, even when the page loads it
+ * twice (e.g. by the page and by an asynchronous result, or by two results), so the second copy costs only its download,
+ * cached by the browser.
  *
  * Remove this script and the wrapper once the minimal supported XWiki version sends the event for the rendered content
  * (XWIKI-25675, https://jira.xwiki.org/browse/XWIKI-25675).
@@ -46,6 +51,8 @@ require(['jquery'], function ($) {
   window.projectManagementAsyncFix = true;
 
   const WRAPPER = 'proj-manag-async-wrapper';
+  // The marker of the errors notified by asyncError.js.
+  const PROCESSED_ERROR = 'data-proj-manag-async-error-processed';
 
   // The wrappers whose result was inserted and initialized: the placeholder of a wrapper is replaced once.
   const initializedWrappers = new WeakSet();
@@ -65,7 +72,10 @@ require(['jquery'], function ($) {
   const onResultInserted = function (wrapper) {
     if (!initializedWrappers.has(wrapper)) {
       initializedWrappers.add(wrapper);
-      $(document).trigger('xwiki:dom:updated', {elements: [wrapper]});
+      if (!$(wrapper).find('[' + PROCESSED_ERROR + ']').length) {
+        $(wrapper).find('.proj-manag-async-error').attr(PROCESSED_ERROR, 'true');
+        $(document).trigger('xwiki:dom:updated', {elements: [wrapper]});
+      }
     }
   };
 
@@ -79,6 +89,6 @@ require(['jquery'], function ($) {
   }).observe(document.documentElement, {childList: true, subtree: true});
 
   // The results that replaced their placeholder before the script started.
-  $('.' + WRAPPER + '[data-async-placeholder]').filter((index, wrapper) => !$(wrapper).children('.xwiki-async').length)
+  $('.' + WRAPPER + '[data-proj-manag-async-placeholder]').filter((index, wrapper) => !$(wrapper).children('.xwiki-async').length)
     .each((index, wrapper) => onResultInserted(wrapper));
 });
