@@ -112,6 +112,9 @@ class ProjectManagementAsyncRendererTest
         when(this.displayer.execute(any(), any(), any())).thenReturn(List.of(block));
 
         assertEquals(List.of(block), this.renderer.execute(true, false).getChildren());
+        // The asynchronous result brings the script that initializes it, to the pages that didn't load it, e.g. when
+        // the in-place editor reloads the content of a page that had no work item macro.
+        verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
     }
 
     @Test
@@ -139,6 +142,8 @@ class ProjectManagementAsyncRendererTest
 
         assertEquals(List.of(warning), this.renderer.execute(false, false).getChildren());
         verifyNoInteractions(this.transformationManager);
+        // The page that displays the result loads the script, if it needs it.
+        verifyNoInteractions(this.jsrx);
     }
 
     @Test
@@ -203,7 +208,9 @@ class ProjectManagementAsyncRendererTest
         // The error is wrapped, so that the script made available makes it expandable once inserted in the page.
         assertEquals(List.of(new GroupBlock(List.of(errorBlock), Map.of("class", ASYNC_ERROR_CLASS))), result);
         verify(this.jsrx).use("js/projectmanagement/asyncError.js");
-
+        // Every asynchronous result brings the script that initializes the results, an error included: the two
+        // scripts mark the errors they notify, so that the other one leaves them alone.
+        verify(this.jsrx).use("js/projectmanagement/asyncFix.js");
     }
 
     @Test

@@ -21,6 +21,7 @@
 package com.xwiki.projectmanagement.internal.macro;
 
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -61,6 +62,11 @@ import com.xwiki.projectmanagement.macro.ProjectManagementAsyncMacroParams;
 public class ProjectManagementAsyncExecutor
 
 {
+    private static final String CLASS_PARAMETER = "class";
+
+    // The class of the placeholder that XWiki replaces by the asynchronous result.
+    private static final String ASYNC_PLACEHOLDER_CLASS = "xwiki-async";
+
     @Inject
     private BlockAsyncRendererExecutor executor;
 
@@ -116,14 +122,20 @@ public class ProjectManagementAsyncExecutor
      * Wraps a result that may be rendered asynchronously. Some results are initialized by JavaScript code on the
      * xwiki:dom:updated event, in the updated elements (e.g. the charts and the Live Data tables), but XWiki sends no
      * event after an asynchronous rendering (before XWiki 18.6) or sends it for the placeholder replaced by the result,
-     * which isn't in the page anymore: the wrapper lets the script send the event for the result. Remove them once the
-     * minimal supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after an
-     * asynchronous rendering targets the removed placeholder instead of the rendered content).
+     * which isn't in the page anymore: the wrapper lets the script send the event for the result. The wrapper of a
+     * placeholder is marked, so that the script initializes the results that replaced their placeholder before it was
+     * loaded (e.g. when the result brings the script), which XWiki doesn't initialize. Remove them once the minimal
+     * supported XWiki version includes the fix of XWIKI-25675 (The xwiki:dom:updated event sent after an asynchronous
+     * rendering targets the removed placeholder instead of the rendered content).
      */
     private List<Block> wrap(List<Block> blocks, MacroTransformationContext context)
     {
         this.jsrx.use("js/projectmanagement/asyncFix.js");
-        Map<String, String> parameters = Collections.singletonMap("class", "proj-manag-async-wrapper");
+        Map<String, String> parameters = new LinkedHashMap<>();
+        parameters.put(CLASS_PARAMETER, "proj-manag-async-wrapper");
+        if (blocks.size() == 1 && ASYNC_PLACEHOLDER_CLASS.equals(blocks.get(0).getParameter(CLASS_PARAMETER))) {
+            parameters.put("data-proj-manag-async-placeholder", "true");
+        }
         Block wrapper = context.isInline() ? new FormatBlock(blocks, Format.NONE, parameters)
             : new GroupBlock(blocks, parameters);
         return Collections.singletonList(wrapper);

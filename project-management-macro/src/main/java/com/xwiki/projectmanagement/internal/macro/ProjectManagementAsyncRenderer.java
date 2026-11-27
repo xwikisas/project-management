@@ -72,6 +72,8 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
 
     private static final String ASYNC_ERROR_SCRIPT = "js/projectmanagement/asyncError.js";
 
+    private static final String ASYNC_FIX_SCRIPT = "js/projectmanagement/asyncFix.js";
+
     private static final String ASYNC_ERROR_CLASS = "proj-manag-async-error";
 
     private static final String CLASS_PARAMETER = "class";
@@ -146,6 +148,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
             }
             if (async) {
                 result = transform(result);
+                useAsyncFixScript();
             }
             if (this.transformationContext.getCurrentMacroBlock() != null) {
                 result = List.of(wrapInMacroMarker(this.transformationContext.getCurrentMacroBlock(), result));
@@ -167,6 +170,7 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
                 : this.errorBlockGenerator.generateErrorBlocks(this.inline, ERROR_MESSAGE_ID, ERROR_MESSAGE, null, e);
             // The script makes the error expandable once the asynchronous result is inserted in the page.
             this.jsrx.use(ASYNC_ERROR_SCRIPT);
+            useAsyncFixScript();
             Map<String, String> wrapperParameters = Map.of(CLASS_PARAMETER, ASYNC_ERROR_CLASS);
             Block error = this.inline ? new FormatBlock(errorBlocks, Format.NONE, wrapperParameters)
                 : new GroupBlock(errorBlocks, wrapperParameters);
@@ -244,6 +248,16 @@ public class ProjectManagementAsyncRenderer extends AbstractBlockAsyncRenderer
         context.setId(pageContext.getId());
         transform(xdom, context);
         return xdom.getChildren();
+    }
+
+    /**
+     * The page that receives the asynchronous result may not have loaded the script that initializes it, e.g. when the
+     * in-place editor reloads the content of a page that had no work item macro: the result brings it. Each
+     * asynchronous response then lists the script, but the page loads it once and the script runs once anyway.
+     */
+    private void useAsyncFixScript()
+    {
+        this.jsrx.use(ASYNC_FIX_SCRIPT);
     }
 
     private Block wrapInMacroMarker(MacroBlock macroBlockToWrap, List<Block> newBlocks)

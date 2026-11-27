@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.Keys;
 import org.xwiki.edit.test.po.InplaceEditablePage;
 import org.xwiki.livedata.test.po.TableLayoutElement;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.rest.model.jaxb.Page;
 import org.xwiki.test.docker.junit5.TestReference;
 import org.xwiki.test.docker.junit5.UITest;
@@ -513,7 +514,19 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         // preferring the WYSIWYG editor, who see the public work packages without an OpenProject account.
         setup.loginAsSuperAdmin();
         setup.createUser(INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, null, "editor", "Wysiwyg");
+        // Also when the page displayed no work item macro when it was loaded (#796): the macro is displayed only when
+        // the in-place editor renders the content again after saving it.
+        DocumentReference firstMacroPage = new DocumentReference("FirstMacro", testReference.getLastSpaceReference());
+        setup.createPage(firstMacroPage, String.format("{{velocity}}#if ($request.xpage == 'get')"
+            + "{{openproject instance=\"%s\" id=\"firstMacro\" identifier=\"%s\"/}}#end{{/velocity}}", CONNECTION_ID,
+            getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc", "\"id\",\"subject\"")));
         switchUser(setup, INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
+        new InplaceEditablePage().editInplace().saveAndView();
+        ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
+        assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
+
+        setup.gotoPage(firstMacroPage);
+        assertTrue(new ViewPageWithOpenProjectMacro().getOpenProjectMacros().isEmpty());
         new InplaceEditablePage().editInplace().saveAndView();
         ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
         assertEquals(getTasksInProgressIds(DEMO_PROJECT_PATH).size(), ld.countRows());
