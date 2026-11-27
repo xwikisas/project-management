@@ -520,6 +520,9 @@ public class OpenProjectMacroIT extends AbstractOpenProjectIT
         setup.createPage(firstMacroPage, String.format("{{velocity}}#if ($request.xpage == 'get')"
             + "{{openproject instance=\"%s\" id=\"firstMacro\" identifier=\"%s\"/}}#end{{/velocity}}", CONNECTION_ID,
             getTasksInProgressUrl(DEMO_PROJECT_PATH + "/work_packages", "asc", "\"id\",\"subject\"")));
+        // Saving the page makes the user its content author (on XWiki 15.10, even without any change), whose rights
+        // run its script.
+        setup.setRights(firstMacroPage, "", "XWiki." + INPLACE_EDITOR, "script", true);
         switchUser(setup, INPLACE_EDITOR, INPLACE_EDITOR_PASSWORD, setup.getURL(testReference));
         new InplaceEditablePage().editInplace().saveAndView();
         ld = new ViewPageWithOpenProjectMacro().getOpenProjectMacros().get(0).waitForTableLayout();
