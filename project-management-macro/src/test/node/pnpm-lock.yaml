@@ -12,8 +12,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       jquery:
-        specifier: 3.7.1
-        version: 3.7.1
+        specifier: 3.8.0
+        version: 3.8.0
       jsdom:
         specifier: 26.1.0
         version: 26.1.0
@@ -495,8 +495,8 @@ packages:
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
-  jquery@3.7.1:
-    resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
+  jquery@3.8.0:
+    resolution: {integrity: sha512-AOYt0viqPysMUTq45O8gF9DuOnBT3Il/8WtM/TT8z/2QeGsZ70ImwSJtNFxznn2R71v8yIgaEunOGo82OY/f0g==}
 
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
@@ -1027,7 +1027,7 @@ snapshots:
 
   daterangepicker@3.1.0:
     dependencies:
-      jquery: 3.7.1
+      jquery: 3.8.0
       moment: 2.31.0
 
   debug@4.4.3:
@@ -1108,7 +1108,7 @@ snapshots:
 
   is-potential-custom-element-name@1.0.1: {}
 
-  jquery@3.7.1: {}
+  jquery@3.8.0: {}
 
   js-tokens@9.0.1: {}
 
