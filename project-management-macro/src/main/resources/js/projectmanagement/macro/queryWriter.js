@@ -257,22 +257,44 @@ define([], function () {
     }
   };
 
+  // The operators that the clients give the constraints without operator, by type of filter (see
+  // OpenProjectFilterTranslator), the other types using equals.
+  const DEFAULT_OPERATORS = { text: 'contains', date: 'between' };
+
+  /*
+   * The operator with which the clients retrieve the work items of a constraint without operator, which the Live Data
+   * filters allow (e.g. a filter of the filters source written by hand): the default operator of the filter of the
+   * property if it has one, else the one of its type, except that a single date (not a range of dates) matches that
+   * day.
+   */
+  let getDefaultOperator = function (type, value, defaultOperator) {
+    let operator = defaultOperator || DEFAULT_OPERATORS[type] || 'equals';
+    return operator === 'between' && !String(value === undefined || value === null ? '' : value).includes('/')
+      ? '=d' : operator;
+  };
+
   /**
    * Converts the constraints of a filter into the operators of the builder for its property, e.g. the filters
    * parameter written by hand, or by an older version, with the generic operators of the Live Data (contains is ~
    * for a text). The constraints whose operator is one of the property, or has no equivalent, are kept as they are.
+   * The constraints without operator get the operator with which the clients retrieve their work items.
    *
    * @param filter the Live Data filter, e.g. {property: 'summary', constraints: [{operator: 'contains', value: 'a'}]}
    * @param type the type of the filter of the property, e.g. text, list, number, date or boolean
    * @param operators the ids of the operators of the builder for the property, e.g. ['~', '!~']
+   * @param defaultOperator the default operator of the filter of the property, if any, e.g. ~ for a text custom field
    * @return the filter, whose constraints use the operators of the builder when they have an equivalent
    */
-  let toBuilderFilter = function (filter, type, operators) {
+  let toBuilderFilter = function (filter, type, operators, defaultOperator) {
     let available = operators || [];
     let genericOperators = GENERIC_OPERATORS[type] || {};
     let constraints = (filter.constraints || []).map(constraint => {
       let operator = constraint.operator;
-      if (operator === null || operator === undefined || available.includes(operator)) {
+      if (operator === null || operator === undefined || operator === '') {
+        operator = getDefaultOperator(type, constraint.value, defaultOperator);
+        constraint = Object.assign({}, constraint, { operator });
+      }
+      if (available.includes(operator)) {
         return constraint;
       }
       let converted = operator === 'empty' ? { operator: '!*', value: '' }
@@ -297,13 +319,14 @@ define([], function () {
    * @param filter the Live Data filter
    * @param type the type of the filter of the property, e.g. text, list, number, date or boolean
    * @param operators the ids of the operators of the builder for the property
+   * @param defaultOperator the default operator of the filter of the property, if any
    * @return {{filter, unsupported}} the filter with the constraints that the builder keeps, and the other constraints,
    *   as they were
    */
-  let splitSupported = function (filter, type, operators) {
+  let splitSupported = function (filter, type, operators, defaultOperator) {
     let available = operators || [];
     let original = filter.constraints || [];
-    let converted = toBuilderFilter(filter, type, available);
+    let converted = toBuilderFilter(filter, type, available, defaultOperator);
     let supported = [];
     let unsupported = [];
     converted.constraints.forEach((constraint, index) => {
