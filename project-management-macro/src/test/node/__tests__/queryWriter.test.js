@@ -191,9 +191,24 @@ describe("toBuilderFilter", () => {
     expect(queryWriter.toQuery(builderFilters, new Map())).toBe("dueDate <= 2026-12-31 AND startDate >= 2026-11-01");
   });
 
-  it("keeps the constraints without operator: the builder chooses the operator of their row", () => {
-    const withoutOperator = { property: "summary", constraints: [{ operator: null, value: "task" }] };
-    expect(queryWriter.toBuilderFilter(withoutOperator, "text", TEXT)).toEqual(withoutOperator);
+  // The constraints without operator are shown with the operator that the client uses to retrieve their work items
+  // (see OpenProjectFilterTranslator), rather than with the first operator of the property.
+  it.each([
+    ["text", TEXT, undefined, "summary", null, "task", "~", "summary ~ task"],
+    ["text", TEXT_ALL, "=", "customField6", undefined, "task", "=", "customField6 = task"],
+    ["list", LIST, undefined, "status", "", "12", "=", "status = 12"],
+    ["number", NUMBER, undefined, "progress", null, "50", "=", "progress = 50"],
+    ["boolean", BOOLEAN, undefined, "flagged", null, "true", "=", "flagged = true"],
+    // A single day, or a range of dates.
+    ["date", DATE, undefined, "dueDate", null, "2026-11-30", "=d", "dueDate = 2026-11-30"],
+    ["date", DATE, undefined, "dueDate", null, "2026-11-01/2026-11-30", "between",
+      "dueDate >= 2026-11-01 AND dueDate <= 2026-11-30"],
+  ])("reads a %s filter %j (default %s) on %s without operator (%j): %s as %s", (type, operators, defaultOperator,
+    property, operator, value, builderOperator, query) => {
+    const builderFilter = queryWriter.toBuilderFilter(filter(property, operator, value), type, operators,
+      defaultOperator);
+    expect(builderFilter).toEqual(filter(property, builderOperator, value));
+    expect(queryWriter.toQuery([builderFilter], new Map())).toBe(query);
   });
 
   it("converts each constraint of a filter", () => {
@@ -239,11 +254,11 @@ describe("splitSupported", () => {
     });
   });
 
-  it("splits each constraint of a filter, and keeps the ones without operator", () => {
+  it("splits each constraint of a filter, and keeps the ones without operator with their default operator", () => {
     const summaryFilter = { property: "summary", constraints: [{ operator: "contains", value: "a" },
       { operator: "empty", value: "" }, { value: "b" }] };
     expect(queryWriter.splitSupported(summaryFilter, "text", TEXT)).toEqual({
-      filter: { property: "summary", constraints: [{ operator: "~", value: "a" }, { value: "b" }] },
+      filter: { property: "summary", constraints: [{ operator: "~", value: "a" }, { operator: "~", value: "b" }] },
       unsupported: [{ operator: "empty", value: "" }],
     });
   });

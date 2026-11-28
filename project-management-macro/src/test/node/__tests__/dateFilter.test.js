@@ -28,6 +28,7 @@ const START_DATE = {
   filter: {
     id: "date",
     operators: [
+      { id: "t", name: "Today" },
       { id: "=d", name: "On" },
       { id: "between", name: "Between" },
     ],
@@ -97,6 +98,17 @@ describe("a date filter", () => {
     expect(getDateField().val()).toBe("2024/01/10 10:30");
     expect(builder.getConstraints()).toEqual({
       startDate: { property: "startDate", constraints: [{ operator: "=d", value: "2024-01-10T10:30:00+02:00" }] },
+    });
+  });
+
+  // The client retrieves the work items of the day of a date without operator, e.g. in the filters source written by
+  // hand, rather than with the first operator of the property (today, which takes no date).
+  it("displays a saved date without operator as on that day", async () => {
+    const builder = await addDateFilter([{ value: "2026-11-30" }]);
+
+    expect($("select.proj-manag-constraint-operator").val()).toBe("=d");
+    expect(builder.getConstraints()).toEqual({
+      startDate: { property: "startDate", constraints: [{ operator: "=d", value: "2026-11-30" }] },
     });
   });
 });

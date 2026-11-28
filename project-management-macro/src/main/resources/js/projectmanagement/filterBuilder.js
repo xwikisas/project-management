@@ -522,9 +522,11 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
       if (property) {
         // The generic operators of the Live Data (e.g. contains, in the filters parameter written by an older version)
         // are shown with the operators of the property selecting the same work items (e.g. ~ for a text).
+        // The constraints without operator are shown with the operator used to retrieve their work items.
         let operators = property.filter.operators.map(operator => operator.id);
         if (filter.dropUnsupported) {
-          let split = queryWriter.splitSupported(filter, getType(property), operators);
+          let split = queryWriter.splitSupported(filter, getType(property), operators,
+            property.filter.defaultOperator);
           if (split.unsupported.length > 0) {
             builder.constraintBuilder.trigger('unsupportedConstraints', [getPropertyName(property), split.unsupported]);
             if (split.filter.constraints.length === 0) {
@@ -533,7 +535,8 @@ define('project-management-filter-builder', ['jquery', 'filterDisplayer', 'proje
           }
           filter = split.filter;
         } else {
-          filter = queryWriter.toBuilderFilter(filter, getType(property), operators);
+          filter = queryWriter.toBuilderFilter(filter, getType(property), operators,
+            property.filter.defaultOperator);
         }
       }
       let constraints = filter.constraints || [];
